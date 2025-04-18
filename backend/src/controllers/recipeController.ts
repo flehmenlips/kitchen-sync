@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 // Using relative path now that we know alias might be tricky initially
 import prisma from '../config/db'; 
+import { Prisma } from '@prisma/client'; // Import Prisma namespace
 
 // Helper function for safe integer parsing
 const safeParseInt = (val: unknown): number | undefined => {
@@ -20,6 +21,16 @@ const safeParseFloat = (val: unknown): number | undefined => {
     return !isNaN(parsed) ? parsed : undefined;
   }
   return undefined;
+};
+
+// Type for the object returned by the ingredient map function
+type MappedIngredientData = {
+    recipeId: number;
+    ingredientId: number | undefined;
+    subRecipeId: number | undefined;
+    quantity: number;
+    unitId: number;
+    order: number;
 };
 
 // @desc    Get all recipes
@@ -121,7 +132,7 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
     const yieldUnit = safeParseInt(yieldUnitId);
     const categoryIdNum = safeParseInt(categoryId) ?? null;
 
-    const newRecipeWithIngredients = await prisma.$transaction(async (tx) => {
+    const newRecipeWithIngredients = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const newRecipe = await tx.recipe.create({
         data: {
           name,
@@ -137,7 +148,13 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
       });
 
       if (ingredients && ingredients.length > 0) {
-        const recipeIngredientsData = ingredients.map((ing: IngredientInput, index: number) => {
+        const recipeIngredientsData = ingredients.map((ing: {
+            type: 'ingredient' | 'sub-recipe' | '';
+            ingredientId?: number | string;
+            subRecipeId?: number | string;
+            quantity: number | string;
+            unitId: number | string;
+        }, index: number) => {
             if ((!ing.ingredientId && !ing.subRecipeId) || !ing.quantity || !ing.unitId) {
                 throw new Error(`Invalid data for ingredient at index ${index}: requires ingredientId or subRecipeId, quantity, and unitId.`);
             }
@@ -171,8 +188,8 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
                 quantity: quantityNum ?? 0, // Default to 0 if somehow still undefined
                 unitId: unitIdNum, 
                 order: index
-            };
-        }).filter(ing => ing.ingredientId || ing.subRecipeId);
+            } as MappedIngredientData;
+        }).filter((ing: MappedIngredientData) => ing.ingredientId || ing.subRecipeId);
 
         if (recipeIngredientsData.length > 0) {
             await tx.unitQuantity.createMany({
@@ -238,7 +255,7 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
     const yieldUnit = safeParseInt(yieldUnitId);
     const categoryIdNum = safeParseInt(categoryId) ?? null;
 
-    const updatedRecipeResult = await prisma.$transaction(async (tx) => {
+    const updatedRecipeResult = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
         // Check if recipe exists before attempting update/delete
         const existingRecipe = await tx.recipe.findUnique({ where: { id: recipeId }});
         if (!existingRecipe) {
@@ -263,17 +280,13 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
         await tx.unitQuantity.deleteMany({ where: { recipeId: recipeId }});
 
         if (ingredients && ingredients.length > 0) {
-            // Define the type alias inside the scope
-            type IngredientInput = { 
-                type: 'ingredient' | 'sub-recipe' | ''; 
-                ingredientId?: number | string; 
-                subRecipeId?: number | string; 
-                quantity: number | string; 
-                unitId: number | string; 
-            };
-            
-            // Use the locally defined type alias
-            const recipeIngredientsData = ingredients.map((ing: IngredientInput, index: number) => {
+            const recipeIngredientsData = ingredients.map((ing: {
+                type: 'ingredient' | 'sub-recipe' | '';
+                ingredientId?: number | string;
+                subRecipeId?: number | string;
+                quantity: number | string;
+                unitId: number | string;
+            }, index: number) => {
                 if ((!ing.ingredientId && !ing.subRecipeId) || !ing.quantity || !ing.unitId) {
                     throw new Error(`Invalid data for ingredient at index ${index}: requires ingredientId or subRecipeId, quantity, and unitId.`);
                 }
@@ -306,8 +319,8 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
                     quantity: quantityNum ?? 0,
                     unitId: unitIdNum,
                     order: index
-                };
-             }).filter(ing => ing.ingredientId || ing.subRecipeId);
+                } as MappedIngredientData;
+             }).filter((ing: MappedIngredientData) => ing.ingredientId || ing.subRecipeId);
              
              if (recipeIngredientsData.length > 0) {
                 await tx.unitQuantity.createMany({ data: recipeIngredientsData });
