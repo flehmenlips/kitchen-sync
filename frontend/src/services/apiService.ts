@@ -55,6 +55,21 @@ export interface UnitOfMeasure {
     updatedAt: string;
 }
 
+// Interface for Ingredient data from form
+export interface IngredientFormData {
+    name: string;
+    description?: string | null;
+}
+
+// Interface for Ingredient returned by API (match prisma model)
+export interface Ingredient {
+    id: number;
+    name: string;
+    description: string | null;
+    createdAt: string;
+    updatedAt: string;
+}
+
 // API functions
 export const getRecipes = async (): Promise<Recipe[]> => {
   try {
@@ -105,6 +120,27 @@ export const createUnit = async (unitData: UnitFormData): Promise<UnitOfMeasure>
         return response.data;
     } catch (error) {
         console.error('Error creating unit:', error);
+        throw error;
+    }
+};
+
+// Ingredients
+export const getIngredients = async (): Promise<Ingredient[]> => {
+    try {
+        const response = await apiClient.get('/ingredients');
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching ingredients:', error);
+        throw error;
+    }
+};
+
+export const createIngredient = async (ingredientData: IngredientFormData): Promise<Ingredient> => {
+    try {
+        const response = await apiClient.post('/ingredients', ingredientData);
+        return response.data;
+    } catch (error) {
+        console.error('Error creating ingredient:', error);
         throw error;
     }
 };

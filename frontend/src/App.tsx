@@ -13,6 +13,8 @@ import RecipeDetail from './components/RecipeDetail'; // Uncommented import
 import CreateRecipePage from './pages/CreateRecipePage'; // Uncommented import
 import UnitListPage from './pages/UnitListPage'; // Import Unit List page
 import CreateUnitPage from './pages/CreateUnitPage'; // Import Create Unit page
+import IngredientListPage from './pages/IngredientListPage'; // Import Ingredient List page
+import CreateIngredientPage from './pages/CreateIngredientPage'; // Import Create Ingredient page
 // import RecipeDetail from './components/RecipeDetail'; // Will create this next
 // import CreateRecipePage from './pages/CreateRecipePage'; // Will create this next
 
@@ -25,7 +27,7 @@ function App() {
         <Box component="nav" sx={{ mb: 2, display: 'flex', gap: 2, justifyContent: 'center' }}>
           <RouterLink to="/recipes">Recipes</RouterLink>
           <RouterLink to="/units">Units</RouterLink>
-          {/* <RouterLink to="/ingredients">Ingredients</RouterLink> */}
+          <RouterLink to="/ingredients">Ingredients</RouterLink> {/* Added Ingredients link */}
         </Box>
 
         <Routes>
@@ -39,6 +41,10 @@ function App() {
           {/* Unit Routes */}
           <Route path="/units" element={<UnitListPage />} />
           <Route path="/units/new" element={<CreateUnitPage />} />
+
+          {/* Ingredient Routes */}
+          <Route path="/ingredients" element={<IngredientListPage />} />
+          <Route path="/ingredients/new" element={<CreateIngredientPage />} />
 
           {/* Add other routes for Ingredients, etc. later */}
           <Route path="*" element={<div>404 Not Found</div>} /> {/* Catch-all route */}
