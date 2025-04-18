@@ -132,6 +132,8 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
     const yieldUnit = safeParseInt(yieldUnitId);
     const categoryIdNum = safeParseInt(categoryId) ?? null;
 
+    const tagsArray = typeof tags === 'string' ? tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '') : [];
+
     const newRecipeWithIngredients = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const newRecipe = await tx.recipe.create({
         data: {
@@ -142,7 +144,7 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
           yieldUnitId: yieldUnit,
           prepTimeMinutes: prepTime,
           cookTimeMinutes: cookTime,
-          tags: tags || [],
+          tags: tagsArray,
           categoryId: categoryIdNum,
         },
       });
@@ -255,6 +257,8 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
     const yieldUnit = safeParseInt(yieldUnitId);
     const categoryIdNum = safeParseInt(categoryId) ?? null;
 
+    const tagsArray = typeof tags === 'string' ? tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '') : [];
+
     const updatedRecipeResult = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
         // Check if recipe exists before attempting update/delete
         const existingRecipe = await tx.recipe.findUnique({ where: { id: recipeId }});
@@ -272,7 +276,7 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
                 yieldUnitId: yieldUnit,
                 prepTimeMinutes: prepTime,
                 cookTimeMinutes: cookTime,
-                tags: tags,
+                tags: tagsArray,
                 categoryId: categoryIdNum,
             },
         });
