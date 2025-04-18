@@ -114,7 +114,6 @@ const IngredientForm: React.FC<IngredientFormProps> = ({ onSubmit, initialData, 
                     helperText={errors.name?.message}
                 />
                 <FormControl fullWidth error={!!categoriesError || categoriesLoading}>
-                    <InputLabel id="ing-category-select-label">Category (Optional)</InputLabel>
                     <Controller
                         name="ingredientCategoryId"
                         control={control}
@@ -147,6 +146,10 @@ const IngredientForm: React.FC<IngredientFormProps> = ({ onSubmit, initialData, 
                                         label="Category (Optional)" 
                                         error={!!categoriesError} 
                                         helperText={categoriesError}
+                                        InputLabelProps={{ 
+                                            ...params.InputLabelProps,
+                                            shrink: true 
+                                        }}
                                         InputProps={{
                                             ...params.InputProps,
                                             endAdornment: (
