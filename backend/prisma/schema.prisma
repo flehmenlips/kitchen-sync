@@ -22,6 +22,19 @@ enum UnitType {
   OTHER
 }
 
+model Category {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique @db.VarChar(150)
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relation: One category has many recipes
+  recipes     Recipe[]
+
+  @@map("categories")
+}
+
 model UnitOfMeasure {
   id           Int                 @id @default(autoincrement())
   name         String              @unique @db.VarChar(100)
@@ -60,6 +73,8 @@ model Recipe {
   prepTimeMinutes   Int?             @map("prep_time_minutes")
   cookTimeMinutes   Int?             @map("cook_time_minutes")
   tags              String[]         @db.Text // PostgreSQL array type
+  categoryId        Int?             @map("category_id")
+  category          Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   createdAt         DateTime         @default(now()) @map("created_at")
   updatedAt         DateTime         @updatedAt @map("updated_at")
 
@@ -69,6 +84,7 @@ model Recipe {
   usedAsSubRecipe   UnitQuantity[]   @relation("RecipeSubComponent") // Recipes where *this recipe* is used as a sub-recipe
 
   @@map("recipes")
+  @@index([categoryId])
 }
 
 // Explicit Many-to-Many / Linking Table for Recipe Ingredients & Sub-Recipes

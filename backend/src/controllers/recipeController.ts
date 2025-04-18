@@ -7,8 +7,16 @@ import prisma from '../config/db';
 // @access  Public (for now)
 export const getRecipes = async (req: Request, res: Response): Promise<void> => {
   try {
-    // TODO: Add pagination, filtering, sorting
-    const recipes = await prisma.recipe.findMany();
+    const recipes = await prisma.recipe.findMany({
+      include: { // Include category
+        category: true,
+        yieldUnit: true // Keep including yield unit too
+      },
+      orderBy: [ // Example: order by category name, then recipe name
+        { category: { name: 'asc' } },
+        { name: 'asc' },
+      ]
+    });
     res.status(200).json(recipes);
   } catch (error) {
     console.error(error);
@@ -30,8 +38,9 @@ export const getRecipeById = async (req: Request, res: Response): Promise<void> 
 
     const recipe = await prisma.recipe.findUnique({
       where: { id: recipeId },
-      include: { // Include related data
-        yieldUnit: true, // Include the yield unit details
+      include: { 
+        category: true, // Include category
+        yieldUnit: true, 
         recipeIngredients: { // Include the list of ingredients/sub-recipes
           orderBy: { order: 'asc' }, // Order them consistently
           include: {
@@ -64,6 +73,7 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
     const {
       name, description, instructions, yieldQuantity, yieldUnitId,
       prepTimeMinutes, cookTimeMinutes, tags,
+      categoryId,
       ingredients // Expect an array: [{ ingredientId?, subRecipeId?, quantity, unitId }, ...]
     } = req.body;
 
@@ -82,6 +92,7 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
     const cookTime = cookTimeMinutes ? parseInt(cookTimeMinutes, 10) : undefined;
     const yieldQty = yieldQuantity ? parseFloat(yieldQuantity) : undefined;
     const yieldUnit = yieldUnitId ? parseInt(yieldUnitId, 10) : undefined;
+    const categoryIdNum = categoryId ? parseInt(categoryId, 10) : null;
 
     // Use Prisma transaction
     const newRecipeWithIngredients = await prisma.$transaction(async (tx) => {
@@ -96,6 +107,7 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
           prepTimeMinutes: prepTime,
           cookTimeMinutes: cookTime,
           tags: tags || [],
+          categoryId: categoryIdNum,
         },
       });
 
@@ -193,6 +205,7 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
     const {
         name, description, instructions, yieldQuantity, yieldUnitId,
         prepTimeMinutes, cookTimeMinutes, tags,
+        categoryId,
         ingredients // Expect an array: [{ ingredientId?, subRecipeId?, quantity, unitId }, ...]
     } = req.body;
 
@@ -212,6 +225,7 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
     const cookTime = cookTimeMinutes ? parseInt(cookTimeMinutes, 10) : undefined;
     const yieldQty = yieldQuantity ? parseFloat(yieldQuantity) : undefined;
     const yieldUnit = yieldUnitId ? parseInt(yieldUnitId, 10) : undefined;
+    const categoryIdNum = categoryId ? parseInt(categoryId, 10) : null;
 
     // Use Prisma transaction
     const updatedRecipeResult = await prisma.$transaction(async (tx) => {
@@ -227,6 +241,7 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
                 prepTimeMinutes: prepTime,
                 cookTimeMinutes: cookTime,
                 tags: tags,
+                categoryId: categoryIdNum,
             },
         });
 
