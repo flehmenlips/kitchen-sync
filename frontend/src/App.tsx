@@ -11,6 +11,7 @@ import Box from '@mui/material/Box'; // For layout
 import RecipeList from './components/RecipeList'; // Import our new component
 import RecipeDetail from './components/RecipeDetail'; // Uncommented import
 import CreateRecipePage from './pages/CreateRecipePage'; // Uncommented import
+import EditRecipePage from './pages/EditRecipePage'; // Import Edit page
 import UnitListPage from './pages/UnitListPage'; // Import Unit List page
 import CreateUnitPage from './pages/CreateUnitPage'; // Import Create Unit page
 import IngredientListPage from './pages/IngredientListPage'; // Import Ingredient List page
@@ -36,6 +37,7 @@ function App() {
           <Route path="/recipes" element={<RecipeList />} />
           <Route path="/recipes/new" element={<CreateRecipePage />} /> {/* Use actual page component */}
           {/* <Route path="/recipes/new" element={<div>Create Recipe Page Placeholder</div>} /> */}
+          <Route path="/recipes/:id/edit" element={<EditRecipePage />} /> {/* Added Edit Route */}
           <Route path="/recipes/:id" element={<RecipeDetail />} /> {/* Uncommented route */}
 
           {/* Unit Routes */}

@@ -103,6 +103,25 @@ export const createRecipe = async (recipeData: ProcessedRecipeData): Promise<Rec
   }
 };
 
+export const updateRecipe = async (id: number, recipeData: ProcessedRecipeData): Promise<Recipe> => {
+    try {
+        const response = await apiClient.put(`/recipes/${id}`, recipeData);
+        return response.data; // Assuming backend returns the updated recipe object
+    } catch (error) {
+        console.error(`Error updating recipe ${id}:`, error);
+        throw error;
+    }
+};
+
+export const deleteRecipe = async (id: number): Promise<void> => {
+    try {
+        await apiClient.delete(`/recipes/${id}`);
+    } catch (error) {
+        console.error(`Error deleting recipe ${id}:`, error);
+        throw error;
+    }
+};
+
 // Units
 export const getUnits = async (): Promise<UnitOfMeasure[]> => {
     try {
@@ -124,6 +143,31 @@ export const createUnit = async (unitData: UnitFormData): Promise<UnitOfMeasure>
     }
 };
 
+export const updateUnit = async (id: number, unitData: UnitFormData): Promise<UnitOfMeasure> => {
+    try {
+        // Ensure empty type/abbreviation are sent as null if needed by backend
+        const payload = {
+             ...unitData,
+             type: unitData.type || null,
+             abbreviation: unitData.abbreviation || null,
+         };
+        const response = await apiClient.put(`/units/${id}`, payload);
+        return response.data;
+    } catch (error) {
+        console.error(`Error updating unit ${id}:`, error);
+        throw error;
+    }
+};
+
+export const deleteUnit = async (id: number): Promise<void> => {
+    try {
+        await apiClient.delete(`/units/${id}`);
+    } catch (error) {
+        console.error(`Error deleting unit ${id}:`, error);
+        throw error;
+    }
+};
+
 // Ingredients
 export const getIngredients = async (): Promise<Ingredient[]> => {
     try {
@@ -141,6 +185,30 @@ export const createIngredient = async (ingredientData: IngredientFormData): Prom
         return response.data;
     } catch (error) {
         console.error('Error creating ingredient:', error);
+        throw error;
+    }
+};
+
+export const updateIngredient = async (id: number, ingredientData: IngredientFormData): Promise<Ingredient> => {
+    try {
+         // Ensure empty description is sent as null if needed by backend
+        const payload = {
+             ...ingredientData,
+             description: ingredientData.description || null,
+         };
+        const response = await apiClient.put(`/ingredients/${id}`, payload);
+        return response.data;
+    } catch (error) {
+        console.error(`Error updating ingredient ${id}:`, error);
+        throw error;
+    }
+};
+
+export const deleteIngredient = async (id: number): Promise<void> => {
+    try {
+        await apiClient.delete(`/ingredients/${id}`);
+    } catch (error) {
+        console.error(`Error deleting ingredient ${id}:`, error);
         throw error;
     }
 };

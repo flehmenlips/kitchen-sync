@@ -32,8 +32,9 @@ const MOCK_INGREDIENTS = [
 ];
 // TODO: Add mock recipes for sub-recipe selection
 
-// Interface for raw form data
-interface RecipeFormData {
+// Interface for the raw form data
+// Export this interface as well
+export interface RecipeFormData {
     name: string;
     description: string;
     yieldQuantity: number | string;
