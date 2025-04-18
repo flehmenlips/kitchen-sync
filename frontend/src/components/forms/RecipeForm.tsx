@@ -220,6 +220,7 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                     labelId="yield-unit-label" 
                                     label="Yield Unit" 
                                     {...field}
+                                    value={field.value ?? ''}
                                     disabled={unitsLoading || !!unitsError}
                                 >
                                     <MenuItem value=""><em>None</em></MenuItem>
@@ -310,6 +311,7 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                                         labelId={`ingredient-item-type-label-${index}`} 
                                                         label="Type" 
                                                         {...field}
+                                                        value={field.value ?? ''}
                                                         onChange={(e) => {
                                                             field.onChange(e); // Call original onChange
                                                             // Clear the other ID field when type changes
@@ -346,6 +348,7 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                                             labelId={`ingredient-id-label-${index}`} 
                                                             label="Ingredient" 
                                                             {...field}
+                                                            value={field.value ?? ''}
                                                             disabled={ingredientsLoading || !!ingredientsError}
                                                             error={!!errors.ingredients?.[index]?.ingredientId}
                                                         >
@@ -371,6 +374,7 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                                             labelId={`subrecipe-id-label-${index}`} 
                                                             label="Sub-Recipe" 
                                                             {...field}
+                                                            value={field.value ?? ''}
                                                             disabled={subRecipesLoading || !!subRecipesError}
                                                             error={!!errors.ingredients?.[index]?.subRecipeId}
                                                         >
@@ -421,7 +425,13 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                                 defaultValue=""
                                                 rules={{ required: 'Unit required' }}
                                                 render={({ field }) => (
-                                                    <Select /* ... props ... */ >
+                                                    <Select 
+                                                        labelId={`ingredient-unit-label-${index}`}
+                                                        label="Unit"
+                                                        {...field} 
+                                                        value={field.value ?? ''}
+                                                        disabled={unitsLoading || !!unitsError}
+                                                    >
                                                          <MenuItem value=""><em>Unit</em></MenuItem>
                                                         {units.map(unit => (
                                                             <MenuItem key={unit.id} value={unit.id}>{unit.abbreviation || unit.name}</MenuItem>
