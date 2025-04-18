@@ -38,6 +38,23 @@ export interface Recipe {
   recipeIngredients?: RecipeIngredient[]; // Optional based on fetch endpoint
 }
 
+// Interface for Unit data from form
+export interface UnitFormData {
+    name: string;
+    abbreviation?: string | null;
+    type?: string | null; // Match backend enum keys (WEIGHT, VOLUME, etc.)
+}
+
+// Interface for Unit returned by API (match prisma model)
+export interface UnitOfMeasure {
+    id: number;
+    name: string;
+    abbreviation: string | null;
+    type: string | null; // Consider using the enum type if shared
+    createdAt: string;
+    updatedAt: string;
+}
+
 // API functions
 export const getRecipes = async (): Promise<Recipe[]> => {
   try {
@@ -69,6 +86,27 @@ export const createRecipe = async (recipeData: ProcessedRecipeData): Promise<Rec
     console.error('Error creating recipe:', error);
     throw error; // Re-throw for the component to handle
   }
+};
+
+// Units
+export const getUnits = async (): Promise<UnitOfMeasure[]> => {
+    try {
+        const response = await apiClient.get('/units');
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching units:', error);
+        throw error;
+    }
+};
+
+export const createUnit = async (unitData: UnitFormData): Promise<UnitOfMeasure> => {
+    try {
+        const response = await apiClient.post('/units', unitData);
+        return response.data;
+    } catch (error) {
+        console.error('Error creating unit:', error);
+        throw error;
+    }
 };
 
 // Add other functions (update, delete for recipes, units, ingredients) here later

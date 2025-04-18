@@ -3,24 +3,44 @@ import {
   BrowserRouter as Router,
   Routes,
   Route,
-  Navigate
+  Navigate,
+  Link as RouterLink // Import Link for navigation
 } from 'react-router-dom';
 import './App.css'; // Keep basic styling
+import Box from '@mui/material/Box'; // For layout
 import RecipeList from './components/RecipeList'; // Import our new component
 import RecipeDetail from './components/RecipeDetail'; // Uncommented import
+import CreateRecipePage from './pages/CreateRecipePage'; // Uncommented import
+import UnitListPage from './pages/UnitListPage'; // Import Unit List page
+import CreateUnitPage from './pages/CreateUnitPage'; // Import Create Unit page
 // import RecipeDetail from './components/RecipeDetail'; // Will create this next
+// import CreateRecipePage from './pages/CreateRecipePage'; // Will create this next
 
 function App() {
   return (
     <Router>
       <div className="App">
         <h1>KitchenSync</h1>
+        {/* Temporary Navigation */}
+        <Box component="nav" sx={{ mb: 2, display: 'flex', gap: 2, justifyContent: 'center' }}>
+          <RouterLink to="/recipes">Recipes</RouterLink>
+          <RouterLink to="/units">Units</RouterLink>
+          {/* <RouterLink to="/ingredients">Ingredients</RouterLink> */}
+        </Box>
+
         <Routes>
           {/* Default route redirects to recipes list */}
           <Route path="/" element={<Navigate replace to="/recipes" />} />
           <Route path="/recipes" element={<RecipeList />} />
+          <Route path="/recipes/new" element={<CreateRecipePage />} /> {/* Use actual page component */}
+          {/* <Route path="/recipes/new" element={<div>Create Recipe Page Placeholder</div>} /> */}
           <Route path="/recipes/:id" element={<RecipeDetail />} /> {/* Uncommented route */}
-          {/* Add other routes for Units, Ingredients, etc. later */}
+
+          {/* Unit Routes */}
+          <Route path="/units" element={<UnitListPage />} />
+          <Route path="/units/new" element={<CreateUnitPage />} />
+
+          {/* Add other routes for Ingredients, etc. later */}
           <Route path="*" element={<div>404 Not Found</div>} /> {/* Catch-all route */}
         </Routes>
       </div>
