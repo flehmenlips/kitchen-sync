@@ -23,6 +23,9 @@ import CategoryListPage from './pages/CategoryListPage';
 import CreateCategoryPage from './pages/CreateCategoryPage'; 
 import EditCategoryPage from './pages/EditCategoryPage';
 import Typography from '@mui/material/Typography';
+import IngredientCategoryListPage from './pages/IngredientCategoryListPage';
+import CreateIngredientCategoryPage from './pages/CreateIngredientCategoryPage';
+import EditIngredientCategoryPage from './pages/EditIngredientCategoryPage';
 
 // Placeholder Dashboard Component
 const Dashboard = () => <Typography variant="h5">Dashboard Content Placeholder</Typography>;
@@ -57,6 +60,11 @@ function App() {
             <Route path="categories" element={<CategoryListPage />} />
             <Route path="categories/new" element={<CreateCategoryPage />} />
             <Route path="categories/:id/edit" element={<EditCategoryPage />} />
+
+            {/* Ingredient Category Routes */}
+            <Route path="ingredient-categories" element={<IngredientCategoryListPage />} />
+            <Route path="ingredient-categories/new" element={<CreateIngredientCategoryPage />} />
+            <Route path="ingredient-categories/:id/edit" element={<EditIngredientCategoryPage />} />
 
             {/* Catch-all within layout */}
             <Route path="*" element={<div>404 Page Not Found</div>} /> 

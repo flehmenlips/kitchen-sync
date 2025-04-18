@@ -14,6 +14,7 @@ import MenuBookIcon from '@mui/icons-material/MenuBook'; // For Recipes
 import ScaleIcon from '@mui/icons-material/Scale'; // For Units
 import BlenderIcon from '@mui/icons-material/Blender'; // For Ingredients
 import CategoryIcon from '@mui/icons-material/Category'; // Import Category icon
+import ClassIcon from '@mui/icons-material/Class'; // Icon for Ingredient Categories?
 // TODO: Add icons for other modules later
 
 interface NavItem {
@@ -25,9 +26,10 @@ interface NavItem {
 const mainNavItems: NavItem[] = [
   { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
   { text: 'Recipes', icon: <MenuBookIcon />, path: '/recipes' },
-  { text: 'Units', icon: <ScaleIcon />, path: '/units' },
+  { text: 'Categories', icon: <CategoryIcon />, path: '/categories' }, // Recipe Categories
   { text: 'Ingredients', icon: <BlenderIcon />, path: '/ingredients' },
-  { text: 'Categories', icon: <CategoryIcon />, path: '/categories' },
+  { text: 'Ingr Categories', icon: <ClassIcon />, path: '/ingredient-categories' }, // Ingredient Categories
+  { text: 'Units', icon: <ScaleIcon />, path: '/units' },
 ];
 
 // Placeholder for other future sections

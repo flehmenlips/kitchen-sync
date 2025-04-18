@@ -86,6 +86,23 @@ export interface Category {
     updatedAt: string;
 }
 
+// --- Category Types (Recipe) ---
+// ...
+
+// --- Ingredient Category Types ---
+export interface IngredientCategoryFormData {
+    name: string;
+    description?: string | null;
+}
+
+export interface IngredientCategory {
+    id: number;
+    name: string;
+    description: string | null;
+    createdAt: string;
+    updatedAt: string;
+}
+
 // API functions
 export const getRecipes = async (): Promise<Recipe[]> => {
   try {
@@ -297,6 +314,59 @@ export const deleteCategory = async (id: number): Promise<void> => {
         await apiClient.delete(`/categories/${id}`);
     } catch (error) {
         console.error(`Error deleting category ${id}:`, error);
+        throw error;
+    }
+};
+
+// == Ingredient Categories ==
+export const getIngredientCategories = async (): Promise<IngredientCategory[]> => {
+    try {
+        const response = await apiClient.get('/ingredient-categories');
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching ingredient categories:', error);
+        throw error;
+    }
+};
+
+export const createIngredientCategory = async (categoryData: IngredientCategoryFormData): Promise<IngredientCategory> => {
+    try {
+        const payload = { ...categoryData, description: categoryData.description || null };
+        const response = await apiClient.post('/ingredient-categories', payload);
+        return response.data;
+    } catch (error) {
+        console.error('Error creating ingredient category:', error);
+        throw error;
+    }
+};
+
+export const updateIngredientCategory = async (id: number, categoryData: IngredientCategoryFormData): Promise<IngredientCategory> => {
+    try {
+        const payload = { ...categoryData, description: categoryData.description || null };
+        const response = await apiClient.put(`/ingredient-categories/${id}`, payload);
+        return response.data;
+    } catch (error) {
+        console.error(`Error updating ingredient category ${id}:`, error);
+        throw error;
+    }
+};
+
+export const deleteIngredientCategory = async (id: number): Promise<void> => {
+    try {
+        await apiClient.delete(`/ingredient-categories/${id}`);
+    } catch (error) {
+        console.error(`Error deleting ingredient category ${id}:`, error);
+        throw error;
+    }
+};
+
+// Optional Get By ID
+export const getIngredientCategoryById = async (id: number): Promise<IngredientCategory> => {
+     try {
+        const response = await apiClient.get(`/ingredient-categories/${id}`);
+        return response.data;
+    } catch (error) {
+        console.error(`Error fetching ingredient category ${id}:`, error);
         throw error;
     }
 };

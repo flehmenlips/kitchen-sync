@@ -1,0 +1,76 @@
+import React from 'react';
+import { useForm } from 'react-hook-form';
+import { Box, TextField, Button, Stack } from '@mui/material';
+
+// Raw form data
+export interface IngredientCategoryFormData {
+    name: string;
+    description: string | null;
+}
+
+// Processed data for API
+interface ProcessedIngredientCategoryFormData {
+    name: string;
+    description: string | null;
+}
+
+interface IngredientCategoryFormProps {
+    onSubmit: (data: ProcessedIngredientCategoryFormData) => void;
+    initialData?: Partial<IngredientCategoryFormData>;
+    isSubmitting: boolean;
+}
+
+const IngredientCategoryForm: React.FC<IngredientCategoryFormProps> = ({ onSubmit, initialData, isSubmitting }) => {
+    const {
+        handleSubmit,
+        register,
+        formState: { errors },
+    } = useForm<IngredientCategoryFormData>({
+        defaultValues: {
+             name: initialData?.name || '',
+             description: initialData?.description || '',
+        }
+    });
+
+    const handleFormSubmit = (data: IngredientCategoryFormData) => {
+        const payload: ProcessedIngredientCategoryFormData = {
+            ...data,
+            description: data.description || null,
+        };
+        onSubmit(payload);
+    };
+
+    return (
+        <Box component="form" onSubmit={handleSubmit(handleFormSubmit)} noValidate sx={{ mt: 1 }}>
+            <Stack spacing={2}>
+                <TextField
+                    {...register("name", { required: "Category name is required" })}
+                    label="Ingredient Category Name"
+                    fullWidth
+                    required
+                    error={!!errors.name}
+                    helperText={errors.name?.message}
+                />
+                <TextField
+                    {...register("description")}
+                    label="Description (Optional)"
+                    fullWidth
+                    multiline
+                    rows={3}
+                />
+            </Stack>
+
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              sx={{ mt: 3, mb: 2 }}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Saving...' : (initialData ? 'Save Changes' : 'Create Category')}
+            </Button>
+        </Box>
+    );
+};
+
+export default IngredientCategoryForm; 
