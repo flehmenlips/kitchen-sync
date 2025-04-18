@@ -33,6 +33,8 @@ export interface Recipe {
   prepTimeMinutes: number | null;
   cookTimeMinutes: number | null;
   tags: string[];
+  categoryId: number | null; // Added categoryId from backend
+  category: Category | null; // Added OPTIONAL nested category object
   createdAt: string; // Assuming ISO string format from backend
   updatedAt: string;
   recipeIngredients?: RecipeIngredient[]; // Optional based on fetch endpoint

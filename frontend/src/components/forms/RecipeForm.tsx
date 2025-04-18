@@ -32,10 +32,14 @@ import {
     getRecipes,
     Recipe,
     createUnit,
-    createIngredient
+    createIngredient,
+    getCategories,
+    Category,
+    createCategory
 } from '../../services/apiService';
 import UnitForm from './UnitForm';
 import IngredientForm from './IngredientForm';
+import CategoryForm from './CategoryForm';
 
 // Interface for the raw form data
 // Export this interface as well
@@ -48,6 +52,7 @@ export interface RecipeFormData {
     cookTimeMinutes: number | string;
     tags: string;
     instructions: string;
+    categoryId: number | string;
     ingredients: {
         type: 'ingredient' | 'sub-recipe' | '';
         ingredientId?: number | string;
@@ -67,6 +72,7 @@ export interface ProcessedRecipeData {
     cookTimeMinutes: number | null;
     tags: string[];
     instructions: string;
+    categoryId: number | null;
     ingredients: { 
         ingredientId?: number;
         subRecipeId?: number; 
@@ -98,6 +104,13 @@ const CREATE_NEW_INGREDIENT_OPTION: Ingredient = {
     createdAt: '',
     updatedAt: ''
 };
+const CREATE_NEW_CATEGORY_OPTION: Category = {
+    id: -1,
+    name: "+ Create New Category",
+    description: null,
+    createdAt: '',
+    updatedAt: ''
+};
 
 const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmitting }) => {
     const {
@@ -117,6 +130,7 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
             cookTimeMinutes: '',
             tags: '',
             instructions: '',
+            categoryId: '',
             ingredients: [{ type: '', ingredientId: '', quantity: '', unitId: '' }]
         }
     });
@@ -136,10 +150,13 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
     const [subRecipesList, setSubRecipesList] = useState<Recipe[]>([]);
     const [subRecipesLoading, setSubRecipesLoading] = useState<boolean>(true);
     const [subRecipesError, setSubRecipesError] = useState<string | null>(null);
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [categoriesLoading, setCategoriesLoading] = useState<boolean>(true);
+    const [categoriesError, setCategoriesError] = useState<string | null>(null);
 
     // State for the creation modal
     const [modalOpen, setModalOpen] = useState(false);
-    const [modalType, setModalType] = useState<'unit' | 'ingredient' | null>(null);
+    const [modalType, setModalType] = useState<'unit' | 'ingredient' | 'category' | null>(null);
     // Store the index of the ingredient row that triggered the modal
     const [modalTargetIndex, setModalTargetIndex] = useState<number | null>(null); 
     const [modalSubmitError, setModalSubmitError] = useState<string | null>(null);
@@ -151,28 +168,33 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
             setUnitsLoading(true);
             setIngredientsLoading(true);
             setSubRecipesLoading(true);
+            setCategoriesLoading(true);
             try {
-                const [fetchedUnits, fetchedIngredients, fetchedRecipes] = await Promise.all([
+                const [fetchedUnits, fetchedIngredients, fetchedRecipes, fetchedCategories] = await Promise.all([
                     getUnits(),
                     getIngredients(),
-                    getRecipes()
+                    getRecipes(),
+                    getCategories()
                 ]);
-                // Add placeholders to the fetched lists
                 setUnits([CREATE_NEW_UNIT_OPTION, ...fetchedUnits]);
                 setIngredientsList([CREATE_NEW_INGREDIENT_OPTION, ...fetchedIngredients]);
-                setSubRecipesList(fetchedRecipes); // No create new for sub-recipes yet
+                setSubRecipesList(fetchedRecipes);
+                setCategories([CREATE_NEW_CATEGORY_OPTION, ...fetchedCategories]);
                 setUnitsError(null);
                 setIngredientsError(null);
                 setSubRecipesError(null);
+                setCategoriesError(null);
             } catch (error) {
                 console.error("Failed to load select data:", error);
                 setUnitsError("Could not load units.");
                 setIngredientsError("Could not load ingredients.");
                 setSubRecipesError("Could not load potential sub-recipes.");
+                setCategoriesError("Could not load categories.");
             } finally {
                 setUnitsLoading(false);
                 setIngredientsLoading(false);
                 setSubRecipesLoading(false);
+                setCategoriesLoading(false);
             }
         };
         loadSelectData();
@@ -192,6 +214,7 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
             yieldUnitId: data.yieldUnitId ? parseInt(data.yieldUnitId as string, 10) : null,
             prepTimeMinutes: data.prepTimeMinutes ? parseInt(data.prepTimeMinutes as string, 10) : null,
             cookTimeMinutes: data.cookTimeMinutes ? parseInt(data.cookTimeMinutes as string, 10) : null,
+            categoryId: data.categoryId ? parseInt(data.categoryId as string, 10) : null,
             ingredients: data.ingredients.map((ing, index) => ({
                 ingredientId: ing.type === 'ingredient' && ing.ingredientId ? parseInt(ing.ingredientId as string, 10) : undefined,
                 subRecipeId: ing.type === 'sub-recipe' && ing.subRecipeId ? parseInt(ing.subRecipeId as string, 10) : undefined,
@@ -204,7 +227,7 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
     };
 
     // --- Modal Logic --- 
-    const handleOpenModal = (type: 'unit' | 'ingredient', index: number) => {
+    const handleOpenModal = (type: 'unit' | 'ingredient' | 'category', index: number) => {
         setModalSubmitError(null); // Clear previous errors
         setModalType(type);
         setModalTargetIndex(index); 
@@ -219,7 +242,7 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
     };
 
     // Handle successful creation within the modal
-    const handleModalCreateSuccess = (newItem: UnitOfMeasure | Ingredient, type: 'unit' | 'ingredient') => {
+    const handleModalCreateSuccess = (newItem: UnitOfMeasure | Ingredient | Category, type: 'unit' | 'ingredient' | 'category') => {
         let fieldToUpdate: string | null = null;
         if (type === 'unit') {
             setUnits(prev => [CREATE_NEW_UNIT_OPTION, ...prev.filter(u => u.id !== -1), newItem as UnitOfMeasure].sort((a, b) => a.id === -1 ? -1 : (b.id === -1 ? 1: a.name.localeCompare(b.name))));
@@ -235,6 +258,9 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                 setValue(`ingredients.${modalTargetIndex}.subRecipeId`, ''); 
                 fieldToUpdate = `ingredients.${modalTargetIndex}.ingredientId`;
             }
+        } else if (type === 'category') {
+            setCategories(prev => [CREATE_NEW_CATEGORY_OPTION, ...prev.filter(c => c.id !== -1), newItem as Category].sort((a, b) => a.id === -1 ? -1 : (b.id === -1 ? 1 : a.name.localeCompare(b.name))));
+            fieldToUpdate = `categoryId`;
         }
         if (fieldToUpdate) {
             setValue(fieldToUpdate as any, newItem.id, { shouldValidate: true });
@@ -351,6 +377,59 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                 helperText={errors.instructions?.message}
                 sx={{ mb: 2 }}
             />
+
+            {/* Category Selector */}
+            <FormControl fullWidth sx={{ mb: 2 }} error={!!categoriesError || categoriesLoading}>
+                <InputLabel id="category-select-label">Category (Optional)</InputLabel>
+                <Controller
+                    name="categoryId"
+                    control={control}
+                    defaultValue=""
+                    render={({ field }) => (
+                        <Autocomplete
+                            options={categories} // Use fetched categories
+                            getOptionLabel={(option) => option.name || ''}
+                            value={categories.find(cat => cat.id === field.value) || null}
+                            onChange={(event, newValue) => {
+                                if (newValue && newValue.id === CREATE_NEW_CATEGORY_OPTION.id) {
+                                    handleOpenModal('category', -2); // Use different special index for category
+                                } else {
+                                    field.onChange(newValue ? newValue.id : '');
+                                }
+                            }}
+                            isOptionEqualToValue={(option, value) => option.id === value?.id}
+                            renderOption={(props, option) => (
+                                <Box component="li" {...props} key={option.id}>
+                                    {option.id === CREATE_NEW_CATEGORY_OPTION.id ? 
+                                        <Typography color="primary">{option.name}</Typography> : 
+                                        option.name
+                                    }
+                                </Box>
+                            )}
+                            loading={categoriesLoading}
+                            disabled={categoriesLoading || !!categoriesError}
+                            renderInput={(params) => (
+                                <TextField 
+                                    {...params} 
+                                    label="Category (Optional)" 
+                                    error={!!categoriesError} 
+                                    helperText={categoriesError}
+                                    InputProps={{
+                                        ...params.InputProps,
+                                        endAdornment: (
+                                            <>
+                                                {categoriesLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                                                {params.InputProps.endAdornment}
+                                            </>
+                                        ),
+                                    }}
+                                />
+                            )}
+                            // No fullWidth needed on Autocomplete itself when in FormControl
+                        />
+                    )}
+                />
+            </FormControl>
 
             <Box>
                 <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Ingredients</Typography>
@@ -598,7 +677,9 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
             {/* Creation Modal */}
             <Dialog open={modalOpen} onClose={handleCloseModal} maxWidth="xs" fullWidth>
                 <DialogTitle>
-                    {modalType === 'unit' ? 'Create New Unit' : 'Create New Ingredient'}
+                    {modalType === 'unit' ? 'Create New Unit' : 
+                     modalType === 'ingredient' ? 'Create New Ingredient' : 
+                     modalType === 'category' ? 'Create New Category' : 'Create New'}
                 </DialogTitle>
                 <DialogContent>
                     {modalSubmitError && <Alert severity="error" sx={{ mb: 2 }}>{modalSubmitError}</Alert>}
@@ -636,6 +717,24 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                     setIsModalSubmitting(false);
                                 }
                             }}
+                        />
+                    )}
+                    {modalType === 'category' && (
+                        <CategoryForm 
+                            isSubmitting={isModalSubmitting}
+                            onSubmit={async (data) => {
+                                setIsModalSubmitting(true);
+                                setModalSubmitError(null);
+                                try {
+                                    const newCat = await createCategory(data as any);
+                                    handleModalCreateSuccess(newCat, 'category');
+                                } catch (err: any) {
+                                    const msg = err.response?.data?.message || err.message || 'Failed to create category';
+                                    setModalSubmitError(msg);
+                                } finally {
+                                    setIsModalSubmitting(false);
+                                }
+                            }} 
                         />
                     )}
                 </DialogContent>

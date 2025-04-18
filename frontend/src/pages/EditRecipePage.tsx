@@ -84,6 +84,7 @@ const EditRecipePage: React.FC = () => {
         cookTimeMinutes: recipeData.cookTimeMinutes?.toString() || '',
         tags: recipeData.tags?.join(', ') || '',
         instructions: recipeData.instructions || '',
+        categoryId: recipeData.category?.id || '',
         ingredients: recipeData.recipeIngredients?.map(ing => ({
             // Determine type based on which ID exists
             type: ing.ingredient ? 'ingredient' : (ing.subRecipe ? 'sub-recipe' : ''), 
