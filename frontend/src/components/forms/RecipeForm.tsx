@@ -62,7 +62,7 @@ export interface ProcessedRecipeData {
         ingredientId?: number;
         subRecipeId?: number; 
         quantity: number; 
-        unitId: number; 
+        unitId: number | null;
         order: number; 
     }[];
 }
@@ -160,8 +160,8 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
             ingredients: data.ingredients.map((ing, index) => ({
                 ingredientId: ing.type === 'ingredient' && ing.ingredientId ? parseInt(ing.ingredientId as string, 10) : undefined,
                 subRecipeId: ing.type === 'sub-recipe' && ing.subRecipeId ? parseInt(ing.subRecipeId as string, 10) : undefined,
-                quantity: ing.quantity ? parseFloat(ing.quantity as string) : 0, 
-                unitId: ing.unitId ? parseInt(ing.unitId as string, 10) : 0, 
+                quantity: ing.quantity ? parseFloat(ing.quantity as string) : 0,
+                unitId: ing.unitId ? parseInt(ing.unitId as string, 10) : null,
                 order: index
             })).filter(ing => ing.ingredientId || ing.subRecipeId)
         };
