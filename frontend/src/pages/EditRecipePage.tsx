@@ -82,13 +82,20 @@ const EditRecipePage: React.FC = () => {
         tags: recipeData.tags?.join(', ') || '',
         instructions: recipeData.instructions || '',
         ingredients: recipeData.recipeIngredients?.map(ing => ({
+            // Determine type based on which ID exists
+            type: ing.ingredient ? 'ingredient' : (ing.subRecipe ? 'sub-recipe' : ''), 
             ingredientId: ing.ingredient?.id || '',
             subRecipeId: ing.subRecipe?.id || '',
             quantity: ing.quantity.toString(),
             unitId: ing.unit.id || '',
-        })) || [{ ingredientId: '', quantity: '', unitId: '' }] // Default if no ingredients
+        })) || [{ type: '', ingredientId: '', quantity: '', unitId: '' }] // Ensure default includes type
     };
   };
+
+  // Transform fetched data for the form
+  const transformIngredientToFormData = ( /* ... */ ): Partial<IngredientFormData> | undefined => { /* ... */ };
+  const initialFormData = transformRecipeToFormData(recipe);
+  console.log('Initial data passed to RecipeForm:', initialFormData);
 
   if (loading) {
     return (
@@ -124,7 +131,7 @@ const EditRecipePage: React.FC = () => {
       <RecipeForm 
         onSubmit={handleFormSubmit} 
         isSubmitting={isSubmitting} 
-        initialData={transformRecipeToFormData(recipe)} 
+        initialData={initialFormData}
       /> 
 
     </Container>
