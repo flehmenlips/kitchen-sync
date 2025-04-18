@@ -19,6 +19,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import Stack from '@mui/material/Stack';
 import ConfirmationDialog from '../components/common/ConfirmationDialog';
 import { useSnackbar } from '../context/SnackbarContext';
+import ListItemButton from '@mui/material/ListItemButton';
 
 const CategoryListPage: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -115,13 +116,14 @@ const CategoryListPage: React.FC = () => {
                         key={category.id} 
                         disablePadding
                         secondaryAction={
-                             <Stack direction="row" spacing={1}>
+                             <Stack direction="row" spacing={0.5}>
                                 <IconButton 
                                     edge="end" 
                                     aria-label="edit" 
                                     component={RouterLink} 
                                     to={`/categories/${category.id}/edit`}
                                     size="small"
+                                    title="Edit Category"
                                 >
                                     <EditIcon fontSize="small"/>
                                 </IconButton>
@@ -132,16 +134,19 @@ const CategoryListPage: React.FC = () => {
                                     disabled={isDeleting && categoryToDelete?.id === category.id}
                                     color="error"
                                     size="small"
+                                    title="Delete Category"
                                 >
                                      <DeleteIcon fontSize="small"/>
                                 </IconButton>
                             </Stack>
                         }
                     >
-                        <ListItemText
-                            primary={category.name}
-                            secondary={category.description || ''} 
-                        />
+                        <ListItemButton component={RouterLink} to={`/categories/${category.id}/edit`} sx={{ pr: 15 }}>
+                            <ListItemText
+                                primary={category.name}
+                                secondary={category.description || ''} 
+                            />
+                        </ListItemButton>
                     </ListItem>
                 ))}
             </List>

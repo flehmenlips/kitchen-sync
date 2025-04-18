@@ -20,6 +20,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import Stack from '@mui/material/Stack';
 import ConfirmationDialog from '../components/common/ConfirmationDialog';
+import ListItemButton from '@mui/material/ListItemButton';
 
 const UnitListPage: React.FC = () => {
   const [units, setUnits] = useState<UnitOfMeasure[]>([]);
@@ -132,13 +133,14 @@ const UnitListPage: React.FC = () => {
                         key={unit.id} 
                         disablePadding
                         secondaryAction={
-                            <Stack direction="row" spacing={1}>
+                             <Stack direction="row" spacing={0.5}>
                                 <IconButton 
                                     edge="end" 
                                     aria-label="edit" 
                                     component={RouterLink} 
                                     to={`/units/${unit.id}/edit`}
                                     size="small"
+                                    title="Edit Unit"
                                 >
                                     <EditIcon fontSize="small"/>
                                 </IconButton>
@@ -149,16 +151,19 @@ const UnitListPage: React.FC = () => {
                                     disabled={isDeleting && unitToDelete?.id === unit.id}
                                     color="error"
                                     size="small"
+                                    title="Delete Unit"
                                 >
-                                    <DeleteIcon fontSize="small"/>
+                                     <DeleteIcon fontSize="small"/>
                                 </IconButton>
                             </Stack>
                         }
                     >
-                        <ListItemText
-                            primary={`${unit.name}${unit.abbreviation ? ` (${unit.abbreviation})` : ''}`}
-                            secondary={`Type: ${unit.type || 'N/A'} | ID: ${unit.id}`}
-                        />
+                        <ListItemButton component={RouterLink} to={`/units/${unit.id}/edit`} sx={{ pr: 15 }}>
+                            <ListItemText
+                                primary={`${unit.name}${unit.abbreviation ? ` (${unit.abbreviation})` : ''}`}
+                                secondary={`Type: ${unit.type || 'N/A'}`}
+                            />
+                        </ListItemButton>
                     </ListItem>
                 ))}
             </List>

@@ -20,6 +20,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import Stack from '@mui/material/Stack';
 import ConfirmationDialog from '../components/common/ConfirmationDialog';
+import ListItemButton from '@mui/material/ListItemButton';
 
 const IngredientListPage: React.FC = () => {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
@@ -133,13 +134,14 @@ const IngredientListPage: React.FC = () => {
                         key={ingredient.id} 
                         disablePadding
                         secondaryAction={
-                             <Stack direction="row" spacing={1}>
+                             <Stack direction="row" spacing={0.5}>
                                 <IconButton 
                                     edge="end" 
                                     aria-label="edit" 
                                     component={RouterLink} 
                                     to={`/ingredients/${ingredient.id}/edit`}
                                     size="small"
+                                    title="Edit Ingredient"
                                 >
                                     <EditIcon fontSize="small"/>
                                 </IconButton>
@@ -150,16 +152,19 @@ const IngredientListPage: React.FC = () => {
                                     disabled={isDeleting && ingredientToDelete?.id === ingredient.id}
                                     color="error"
                                     size="small"
+                                    title="Delete Ingredient"
                                 >
                                      <DeleteIcon fontSize="small"/>
                                 </IconButton>
                             </Stack>
                         }
                     >
-                        <ListItemText
-                            primary={ingredient.name}
-                            secondary={ingredient.description || ''} 
-                        />
+                        <ListItemButton component={RouterLink} to={`/ingredients/${ingredient.id}/edit`} sx={{ pr: 15 }}>
+                            <ListItemText
+                                primary={ingredient.name}
+                                secondary={ingredient.description || ''} 
+                            />
+                         </ListItemButton>
                     </ListItem>
                 ))}
             </List>
