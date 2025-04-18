@@ -11,26 +11,14 @@ import {
     FormControl,
     InputLabel,
     IconButton,
-    Paper
+    Paper,
+    Alert
 } from '@mui/material';
 import { GridTypeMap } from '@mui/material/Grid';
 import { DefaultComponentProps } from '@mui/material/OverridableComponent';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
-import { getUnits, UnitOfMeasure } from '../../services/apiService';
-
-// Assume we fetch these from the API eventually
-// TODO: Fetch units and ingredients from API
-const MOCK_INGREDIENTS = [
-    { id: 1, name: 'Eggs' },
-    { id: 2, name: 'Milk' },
-    { id: 3, name: 'Butter' },
-    { id: 4, name: 'Salt' },
-    { id: 5, name: 'Black Pepper' },
-    { id: 6, name: 'Bacon' },
-    // Add other ingredients created via API
-];
-// TODO: Add mock recipes for sub-recipe selection
+import { getUnits, UnitOfMeasure, getIngredients, Ingredient } from '../../services/apiService';
 
 // Interface for the raw form data
 // Export this interface as well
@@ -102,28 +90,45 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
         name: "ingredients"
     });
 
-    // State for fetched units
+    // State for fetched units AND ingredients
     const [units, setUnits] = useState<UnitOfMeasure[]>([]);
     const [unitsLoading, setUnitsLoading] = useState<boolean>(true);
     const [unitsError, setUnitsError] = useState<string | null>(null);
+    const [ingredientsList, setIngredientsList] = useState<Ingredient[]>([]);
+    const [ingredientsLoading, setIngredientsLoading] = useState<boolean>(true);
+    const [ingredientsError, setIngredientsError] = useState<string | null>(null);
 
-    // Fetch units on component mount
+    // Fetch units AND ingredients on component mount
     useEffect(() => {
-        const loadUnits = async () => {
+        const loadSelectData = async () => {
             try {
+                // Fetch units
                 setUnitsLoading(true);
                 const fetchedUnits = await getUnits();
                 setUnits(fetchedUnits);
                 setUnitsError(null);
             } catch (error) {
                 console.error("Failed to fetch units:", error);
-                setUnitsError("Could not load units for selection.");
+                setUnitsError("Could not load units.");
             } finally {
                 setUnitsLoading(false);
             }
+            
+            try {
+                 // Fetch ingredients
+                setIngredientsLoading(true);
+                const fetchedIngredients = await getIngredients();
+                setIngredientsList(fetchedIngredients);
+                setIngredientsError(null);
+            } catch (error) {
+                 console.error("Failed to fetch ingredients:", error);
+                setIngredientsError("Could not load ingredients.");
+            } finally {
+                 setIngredientsLoading(false);
+            }
         };
-        loadUnits();
-    }, []); // Empty dependency array ensures this runs only once
+        loadSelectData();
+    }, []); 
 
     const handleFormSubmit = (data: RecipeFormData) => {
         // Process data before calling onSubmit
@@ -264,20 +269,34 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                 {/* Dynamic Ingredients Section */}
                 <Grid item xs={12} component={'div' as React.ElementType}>
                     <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Ingredients</Typography>
+                    {/* Display overall loading/error for selects */} 
+                    {(unitsError || ingredientsError) && (
+                        <Alert severity="warning" sx={{ mb: 1 }}>
+                            {unitsError} {ingredientsError}
+                        </Alert>
+                    )}
                     {fields.map((item, index) => (
                          <Paper key={item.id} sx={{ p: 1.5, mb: 1.5, position: 'relative' }}>
                             <Grid container spacing={1} alignItems="center">
-                                <Grid item xs={12} sm={4} component={'div' as React.ElementType}>
-                                    <FormControl fullWidth size="small">
+                                <Grid item xs={12} sm={4} component={'div' as React.ElementType}> 
+                                    {/* Ingredient Select (now dynamic) */} 
+                                    <FormControl fullWidth size="small" error={!!ingredientsError || ingredientsLoading}> 
                                         <InputLabel id={`ingredient-type-label-${index}`}>Item</InputLabel>
+                                        {/* TODO: Enhance to choose Ingredient vs Sub-Recipe */}
                                         <Controller
                                             name={`ingredients.${index}.ingredientId`}
                                             control={control}
                                             defaultValue=""
                                             render={({ field }) => (
-                                                <Select labelId={`ingredient-type-label-${index}`} label="Item" {...field}>
+                                                <Select 
+                                                    labelId={`ingredient-type-label-${index}`} 
+                                                    label="Item" 
+                                                    {...field}
+                                                    disabled={ingredientsLoading || !!ingredientsError}
+                                                >
                                                      <MenuItem value=""><em>Select Ingredient</em></MenuItem>
-                                                     {MOCK_INGREDIENTS.map(ing => (
+                                                     {/* Use fetched ingredientsList */}
+                                                     {ingredientsList.map(ing => (
                                                         <MenuItem key={ing.id} value={ing.id}>{ing.name}</MenuItem>
                                                     ))}
                                                 </Select>
