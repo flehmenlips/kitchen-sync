@@ -9,7 +9,15 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Box from '@mui/material/Box';
 import UnitForm from '../components/forms/UnitForm'; // Re-use the form
 import { getUnitById, updateUnit, UnitOfMeasure, UnitFormData } from '../services/apiService';
+import { useSnackbar } from '../context/SnackbarContext'; // Import hook
 import { AxiosError } from 'axios';
+
+// Define the type for the processed form data expected by onSubmit
+interface ProcessedUnitFormData {
+    name: string;
+    abbreviation: string | null;
+    type: string | null;
+}
 
 const EditUnitPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +27,7 @@ const EditUnitPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const { showSnackbar } = useSnackbar(); // Use hook
 
   useEffect(() => {
     const fetchUnit = async () => {
@@ -44,23 +53,21 @@ const EditUnitPage: React.FC = () => {
     fetchUnit();
   }, [id]);
 
-  const handleFormSubmit = async (formData: UnitFormData) => {
+  const handleFormSubmit = async (formData: ProcessedUnitFormData) => { // Expect Processed type
     if (!id) return;
     setSubmitError(null);
     setIsSubmitting(true);
     console.log('Submitting updated Unit data:', formData);
-     // Ensure type is null if empty string is submitted from form
-    const payload = {
-      ...formData,
-      type: formData.type || null,
-      abbreviation: formData.abbreviation || null,
-    };
+    
+    // Payload is already processed by the form's internal handler
+    const payload = formData; 
 
     try {
       const unitId = parseInt(id, 10);
       const updated = await updateUnit(unitId, payload);
       console.log('Unit updated:', updated);
-      navigate('/units'); // Navigate back to list after update
+      showSnackbar(`Unit "${updated.name}" updated successfully!`, 'success');
+      navigate('/units'); 
     } catch (error) {
       console.error('Failed to update unit:', error);
       let message = 'An unexpected error occurred.';
@@ -70,6 +77,7 @@ const EditUnitPage: React.FC = () => {
         message = error.message;
       }
       setSubmitError(`Failed to update unit: ${message}`);
+      // showSnackbar('Failed to update unit.', 'error');
     } finally {
       setIsSubmitting(false);
     }

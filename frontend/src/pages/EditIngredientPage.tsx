@@ -8,10 +8,12 @@ import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import Box from '@mui/material/Box';
 import IngredientForm from '../components/forms/IngredientForm'; // Re-use the form
-import { getIngredientById, updateIngredient, Ingredient, IngredientFormData } from '../services/apiService';
+import { getIngredientById, updateIngredient, Ingredient } from '../services/apiService';
+import { useSnackbar } from '../context/SnackbarContext'; // Import hook
 import { AxiosError } from 'axios';
+import { IngredientFormData } from '../components/forms/IngredientForm';
 
-// Re-define processed type here as it might differ slightly from UnitForm if needed
+// Define the type for the processed form data expected by onSubmit
 interface ProcessedIngredientFormData {
     name: string;
     description: string | null;
@@ -25,6 +27,7 @@ const EditIngredientPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const { showSnackbar } = useSnackbar(); // Use hook
 
   useEffect(() => {
     const fetchIngredient = async () => {
@@ -55,12 +58,16 @@ const EditIngredientPage: React.FC = () => {
     setSubmitError(null);
     setIsSubmitting(true);
     console.log('Submitting updated Ingredient data:', formData);
+    
+    // Payload is already processed by the form's internal handler
+    const payload = formData; 
 
     try {
       const ingredientId = parseInt(id, 10);
-      const updated = await updateIngredient(ingredientId, formData); // Use Processed data
+      const updated = await updateIngredient(ingredientId, payload);
       console.log('Ingredient updated:', updated);
-      navigate('/ingredients'); // Navigate back to list after update
+      showSnackbar(`Ingredient "${updated.name}" updated successfully!`, 'success');
+      navigate('/ingredients'); 
     } catch (error) {
       console.error('Failed to update ingredient:', error);
       let message = 'An unexpected error occurred.';
@@ -70,6 +77,7 @@ const EditIngredientPage: React.FC = () => {
         message = error.message;
       }
       setSubmitError(`Failed to update ingredient: ${message}`);
+      // showSnackbar('Failed to update ingredient.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -80,7 +88,7 @@ const EditIngredientPage: React.FC = () => {
     if (!ingredientData) return undefined;
     return {
         name: ingredientData.name,
-        description: ingredientData.description || '' // Form expects string
+        description: ingredientData.description || '' // Form expects string or null
     };
   };
 

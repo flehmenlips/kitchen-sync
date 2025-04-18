@@ -7,6 +7,7 @@ import Link from '@mui/material/Link';
 import Alert from '@mui/material/Alert';
 import IngredientForm from '../components/forms/IngredientForm';
 import { createIngredient } from '../services/apiService';
+import { useSnackbar } from '../context/SnackbarContext';
 import { AxiosError } from 'axios';
 
 // Define the type for the processed form data expected by onSubmit
@@ -17,6 +18,7 @@ interface ProcessedIngredientFormData {
 
 const CreateIngredientPage: React.FC = () => {
   const navigate = useNavigate();
+  const { showSnackbar } = useSnackbar();
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState<boolean>(false);
 
@@ -24,12 +26,14 @@ const CreateIngredientPage: React.FC = () => {
     setSubmitError(null);
     setIsSubmitting(true);
     console.log('Submitting Ingredient data:', formData);
+    
+    const payload = formData; 
 
     try {
-      const newIngredient = await createIngredient(formData); 
+      const newIngredient = await createIngredient(payload); 
       console.log('Ingredient created:', newIngredient);
-      // Navigate back to the ingredients list page
-      navigate('/ingredients'); // Corrected navigation path
+      showSnackbar(`Ingredient "${newIngredient.name}" created successfully!`, 'success');
+      navigate('/ingredients'); 
     } catch (error) {
       console.error('Failed to create ingredient:', error);
       let message = 'An unexpected error occurred.';

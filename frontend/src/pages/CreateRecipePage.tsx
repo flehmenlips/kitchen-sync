@@ -8,10 +8,12 @@ import Alert from '@mui/material/Alert';
 import RecipeForm from '../components/forms/RecipeForm';
 import { createRecipe } from '../services/apiService';
 import { ProcessedRecipeData } from '../components/forms/RecipeForm';
+import { useSnackbar } from '../context/SnackbarContext';
 import { AxiosError } from 'axios';
 
 const CreateRecipePage: React.FC = () => {
   const navigate = useNavigate();
+  const { showSnackbar } = useSnackbar();
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState<boolean>(false);
 
@@ -22,6 +24,7 @@ const CreateRecipePage: React.FC = () => {
     try {
       const newRecipe = await createRecipe(formData);
       console.log('Recipe created:', newRecipe);
+      showSnackbar(`Recipe "${newRecipe.name}" created successfully!`, 'success');
       navigate(`/recipes/${newRecipe.id}`);
     } catch (error) {
       console.error('Failed to create recipe:', error);

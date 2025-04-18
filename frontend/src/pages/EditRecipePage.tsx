@@ -10,6 +10,7 @@ import Box from '@mui/material/Box';
 import RecipeForm from '../components/forms/RecipeForm';
 import { getRecipeById, updateRecipe, Recipe } from '../services/apiService';
 import { ProcessedRecipeData, RecipeFormData } from '../components/forms/RecipeForm';
+import { useSnackbar } from '../context/SnackbarContext';
 import { AxiosError } from 'axios';
 
 const EditRecipePage: React.FC = () => {
@@ -20,6 +21,7 @@ const EditRecipePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const { showSnackbar } = useSnackbar();
 
   useEffect(() => {
     const fetchRecipe = async () => {
@@ -54,7 +56,8 @@ const EditRecipePage: React.FC = () => {
       const recipeId = parseInt(id, 10);
       const updated = await updateRecipe(recipeId, formData);
       console.log('Recipe updated:', updated);
-      navigate(`/recipes/${updated.id}`); // Navigate to detail page after update
+      showSnackbar(`Recipe "${updated.name}" updated successfully!`, 'success');
+      navigate(`/recipes/${updated.id}`); // Navigate after showing snackbar
     } catch (error) {
       console.error('Failed to update recipe:', error);
       let message = 'An unexpected error occurred.';
@@ -131,7 +134,7 @@ const EditRecipePage: React.FC = () => {
       <RecipeForm 
         onSubmit={handleFormSubmit} 
         isSubmitting={isSubmitting} 
-        initialData={initialFormData}
+        initialData={transformRecipeToFormData(recipe)}
       /> 
 
     </Container>

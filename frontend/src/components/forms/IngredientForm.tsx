@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { Box, TextField, Button, Grid } from '@mui/material';
 
 // Interface for the raw form data
-interface IngredientFormData {
+export interface IngredientFormData {
     name: string;
     description: string | null; // Allow null for initial data consistency
 }

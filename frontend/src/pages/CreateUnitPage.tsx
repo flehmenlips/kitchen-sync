@@ -7,30 +7,35 @@ import Link from '@mui/material/Link';
 import Alert from '@mui/material/Alert';
 import UnitForm from '../components/forms/UnitForm';
 import { createUnit, UnitFormData } from '../services/apiService';
+import { useSnackbar } from '../context/SnackbarContext';
 import { AxiosError } from 'axios';
+
+// Define the type for the processed form data expected by onSubmit
+interface ProcessedUnitFormData {
+    name: string;
+    abbreviation: string | null;
+    type: string | null;
+}
 
 const CreateUnitPage: React.FC = () => {
   const navigate = useNavigate();
+  const { showSnackbar } = useSnackbar();
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState<boolean>(false);
 
-  const handleFormSubmit = async (formData: UnitFormData) => {
+  const handleFormSubmit = async (formData: ProcessedUnitFormData) => {
     setSubmitError(null);
     setIsSubmitting(true);
     console.log('Submitting Unit data:', formData);
-
-    // Ensure type is null if empty string is submitted from form
-    const payload = {
-      ...formData,
-      type: formData.type || null,
-      abbreviation: formData.abbreviation || null, // Also handle empty abbreviation
-    };
+    
+    // Payload is already processed by the form's internal handler
+    const payload = formData; 
 
     try {
       const newUnit = await createUnit(payload); 
       console.log('Unit created:', newUnit);
-      // Navigate back to the units list page
-      navigate('/units'); // Corrected navigation path
+      showSnackbar(`Unit "${newUnit.name}" created successfully!`, 'success');
+      navigate('/units'); 
     } catch (error) {
       console.error('Failed to create unit:', error);
       let message = 'An unexpected error occurred.';
