@@ -5,6 +5,7 @@ import recipeRoutes from './routes/recipeRoutes';
 import unitRoutes from './routes/unitRoutes'; // Import unit routes
 import ingredientRoutes from './routes/ingredientRoutes'; // Import ingredient routes
 import categoryRoutes from './routes/categoryRoutes'; // Import category routes
+import ingredientCategoryRoutes from './routes/ingredientCategoryRoutes'; // Import ingredient category routes
 
 // Load environment variables
 dotenv.config(); // Loads variables from .env file in the current directory (backend/)
@@ -21,6 +22,7 @@ app.use('/api/recipes', recipeRoutes);
 app.use('/api/units', unitRoutes); // Mount unit routes
 app.use('/api/ingredients', ingredientRoutes); // Mount ingredient routes
 app.use('/api/categories', categoryRoutes); // Mount category routes
+app.use('/api/ingredient-categories', ingredientCategoryRoutes); // Mount ingredient category routes
 
 // Basic route for testing
 app.get('/', (req, res) => {

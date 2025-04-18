@@ -6,8 +6,13 @@ import prisma from '../config/db'; // Using relative path
 // @access  Public (for now)
 export const getIngredients = async (req: Request, res: Response): Promise<void> => {
     try {
-        // TODO: Add searching/filtering (e.g., by name)
-        const ingredients = await prisma.ingredient.findMany();
+        const ingredients = await prisma.ingredient.findMany({
+            include: { ingredientCategory: true }, // Include category
+            orderBy: [ // Order by category, then name
+                 { ingredientCategory: { name: 'asc' } },
+                 { name: 'asc' }
+            ]
+        });
         res.status(200).json(ingredients);
     } catch (error) {
         console.error(error);
@@ -20,18 +25,22 @@ export const getIngredients = async (req: Request, res: Response): Promise<void>
 // @access  Private/Admin (eventually)
 export const createIngredient = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { name, description } = req.body;
+        const { name, description, ingredientCategoryId } = req.body;
 
         if (!name) {
             res.status(400).json({ message: 'Missing required field: name' });
             return;
         }
 
+        const categoryIdNum = ingredientCategoryId ? parseInt(ingredientCategoryId, 10) : null;
+
         const newIngredient = await prisma.ingredient.create({
             data: {
                 name,
-                description,
+                description: description || null,
+                ingredientCategoryId: categoryIdNum
             },
+            include: { ingredientCategory: true }
         });
         res.status(201).json(newIngredient);
     } catch (error: any) {
@@ -59,6 +68,7 @@ export const getIngredientById = async (req: Request, res: Response): Promise<vo
 
         const ingredient = await prisma.ingredient.findUnique({
             where: { id: ingredientId },
+            include: { ingredientCategory: true }
         });
 
         if (!ingredient) {
@@ -84,14 +94,23 @@ export const updateIngredient = async (req: Request, res: Response): Promise<voi
             return;
         }
 
-        const { name, description } = req.body;
+        const { name, description, ingredientCategoryId } = req.body;
+
+        if (!name) {
+            res.status(400).json({ message: 'Missing required field: name' });
+            return;
+        }
+
+        const categoryIdNum = ingredientCategoryId ? parseInt(ingredientCategoryId, 10) : null;
 
         const updatedIngredient = await prisma.ingredient.update({
             where: { id: ingredientId },
             data: {
-                name, // Allow updating name, handle potential P2002 conflict below
-                description,
+                name,
+                description: description || null,
+                ingredientCategoryId: categoryIdNum
             },
+            include: { ingredientCategory: true }
         });
         res.status(200).json(updatedIngredient);
     } catch (error: any) {
