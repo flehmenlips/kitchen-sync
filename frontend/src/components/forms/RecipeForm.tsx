@@ -17,16 +17,10 @@ import { GridTypeMap } from '@mui/material/Grid';
 import { DefaultComponentProps } from '@mui/material/OverridableComponent';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
+import { getUnits, UnitOfMeasure } from '../../services/apiService';
 
 // Assume we fetch these from the API eventually
 // TODO: Fetch units and ingredients from API
-const MOCK_UNITS = [
-    { id: 1, name: 'Gram', abbreviation: 'g' },
-    { id: 3, name: 'Milliliter', abbreviation: 'ml' },
-    { id: 5, name: 'Each', abbreviation: 'ea' },
-    { id: 6, name: 'Portion', abbreviation: 'portion' },
-    // Add other units created via API
-];
 const MOCK_INGREDIENTS = [
     { id: 1, name: 'Eggs' },
     { id: 2, name: 'Milk' },
@@ -107,6 +101,29 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
         name: "ingredients"
     });
 
+    // State for fetched units
+    const [units, setUnits] = useState<UnitOfMeasure[]>([]);
+    const [unitsLoading, setUnitsLoading] = useState<boolean>(true);
+    const [unitsError, setUnitsError] = useState<string | null>(null);
+
+    // Fetch units on component mount
+    useEffect(() => {
+        const loadUnits = async () => {
+            try {
+                setUnitsLoading(true);
+                const fetchedUnits = await getUnits();
+                setUnits(fetchedUnits);
+                setUnitsError(null);
+            } catch (error) {
+                console.error("Failed to fetch units:", error);
+                setUnitsError("Could not load units for selection.");
+            } finally {
+                setUnitsLoading(false);
+            }
+        };
+        loadUnits();
+    }, []); // Empty dependency array ensures this runs only once
+
     const handleFormSubmit = (data: RecipeFormData) => {
         // Process data before calling onSubmit
         const processedData: ProcessedRecipeData = { // Explicitly type processedData
@@ -171,16 +188,21 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                     />
                 </Grid>
                 <Grid item xs={6} sm={3} component={'div' as React.ElementType}>
-                    <FormControl fullWidth>
+                    <FormControl fullWidth error={!!unitsError || unitsLoading}>
                         <InputLabel id="yield-unit-label">Yield Unit</InputLabel>
                         <Controller
                             name="yieldUnitId"
                             control={control}
                             defaultValue=""
                             render={({ field }) => (
-                                <Select labelId="yield-unit-label" label="Yield Unit" {...field}>
+                                <Select 
+                                    labelId="yield-unit-label" 
+                                    label="Yield Unit" 
+                                    {...field}
+                                    disabled={unitsLoading || !!unitsError}
+                                >
                                     <MenuItem value=""><em>None</em></MenuItem>
-                                    {MOCK_UNITS.map(unit => (
+                                    {units.map(unit => (
                                         <MenuItem key={unit.id} value={unit.id}>{unit.name}</MenuItem>
                                     ))}
                                 </Select>
@@ -281,7 +303,7 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                     />
                                 </Grid>
                                  <Grid item xs={5} sm={3} component={'div' as React.ElementType}>
-                                    <FormControl fullWidth size="small" error={!!errors.ingredients?.[index]?.unitId}> 
+                                    <FormControl fullWidth size="small" error={!!errors.ingredients?.[index]?.unitId || !!unitsError || unitsLoading}>
                                         <InputLabel id={`ingredient-unit-label-${index}`}>Unit</InputLabel>
                                         <Controller
                                             name={`ingredients.${index}.unitId`}
@@ -289,9 +311,14 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                             defaultValue=""
                                             rules={{ required: 'Unit required' }}
                                             render={({ field }) => (
-                                                <Select labelId={`ingredient-unit-label-${index}`} label="Unit" {...field}>
+                                                <Select 
+                                                    labelId={`ingredient-unit-label-${index}`} 
+                                                    label="Unit" 
+                                                    {...field}
+                                                    disabled={unitsLoading || !!unitsError}
+                                                >
                                                     <MenuItem value=""><em>Unit</em></MenuItem>
-                                                    {MOCK_UNITS.map(unit => (
+                                                    {units.map(unit => (
                                                         <MenuItem key={unit.id} value={unit.id}>{unit.abbreviation || unit.name}</MenuItem>
                                                     ))}
                                                 </Select>
