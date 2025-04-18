@@ -642,7 +642,7 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                 sx={{ mt: 3, mb: 2 }}
                 disabled={isSubmitting}
             >
-                {isSubmitting ? 'Creating...' : 'Create Recipe'}
+                {isSubmitting ? 'Saving...' : (initialData ? 'Save Changes' : 'Create Recipe')}
             </Button>
 
             {/* Creation Modal */}
