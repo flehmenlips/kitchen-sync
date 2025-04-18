@@ -1,0 +1,102 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enum for Unit Types (Optional but helpful)
+enum UnitType {
+  WEIGHT
+  VOLUME
+  COUNT
+  OTHER
+}
+
+model UnitOfMeasure {
+  id           Int                 @id @default(autoincrement())
+  name         String              @unique @db.VarChar(100)
+  abbreviation String?             @unique @db.VarChar(20)
+  type         UnitType?           // Optional enum type
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt @map("updated_at")
+
+  // Relations
+  recipesYield       Recipe[]            @relation("RecipeYieldUnit")
+  recipeIngredients UnitQuantity[]      @relation("RecipeIngredientUnit")
+
+  @@map("units_of_measure")
+}
+
+model Ingredient {
+  id          Int              @id @default(autoincrement())
+  name        String           @unique @db.VarChar(255)
+  description String?          @db.Text
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  // Relation
+  recipeIngredients UnitQuantity[]   @relation("RecipeIngredientBase")
+
+  @@map("ingredients")
+}
+
+model Recipe {
+  id                Int              @id @default(autoincrement())
+  name              String           @db.VarChar(255)
+  description       String?          @db.Text
+  instructions      String           @db.Text
+  yieldQuantity     Decimal?         @map("yield_quantity") @db.Decimal(10, 2)
+  yieldUnitId       Int?             @map("yield_unit_id")
+  prepTimeMinutes   Int?             @map("prep_time_minutes")
+  cookTimeMinutes   Int?             @map("cook_time_minutes")
+  tags              String[]         @db.Text // PostgreSQL array type
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  yieldUnit         UnitOfMeasure?   @relation("RecipeYieldUnit", fields: [yieldUnitId], references: [id], onDelete: SetNull)
+  recipeIngredients UnitQuantity[]   @relation("RecipeParent") // Ingredients/Sub-recipes *used in* this recipe
+  usedAsSubRecipe   UnitQuantity[]   @relation("RecipeSubComponent") // Recipes where *this recipe* is used as a sub-recipe
+
+  @@map("recipes")
+}
+
+// Explicit Many-to-Many / Linking Table for Recipe Ingredients & Sub-Recipes
+model UnitQuantity {
+  id            Int      @id @default(autoincrement())
+  recipeId      Int      @map("recipe_id") // The recipe this ingredient belongs to
+  ingredientId  Int?     @map("ingredient_id") // The base ingredient (nullable)
+  subRecipeId   Int?     @map("sub_recipe_id") // The sub-recipe used as an ingredient (nullable)
+  quantity      Decimal  @db.Decimal(10, 2)
+  unitId        Int      @map("unit_id") // Unit for this specific line item quantity
+  order         Int      @default(0)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  recipe        Recipe         @relation("RecipeParent", fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredient    Ingredient?    @relation("RecipeIngredientBase", fields: [ingredientId], references: [id], onDelete: Restrict)
+  subRecipe     Recipe?        @relation("RecipeSubComponent", fields: [subRecipeId], references: [id], onDelete: Restrict)
+  unit          UnitOfMeasure  @relation("RecipeIngredientUnit", fields: [unitId], references: [id], onDelete: Restrict)
+
+  // @@unique([recipeId, ingredientId]) // Can't use if ingredientId is nullable
+  // @@unique([recipeId, subRecipeId]) // Can't use if subRecipeId is nullable
+  // Need to handle uniqueness constraint at the application or database trigger level if needed
+  // e.g., ensure you don't add the same ingredient twice to the same recipe.
+
+  @@map("recipe_ingredients")
+  @@index([recipeId])
+  @@index([ingredientId])
+  @@index([subRecipeId])
+  @@index([unitId])
+}
