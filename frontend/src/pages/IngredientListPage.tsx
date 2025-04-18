@@ -62,19 +62,30 @@ const IngredientListPage: React.FC = () => {
   const handleConfirmDelete = async () => {
     if (!ingredientToDelete) return;
     const ingredientId = ingredientToDelete.id;
+    const ingredientName = ingredientToDelete.name;
 
     setIsDeleting(prev => ({ ...prev, [ingredientId]: true }));
     setDeleteError(prev => ({ ...prev, [ingredientId]: null }));
+
     try {
         await deleteIngredient(ingredientId);
         console.log('Ingredient deleted successfully');
         setIngredients(prevIngredients => prevIngredients.filter(i => i.id !== ingredientId));
+        handleCloseDialog(); // Close dialog on success
     } catch (err: any) {
         console.error('Failed to delete ingredient:', err);
-        setDeleteError(prev => ({ ...prev, [ingredientId]: err.response?.data?.message || err.message || 'Failed to delete ingredient.' }));
+        const errorMsg = err.response?.data?.message || err.message || 'Failed to delete ingredient.';
+        setDeleteError(prev => ({ ...prev, [ingredientId]: errorMsg }));
+        // Check if the error indicates it's in use
+        const isInUse = errorMsg.toLowerCase().includes('currently used') || 
+                        errorMsg.toLowerCase().includes('foreign key constraint');
+
+        if (!isInUse) {
+             handleCloseDialog(); // Close dialog only if it's not a dependency error
+        } 
+        // If it IS in use, the dialog stays open, and the error is shown below the list
     } finally {
         setIsDeleting(prev => ({ ...prev, [ingredientId]: false }));
-        handleCloseDialog();
     }
   };
 
@@ -154,7 +165,7 @@ const IngredientListPage: React.FC = () => {
             </List>
         )}
         {Object.entries(deleteError).map(([id, msg]) => 
-            msg ? <Alert severity="error" key={`err-${id}`} sx={{ mt: 1 }}>Error deleting ingredient {id}: {msg}</Alert> : null
+            msg ? <Alert severity="error" key={`err-${id}`} sx={{ mt: 1 }}>{msg}</Alert> : null
         )}
 
         {ingredientToDelete && (
@@ -163,7 +174,7 @@ const IngredientListPage: React.FC = () => {
                 onClose={handleCloseDialog}
                 onConfirm={handleConfirmDelete}
                 title="Confirm Deletion"
-                contentText={`Are you sure you want to delete the ingredient "${ingredientToDelete?.name || ''}"? This cannot be undone, especially if the ingredient is currently used in recipes.`}
+                contentText={`Are you sure you want to delete the ingredient "${ingredientToDelete?.name || ''}"? This cannot be undone${deleteError[ingredientToDelete.id] ? ". Deletion failed:" : "."}`}
                 confirmText={isDeleting[ingredientToDelete.id] ? 'Deleting...' : 'Delete'}
             />
         )}

@@ -40,7 +40,7 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>{cancelText}</Button>
-        <Button onClick={() => { onConfirm(); onClose(); }} autoFocus color="primary">
+        <Button onClick={onConfirm} autoFocus color="primary">
           {confirmText}
         </Button>
       </DialogActions>

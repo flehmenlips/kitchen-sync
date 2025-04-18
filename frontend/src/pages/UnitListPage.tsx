@@ -62,16 +62,26 @@ const UnitListPage: React.FC = () => {
   const handleConfirmDelete = async () => {
     if (!unitToDelete) return;
     const unitId = unitToDelete.id;
+    const unitName = unitToDelete.name;
 
     setIsDeleting(prev => ({ ...prev, [unitId]: true }));
     setDeleteError(prev => ({ ...prev, [unitId]: null }));
+
     try {
         await deleteUnit(unitId);
         console.log('Unit deleted successfully');
         setUnits(prevUnits => prevUnits.filter(u => u.id !== unitId));
+        handleCloseDialog();
     } catch (err: any) {
         console.error('Failed to delete unit:', err);
-        setDeleteError(prev => ({ ...prev, [unitId]: err.response?.data?.message || err.message || 'Failed to delete unit.' }));
+        const errorMsg = err.response?.data?.message || err.message || 'Failed to delete unit.';
+        setDeleteError(prev => ({ ...prev, [unitId]: errorMsg }));
+        const isInUse = errorMsg.toLowerCase().includes('currently used') || 
+                        errorMsg.toLowerCase().includes('foreign key constraint'); 
+        
+        if (!isInUse) {
+             handleCloseDialog();
+        } 
     } finally {
          setIsDeleting(prev => ({ ...prev, [unitId]: false }));
     }
@@ -153,7 +163,7 @@ const UnitListPage: React.FC = () => {
             </List>
         )}
         {Object.entries(deleteError).map(([id, msg]) => 
-            msg ? <Alert severity="error" key={`err-${id}`} sx={{ mt: 1 }}>Error deleting unit {id}: {msg}</Alert> : null
+            msg ? <Alert severity="error" key={`err-${id}`} sx={{ mt: 1 }}>{msg}</Alert> : null
         )}
 
         {unitToDelete && (
@@ -162,7 +172,7 @@ const UnitListPage: React.FC = () => {
                 onClose={handleCloseDialog}
                 onConfirm={handleConfirmDelete}
                 title="Confirm Deletion"
-                contentText={`Are you sure you want to delete the unit "${unitToDelete?.name || ''}"? This cannot be undone, especially if the unit is currently used in recipes.`}
+                contentText={`Are you sure you want to delete the unit "${unitToDelete?.name || ''}"? This cannot be undone${deleteError[unitToDelete.id] ? ". Deletion failed:" : "."}`}
                 confirmText={isDeleting[unitToDelete.id] ? 'Deleting...' : 'Delete'}
             />
         )}
