@@ -6,7 +6,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -35,6 +34,20 @@ model Category {
   @@map("categories")
 }
 
+// Add Ingredient Category model
+model IngredientCategory {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique @db.VarChar(150)
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relation: One category has many ingredients
+  ingredients Ingredient[]
+
+  @@map("ingredient_categories")
+}
+
 model UnitOfMeasure {
   id           Int                 @id @default(autoincrement())
   name         String              @unique @db.VarChar(100)
@@ -54,13 +67,19 @@ model Ingredient {
   id          Int              @id @default(autoincrement())
   name        String           @unique @db.VarChar(255)
   description String?          @db.Text
+
+  // Add relation to IngredientCategory (optional)
+  ingredientCategoryId Int?     @map("ingredient_category_id")
+  ingredientCategory   IngredientCategory? @relation(fields: [ingredientCategoryId], references: [id], onDelete: SetNull)
+
   createdAt   DateTime         @default(now()) @map("created_at")
   updatedAt   DateTime         @updatedAt @map("updated_at")
 
-  // Relation
+  // Relation to recipe ingredients
   recipeIngredients UnitQuantity[]   @relation("RecipeIngredientBase")
 
   @@map("ingredients")
+  @@index([ingredientCategoryId]) // Add index
 }
 
 model Recipe {
