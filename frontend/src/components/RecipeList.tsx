@@ -1,5 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 import { getRecipes, Recipe } from '../services/apiService';
+
+// Import MUI components
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemText from '@mui/material/ListItemText';
+import Typography from '@mui/material/Typography';
+import CircularProgress from '@mui/material/CircularProgress';
+import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import ListItemButton from '@mui/material/ListItemButton'; // For clickable list items
 
 const RecipeList: React.FC = () => {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -14,7 +25,7 @@ const RecipeList: React.FC = () => {
         setRecipes(data);
         setError(null);
       } catch (err) {
-        console.error(err); // Log the actual error
+        console.error(err);
         setError('Failed to fetch recipes. Is the backend running?');
       } finally {
         setLoading(false);
@@ -22,33 +33,45 @@ const RecipeList: React.FC = () => {
     };
 
     fetchRecipes();
-  }, []); // Empty dependency array means this runs once on mount
+  }, []);
 
   if (loading) {
-    return <div>Loading recipes...</div>;
+    // Center the loading spinner
+    return (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+            <CircularProgress />
+        </Box>
+    );
   }
 
   if (error) {
-    return <div style={{ color: 'red' }}>Error: {error}</div>;
+    return <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>;
   }
 
   return (
-    <div>
-      <h2>Recipe List (CookBook)</h2>
+    <Box sx={{ width: '100%', maxWidth: 600, margin: 'auto', mt: 2 }}> {/* Basic container */} 
+      <Typography variant="h4" component="h2" gutterBottom>
+        Recipe List (CookBook)
+      </Typography>
+      {/* TODO: Add "Add Recipe" button here */}
       {recipes.length === 0 ? (
-        <p>No recipes found. Add some via the API!</p>
+        <Typography sx={{ mt: 2 }}>No recipes found. Add some via the API!</Typography>
       ) : (
-        <ul>
+        <List>
           {recipes.map((recipe) => (
-            <li key={recipe.id}>
-              <strong>{recipe.name}</strong>
-              {recipe.description && <p style={{ margin: '0.2em 0 0.5em 0', fontSize: '0.9em' }}>{recipe.description}</p>}
-              {/* TODO: Add link/button to view full recipe details */}
-            </li>
+            <ListItem key={recipe.id} disablePadding>
+              {/* Use ListItemButton for link behavior */}
+              <ListItemButton component={RouterLink} to={`/recipes/${recipe.id}`}>
+                <ListItemText
+                  primary={recipe.name}
+                  secondary={recipe.description || ''}
+                />
+              </ListItemButton>
+            </ListItem>
           ))}
-        </ul>
+        </List>
       )}
-    </div>
+    </Box>
   );
 };
 

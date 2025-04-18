@@ -1,6 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link as RouterLink } from 'react-router-dom';
 import { getRecipeById, Recipe } from '../services/apiService';
+
+// Import MUI components
+import Container from '@mui/material/Container';
+import Typography from '@mui/material/Typography';
+import Box from '@mui/material/Box';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import Chip from '@mui/material/Chip';
+import CircularProgress from '@mui/material/CircularProgress';
+import Alert from '@mui/material/Alert';
+import Divider from '@mui/material/Divider';
+import Link from '@mui/material/Link'; // MUI Link
+import Breadcrumbs from '@mui/material/Breadcrumbs';
 
 const RecipeDetail: React.FC = () => {
     // Get the recipe ID from URL parameters
@@ -37,15 +50,19 @@ const RecipeDetail: React.FC = () => {
     }, [id]); // Re-run effect if the ID changes
 
     if (loading) {
-        return <div>Loading recipe details...</div>;
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+                <CircularProgress />
+            </Box>
+        );
     }
 
     if (error) {
-        return <div style={{ color: 'red' }}>Error: {error}</div>;
+        return <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>;
     }
 
     if (!recipe) {
-        return <div>Recipe not found.</div>;
+        return <Alert severity="warning" sx={{ m: 2 }}>Recipe not found.</Alert>;
     }
 
     // Helper to format time
@@ -58,49 +75,67 @@ const RecipeDetail: React.FC = () => {
     };
 
     return (
-        <div>
-            <Link to="/recipes">&larr; Back to List</Link>
-            <h2>{recipe.name}</h2>
-            {recipe.description && <p><em>{recipe.description}</em></p>}
+        <Container maxWidth="md" sx={{ mt: 2 }}> {/* Main container */} 
+             <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
+                <Link component={RouterLink} underline="hover" color="inherit" to="/">
+                    KitchenSync
+                </Link>
+                 <Link component={RouterLink} underline="hover" color="inherit" to="/recipes">
+                    Recipes
+                </Link>
+                <Typography color="text.primary">{recipe.name}</Typography>
+            </Breadcrumbs>
+
+            <Typography variant="h4" component="h2" gutterBottom>{recipe.name}</Typography>
+            {recipe.description && <Typography variant="body1" sx={{ mb: 2 }}><em>{recipe.description}</em></Typography>}
             
-            <div>
-                <strong>Yield:</strong> {recipe.yieldQuantity || 'N/A'} {recipe.yieldUnit?.name || ''}
-            </div>
-            <div>
-                <strong>Prep Time:</strong> {formatTime(recipe.prepTimeMinutes)}
-            </div>
-             <div>
-                <strong>Cook Time:</strong> {formatTime(recipe.cookTimeMinutes)}
-            </div>
+            <Box sx={{ display: 'flex', gap: 3, mb: 2, flexWrap: 'wrap' }}>
+                <Typography variant="body2">
+                    <strong>Yield:</strong> {recipe.yieldQuantity || 'N/A'} {recipe.yieldUnit?.name || ''}
+                </Typography>
+                <Typography variant="body2">
+                    <strong>Prep Time:</strong> {formatTime(recipe.prepTimeMinutes)}
+                </Typography>
+                 <Typography variant="body2">
+                    <strong>Cook Time:</strong> {formatTime(recipe.cookTimeMinutes)}
+                </Typography>
+            </Box>
             {recipe.tags && recipe.tags.length > 0 && (
-                <div>
-                    <strong>Tags:</strong> {recipe.tags.join(', ')}
-                </div>
+                <Box sx={{ mb: 2 }}>
+                    <strong>Tags:</strong> {recipe.tags.map(tag => <Chip key={tag} label={tag} size="small" sx={{ ml: 0.5 }} />)}
+                </Box>
             )}
 
-            <h3>Ingredients</h3>
+            <Divider sx={{ my: 2 }}/>
+
+            <Typography variant="h5" component="h3" gutterBottom>Ingredients</Typography>
             {recipe.recipeIngredients && recipe.recipeIngredients.length > 0 ? (
-                 <ul>
+                 <List dense> {/* Use dense list for ingredients */} 
                     {recipe.recipeIngredients.map((item) => (
-                        <li key={item.id}>
-                            {item.quantity} {item.unit.abbreviation || item.unit.name}{/* 
-                             */}{item.ingredient ? ` ${item.ingredient.name}` : ''}{/* 
-                             */}{item.subRecipe ? ` ${item.subRecipe.name} (Sub-Recipe)` : ''}
-                        </li>
+                        <ListItem key={item.id} disableGutters>
+                             <Typography variant="body1">
+                                {item.quantity} {item.unit.abbreviation || item.unit.name}
+                                {item.ingredient ? ` ${item.ingredient.name}` : ''}
+                                {item.subRecipe ? 
+                                    <> {item.subRecipe.name} (<Link component={RouterLink} to={`/recipes/${item.subRecipe.id}`}>Sub-Recipe</Link>)
+                                    </> : ''}
+                             </Typography>
+                        </ListItem>
                     ))}
-                </ul>
+                </List>
             ) : (
-                <p>No ingredients listed.</p>
+                <Typography>No ingredients listed.</Typography>
             )}
 
-            <h3>Instructions</h3>
-            {/* Preserve line breaks from the instructions text */}
-            <div style={{ whiteSpace: 'pre-wrap' }}>
-                {recipe.instructions || 'No instructions provided.'}
-            </div>
+             <Divider sx={{ my: 2 }}/>
 
-            {/* TODO: Add Edit/Delete buttons */}
-        </div>
+            <Typography variant="h5" component="h3" gutterBottom>Instructions</Typography>
+            <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', mb: 4 }}>
+                {recipe.instructions || 'No instructions provided.'}
+            </Typography>
+
+            {/* TODO: Add Edit/Delete buttons using MUI Button component */}
+        </Container>
     );
 };
 
