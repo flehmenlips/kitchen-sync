@@ -12,7 +12,12 @@ import {
     IconButton,
     Paper,
     Alert,
-    Stack
+    Stack,
+    Divider,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    SelectChangeEvent
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
@@ -22,8 +27,12 @@ import {
     getIngredients,
     Ingredient,
     getRecipes,
-    Recipe
+    Recipe,
+    createUnit,
+    createIngredient
 } from '../../services/apiService';
+import UnitForm from './UnitForm';
+import IngredientForm from './IngredientForm';
 
 // Interface for the raw form data
 // Export this interface as well
@@ -108,6 +117,14 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
     const [subRecipesLoading, setSubRecipesLoading] = useState<boolean>(true);
     const [subRecipesError, setSubRecipesError] = useState<string | null>(null);
 
+    // State for the creation modal
+    const [modalOpen, setModalOpen] = useState(false);
+    const [modalType, setModalType] = useState<'unit' | 'ingredient' | null>(null);
+    // Store the index of the ingredient row that triggered the modal
+    const [modalTargetIndex, setModalTargetIndex] = useState<number | null>(null); 
+    const [modalSubmitError, setModalSubmitError] = useState<string | null>(null);
+    const [isModalSubmitting, setIsModalSubmitting] = useState<boolean>(false);
+
     // Fetch units AND ingredients on component mount
     useEffect(() => {
         const loadSelectData = async () => {
@@ -164,6 +181,45 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
         };
         onSubmit(processedData);
     };
+
+    // --- Modal Logic --- 
+    const handleOpenModal = (type: 'unit' | 'ingredient', index: number) => {
+        setModalSubmitError(null); // Clear previous errors
+        setModalType(type);
+        setModalTargetIndex(index); 
+        setModalOpen(true);
+    };
+
+    const handleCloseModal = () => {
+        setModalOpen(false);
+        setModalType(null);
+        setModalTargetIndex(null);
+        setModalSubmitError(null);
+    };
+
+    // Handle successful creation within the modal
+    const handleModalCreateSuccess = (newItem: UnitOfMeasure | Ingredient, type: 'unit' | 'ingredient') => {
+        if (type === 'unit') {
+            // Optimistically add to state or refetch
+            setUnits(prev => [...prev, newItem as UnitOfMeasure].sort((a, b) => a.name.localeCompare(b.name)));
+            // If a target index exists (meaning it was triggered from an ingredient row unit select)
+            if (modalTargetIndex !== null) {
+                setValue(`ingredients.${modalTargetIndex}.unitId`, newItem.id, { shouldValidate: true });
+            }
+            // TODO: Handle setting yieldUnitId if modal was triggered from there?
+        } else if (type === 'ingredient') {
+            setIngredientsList(prev => [...prev, newItem as Ingredient].sort((a, b) => a.name.localeCompare(b.name)));
+            if (modalTargetIndex !== null) {
+                // Also ensure the type is set correctly
+                setValue(`ingredients.${modalTargetIndex}.type`, 'ingredient');
+                setValue(`ingredients.${modalTargetIndex}.subRecipeId`, ''); // Clear sub-recipe id
+                setValue(`ingredients.${modalTargetIndex}.ingredientId`, newItem.id, { shouldValidate: true });
+            }
+        }
+        handleCloseModal();
+    };
+    
+    // --- End Modal Logic ---
 
     return (
         <Box component="form" onSubmit={handleSubmit(handleFormSubmit)} noValidate sx={{ mt: 1 }}>
@@ -376,7 +432,14 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                         control={control}
                                         defaultValue=""
                                         render={({ field }) => {
-                                            console.log(`Ingredient Unit Field (${field.name}):`, field.value);
+                                            const handleUnitChange = (event: SelectChangeEvent<string | number>) => {
+                                                const value = event.target.value;
+                                                if (value === '__CREATE_NEW__') {
+                                                    handleOpenModal('unit', index);
+                                                } else {
+                                                    field.onChange(event);
+                                                }
+                                            };
                                             return (
                                                 <Select 
                                                     labelId={`ingredient-unit-label-${index}`}
@@ -384,11 +447,17 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                                     {...field} 
                                                     value={field.value ?? ''} 
                                                     disabled={unitsLoading || !!unitsError}
+                                                    onChange={handleUnitChange}
                                                 >
                                                     <MenuItem value=""><em>Unit</em></MenuItem>
+                                                    <Divider />
                                                     {units.map(unit => (
                                                         <MenuItem key={unit.id} value={unit.id}>{unit.abbreviation || unit.name}</MenuItem>
                                                     ))}
+                                                    <Divider />
+                                                    <MenuItem value="__CREATE_NEW__">
+                                                         <Typography color="primary">+ Create New Unit</Typography>
+                                                     </MenuItem>
                                                 </Select>
                                             );
                                         }}
@@ -427,6 +496,53 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
             >
                 {isSubmitting ? 'Creating...' : 'Create Recipe'}
             </Button>
+
+            {/* Creation Modal */}
+            <Dialog open={modalOpen} onClose={handleCloseModal} maxWidth="xs" fullWidth>
+                <DialogTitle>
+                    {modalType === 'unit' ? 'Create New Unit' : 'Create New Ingredient'}
+                </DialogTitle>
+                <DialogContent>
+                    {modalSubmitError && <Alert severity="error" sx={{ mb: 2 }}>{modalSubmitError}</Alert>}
+                    {modalType === 'unit' && (
+                        <UnitForm 
+                            isSubmitting={isModalSubmitting}
+                            onSubmit={async (data) => {
+                                setIsModalSubmitting(true);
+                                setModalSubmitError(null);
+                                try {
+                                    const newUnit = await createUnit(data);
+                                    handleModalCreateSuccess(newUnit, 'unit');
+                                } catch (err: any) {
+                                    const msg = err.response?.data?.message || err.message || 'Failed to create unit';
+                                    setModalSubmitError(msg);
+                                } finally {
+                                    setIsModalSubmitting(false);
+                                }
+                            }} 
+                        />
+                    )}
+                     {modalType === 'ingredient' && (
+                        <IngredientForm 
+                            isSubmitting={isModalSubmitting}
+                            onSubmit={async (data) => {
+                                 setIsModalSubmitting(true);
+                                 setModalSubmitError(null);
+                                 try {
+                                    const newIng = await createIngredient(data);
+                                    handleModalCreateSuccess(newIng, 'ingredient');
+                                } catch (err: any) {
+                                    const msg = err.response?.data?.message || err.message || 'Failed to create ingredient';
+                                    setModalSubmitError(msg);
+                                } finally {
+                                    setIsModalSubmitting(false);
+                                }
+                            }}
+                        />
+                    )}
+                </DialogContent>
+                 {/* Optional: Add Actions with Cancel button to modal */}
+            </Dialog>
         </Box>
     );
 };
