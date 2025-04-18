@@ -2,19 +2,26 @@ import React from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { Box, TextField, Button, Grid, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 
-// Interface for the form data
+// Interface for the raw form data from react-hook-form
 interface UnitFormData {
     name: string;
-    abbreviation: string;
-    type: string; // Corresponds to UnitType enum keys (WEIGHT, VOLUME, COUNT, OTHER)
+    abbreviation: string; // TextField value is always string
+    type: string; 
+}
+
+// Interface for processed data sent to API
+interface ProcessedUnitFormData {
+    name: string;
+    abbreviation: string | null; // Can be null after processing
+    type: string | null; // Can be null after processing
 }
 
 // TODO: Ideally get these enum keys from backend or shared types
 const UNIT_TYPES = ['WEIGHT', 'VOLUME', 'COUNT', 'OTHER'];
 
 interface UnitFormProps {
-    onSubmit: (data: UnitFormData) => void;
-    initialData?: Partial<UnitFormData>;
+    onSubmit: (data: ProcessedUnitFormData) => void; // Expect processed data
+    initialData?: Partial<UnitFormData>; // Initial data matches form shape
     isSubmitting: boolean;
 }
 
@@ -32,10 +39,18 @@ const UnitForm: React.FC<UnitFormProps> = ({ onSubmit, initialData, isSubmitting
         }
     });
 
-    // No complex processing needed before onSubmit for this simple form
+    const handleFormSubmit = (data: UnitFormData) => {
+        // Process before calling the passed onSubmit
+        const payload: ProcessedUnitFormData = {
+            name: data.name,
+            abbreviation: data.abbreviation || null,
+            type: data.type || null
+        };
+        onSubmit(payload);
+    };
 
     return (
-        <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate sx={{ mt: 1 }}>
+        <Box component="form" onSubmit={handleSubmit(handleFormSubmit)} noValidate sx={{ mt: 1 }}>
             <Grid container spacing={2}>
                 <Grid item xs={12} sm={6}>
                     <TextField

@@ -133,6 +133,16 @@ export const getUnits = async (): Promise<UnitOfMeasure[]> => {
     }
 };
 
+export const getUnitById = async (id: number): Promise<UnitOfMeasure> => {
+    try {
+        const response = await apiClient.get(`/units/${id}`);
+        return response.data;
+    } catch (error) {
+        console.error(`Error fetching unit ${id}:`, error);
+        throw error;
+    }
+};
+
 export const createUnit = async (unitData: UnitFormData): Promise<UnitOfMeasure> => {
     try {
         const response = await apiClient.post('/units', unitData);

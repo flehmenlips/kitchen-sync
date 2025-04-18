@@ -14,6 +14,7 @@ import CreateRecipePage from './pages/CreateRecipePage'; // Uncommented import
 import EditRecipePage from './pages/EditRecipePage'; // Import Edit page
 import UnitListPage from './pages/UnitListPage'; // Import Unit List page
 import CreateUnitPage from './pages/CreateUnitPage'; // Import Create Unit page
+import EditUnitPage from './pages/EditUnitPage'; // Import Edit page
 import IngredientListPage from './pages/IngredientListPage'; // Import Ingredient List page
 import CreateIngredientPage from './pages/CreateIngredientPage'; // Import Create Ingredient page
 // import RecipeDetail from './components/RecipeDetail'; // Will create this next
@@ -43,6 +44,7 @@ function App() {
           {/* Unit Routes */}
           <Route path="/units" element={<UnitListPage />} />
           <Route path="/units/new" element={<CreateUnitPage />} />
+          <Route path="/units/:id/edit" element={<EditUnitPage />} /> {/* Added Edit Route */}
 
           {/* Ingredient Routes */}
           <Route path="/ingredients" element={<IngredientListPage />} />
