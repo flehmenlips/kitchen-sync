@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useLocation } from 'react-router-dom';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
@@ -36,35 +36,48 @@ const otherNavItems: NavItem[] = [
     // { text: 'KDS', icon: <SomeIcon />, path: '/kds' },
 ];
 
-export const SidebarItems: React.FC = () => (
-  <Box>
-    <List>
-      {mainNavItems.map((item) => (
-        <ListItem key={item.text} disablePadding>
-          <ListItemButton component={RouterLink} to={item.path}>
-            <ListItemIcon>
-              {item.icon}
-            </ListItemIcon>
-            <ListItemText primary={item.text} />
-          </ListItemButton>
-        </ListItem>
-      ))}
-    </List>
-    {/* Render other sections if they exist */}
-    {otherNavItems.length > 0 && <Divider />}
-     {otherNavItems.length > 0 && (
-        <List>
-         {otherNavItems.map((item) => (
-            <ListItem key={item.text} disablePadding>
-            <ListItemButton component={RouterLink} to={item.path}>
-                <ListItemIcon>
+export const SidebarItems: React.FC = () => {
+  const location = useLocation();
+  const currentPath = location.pathname;
+
+  return (
+    <Box>
+      <List>
+        {mainNavItems.map((item) => (
+          <ListItem key={item.text} disablePadding>
+            <ListItemButton 
+              component={RouterLink} 
+              to={item.path}
+              selected={currentPath === item.path || (item.path !== '/' && currentPath.startsWith(item.path))}
+            >
+              <ListItemIcon>
                 {item.icon}
-                </ListItemIcon>
-                <ListItemText primary={item.text} />
+              </ListItemIcon>
+              <ListItemText primary={item.text} />
             </ListItemButton>
-            </ListItem>
+          </ListItem>
         ))}
-        </List>
-    )}
-  </Box>
-); 
+      </List>
+      {/* Render other sections if they exist */}
+      {otherNavItems.length > 0 && <Divider />}
+       {otherNavItems.length > 0 && (
+          <List>
+           {otherNavItems.map((item) => (
+              <ListItem key={item.text} disablePadding>
+              <ListItemButton 
+                  component={RouterLink} 
+                  to={item.path}
+                  selected={currentPath === item.path || (item.path !== '/' && currentPath.startsWith(item.path))}
+              >
+                  <ListItemIcon>
+                  {item.icon}
+                  </ListItemIcon>
+                  <ListItemText primary={item.text} />
+              </ListItemButton>
+              </ListItem>
+          ))}
+          </List>
+      )}
+    </Box>
+  );
+} 
