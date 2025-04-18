@@ -9,7 +9,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Box from '@mui/material/Box';
 import RecipeForm from '../components/forms/RecipeForm';
 import { getRecipeById, updateRecipe, Recipe } from '../services/apiService';
-import { ProcessedRecipeData, RecipeFormData } from '../components/forms/RecipeForm';
+import { RecipeFormData } from '../components/forms/RecipeForm';
 import { useSnackbar } from '../context/SnackbarContext';
 import { AxiosError } from 'axios';
 
@@ -47,17 +47,16 @@ const EditRecipePage: React.FC = () => {
     fetchRecipe();
   }, [id]);
 
-  const handleFormSubmit = async (formData: ProcessedRecipeData) => {
+  const handleFormSubmit = async (formData: RecipeFormData) => {
     if (!id) return;
     setSubmitError(null);
     setIsSubmitting(true);
-    console.log('Submitting updated data:', formData);
+    console.log('Submitting updated raw data:', formData);
     try {
       const recipeId = parseInt(id, 10);
       const updated = await updateRecipe(recipeId, formData);
-      console.log('Recipe updated:', updated);
       showSnackbar(`Recipe "${updated.name}" updated successfully!`, 'success');
-      navigate(`/recipes/${updated.id}`); // Navigate after showing snackbar
+      navigate(`/recipes/${updated.id}`);
     } catch (error) {
       console.error('Failed to update recipe:', error);
       let message = 'An unexpected error occurred.';

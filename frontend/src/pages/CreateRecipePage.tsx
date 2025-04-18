@@ -7,7 +7,7 @@ import Link from '@mui/material/Link';
 import Alert from '@mui/material/Alert';
 import RecipeForm from '../components/forms/RecipeForm';
 import { createRecipe } from '../services/apiService';
-import { ProcessedRecipeData } from '../components/forms/RecipeForm';
+import { RecipeFormData } from '../components/forms/RecipeForm';
 import { useSnackbar } from '../context/SnackbarContext';
 import { AxiosError } from 'axios';
 
@@ -17,10 +17,10 @@ const CreateRecipePage: React.FC = () => {
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState<boolean>(false);
 
-  const handleFormSubmit = async (formData: ProcessedRecipeData) => {
+  const handleFormSubmit = async (formData: RecipeFormData) => {
     setSubmitError(null);
     setIsSubmitting(true);
-    console.log('Submitting processed data:', formData);
+    console.log('Submitting Raw Recipe data:', formData);
     try {
       const newRecipe = await createRecipe(formData);
       console.log('Recipe created:', newRecipe);

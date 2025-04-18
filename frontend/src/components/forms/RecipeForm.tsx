@@ -62,28 +62,8 @@ export interface RecipeFormData {
     }[];
 }
 
-// Interface for the data structure after processing, ready for API
-export interface ProcessedRecipeData {
-    name: string;
-    description: string;
-    yieldQuantity: number | null;
-    yieldUnitId: number | null;
-    prepTimeMinutes: number | null;
-    cookTimeMinutes: number | null;
-    tags: string[];
-    instructions: string;
-    categoryId: number | null;
-    ingredients: { 
-        ingredientId?: number;
-        subRecipeId?: number; 
-        quantity: number; 
-        unitId: number | null;
-        order: number; 
-    }[];
-}
-
 interface RecipeFormProps {
-    onSubmit: (data: ProcessedRecipeData) => void;
+    onSubmit: (data: RecipeFormData) => void;
     initialData?: Partial<RecipeFormData>; 
     isSubmitting: boolean;
 }
@@ -206,26 +186,14 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
     const watchIngredientTypes = watch("ingredients");
 
     const handleFormSubmit = (data: RecipeFormData) => {
-        // Process data before calling onSubmit
-        const processedData: ProcessedRecipeData = {
-            name: data.name,
-            description: data.description,
-            instructions: data.instructions,
-            tags: data.tags.split(',').map(tag => tag.trim()).filter(tag => tag !== ''),
-            yieldQuantity: data.yieldQuantity ? parseFloat(data.yieldQuantity as string) : null,
-            yieldUnitId: data.yieldUnitId ? parseInt(data.yieldUnitId as string, 10) : null,
-            prepTimeMinutes: data.prepTimeMinutes ? parseInt(data.prepTimeMinutes as string, 10) : null,
-            cookTimeMinutes: data.cookTimeMinutes ? parseInt(data.cookTimeMinutes as string, 10) : null,
-            categoryId: data.categoryId ? parseInt(data.categoryId as string, 10) : null,
-            ingredients: data.ingredients.map((ing, index) => ({
-                ingredientId: ing.type === 'ingredient' && ing.ingredientId ? parseInt(ing.ingredientId as string, 10) : undefined,
-                subRecipeId: ing.type === 'sub-recipe' && ing.subRecipeId ? parseInt(ing.subRecipeId as string, 10) : undefined,
-                quantity: ing.quantity ? parseFloat(ing.quantity as string) : 0,
-                unitId: ing.unitId ? parseInt(ing.unitId as string, 10) : null,
-                order: index
-            })).filter(ing => ing.ingredientId || ing.subRecipeId)
+        console.log("[RecipeForm] Raw data before calling onSubmit prop:", data);
+        // Basic processing that doesn't remove needed fields like 'type'
+        const dataToSend = {
+            ...data,
+            tags: data.tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '').join(','), // Keep tags as string for raw data? Or process here?
+            // Let the page component handle final number/null conversion if needed before API
         };
-        onSubmit(processedData);
+        onSubmit(dataToSend); // Pass slightly processed data (tags) 
     };
 
     // --- Modal Logic --- 
