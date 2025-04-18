@@ -280,13 +280,9 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
         await tx.unitQuantity.deleteMany({ where: { recipeId: recipeId }});
 
         if (ingredients && ingredients.length > 0) {
-            const recipeIngredientsData = ingredients.map((ing: {
-                type: 'ingredient' | 'sub-recipe' | '';
-                ingredientId?: number | string;
-                subRecipeId?: number | string;
-                quantity: number | string;
-                unitId: number | string;
-            }, index: number) => {
+            const recipeIngredientsData = ingredients.map((ing: IngredientInput, index: number) => { 
+                console.log(`[updateRecipe] Processing ing[${index}] Input:`, JSON.stringify(ing, null, 2)); // Log raw input
+
                 if ((!ing.ingredientId && !ing.subRecipeId) || !ing.quantity || !ing.unitId) {
                     throw new Error(`Invalid data for ingredient at index ${index}: requires ingredientId or subRecipeId, quantity, and unitId.`);
                 }
@@ -298,6 +294,8 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
                 const unitIdNum = safeParseInt(ing.unitId);
                 const ingredientIdNum = safeParseInt(ing.ingredientId);
                 const subRecipeIdNum = safeParseInt(ing.subRecipeId);
+                
+                console.log(`[updateRecipe] Parsed values[${index}]:`, { quantityNum, unitIdNum, ingredientIdNum, subRecipeIdNum, type: ing.type }); // Log parsed values + type
 
                 if (quantityNum === undefined) {
                     throw new Error(`Invalid numeric quantity for ingredient at index ${index}.`);
@@ -312,17 +310,20 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
                      throw new Error(`Invalid or missing subRecipeId for ingredient at index ${index}.`);
                 }
 
-                return {
+                const returnObj = {
                     recipeId: updatedRecipe.id,
                     ingredientId: ing.type === 'ingredient' ? ingredientIdNum : undefined,
                     subRecipeId: ing.type === 'sub-recipe' ? subRecipeIdNum : undefined,
                     quantity: quantityNum ?? 0,
                     unitId: unitIdNum,
                     order: index
-                } as MappedIngredientData;
+                };
+                console.log(`[updateRecipe] Returning object[${index}] before filter:`, JSON.stringify(returnObj, null, 2)); // Log object being returned
+
+                return returnObj as MappedIngredientData;
              }).filter((ing: MappedIngredientData) => ing.ingredientId || ing.subRecipeId);
              
-             console.log(`[updateRecipe] Recipe ID: ${recipeId}, Processed ingredients for createMany:`, JSON.stringify(recipeIngredientsData, null, 2));
+             console.log(`[updateRecipe] Recipe ID: ${recipeId}, Filtered ingredients for createMany:`, JSON.stringify(recipeIngredientsData, null, 2)); // Renamed log
 
              if (recipeIngredientsData.length > 0) {
                 try {
