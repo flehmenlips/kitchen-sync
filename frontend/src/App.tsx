@@ -4,58 +4,63 @@ import {
   Routes,
   Route,
   Navigate,
-  Link as RouterLink // Import Link for navigation
+  // Link as RouterLink // No longer needed here
 } from 'react-router-dom';
-import './App.css'; // Keep basic styling
-import Box from '@mui/material/Box'; // For layout
-import RecipeList from './components/RecipeList'; // Import our new component
-import RecipeDetail from './components/RecipeDetail'; // Uncommented import
-import CreateRecipePage from './pages/CreateRecipePage'; // Uncommented import
-import EditRecipePage from './pages/EditRecipePage'; // Import Edit page
-import UnitListPage from './pages/UnitListPage'; // Import Unit List page
-import CreateUnitPage from './pages/CreateUnitPage'; // Import Create Unit page
-import EditUnitPage from './pages/EditUnitPage'; // Import Edit page
-import IngredientListPage from './pages/IngredientListPage'; // Import Ingredient List page
-import CreateIngredientPage from './pages/CreateIngredientPage'; // Import Create Ingredient page
-import EditIngredientPage from './pages/EditIngredientPage'; // Import Edit page
-// import RecipeDetail from './components/RecipeDetail'; // Will create this next
-// import CreateRecipePage from './pages/CreateRecipePage'; // Will create this next
+import './App.css';
+// Removed Box import
+import MainLayout from './components/layout/MainLayout'; // Import the layout
+import RecipeList from './components/RecipeList';
+import RecipeDetail from './components/RecipeDetail';
+import CreateRecipePage from './pages/CreateRecipePage'; 
+import EditRecipePage from './pages/EditRecipePage';
+import UnitListPage from './pages/UnitListPage';
+import CreateUnitPage from './pages/CreateUnitPage';
+import EditUnitPage from './pages/EditUnitPage';
+import IngredientListPage from './pages/IngredientListPage'; 
+import CreateIngredientPage from './pages/CreateIngredientPage'; 
+import EditIngredientPage from './pages/EditIngredientPage';
+import Typography from '@mui/material/Typography';
+
+// Placeholder Dashboard Component
+const Dashboard = () => <Typography variant="h5">Dashboard Content Placeholder</Typography>;
 
 function App() {
   return (
     <Router>
-      <div className="App">
-        <h1>KitchenSync</h1>
-        {/* Temporary Navigation */}
-        <Box component="nav" sx={{ mb: 2, display: 'flex', gap: 2, justifyContent: 'center' }}>
-          <RouterLink to="/recipes">Recipes</RouterLink>
-          <RouterLink to="/units">Units</RouterLink>
-          <RouterLink to="/ingredients">Ingredients</RouterLink> {/* Added Ingredients link */}
-        </Box>
-
+      {/* Remove outer div and title, MainLayout provides structure */}
+      {/* Remove Temporary Navigation Box */}
         <Routes>
-          {/* Default route redirects to recipes list */}
-          <Route path="/" element={<Navigate replace to="/recipes" />} />
-          <Route path="/recipes" element={<RecipeList />} />
-          <Route path="/recipes/new" element={<CreateRecipePage />} /> {/* Use actual page component */}
-          {/* <Route path="/recipes/new" element={<div>Create Recipe Page Placeholder</div>} /> */}
-          <Route path="/recipes/:id/edit" element={<EditRecipePage />} /> {/* Added Edit Route */}
-          <Route path="/recipes/:id" element={<RecipeDetail />} /> {/* Uncommented route */}
+           {/* Wrap page routes within MainLayout */}
+          <Route path="/" element={<MainLayout />}>
+            {/* Default route within layout */}
+            <Route index element={<Dashboard />} /> {/* Render Dashboard at root */}
+            
+            {/* Recipe Routes */}
+            <Route path="recipes" element={<RecipeList />} />
+            <Route path="recipes/new" element={<CreateRecipePage />} /> 
+            <Route path="recipes/:id/edit" element={<EditRecipePage />} /> 
+            <Route path="recipes/:id" element={<RecipeDetail />} />
 
-          {/* Unit Routes */}
-          <Route path="/units" element={<UnitListPage />} />
-          <Route path="/units/new" element={<CreateUnitPage />} />
-          <Route path="/units/:id/edit" element={<EditUnitPage />} /> {/* Added Edit Route */}
+            {/* Unit Routes */}
+            <Route path="units" element={<UnitListPage />} />
+            <Route path="units/new" element={<CreateUnitPage />} />
+            <Route path="units/:id/edit" element={<EditUnitPage />} />
 
-          {/* Ingredient Routes */}
-          <Route path="/ingredients" element={<IngredientListPage />} />
-          <Route path="/ingredients/new" element={<CreateIngredientPage />} />
-          <Route path="/ingredients/:id/edit" element={<EditIngredientPage />} /> {/* Added Edit Route */}
+            {/* Ingredient Routes */}
+            <Route path="ingredients" element={<IngredientListPage />} />
+            <Route path="ingredients/new" element={<CreateIngredientPage />} />
+            <Route path="ingredients/:id/edit" element={<EditIngredientPage />} />
 
-          {/* Add other routes for Ingredients, etc. later */}
-          <Route path="*" element={<div>404 Not Found</div>} /> {/* Catch-all route */}
+            {/* Add other module routes later */}
+            
+             {/* Catch-all within layout */}
+            <Route path="*" element={<div>404 Page Not Found (within layout)</div>} />
+          </Route>
+
+           {/* Routes outside MainLayout (e.g., Login page) could go here */}
+           {/* <Route path="/login" element={<LoginPage />} /> */}
+
         </Routes>
-      </div>
     </Router>
   );
 }
