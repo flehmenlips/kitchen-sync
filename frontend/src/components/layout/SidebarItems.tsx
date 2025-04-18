@@ -12,7 +12,8 @@ import Box from '@mui/material/Box';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import MenuBookIcon from '@mui/icons-material/MenuBook'; // For Recipes
 import ScaleIcon from '@mui/icons-material/Scale'; // For Units
-import BlenderIcon from '@mui/icons-material/Blender'; // For Ingredients (or Science, Inventory?)
+import BlenderIcon from '@mui/icons-material/Blender'; // For Ingredients
+import CategoryIcon from '@mui/icons-material/Category'; // Import Category icon
 // TODO: Add icons for other modules later
 
 interface NavItem {
@@ -26,6 +27,7 @@ const mainNavItems: NavItem[] = [
   { text: 'Recipes', icon: <MenuBookIcon />, path: '/recipes' },
   { text: 'Units', icon: <ScaleIcon />, path: '/units' },
   { text: 'Ingredients', icon: <BlenderIcon />, path: '/ingredients' },
+  { text: 'Categories', icon: <CategoryIcon />, path: '/categories' },
 ];
 
 // Placeholder for other future sections
@@ -58,6 +60,8 @@ export const SidebarItems: React.FC = () => {
           </ListItem>
         ))}
       </List>
+      {/* Add Categories link here if needed, or update mainNavItems */}
+      {/* We added Categories to mainNavItems in a previous step */}
       {/* Render other sections if they exist */}
       {otherNavItems.length > 0 && <Divider />}
        {otherNavItems.length > 0 && (
