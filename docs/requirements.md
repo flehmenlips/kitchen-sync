@@ -1,49 +1,56 @@
-# Core Requirements (Initial Draft - High Level)
+# Core Requirements
 
-This document outlines the core functional requirements for the KitchenSync system.
+## 3.1. System-Wide Requirements:
 
-## 1. Recipe Engine (CookBook)
+*   **SR-01:** The system shall utilize a central database (or logically connected databases) for core data like ingredients, recipes, menu items.
+*   **SR-02:** Modules shall communicate via APIs (Application Programming Interfaces) to ensure loose coupling and maintainability.
+*   **SR-03:** User authentication and basic authorization (initially, maybe just a single admin user).
+*   **SR-04:** The system should be web-accessible.
+*   **SR-05:** Consistent User Interface (UI) principles should be applied across modules where feasible.
 
-*   **CR1.1:** Ability to create, edit, delete, and view recipes.
-*   **CR1.2:** Recipes should include ingredients, quantities, units, instructions, yield, and potentially cost information.
-*   **CR1.3:** Ability to scale recipes based on desired yield.
-*   **CR1.4:** Ability to categorize or tag recipes (e.g., by course, cuisine).
-*   **CR1.5:** Store recipe data persistently (in PostgreSQL database).
+## 3.2. Module-Specific Requirements:
 
-## 2. Prep Flow Manager (AgileChef)
+### M1: Recipe Engine
+*   **REQ-M1-01:** Create, Read, Update, Delete (CRUD) operations for Recipes.
+*   **REQ-M1-02:** CRUD operations for Ingredients (Name, Unit of Measure, Supplier Info - future).
+*   **REQ-M1-03:** Ability to define recipe ingredients with quantities and units.
+*   **REQ-M1-04:** Ability to define recipe preparation steps.
+*   **REQ-M1-05:** Ability to scale recipes by yield (e.g., portions) or ingredient quantity.
+*   **REQ-M1-06:** Support for sub-recipes (recipes used as ingredients in other recipes).
+*   **REQ-M1-07:** Search/Filter recipes (by name, tag, ingredient).
+*   **REQ-M1-08:** Tagging/Categorization of recipes.
+*   *(Future: Costing calculations, Nutritional info, Version history)*
 
-*   **CR2.1:** Generate prep lists/tasks based on selected recipes and required quantities (likely derived from orders or menu forecasts).
-*   **CR2.2:** Display prep tasks clearly, potentially organized by station or urgency.
-*   **CR2.3:** Allow kitchen staff to mark tasks as started or completed.
-*   **CR2.4:** Utilize scaled ingredient lists from the Recipe Engine.
+### M2: Prep Flow Manager (AgileChef)
+*   **REQ-M2-01:** Display prep tasks on a Kanban-style board (e.g., To Do, In Progress, Done).
+*   **REQ-M2-02:** Generate prep task cards based on selected recipes and required quantities.
+*   **REQ-M2-03:** Allow manual creation of prep tasks.
+*   **REQ-M2-04:** Allow users to move cards between columns (update status).
+*   **REQ-M2-05:** Display key recipe info (or link) on the task card.
+*   *(Future: Assign tasks to users, Due dates, Priority)*
 
-## 3. Menu Designer (MenuBuilder)
+### M3: Menu Designer (Menu Builder)
+*   **REQ-M3-01:** Import/select recipes from the Recipe Engine to include on a menu.
+*   **REQ-M3-02:** Allow arrangement of menu items into sections (e.g., Appetizers, Mains).
+*   **REQ-M3-03:** Provide basic layout/design tools (fonts, columns, borders, image upload - TBD).
+*   **REQ-M3-04:** Allow saving menu layouts/templates.
+*   **REQ-M3-05:** Export menus to a printable format (e.g., PDF).
+*   **REQ-M3-06:** Define prices for menu items (either pulled/calculated from Recipe Engine or set manually).
+*   *(Future: Multiple menu types - Lunch, Dinner, Specials; Digital menu output)*
 
-*   **CR3.1:** Ability to create, edit, and manage multiple menus (e.g., Dinner, Lunch, Specials).
-*   **CR3.2:** Add items to menus, pulling recipe data (name, description, potentially price) from the Recipe Engine.
-*   **CR3.3:** Define menu item pricing.
-*   **CR3.4:** Organize menu layout (sections, order of items).
-*   **CR3.5:** Generate printable or viewable menu formats.
+### M4: Reservation & Order System (TableFarm)
+*   **REQ-M4-01:** CRUD operations for reservations (Date, Time, Party Size, Customer Info).
+*   **REQ-M4-02:** Visual representation of reservations (e.g., timeline, list).
+*   **REQ-M4-03:** Ability to create a customer order.
+*   **REQ-M4-04:** Add menu items (from Menu Designer output/data) to an order.
+*   **REQ-M4-05:** Specify quantities and modifiers (if applicable) for order items.
+*   **REQ-M4-06:** Send finalized order/ticket data to the KDS module.
+*   *(Future: Table management, POS integration, Waitlist management)*
 
-## 4. Reservation/Order System (TableFarm)
-
-*   **CR4.1:** (**Future Scope / TBD**) Manage table reservations (create, view, update status).
-*   **CR4.2:** Allow staff to create customer orders (select menu items, quantities).
-*   **CR4.3:** Calculate order totals based on menu item prices.
-*   **CR4.4:** Send finalized orders/tickets to the Kitchen Display System.
-*   **CR4.5:** Track order status (e.g., received, preparing, ready, served).
-*   **CR4.6:** Persist order and reservation data (in PostgreSQL database).
-
-## 5. Kitchen Display System (ChefRail)
-
-*   **CR5.1:** Display incoming orders/tickets from the Order System in real-time.
-*   **CR5.2:** Organize tickets logically (e.g., by time, table, course).
-*   **CR5.3:** Allow kitchen staff to mark orders/items as started, ready, or completed.
-*   **CR5.4:** Potentially provide summaries or timers for orders.
-*   **CR5.5:** Reflect order status updates back to the Order System (or relevant interface).
-
-## Cross-Cutting Requirements
-
-*   **CCR1:** User authentication and authorization (role-based access for different staff).
-*   **CCR2:** System should be accessible via a web browser.
-*   **CCR3:** Intuitive and responsive user interfaces for both front-of-house and back-of-house staff. 
+### M5: Kitchen Display System (ChefRail)
+*   **REQ-M5-01:** Display incoming orders/tickets in real-time.
+*   **REQ-M5-02:** Clearly show items within each order, quantities, modifiers.
+*   **REQ-M5-03:** Allow kitchen staff to update the status of items/tickets (e.g., Seen, Firing, Ready, Bumped).
+*   **REQ-M5-04:** Display running timers for tickets/items.
+*   **REQ-M5-05:** Sort/Filter tickets (e.g., by time, by station - future).
+*   *(Future: Recall bumped tickets, Station-specific views)* 
