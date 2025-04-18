@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../config/db'; // Using relative path
-import { UnitType } from '../generated/prisma/client'; // Import generated enum if needed
+import { UnitType } from '@prisma/client'; // Import the type from the correct location
 
 // @desc    Get all units
 // @route   GET /api/units

@@ -113,8 +113,17 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
 
       // 2. Create RecipeIngredient entries if ingredients array is provided
       if (ingredients && ingredients.length > 0) {
-        const recipeIngredientsData = ingredients.map((ing, index: number) => {
-            // Simple validation for each ingredient entry
+        // Define expected type for items in the input array
+        type IngredientInput = { 
+            type: 'ingredient' | 'sub-recipe' | ''; 
+            ingredientId?: number | string; 
+            subRecipeId?: number | string; 
+            quantity: number | string; 
+            unitId: number | string; 
+        };
+        
+        const recipeIngredientsData = ingredients.map((ing: IngredientInput, index: number) => {
+            // Validation for each ingredient entry
             if ((!ing.ingredientId && !ing.subRecipeId) || !ing.quantity || !ing.unitId) {
                 throw new Error(`Invalid data for ingredient at index ${index}: requires ingredientId or subRecipeId, quantity, and unitId.`);
             }
@@ -127,15 +136,14 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
             const ingredientIdNum = ing.ingredientId ? parseInt(ing.ingredientId, 10) : undefined;
             const subRecipeIdNum = ing.subRecipeId ? parseInt(ing.subRecipeId, 10) : undefined;
 
-            // Validate parsed numbers
             if (isNaN(quantityNum) || isNaN(unitIdNum)) {
                 throw new Error(`Invalid numeric quantity or unitId for ingredient at index ${index}.`);
             }
              if (ing.ingredientId && (ingredientIdNum === undefined || isNaN(ingredientIdNum))) {
-                 throw new Error(`Invalid numeric ingredientId for ingredient at index ${index}.`);
+                throw new Error(`Invalid numeric ingredientId for ingredient at index ${index}.`);
             }
              if (ing.subRecipeId && (subRecipeIdNum === undefined || isNaN(subRecipeIdNum))) {
-                 throw new Error(`Invalid numeric subRecipeId for ingredient at index ${index}.`);
+                throw new Error(`Invalid numeric subRecipeId for ingredient at index ${index}.`);
             }
 
             return {
