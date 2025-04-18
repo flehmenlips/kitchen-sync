@@ -1,6 +1,6 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
-import { Box, TextField, Button, Grid } from '@mui/material';
+import { Box, TextField, Button, Stack } from '@mui/material';
 
 // Interface for the raw form data
 export interface IngredientFormData {
@@ -43,27 +43,23 @@ const IngredientForm: React.FC<IngredientFormProps> = ({ onSubmit, initialData, 
 
     return (
         <Box component="form" onSubmit={handleSubmit(handleFormSubmit)} noValidate sx={{ mt: 1 }}>
-            <Grid container spacing={2}>
-                <Grid item xs={12}>
-                    <TextField
-                        {...register("name", { required: "Ingredient name is required" })}
-                        label="Ingredient Name"
-                        fullWidth
-                        required
-                        error={!!errors.name}
-                        helperText={errors.name?.message}
-                    />
-                </Grid>
-                <Grid item xs={12}>
-                    <TextField
-                        {...register("description")}
-                        label="Description (Optional)"
-                        fullWidth
-                        multiline
-                        rows={3}
-                    />
-                </Grid>
-            </Grid>
+            <Stack spacing={2}>
+                <TextField
+                    {...register("name", { required: "Ingredient name is required" })}
+                    label="Ingredient Name"
+                    fullWidth
+                    required
+                    error={!!errors.name}
+                    helperText={errors.name?.message}
+                />
+                <TextField
+                    {...register("description")}
+                    label="Description (Optional)"
+                    fullWidth
+                    multiline
+                    rows={3}
+                />
+            </Stack>
 
             <Button
               type="submit"

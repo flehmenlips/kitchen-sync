@@ -1,6 +1,6 @@
 import React from 'react';
 import { useForm, Controller } from 'react-hook-form';
-import { Box, TextField, Button, Grid, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+import { Box, TextField, Button, Grid, Select, MenuItem, FormControl, InputLabel, Stack } from '@mui/material';
 
 // Interface for the raw form data from react-hook-form
 interface UnitFormData {
@@ -51,8 +51,8 @@ const UnitForm: React.FC<UnitFormProps> = ({ onSubmit, initialData, isSubmitting
 
     return (
         <Box component="form" onSubmit={handleSubmit(handleFormSubmit)} noValidate sx={{ mt: 1 }}>
-            <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
+            <Stack spacing={2}>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                     <TextField
                         {...register("name", { required: "Unit name is required" })}
                         label="Unit Name"
@@ -61,33 +61,29 @@ const UnitForm: React.FC<UnitFormProps> = ({ onSubmit, initialData, isSubmitting
                         error={!!errors.name}
                         helperText={errors.name?.message}
                     />
-                </Grid>
-                <Grid item xs={12} sm={6}>
                     <TextField
                         {...register("abbreviation")}
                         label="Abbreviation"
                         fullWidth
                     />
-                </Grid>
-                <Grid item xs={12}>
-                     <FormControl fullWidth>
-                        <InputLabel id="unit-type-label">Type (Optional)</InputLabel>
-                        <Controller
-                            name="type"
-                            control={control}
-                            defaultValue=""
-                            render={({ field }) => (
-                                <Select labelId="unit-type-label" label="Type (Optional)" {...field}>
-                                    <MenuItem value=""><em>None</em></MenuItem>
-                                    {UNIT_TYPES.map(type => (
-                                        <MenuItem key={type} value={type}>{type}</MenuItem>
-                                    ))}
-                                </Select>
-                            )}
-                        />
-                    </FormControl>
-                </Grid>
-            </Grid>
+                </Stack>
+                <FormControl fullWidth>
+                    <InputLabel id="unit-type-label">Type (Optional)</InputLabel>
+                    <Controller
+                        name="type"
+                        control={control}
+                        defaultValue=""
+                        render={({ field }) => (
+                            <Select labelId="unit-type-label" label="Type (Optional)" {...field} value={field.value ?? ''}>
+                                <MenuItem value=""><em>None</em></MenuItem>
+                                {UNIT_TYPES.map(type => (
+                                    <MenuItem key={type} value={type}>{type}</MenuItem>
+                                ))}
+                            </Select>
+                        )}
+                    />
+                </FormControl>
+            </Stack>
 
             <Button
               type="submit"
