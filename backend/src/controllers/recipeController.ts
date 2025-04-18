@@ -263,6 +263,16 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
         await tx.unitQuantity.deleteMany({ where: { recipeId: recipeId }});
 
         if (ingredients && ingredients.length > 0) {
+            // Define the type alias inside the scope
+            type IngredientInput = { 
+                type: 'ingredient' | 'sub-recipe' | ''; 
+                ingredientId?: number | string; 
+                subRecipeId?: number | string; 
+                quantity: number | string; 
+                unitId: number | string; 
+            };
+            
+            // Use the locally defined type alias
             const recipeIngredientsData = ingredients.map((ing: IngredientInput, index: number) => {
                 if ((!ing.ingredientId && !ing.subRecipeId) || !ing.quantity || !ing.unitId) {
                     throw new Error(`Invalid data for ingredient at index ${index}: requires ingredientId or subRecipeId, quantity, and unitId.`);
