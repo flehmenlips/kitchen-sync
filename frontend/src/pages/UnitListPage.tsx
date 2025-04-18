@@ -25,8 +25,8 @@ const UnitListPage: React.FC = () => {
   const [units, setUnits] = useState<UnitOfMeasure[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [deleteError, setDeleteError] = useState<{ [key: number]: string | null }>({});
-  const [isDeleting, setIsDeleting] = useState<{ [key: number]: boolean }>({});
+  const [dialogError, setDialogError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [unitToDelete, setUnitToDelete] = useState<UnitOfMeasure | null>(null);
 
@@ -49,7 +49,7 @@ const UnitListPage: React.FC = () => {
   }, []);
 
   const handleDeleteClick = (unit: UnitOfMeasure) => {
-    setDeleteError(prev => ({ ...prev, [unit.id]: null }));
+    setDialogError(null);
     setUnitToDelete(unit);
     setDialogOpen(true);
   };
@@ -57,15 +57,15 @@ const UnitListPage: React.FC = () => {
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setUnitToDelete(null);
+    setDialogError(null);
   };
 
   const handleConfirmDelete = async () => {
     if (!unitToDelete) return;
     const unitId = unitToDelete.id;
-    const unitName = unitToDelete.name;
 
-    setIsDeleting(prev => ({ ...prev, [unitId]: true }));
-    setDeleteError(prev => ({ ...prev, [unitId]: null }));
+    setIsDeleting(true);
+    setDialogError(null);
 
     try {
         await deleteUnit(unitId);
@@ -75,23 +75,16 @@ const UnitListPage: React.FC = () => {
     } catch (err: any) {
         console.error('Failed to delete unit:', err);
         const backendErrorMsg = err.response?.data?.message || err.message || 'Failed to delete unit.';
-        
-        // Check if the error indicates it's in use
         const isInUse = backendErrorMsg.toLowerCase().includes('currently used') || 
                         backendErrorMsg.toLowerCase().includes('foreign key constraint'); 
         
         const displayError = isInUse 
             ? "This unit is in use in one or more recipes and cannot be deleted. Please remove it from all recipes before deleting." 
-            : backendErrorMsg; // Show backend error for other issues
+            : `Error: ${backendErrorMsg}`;
 
-        setDeleteError(prev => ({ ...prev, [unitId]: displayError }));
-        
-        if (!isInUse) {
-             handleCloseDialog(); // Close dialog only if it's not a dependency error
-        } 
-        // If it IS in use, the dialog stays open
+        setDialogError(displayError);
     } finally {
-         setIsDeleting(prev => ({ ...prev, [unitId]: false }));
+         setIsDeleting(false);
     }
   };
 
@@ -153,11 +146,11 @@ const UnitListPage: React.FC = () => {
                                     edge="end" 
                                     aria-label="delete" 
                                     onClick={() => handleDeleteClick(unit)}
-                                    disabled={isDeleting[unit.id]}
+                                    disabled={isDeleting && unitToDelete?.id === unit.id}
                                     color="error"
                                     size="small"
                                 >
-                                    {isDeleting[unit.id] ? <CircularProgress size={16} color="inherit"/> : <DeleteIcon fontSize="small"/>}
+                                    <DeleteIcon fontSize="small"/>
                                 </IconButton>
                             </Stack>
                         }
@@ -170,9 +163,6 @@ const UnitListPage: React.FC = () => {
                 ))}
             </List>
         )}
-        {Object.entries(deleteError).map(([id, msg]) => 
-            msg ? <Alert severity="error" key={`err-${id}`} sx={{ mt: 1 }}>{msg}</Alert> : null
-        )}
 
         {unitToDelete && (
             <ConfirmationDialog
@@ -180,8 +170,10 @@ const UnitListPage: React.FC = () => {
                 onClose={handleCloseDialog}
                 onConfirm={handleConfirmDelete}
                 title="Confirm Deletion"
-                contentText={`Are you sure you want to delete the unit "${unitToDelete?.name || ''}"? This cannot be undone${deleteError[unitToDelete.id] ? ". Deletion failed:" : "."}`}
-                confirmText={isDeleting[unitToDelete.id] ? 'Deleting...' : 'Delete'}
+                contentText={`Are you sure you want to delete the unit "${unitToDelete?.name || ''}"? This action cannot be undone.`}
+                errorText={dialogError}
+                isProcessing={isDeleting}
+                confirmText="Delete"
             />
         )}
     </Container>

@@ -25,8 +25,8 @@ const IngredientListPage: React.FC = () => {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [deleteError, setDeleteError] = useState<{ [key: number]: string | null }>({});
-  const [isDeleting, setIsDeleting] = useState<{ [key: number]: boolean }>({});
+  const [dialogError, setDialogError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [ingredientToDelete, setIngredientToDelete] = useState<Ingredient | null>(null);
 
@@ -49,7 +49,7 @@ const IngredientListPage: React.FC = () => {
   }, []);
 
   const handleDeleteClick = (ingredient: Ingredient) => {
-    setDeleteError(prev => ({ ...prev, [ingredient.id]: null }));
+    setDialogError(null);
     setIngredientToDelete(ingredient);
     setDialogOpen(true);
   };
@@ -57,41 +57,35 @@ const IngredientListPage: React.FC = () => {
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setIngredientToDelete(null);
+    setDialogError(null);
   };
 
   const handleConfirmDelete = async () => {
     if (!ingredientToDelete) return;
     const ingredientId = ingredientToDelete.id;
-    const ingredientName = ingredientToDelete.name;
 
-    setIsDeleting(prev => ({ ...prev, [ingredientId]: true }));
-    setDeleteError(prev => ({ ...prev, [ingredientId]: null }));
+    setIsDeleting(true);
+    setDialogError(null);
 
     try {
         await deleteIngredient(ingredientId);
         console.log('Ingredient deleted successfully');
         setIngredients(prevIngredients => prevIngredients.filter(i => i.id !== ingredientId));
-        handleCloseDialog(); // Close dialog on success
+        handleCloseDialog(); // Close on success
     } catch (err: any) {
         console.error('Failed to delete ingredient:', err);
         const backendErrorMsg = err.response?.data?.message || err.message || 'Failed to delete ingredient.';
-        
-        // Check if the error indicates it's in use
         const isInUse = backendErrorMsg.toLowerCase().includes('currently used') || 
                         backendErrorMsg.toLowerCase().includes('foreign key constraint');
 
         const displayError = isInUse 
             ? "This ingredient is in use in one or more recipes and cannot be deleted. Please remove it from all recipes before deleting." 
-            : backendErrorMsg; // Show backend error for other issues
+            : `Error: ${backendErrorMsg}`;
 
-        setDeleteError(prev => ({ ...prev, [ingredientId]: displayError }));
-
-        if (!isInUse) {
-             handleCloseDialog(); // Close dialog only if it's not a dependency error
-        } 
-        // If it IS in use, the dialog stays open
+        setDialogError(displayError); // Set error to display in dialog
+        // Dialog remains open
     } finally {
-        setIsDeleting(prev => ({ ...prev, [ingredientId]: false }));
+        setIsDeleting(false);
     }
   };
 
@@ -152,12 +146,12 @@ const IngredientListPage: React.FC = () => {
                                 <IconButton 
                                     edge="end" 
                                     aria-label="delete" 
-                                    onClick={() => handleDeleteClick(ingredient)}
-                                    disabled={isDeleting[ingredient.id]}
+                                    onClick={() => handleDeleteClick(ingredient)} 
+                                    disabled={isDeleting && ingredientToDelete?.id === ingredient.id}
                                     color="error"
                                     size="small"
                                 >
-                                    {isDeleting[ingredient.id] ? <CircularProgress size={16} color="inherit"/> : <DeleteIcon fontSize="small"/>}
+                                     <DeleteIcon fontSize="small"/>
                                 </IconButton>
                             </Stack>
                         }
@@ -170,9 +164,6 @@ const IngredientListPage: React.FC = () => {
                 ))}
             </List>
         )}
-        {Object.entries(deleteError).map(([id, msg]) => 
-            msg ? <Alert severity="error" key={`err-${id}`} sx={{ mt: 1 }}>{msg}</Alert> : null
-        )}
 
         {ingredientToDelete && (
             <ConfirmationDialog
@@ -180,8 +171,10 @@ const IngredientListPage: React.FC = () => {
                 onClose={handleCloseDialog}
                 onConfirm={handleConfirmDelete}
                 title="Confirm Deletion"
-                contentText={`Are you sure you want to delete the ingredient "${ingredientToDelete?.name || ''}"? This cannot be undone${deleteError[ingredientToDelete.id] ? ". Deletion failed:" : "."}`}
-                confirmText={isDeleting[ingredientToDelete.id] ? 'Deleting...' : 'Delete'}
+                contentText={`Are you sure you want to delete the ingredient "${ingredientToDelete?.name || ''}"? This action cannot be undone.`}
+                errorText={dialogError}
+                isProcessing={isDeleting}
+                confirmText="Delete"
             />
         )}
     </Container>
