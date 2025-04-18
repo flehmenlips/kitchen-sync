@@ -5,7 +5,6 @@ import {
     TextField,
     Button,
     Typography,
-    Grid,
     Select,
     MenuItem,
     FormControl,
@@ -15,8 +14,6 @@ import {
     Alert,
     Stack
 } from '@mui/material';
-import { GridTypeMap } from '@mui/material/Grid';
-import { DefaultComponentProps } from '@mui/material/OverridableComponent';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 import {
@@ -168,30 +165,25 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
         onSubmit(processedData);
     };
 
-    // Helper type for Grid item props
-    type GridItemProps = DefaultComponentProps<GridTypeMap<{ item?: boolean }, 'div'>>;
-
     return (
         <Box component="form" onSubmit={handleSubmit(handleFormSubmit)} noValidate sx={{ mt: 1 }}>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }}>
-                <TextField
-                    {...register("name", { required: "Recipe name is required" })}
-                    label="Recipe Name"
-                    fullWidth
-                    required
-                    error={!!errors.name}
-                    helperText={errors.name?.message}
-                    sx={{ mb: 2 }}
-                />
-                <TextField
-                    {...register("description")}
-                    label="Description"
-                    fullWidth
-                    multiline
-                    rows={2}
-                    sx={{ mb: 2 }}
-                />
-            </Stack>
+            <TextField
+                {...register("name", { required: "Recipe name is required" })}
+                label="Recipe Name"
+                fullWidth
+                required
+                error={!!errors.name}
+                helperText={errors.name?.message}
+                sx={{ mb: 2 }}
+            />
+            <TextField
+                {...register("description")}
+                label="Description"
+                fullWidth
+                multiline
+                rows={2}
+                sx={{ mb: 2 }}
+            />
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }}>
                 <Controller
                     name="yieldQuantity"
@@ -206,14 +198,23 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                         name="yieldUnitId"
                         control={control}
                         defaultValue=""
-                        render={({ field }) => (
-                            <Select value={field.value ?? ''} disabled={unitsLoading || !!unitsError}>
-                                <MenuItem value=""><em>None</em></MenuItem>
-                                {units.map(unit => (
-                                    <MenuItem key={unit.id} value={unit.id}>{unit.name}</MenuItem>
-                                ))}
-                            </Select>
-                        )}
+                        render={({ field }) => {
+                            console.log(`Yield Unit Field (${field.name}):`, field.value);
+                            return (
+                                <Select 
+                                    labelId="yield-unit-label" 
+                                    label="Yield Unit" 
+                                    {...field}
+                                    value={field.value ?? ''} 
+                                    disabled={unitsLoading || !!unitsError}
+                                >
+                                    <MenuItem value=""><em>None</em></MenuItem>
+                                    {units.map(unit => (
+                                        <MenuItem key={unit.id} value={unit.id}>{unit.name}</MenuItem>
+                                    ))}
+                                </Select>
+                            );
+                        }}
                     />
                 </FormControl>
                 <Controller
@@ -368,21 +369,29 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                         />
                                     )}
                                 />
-                                <FormControl fullWidth size="small" error={!!errors.ingredients?.[index]?.unitId || !!unitsError || unitsLoading} required sx={{ flexBasis: '20%' }}>
+                                <FormControl fullWidth size="small" sx={{ flexBasis: '20%' }} error={!!unitsError || unitsLoading}>
                                     <InputLabel id={`ingredient-unit-label-${index}`}>Unit</InputLabel>
                                     <Controller
                                         name={`ingredients.${index}.unitId`}
                                         control={control}
                                         defaultValue=""
-                                        rules={{ required: 'Unit required' }}
-                                        render={({ field }) => (
-                                            <Select value={field.value ?? ''} disabled={unitsLoading || !!unitsError}>
-                                                <MenuItem value=""><em>Unit</em></MenuItem>
-                                                {units.map(unit => (
-                                                    <MenuItem key={unit.id} value={unit.id}>{unit.abbreviation || unit.name}</MenuItem>
-                                                ))}
-                                            </Select>
-                                        )}
+                                        render={({ field }) => {
+                                            console.log(`Ingredient Unit Field (${field.name}):`, field.value);
+                                            return (
+                                                <Select 
+                                                    labelId={`ingredient-unit-label-${index}`}
+                                                    label="Unit"
+                                                    {...field} 
+                                                    value={field.value ?? ''} 
+                                                    disabled={unitsLoading || !!unitsError}
+                                                >
+                                                    <MenuItem value=""><em>Unit</em></MenuItem>
+                                                    {units.map(unit => (
+                                                        <MenuItem key={unit.id} value={unit.id}>{unit.abbreviation || unit.name}</MenuItem>
+                                                    ))}
+                                                </Select>
+                                            );
+                                        }}
                                     />
                                 </FormControl>
                                 <Box sx={{ flexBasis: '10%', textAlign: 'center', pt: 0.5 }}>
