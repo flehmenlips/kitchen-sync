@@ -18,7 +18,14 @@ import { GridTypeMap } from '@mui/material/Grid';
 import { DefaultComponentProps } from '@mui/material/OverridableComponent';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
-import { getUnits, UnitOfMeasure, getIngredients, Ingredient } from '../../services/apiService';
+import {
+    getUnits,
+    UnitOfMeasure,
+    getIngredients,
+    Ingredient,
+    getRecipes,
+    Recipe
+} from '../../services/apiService';
 
 // Interface for the raw form data
 // Export this interface as well
@@ -31,11 +38,12 @@ export interface RecipeFormData {
     cookTimeMinutes: number | string;
     tags: string;
     instructions: string;
-    ingredients: { 
+    ingredients: {
+        type: 'ingredient' | 'sub-recipe' | '';
         ingredientId?: number | string;
-        subRecipeId?: number | string; 
-        quantity: number | string; 
-        unitId: number | string; 
+        subRecipeId?: number | string;
+        quantity: number | string;
+        unitId: number | string;
     }[];
 }
 
@@ -70,7 +78,8 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
         control,
         register,
         formState: { errors },
-        watch
+        watch,
+        setValue
     } = useForm<RecipeFormData>({
         defaultValues: initialData || {
             name: '',
@@ -81,7 +90,7 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
             cookTimeMinutes: '',
             tags: '',
             instructions: '',
-            ingredients: [{ ingredientId: '', quantity: '', unitId: '' }]
+            ingredients: [{ type: '', ingredientId: '', quantity: '', unitId: '' }]
         }
     });
 
@@ -97,42 +106,48 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
     const [ingredientsList, setIngredientsList] = useState<Ingredient[]>([]);
     const [ingredientsLoading, setIngredientsLoading] = useState<boolean>(true);
     const [ingredientsError, setIngredientsError] = useState<string | null>(null);
+    const [subRecipesList, setSubRecipesList] = useState<Recipe[]>([]);
+    const [subRecipesLoading, setSubRecipesLoading] = useState<boolean>(true);
+    const [subRecipesError, setSubRecipesError] = useState<string | null>(null);
 
     // Fetch units AND ingredients on component mount
     useEffect(() => {
         const loadSelectData = async () => {
+            setUnitsLoading(true);
+            setIngredientsLoading(true);
+            setSubRecipesLoading(true);
             try {
-                // Fetch units
-                setUnitsLoading(true);
-                const fetchedUnits = await getUnits();
+                const [fetchedUnits, fetchedIngredients, fetchedRecipes] = await Promise.all([
+                    getUnits(),
+                    getIngredients(),
+                    getRecipes()
+                ]);
                 setUnits(fetchedUnits);
+                setIngredientsList(fetchedIngredients);
+                setSubRecipesList(fetchedRecipes);
                 setUnitsError(null);
+                setIngredientsError(null);
+                setSubRecipesError(null);
             } catch (error) {
-                console.error("Failed to fetch units:", error);
+                console.error("Failed to load select data:", error);
                 setUnitsError("Could not load units.");
+                setIngredientsError("Could not load ingredients.");
+                setSubRecipesError("Could not load potential sub-recipes.");
             } finally {
                 setUnitsLoading(false);
-            }
-            
-            try {
-                 // Fetch ingredients
-                setIngredientsLoading(true);
-                const fetchedIngredients = await getIngredients();
-                setIngredientsList(fetchedIngredients);
-                setIngredientsError(null);
-            } catch (error) {
-                 console.error("Failed to fetch ingredients:", error);
-                setIngredientsError("Could not load ingredients.");
-            } finally {
-                 setIngredientsLoading(false);
+                setIngredientsLoading(false);
+                setSubRecipesLoading(false);
             }
         };
         loadSelectData();
     }, []); 
 
+    // Watch the type field for each ingredient to conditionally render selects
+    const watchIngredientTypes = watch("ingredients");
+
     const handleFormSubmit = (data: RecipeFormData) => {
         // Process data before calling onSubmit
-        const processedData: ProcessedRecipeData = { // Explicitly type processedData
+        const processedData: ProcessedRecipeData = {
             name: data.name,
             description: data.description,
             instructions: data.instructions,
@@ -142,12 +157,12 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
             prepTimeMinutes: data.prepTimeMinutes ? parseInt(data.prepTimeMinutes as string, 10) : null,
             cookTimeMinutes: data.cookTimeMinutes ? parseInt(data.cookTimeMinutes as string, 10) : null,
             ingredients: data.ingredients.map((ing, index) => ({
-                ingredientId: ing.ingredientId ? parseInt(ing.ingredientId as string, 10) : undefined,
-                subRecipeId: ing.subRecipeId ? parseInt(ing.subRecipeId as string, 10) : undefined,
+                ingredientId: ing.type === 'ingredient' && ing.ingredientId ? parseInt(ing.ingredientId as string, 10) : undefined,
+                subRecipeId: ing.type === 'sub-recipe' && ing.subRecipeId ? parseInt(ing.subRecipeId as string, 10) : undefined,
                 quantity: ing.quantity ? parseFloat(ing.quantity as string) : 0, 
                 unitId: ing.unitId ? parseInt(ing.unitId as string, 10) : 0, 
-                order: index // Add order here
-            }))
+                order: index
+            })).filter(ing => ing.ingredientId || ing.subRecipeId)
         };
         onSubmit(processedData);
     };
@@ -275,97 +290,169 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                             {unitsError} {ingredientsError}
                         </Alert>
                     )}
-                    {fields.map((item, index) => (
-                         <Paper key={item.id} sx={{ p: 1.5, mb: 1.5, position: 'relative' }}>
-                            <Grid container spacing={1} alignItems="center">
-                                <Grid item xs={12} sm={4} component={'div' as React.ElementType}> 
-                                    {/* Ingredient Select (now dynamic) */} 
-                                    <FormControl fullWidth size="small" error={!!ingredientsError || ingredientsLoading}> 
-                                        <InputLabel id={`ingredient-type-label-${index}`}>Item</InputLabel>
-                                        {/* TODO: Enhance to choose Ingredient vs Sub-Recipe */}
-                                        <Controller
-                                            name={`ingredients.${index}.ingredientId`}
-                                            control={control}
-                                            defaultValue=""
-                                            render={({ field }) => (
-                                                <Select 
-                                                    labelId={`ingredient-type-label-${index}`} 
-                                                    label="Item" 
-                                                    {...field}
-                                                    disabled={ingredientsLoading || !!ingredientsError}
-                                                >
-                                                     <MenuItem value=""><em>Select Ingredient</em></MenuItem>
-                                                     {/* Use fetched ingredientsList */}
-                                                     {ingredientsList.map(ing => (
-                                                        <MenuItem key={ing.id} value={ing.id}>{ing.name}</MenuItem>
-                                                    ))}
-                                                </Select>
-                                            )}
-                                        />
-                                    </FormControl>
-                                </Grid>
-                                 <Grid item xs={5} sm={3} component={'div' as React.ElementType}>
-                                    <Controller
-                                        name={`ingredients.${index}.quantity`}
-                                        control={control}
-                                        rules={{ required: 'Qty required' }}
-                                        render={({ field, fieldState }) => (
-                                            <TextField 
-                                                {...field}
-                                                label="Qty"
-                                                type="number"
-                                                fullWidth
-                                                required
-                                                size="small"
-                                                error={!!fieldState.error}
+                    {fields.map((item, index) => {
+                         // Get the current type for this row to conditionally render
+                         const currentType = watchIngredientTypes?.[index]?.type;
+                         return (
+                            <Paper key={item.id} sx={{ p: 1.5, mb: 1.5, position: 'relative' }}>
+                                <Grid container spacing={1} alignItems="flex-start"> {/* Use flex-start */} 
+                                    {/* Type Selector */} 
+                                     <Grid item xs={12} sm={2.5} component={'div' as React.ElementType}>
+                                        <FormControl fullWidth size="small" required>
+                                            <InputLabel id={`ingredient-item-type-label-${index}`}>Type</InputLabel>
+                                            <Controller
+                                                name={`ingredients.${index}.type`}
+                                                control={control}
+                                                defaultValue=""
+                                                rules={{ required: 'Type required' }}
+                                                render={({ field }) => (
+                                                    <Select 
+                                                        labelId={`ingredient-item-type-label-${index}`} 
+                                                        label="Type" 
+                                                        {...field}
+                                                        onChange={(e) => {
+                                                            field.onChange(e); // Call original onChange
+                                                            // Clear the other ID field when type changes
+                                                            if (e.target.value === 'ingredient') {
+                                                                setValue(`ingredients.${index}.subRecipeId`, '');
+                                                            } else if (e.target.value === 'sub-recipe') {
+                                                                setValue(`ingredients.${index}.ingredientId`, '');
+                                                            }
+                                                        }}
+                                                        error={!!errors.ingredients?.[index]?.type}
+                                                    >
+                                                        <MenuItem value=""><em>Select Type</em></MenuItem>
+                                                        <MenuItem value="ingredient">Base Ingredient</MenuItem>
+                                                        <MenuItem value="sub-recipe">Sub-Recipe</MenuItem>
+                                                    </Select>
+                                                )}
                                             />
+                                            {/* TODO: Add helper text for validation error */} 
+                                        </FormControl>
+                                    </Grid>
+
+                                    {/* Conditional Ingredient/Sub-Recipe Select */} 
+                                    <Grid item xs={12} sm={4.5} component={'div' as React.ElementType}>
+                                        {currentType === 'ingredient' && (
+                                            <FormControl fullWidth size="small" error={!!ingredientsError || ingredientsLoading || !!errors.ingredients?.[index]?.ingredientId} required>
+                                                <InputLabel id={`ingredient-id-label-${index}`}>Ingredient</InputLabel>
+                                                <Controller
+                                                    name={`ingredients.${index}.ingredientId`}
+                                                    control={control}
+                                                    defaultValue=""
+                                                    rules={{ required: currentType === 'ingredient' ? 'Ingredient required' : false }}
+                                                    render={({ field }) => (
+                                                        <Select 
+                                                            labelId={`ingredient-id-label-${index}`} 
+                                                            label="Ingredient" 
+                                                            {...field}
+                                                            disabled={ingredientsLoading || !!ingredientsError}
+                                                            error={!!errors.ingredients?.[index]?.ingredientId}
+                                                        >
+                                                            <MenuItem value=""><em>Select Ingredient</em></MenuItem>
+                                                            {ingredientsList.map(ing => (
+                                                                <MenuItem key={ing.id} value={ing.id}>{ing.name}</MenuItem>
+                                                            ))}
+                                                        </Select>
+                                                    )}
+                                                />
+                                            </FormControl>
                                         )}
-                                    />
-                                </Grid>
-                                 <Grid item xs={5} sm={3} component={'div' as React.ElementType}>
-                                    <FormControl fullWidth size="small" error={!!errors.ingredients?.[index]?.unitId || !!unitsError || unitsLoading}>
-                                        <InputLabel id={`ingredient-unit-label-${index}`}>Unit</InputLabel>
+                                         {currentType === 'sub-recipe' && (
+                                            <FormControl fullWidth size="small" error={!!subRecipesError || subRecipesLoading || !!errors.ingredients?.[index]?.subRecipeId} required>
+                                                <InputLabel id={`subrecipe-id-label-${index}`}>Sub-Recipe</InputLabel>
+                                                <Controller
+                                                    name={`ingredients.${index}.subRecipeId`}
+                                                    control={control}
+                                                    defaultValue=""
+                                                    rules={{ required: currentType === 'sub-recipe' ? 'Sub-recipe required' : false }}
+                                                    render={({ field }) => (
+                                                        <Select 
+                                                            labelId={`subrecipe-id-label-${index}`} 
+                                                            label="Sub-Recipe" 
+                                                            {...field}
+                                                            disabled={subRecipesLoading || !!subRecipesError}
+                                                            error={!!errors.ingredients?.[index]?.subRecipeId}
+                                                        >
+                                                            <MenuItem value=""><em>Select Sub-Recipe</em></MenuItem>
+                                                            {/* TODO: Filter out the current recipe being edited if applicable */}
+                                                            {subRecipesList.map(sr => (
+                                                                <MenuItem key={sr.id} value={sr.id}>{sr.name}</MenuItem>
+                                                            ))}
+                                                        </Select>
+                                                    )}
+                                                />
+                                            </FormControl>
+                                        )}
+                                         {/* Show placeholder if type not selected */} 
+                                         {!currentType && (
+                                            <TextField label="Item" size="small" fullWidth disabled value="Select Type first" />
+                                         )}
+                                    </Grid>
+
+                                    {/* Quantity Input */} 
+                                     <Grid item xs={5} sm={2} component={'div' as React.ElementType}>
                                         <Controller
-                                            name={`ingredients.${index}.unitId`}
+                                            name={`ingredients.${index}.quantity`}
                                             control={control}
-                                            defaultValue=""
-                                            rules={{ required: 'Unit required' }}
-                                            render={({ field }) => (
-                                                <Select 
-                                                    labelId={`ingredient-unit-label-${index}`} 
-                                                    label="Unit" 
+                                            rules={{ required: 'Qty required', min: { value: 0.01, message: "Qty > 0"} }}
+                                            render={({ field, fieldState }) => (
+                                                <TextField 
                                                     {...field}
-                                                    disabled={unitsLoading || !!unitsError}
-                                                >
-                                                    <MenuItem value=""><em>Unit</em></MenuItem>
-                                                    {units.map(unit => (
-                                                        <MenuItem key={unit.id} value={unit.id}>{unit.abbreviation || unit.name}</MenuItem>
-                                                    ))}
-                                                </Select>
+                                                    label="Qty"
+                                                    type="number"
+                                                    fullWidth
+                                                    required
+                                                    size="small"
+                                                    error={!!fieldState.error}
+                                                    helperText={fieldState.error?.message}
+                                                    inputProps={{ step: "any" }} // Allow decimals
+                                                />
                                             )}
                                         />
-                                    </FormControl>
+                                    </Grid>
+                                     {/* Unit Select */} 
+                                     <Grid item xs={5} sm={2} component={'div' as React.ElementType}>
+                                        <FormControl fullWidth size="small" error={!!errors.ingredients?.[index]?.unitId || !!unitsError || unitsLoading} required>
+                                            <InputLabel id={`ingredient-unit-label-${index}`}>Unit</InputLabel>
+                                            <Controller
+                                                name={`ingredients.${index}.unitId`}
+                                                control={control}
+                                                defaultValue=""
+                                                rules={{ required: 'Unit required' }}
+                                                render={({ field }) => (
+                                                    <Select /* ... props ... */ >
+                                                         <MenuItem value=""><em>Unit</em></MenuItem>
+                                                        {units.map(unit => (
+                                                            <MenuItem key={unit.id} value={unit.id}>{unit.abbreviation || unit.name}</MenuItem>
+                                                        ))}
+                                                    </Select>
+                                                )}
+                                            />
+                                        </FormControl>
+                                    </Grid>
+                                    {/* Remove Button */} 
+                                    <Grid item xs={2} sm={1} component={'div' as React.ElementType} sx={{ textAlign: 'center' }}>
+                                        <IconButton 
+                                            onClick={() => remove(index)} 
+                                            color="error" 
+                                            disabled={fields.length <= 1} 
+                                            sx={{ mt: 0.5 }}
+                                        >
+                                            <RemoveCircleOutlineIcon />
+                                        </IconButton>
+                                    </Grid>
                                 </Grid>
-                                <Grid item xs={2} sm={1} component={'div' as React.ElementType}>
-                                    <IconButton 
-                                        onClick={() => remove(index)} 
-                                        color="error" 
-                                        disabled={fields.length <= 1}
-                                        sx={{ mt: 0.5 }}
-                                    >
-                                        <RemoveCircleOutlineIcon />
-                                    </IconButton>
-                                </Grid>
-                            </Grid>
-                        </Paper>
-                    ))}
+                            </Paper>
+                        );
+                    })}
                     <Button
                         type="button"
                         startIcon={<AddCircleOutlineIcon />}
-                        onClick={() => append({ ingredientId: '', quantity: '', unitId: '' })}
+                        onClick={() => append({ type: '', ingredientId: '', subRecipeId: '', quantity: '', unitId: '' })} // Add type and subRecipeId to default append
                         sx={{ mt: 1 }}
                     >
-                        Add Ingredient
+                        Add Ingredient / Sub-Recipe
                     </Button>
                 </Grid>
             </Grid>
