@@ -68,6 +68,8 @@ export interface Ingredient {
     id: number;
     name: string;
     description: string | null;
+    ingredientCategoryId: number | null; // Added ID
+    ingredientCategory: IngredientCategory | null; // Added optional nested object
     createdAt: string;
     updatedAt: string;
 }

@@ -84,11 +84,12 @@ const EditIngredientPage: React.FC = () => {
   };
 
    // Transform fetched data for the form
-   const transformIngredientToFormData = (ingredientData: Ingredient | null): Partial<IngredientFormData> | undefined => {
+   const transformData = (ingredientData: Ingredient | null): Partial<IngredientFormData> | undefined => {
     if (!ingredientData) return undefined;
     return {
         name: ingredientData.name,
-        description: ingredientData.description || '' // Form expects string or null
+        description: ingredientData.description || '', // Form expects string or null
+        ingredientCategoryId: ingredientData.ingredientCategory?.id || '' // Added category mapping, Added comma
     };
   };
 
@@ -125,7 +126,7 @@ const EditIngredientPage: React.FC = () => {
       <IngredientForm 
         onSubmit={handleFormSubmit} 
         isSubmitting={isSubmitting} 
-        initialData={transformIngredientToFormData(ingredient)} 
+        initialData={transformData(ingredient)} 
       /> 
 
     </Container>
