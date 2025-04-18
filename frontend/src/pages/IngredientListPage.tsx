@@ -74,16 +74,22 @@ const IngredientListPage: React.FC = () => {
         handleCloseDialog(); // Close dialog on success
     } catch (err: any) {
         console.error('Failed to delete ingredient:', err);
-        const errorMsg = err.response?.data?.message || err.message || 'Failed to delete ingredient.';
-        setDeleteError(prev => ({ ...prev, [ingredientId]: errorMsg }));
+        const backendErrorMsg = err.response?.data?.message || err.message || 'Failed to delete ingredient.';
+        
         // Check if the error indicates it's in use
-        const isInUse = errorMsg.toLowerCase().includes('currently used') || 
-                        errorMsg.toLowerCase().includes('foreign key constraint');
+        const isInUse = backendErrorMsg.toLowerCase().includes('currently used') || 
+                        backendErrorMsg.toLowerCase().includes('foreign key constraint');
+
+        const displayError = isInUse 
+            ? "This ingredient is in use in one or more recipes and cannot be deleted. Please remove it from all recipes before deleting." 
+            : backendErrorMsg; // Show backend error for other issues
+
+        setDeleteError(prev => ({ ...prev, [ingredientId]: displayError }));
 
         if (!isInUse) {
              handleCloseDialog(); // Close dialog only if it's not a dependency error
         } 
-        // If it IS in use, the dialog stays open, and the error is shown below the list
+        // If it IS in use, the dialog stays open
     } finally {
         setIsDeleting(prev => ({ ...prev, [ingredientId]: false }));
     }

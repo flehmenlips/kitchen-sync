@@ -74,14 +74,22 @@ const UnitListPage: React.FC = () => {
         handleCloseDialog();
     } catch (err: any) {
         console.error('Failed to delete unit:', err);
-        const errorMsg = err.response?.data?.message || err.message || 'Failed to delete unit.';
-        setDeleteError(prev => ({ ...prev, [unitId]: errorMsg }));
-        const isInUse = errorMsg.toLowerCase().includes('currently used') || 
-                        errorMsg.toLowerCase().includes('foreign key constraint'); 
+        const backendErrorMsg = err.response?.data?.message || err.message || 'Failed to delete unit.';
+        
+        // Check if the error indicates it's in use
+        const isInUse = backendErrorMsg.toLowerCase().includes('currently used') || 
+                        backendErrorMsg.toLowerCase().includes('foreign key constraint'); 
+        
+        const displayError = isInUse 
+            ? "This unit is in use in one or more recipes and cannot be deleted. Please remove it from all recipes before deleting." 
+            : backendErrorMsg; // Show backend error for other issues
+
+        setDeleteError(prev => ({ ...prev, [unitId]: displayError }));
         
         if (!isInUse) {
-             handleCloseDialog();
+             handleCloseDialog(); // Close dialog only if it's not a dependency error
         } 
+        // If it IS in use, the dialog stays open
     } finally {
          setIsDeleting(prev => ({ ...prev, [unitId]: false }));
     }
