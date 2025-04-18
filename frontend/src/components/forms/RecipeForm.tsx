@@ -17,7 +17,8 @@ import {
     Dialog,
     DialogTitle,
     DialogContent,
-    SelectChangeEvent
+    SelectChangeEvent,
+    Grid
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
@@ -358,21 +359,37 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                                 control={control}
                                                 defaultValue=""
                                                 rules={{ required: currentType === 'ingredient' ? 'Ingredient required' : false }}
-                                                render={({ field }) => (
-                                                    <Select 
-                                                        labelId={`ingredient-id-label-${index}`} 
-                                                        label="Ingredient" 
-                                                        {...field}
-                                                        value={field.value ?? ''}
-                                                        disabled={ingredientsLoading || !!ingredientsError}
-                                                        error={!!errors.ingredients?.[index]?.ingredientId}
-                                                    >
-                                                        <MenuItem value=""><em>Select Ingredient</em></MenuItem>
-                                                        {ingredientsList.map(ing => (
-                                                            <MenuItem key={ing.id} value={ing.id}>{ing.name}</MenuItem>
-                                                        ))}
-                                                    </Select>
-                                                )}
+                                                render={({ field }) => {
+                                                    const handleIngredientChange = (event: SelectChangeEvent<string | number>) => {
+                                                        const value = event.target.value;
+                                                        if (value === '__CREATE_NEW__') {
+                                                            handleOpenModal('ingredient', index);
+                                                        } else {
+                                                            field.onChange(event);
+                                                        }
+                                                    };
+                                                    return (
+                                                        <Select 
+                                                            labelId={`ingredient-id-label-${index}`} 
+                                                            label="Ingredient" 
+                                                            {...field}
+                                                            value={field.value ?? ''} 
+                                                            onChange={handleIngredientChange}
+                                                            disabled={ingredientsLoading || !!ingredientsError}
+                                                            error={!!errors.ingredients?.[index]?.ingredientId}
+                                                        >
+                                                            <MenuItem value=""><em>Select Ingredient</em></MenuItem>
+                                                            <Divider />
+                                                            {ingredientsList.map(ing => (
+                                                                <MenuItem key={ing.id} value={ing.id}>{ing.name}</MenuItem>
+                                                            ))}
+                                                            <Divider />
+                                                            <MenuItem value="__CREATE_NEW__">
+                                                                <Typography color="primary">+ Create New Ingredient</Typography>
+                                                            </MenuItem>
+                                                        </Select>
+                                                    );
+                                                }}
                                             />
                                         </FormControl>
                                     )}
