@@ -322,8 +322,17 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
                 } as MappedIngredientData;
              }).filter((ing: MappedIngredientData) => ing.ingredientId || ing.subRecipeId);
              
+             console.log(`[updateRecipe] Recipe ID: ${recipeId}, Processed ingredients for createMany:`, JSON.stringify(recipeIngredientsData, null, 2));
+
              if (recipeIngredientsData.length > 0) {
-                await tx.unitQuantity.createMany({ data: recipeIngredientsData });
+                try {
+                    await tx.unitQuantity.createMany({ data: recipeIngredientsData });
+                 } catch (createError) {
+                     // Log specific createMany error
+                     console.error(`[updateRecipe] Error during createMany for Recipe ID: ${recipeId}`, createError);
+                     // Re-throw the error to abort the transaction
+                     throw createError; 
+                 }
              }
         }
         return updatedRecipe.id;
