@@ -82,6 +82,23 @@ interface RecipeFormProps {
     isSubmitting: boolean;
 }
 
+// Define placeholder objects for "Create New" options
+const CREATE_NEW_UNIT_OPTION: UnitOfMeasure = {
+    id: -1, // Use a special ID
+    name: "+ Create New Unit",
+    abbreviation: null,
+    type: null,
+    createdAt: '', // Add dummy values for required fields if strict
+    updatedAt: ''
+};
+const CREATE_NEW_INGREDIENT_OPTION: Ingredient = {
+    id: -1,
+    name: "+ Create New Ingredient",
+    description: null,
+    createdAt: '',
+    updatedAt: ''
+};
+
 const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmitting }) => {
     const {
         handleSubmit,
@@ -140,9 +157,10 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                     getIngredients(),
                     getRecipes()
                 ]);
-                setUnits(fetchedUnits);
-                setIngredientsList(fetchedIngredients);
-                setSubRecipesList(fetchedRecipes);
+                // Add placeholders to the fetched lists
+                setUnits([CREATE_NEW_UNIT_OPTION, ...fetchedUnits]);
+                setIngredientsList([CREATE_NEW_INGREDIENT_OPTION, ...fetchedIngredients]);
+                setSubRecipesList(fetchedRecipes); // No create new for sub-recipes yet
                 setUnitsError(null);
                 setIngredientsError(null);
                 setSubRecipesError(null);
@@ -202,22 +220,24 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
 
     // Handle successful creation within the modal
     const handleModalCreateSuccess = (newItem: UnitOfMeasure | Ingredient, type: 'unit' | 'ingredient') => {
+        let fieldToUpdate: string | null = null;
         if (type === 'unit') {
-            // Optimistically add to state or refetch
-            setUnits(prev => [...prev, newItem as UnitOfMeasure].sort((a, b) => a.name.localeCompare(b.name)));
-            // If a target index exists (meaning it was triggered from an ingredient row unit select)
-            if (modalTargetIndex !== null) {
-                setValue(`ingredients.${modalTargetIndex}.unitId`, newItem.id, { shouldValidate: true });
+            setUnits(prev => [CREATE_NEW_UNIT_OPTION, ...prev.filter(u => u.id !== -1), newItem as UnitOfMeasure].sort((a, b) => a.id === -1 ? -1 : (b.id === -1 ? 1: a.name.localeCompare(b.name))));
+            if (modalTargetIndex === -1) { // Special index for Yield Unit
+                fieldToUpdate = `yieldUnitId`;
+            } else if (modalTargetIndex !== null) {
+                fieldToUpdate = `ingredients.${modalTargetIndex}.unitId`;
             }
-            // TODO: Handle setting yieldUnitId if modal was triggered from there?
         } else if (type === 'ingredient') {
-            setIngredientsList(prev => [...prev, newItem as Ingredient].sort((a, b) => a.name.localeCompare(b.name)));
+             setIngredientsList(prev => [CREATE_NEW_INGREDIENT_OPTION, ...prev.filter(i => i.id !== -1), newItem as Ingredient].sort((a, b) => a.id === -1 ? -1 : (b.id === -1 ? 1 : a.name.localeCompare(b.name))));
             if (modalTargetIndex !== null) {
-                // Also ensure the type is set correctly
                 setValue(`ingredients.${modalTargetIndex}.type`, 'ingredient');
-                setValue(`ingredients.${modalTargetIndex}.subRecipeId`, ''); // Clear sub-recipe id
-                setValue(`ingredients.${modalTargetIndex}.ingredientId`, newItem.id, { shouldValidate: true });
+                setValue(`ingredients.${modalTargetIndex}.subRecipeId`, ''); 
+                fieldToUpdate = `ingredients.${modalTargetIndex}.ingredientId`;
             }
+        }
+        if (fieldToUpdate) {
+            setValue(fieldToUpdate as any, newItem.id, { shouldValidate: true });
         }
         handleCloseModal();
     };
@@ -256,13 +276,26 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                     control={control}
                     render={({ field }) => (
                         <Autocomplete
-                            options={units}
-                            getOptionLabel={(option) => option.name || ''}
-                            value={units.find(unit => unit.id === field.value) || null}
+                            options={units} 
+                            getOptionLabel={(option) => option.name || ''} 
+                            value={units.find(unit => unit.id === field.value) || null} 
                             onChange={(event, newValue) => {
-                                field.onChange(newValue ? newValue.id : '');
+                                if (newValue && newValue.id === CREATE_NEW_UNIT_OPTION.id) {
+                                    // Use special index -1 for yield unit trigger
+                                    handleOpenModal('unit', -1); 
+                                } else {
+                                    field.onChange(newValue ? newValue.id : ''); 
+                                }
                             }}
                             isOptionEqualToValue={(option, value) => option.id === value?.id}
+                            renderOption={(props, option) => (
+                                <Box component="li" {...props} key={option.id}>
+                                    {option.id === CREATE_NEW_UNIT_OPTION.id ? 
+                                        <Typography color="primary">{option.name}</Typography> : 
+                                        option.name
+                                    }
+                                </Box>
+                            )}
                             loading={unitsLoading}
                             disabled={unitsLoading || !!unitsError}
                             renderInput={(params) => (
@@ -373,8 +406,22 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                                     options={ingredientsList}
                                                     getOptionLabel={(option) => option.name || ''}
                                                     value={ingredientsList.find(ing => ing.id === field.value) || null}
-                                                    onChange={(event, newValue) => field.onChange(newValue ? newValue.id : '')}
+                                                    onChange={(event, newValue) => {
+                                                        if (newValue && newValue.id === CREATE_NEW_INGREDIENT_OPTION.id) {
+                                                            handleOpenModal('ingredient', index);
+                                                        } else {
+                                                            field.onChange(newValue ? newValue.id : '');
+                                                        }
+                                                    }}
                                                     isOptionEqualToValue={(option, value) => option.id === value?.id}
+                                                    renderOption={(props, option) => (
+                                                        <Box component="li" {...props} key={option.id}>
+                                                            {option.id === CREATE_NEW_INGREDIENT_OPTION.id ? 
+                                                                <Typography color="primary" variant="body2">{option.name}</Typography> : 
+                                                                option.name
+                                                            }
+                                                        </Box>
+                                                    )}
                                                     loading={ingredientsLoading}
                                                     disabled={ingredientsLoading || !!ingredientsError}
                                                     renderInput={(params) => (
@@ -385,7 +432,7 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                                             required={currentType === 'ingredient'}
                                                             error={!!ingredientsError || !!errors.ingredients?.[index]?.ingredientId}
                                                             helperText={ingredientsError}
-                                                            InputProps={{
+                                                            InputProps={{ 
                                                                 ...params.InputProps,
                                                                 endAdornment: (
                                                                     <>
@@ -472,8 +519,22 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                                 options={units}
                                                 getOptionLabel={(option) => option.abbreviation || option.name || ''}
                                                 value={units.find(unit => unit.id === field.value) || null}
-                                                onChange={(event, newValue) => field.onChange(newValue ? newValue.id : '')}
+                                                onChange={(event, newValue) => {
+                                                    if (newValue && newValue.id === CREATE_NEW_UNIT_OPTION.id) {
+                                                        handleOpenModal('unit', index);
+                                                    } else {
+                                                        field.onChange(newValue ? newValue.id : '');
+                                                    }
+                                                }}
                                                 isOptionEqualToValue={(option, value) => option.id === value?.id}
+                                                renderOption={(props, option) => (
+                                                    <Box component="li" {...props} key={option.id}>
+                                                        {option.id === CREATE_NEW_UNIT_OPTION.id ? 
+                                                            <Typography color="primary" variant="body2">{option.name}</Typography> :
+                                                            option.abbreviation || option.name
+                                                        }
+                                                    </Box>
+                                                )}
                                                 loading={unitsLoading}
                                                 disabled={unitsLoading || !!unitsError}
                                                 renderInput={(params) => (
@@ -495,6 +556,7 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                                     />
                                                 )}
                                                 fullWidth
+                                                sx={{ flexBasis: '20%' }} 
                                             />
                                         )}
                                     />
