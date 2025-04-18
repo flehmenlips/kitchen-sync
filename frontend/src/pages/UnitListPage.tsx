@@ -19,6 +19,7 @@ import IconButton from '@mui/material/IconButton';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import Stack from '@mui/material/Stack';
+import ConfirmationDialog from '../components/common/ConfirmationDialog';
 
 const UnitListPage: React.FC = () => {
   const [units, setUnits] = useState<UnitOfMeasure[]>([]);
@@ -26,6 +27,8 @@ const UnitListPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<{ [key: number]: string | null }>({});
   const [isDeleting, setIsDeleting] = useState<{ [key: number]: boolean }>({});
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [unitToDelete, setUnitToDelete] = useState<UnitOfMeasure | null>(null);
 
   useEffect(() => {
     const fetchUnits = async () => {
@@ -45,20 +48,32 @@ const UnitListPage: React.FC = () => {
     fetchUnits();
   }, []);
 
-  const handleDelete = async (unit: UnitOfMeasure) => {
-    if (window.confirm(`Are you sure you want to delete unit "${unit.name}"? This cannot be undone if the unit is in use.`)) {
-        setIsDeleting(prev => ({ ...prev, [unit.id]: true }));
-        setDeleteError(prev => ({ ...prev, [unit.id]: null }));
-        try {
-            await deleteUnit(unit.id);
-            console.log('Unit deleted successfully');
-            setUnits(prevUnits => prevUnits.filter(u => u.id !== unit.id));
-        } catch (err: any) {
-            console.error('Failed to delete unit:', err);
-            setDeleteError(prev => ({ ...prev, [unit.id]: err.response?.data?.message || err.message || 'Failed to delete unit.' }));
-        } finally {
-             setIsDeleting(prev => ({ ...prev, [unit.id]: false }));
-        }
+  const handleDeleteClick = (unit: UnitOfMeasure) => {
+    setDeleteError(prev => ({ ...prev, [unit.id]: null }));
+    setUnitToDelete(unit);
+    setDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    setUnitToDelete(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!unitToDelete) return;
+    const unitId = unitToDelete.id;
+
+    setIsDeleting(prev => ({ ...prev, [unitId]: true }));
+    setDeleteError(prev => ({ ...prev, [unitId]: null }));
+    try {
+        await deleteUnit(unitId);
+        console.log('Unit deleted successfully');
+        setUnits(prevUnits => prevUnits.filter(u => u.id !== unitId));
+    } catch (err: any) {
+        console.error('Failed to delete unit:', err);
+        setDeleteError(prev => ({ ...prev, [unitId]: err.response?.data?.message || err.message || 'Failed to delete unit.' }));
+    } finally {
+         setIsDeleting(prev => ({ ...prev, [unitId]: false }));
     }
   };
 
@@ -119,12 +134,12 @@ const UnitListPage: React.FC = () => {
                                 <IconButton 
                                     edge="end" 
                                     aria-label="delete" 
-                                    onClick={() => handleDelete(unit)}
+                                    onClick={() => handleDeleteClick(unit)}
                                     disabled={isDeleting[unit.id]}
                                     color="error"
                                     size="small"
                                 >
-                                   {isDeleting[unit.id] ? <CircularProgress size={16} color="inherit"/> : <DeleteIcon fontSize="small"/>}
+                                    {isDeleting[unit.id] ? <CircularProgress size={16} color="inherit"/> : <DeleteIcon fontSize="small"/>}
                                 </IconButton>
                             </Stack>
                         }
@@ -138,7 +153,18 @@ const UnitListPage: React.FC = () => {
             </List>
         )}
         {Object.entries(deleteError).map(([id, msg]) => 
-            msg ? <Alert severity="error" key={id} sx={{ mt: 1 }}>Error deleting unit {id}: {msg}</Alert> : null
+            msg ? <Alert severity="error" key={`err-${id}`} sx={{ mt: 1 }}>Error deleting unit {id}: {msg}</Alert> : null
+        )}
+
+        {unitToDelete && (
+            <ConfirmationDialog
+                open={dialogOpen}
+                onClose={handleCloseDialog}
+                onConfirm={handleConfirmDelete}
+                title="Confirm Deletion"
+                contentText={`Are you sure you want to delete the unit "${unitToDelete?.name || ''}"? This cannot be undone, especially if the unit is currently used in recipes.`}
+                confirmText={isDeleting[unitToDelete.id] ? 'Deleting...' : 'Delete'}
+            />
         )}
     </Container>
   );

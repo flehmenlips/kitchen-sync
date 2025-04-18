@@ -19,6 +19,7 @@ import IconButton from '@mui/material/IconButton';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import Stack from '@mui/material/Stack';
+import ConfirmationDialog from '../components/common/ConfirmationDialog';
 
 const IngredientListPage: React.FC = () => {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
@@ -26,6 +27,8 @@ const IngredientListPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<{ [key: number]: string | null }>({});
   const [isDeleting, setIsDeleting] = useState<{ [key: number]: boolean }>({});
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [ingredientToDelete, setIngredientToDelete] = useState<Ingredient | null>(null);
 
   useEffect(() => {
     const fetchIngredients = async () => {
@@ -45,21 +48,33 @@ const IngredientListPage: React.FC = () => {
     fetchIngredients();
   }, []);
 
-  const handleDelete = async (ingredient: Ingredient) => {
-    if (window.confirm(`Are you sure you want to delete ingredient "${ingredient.name}"? This cannot be undone if the ingredient is in use.`)) {
-        setIsDeleting(prev => ({ ...prev, [ingredient.id]: true }));
-        setDeleteError(prev => ({ ...prev, [ingredient.id]: null }));
-        try {
-            await deleteIngredient(ingredient.id);
-            console.log('Ingredient deleted successfully');
-            // Refetch ingredients or remove from state
-            setIngredients(prevIngredients => prevIngredients.filter(i => i.id !== ingredient.id));
-        } catch (err: any) {
-            console.error('Failed to delete ingredient:', err);
-            setDeleteError(prev => ({ ...prev, [ingredient.id]: err.response?.data?.message || err.message || 'Failed to delete ingredient.' }));
-        } finally {
-            setIsDeleting(prev => ({ ...prev, [ingredient.id]: false }));
-        }
+  const handleDeleteClick = (ingredient: Ingredient) => {
+    setDeleteError(prev => ({ ...prev, [ingredient.id]: null }));
+    setIngredientToDelete(ingredient);
+    setDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    setIngredientToDelete(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!ingredientToDelete) return;
+    const ingredientId = ingredientToDelete.id;
+
+    setIsDeleting(prev => ({ ...prev, [ingredientId]: true }));
+    setDeleteError(prev => ({ ...prev, [ingredientId]: null }));
+    try {
+        await deleteIngredient(ingredientId);
+        console.log('Ingredient deleted successfully');
+        setIngredients(prevIngredients => prevIngredients.filter(i => i.id !== ingredientId));
+    } catch (err: any) {
+        console.error('Failed to delete ingredient:', err);
+        setDeleteError(prev => ({ ...prev, [ingredientId]: err.response?.data?.message || err.message || 'Failed to delete ingredient.' }));
+    } finally {
+        setIsDeleting(prev => ({ ...prev, [ingredientId]: false }));
+        handleCloseDialog();
     }
   };
 
@@ -120,7 +135,7 @@ const IngredientListPage: React.FC = () => {
                                 <IconButton 
                                     edge="end" 
                                     aria-label="delete" 
-                                    onClick={() => handleDelete(ingredient)}
+                                    onClick={() => handleDeleteClick(ingredient)}
                                     disabled={isDeleting[ingredient.id]}
                                     color="error"
                                     size="small"
@@ -139,7 +154,18 @@ const IngredientListPage: React.FC = () => {
             </List>
         )}
         {Object.entries(deleteError).map(([id, msg]) => 
-            msg ? <Alert severity="error" key={id} sx={{ mt: 1 }}>Error deleting ingredient {id}: {msg}</Alert> : null
+            msg ? <Alert severity="error" key={`err-${id}`} sx={{ mt: 1 }}>Error deleting ingredient {id}: {msg}</Alert> : null
+        )}
+
+        {ingredientToDelete && (
+            <ConfirmationDialog
+                open={dialogOpen}
+                onClose={handleCloseDialog}
+                onConfirm={handleConfirmDelete}
+                title="Confirm Deletion"
+                contentText={`Are you sure you want to delete the ingredient "${ingredientToDelete?.name || ''}"? This cannot be undone, especially if the ingredient is currently used in recipes.`}
+                confirmText={isDeleting[ingredientToDelete.id] ? 'Deleting...' : 'Delete'}
+            />
         )}
     </Container>
   );

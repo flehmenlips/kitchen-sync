@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link as RouterLink } from 'react-router-dom';
-import { getRecipeById, Recipe } from '../services/apiService';
+import { useParams, Link as RouterLink, useNavigate } from 'react-router-dom';
+import { getRecipeById, Recipe, deleteRecipe } from '../services/apiService';
 
 // Import MUI components
 import Container from '@mui/material/Container';
@@ -14,13 +14,21 @@ import Alert from '@mui/material/Alert';
 import Divider from '@mui/material/Divider';
 import Link from '@mui/material/Link'; // MUI Link
 import Breadcrumbs from '@mui/material/Breadcrumbs';
+import Button from '@mui/material/Button';
+import Stack from '@mui/material/Stack';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import ConfirmationDialog from './common/ConfirmationDialog'; // Import the dialog
 
 const RecipeDetail: React.FC = () => {
-    // Get the recipe ID from URL parameters
     const { id } = useParams<{ id: string }>();
+    const navigate = useNavigate(); // Hook for navigation
     const [recipe, setRecipe] = useState<Recipe | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
+    const [deleteError, setDeleteError] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState<boolean>(false);
+    const [dialogOpen, setDialogOpen] = useState(false); // State for dialog
 
     useEffect(() => {
         const fetchRecipe = async () => {
@@ -48,6 +56,35 @@ const RecipeDetail: React.FC = () => {
 
         fetchRecipe();
     }, [id]); // Re-run effect if the ID changes
+
+    const handleDeleteClick = () => {
+        setDeleteError(null); // Clear previous errors
+        setDialogOpen(true); // Open the dialog
+    };
+
+    const handleCloseDialog = () => {
+        setDialogOpen(false);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!recipe) return;
+        // Actual delete logic moved here from handleDeleteClick
+        setIsDeleting(true);
+        setDeleteError(null);
+        try {
+            await deleteRecipe(recipe.id);
+            console.log('Recipe deleted successfully');
+            navigate('/recipes'); 
+        } catch (err: any) {
+            console.error('Failed to delete recipe:', err);
+            setDeleteError(err.response?.data?.message || err.message || 'Failed to delete recipe.');
+            // Keep dialog open on error? Or close and show alert?
+            // For now, dialog closes automatically via onClose in onConfirm call
+        } finally {
+            setIsDeleting(false);
+            // No need to close dialog here, ConfirmationDialog handles it
+        }
+    };
 
     if (loading) {
         return (
@@ -86,7 +123,32 @@ const RecipeDetail: React.FC = () => {
                 <Typography color="text.primary">{recipe.name}</Typography>
             </Breadcrumbs>
 
-            <Typography variant="h4" component="h2" gutterBottom>{recipe.name}</Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                <Typography variant="h4" component="h2" gutterBottom>{recipe.name}</Typography>
+                <Stack direction="row" spacing={1}>
+                    <Button 
+                        variant="outlined" 
+                        startIcon={<EditIcon />} 
+                        component={RouterLink}
+                        to={`/recipes/${recipe.id}/edit`}
+                        size="small"
+                    >
+                        Edit
+                    </Button>
+                    <Button 
+                        variant="outlined" 
+                        color="error" 
+                        startIcon={<DeleteIcon />} 
+                        onClick={handleDeleteClick}
+                        disabled={isDeleting || !recipe}
+                        size="small"
+                    >
+                        Delete
+                    </Button>
+                </Stack>
+            </Box>
+            {deleteError && <Alert severity="error" sx={{ mb: 2 }}>{deleteError}</Alert>}
+            
             {recipe.description && <Typography variant="body1" sx={{ mb: 2 }}><em>{recipe.description}</em></Typography>}
             
             <Box sx={{ display: 'flex', gap: 3, mb: 2, flexWrap: 'wrap' }}>
@@ -134,7 +196,17 @@ const RecipeDetail: React.FC = () => {
                 {recipe.instructions || 'No instructions provided.'}
             </Typography>
 
-            {/* TODO: Add Edit/Delete buttons using MUI Button component */}
+            {/* Render Confirmation Dialog */}
+            <ConfirmationDialog
+                open={dialogOpen}
+                onClose={handleCloseDialog}
+                onConfirm={handleConfirmDelete}
+                title="Confirm Deletion"
+                contentText={`Are you sure you want to delete the recipe "${recipe?.name || ''}"? This action cannot be undone.`}
+                confirmText={isDeleting ? 'Deleting...' : 'Delete'}
+                // Optionally make confirm button red
+                // confirmButtonProps={{ color: 'error' }} 
+            />
         </Container>
     );
 };
