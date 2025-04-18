@@ -26,13 +26,24 @@ interface GroupedRecipes {
 }
 
 const UNCATEGORIZED_KEY = 'Uncategorized';
+const LOCAL_STORAGE_KEY = 'kitchenSyncRecipeCategoryState'; // Define key
 
 const RecipeList: React.FC = () => {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   // State to track open/closed categories
-  const [openCategories, setOpenCategories] = useState<{ [key: string]: boolean }>({});
+  const [openCategories, setOpenCategories] = useState<{ [key: string]: boolean }>(() => {
+    try {
+        const savedState = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (savedState) {
+            return JSON.parse(savedState);
+        }
+    } catch (error) {
+        console.error("Error reading category state from localStorage:", error);
+    }
+    return {}; // Return empty initially, will be populated after fetch
+  });
 
   useEffect(() => {
     const fetchRecipes = async () => {
@@ -41,18 +52,34 @@ const RecipeList: React.FC = () => {
         const data = await getRecipes(); // Assuming this now includes category
         setRecipes(data);
         setError(null);
-        // Initialize all categories as open by default
-        const initialOpenState: { [key: string]: boolean } = {};
-        data.forEach(recipe => {
-            const categoryName = recipe.category?.name || UNCATEGORIZED_KEY;
-            if (!(categoryName in initialOpenState)) {
-                 initialOpenState[categoryName] = true; // Default to open
-            }
+
+        // Initialize state only if not loaded from storage OR if new categories appear
+        setOpenCategories(prevState => {
+             const loadedFromStorage = Object.keys(prevState).length > 0;
+             const newState = { ...prevState }; // Start with potentially loaded state
+             let updated = false;
+
+             // Ensure all current categories have an entry (defaulting to true if new)
+             const allCategoryNames = new Set<string>([UNCATEGORIZED_KEY]); // Include Uncategorized
+             data.forEach(recipe => {
+                 allCategoryNames.add(recipe.category?.name || UNCATEGORIZED_KEY);
+             });
+
+             allCategoryNames.forEach(categoryName => {
+                 if (!(categoryName in newState)) {
+                     newState[categoryName] = true; // Default new categories to open
+                     updated = true;
+                 }
+             });
+             
+             // If nothing was loaded and we didn't add anything, default all to true
+             if (!loadedFromStorage && !updated && data.length > 0) { // Only default if data was actually fetched
+                 allCategoryNames.forEach(name => newState[name] = true);
+                 updated = true;
+             }
+
+             return updated ? newState : prevState;
         });
-        if (!initialOpenState[UNCATEGORIZED_KEY] && data.some(r => !r.category)) {
-             initialOpenState[UNCATEGORIZED_KEY] = true; // Ensure Uncategorized is open if present
-        }
-        setOpenCategories(initialOpenState);
 
       } catch (err) {
         console.error(err);
@@ -63,7 +90,19 @@ const RecipeList: React.FC = () => {
     };
 
     fetchRecipes();
-  }, []);
+  }, []); // Fetch only on mount
+
+  // Effect to save state to Local Storage whenever it changes
+  useEffect(() => {
+      // Avoid saving the initial empty state before categories are loaded/initialized
+      if (Object.keys(openCategories).length > 0 && !loading) { // Only save if not loading and state is populated
+        try {
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(openCategories));
+        } catch (error) {
+            console.error("Error saving category state to localStorage:", error);
+        }
+      }
+  }, [openCategories, loading]); // Add loading dependency
 
   // Group recipes by category using useMemo for efficiency
   const groupedRecipes = useMemo(() => {
@@ -133,9 +172,9 @@ const RecipeList: React.FC = () => {
                  {/* Optional Icon */}
                  {/* <ListItemIcon><FolderIcon /></ListItemIcon> */}
                 <ListItemText primary={categoryName} primaryTypographyProps={{ fontWeight: 'medium' }} />
-                {openCategories[categoryName] ? <ExpandLess /> : <ExpandMore />}
+                {!!openCategories[categoryName] ? <ExpandLess /> : <ExpandMore />}
               </ListItemButton>
-              <Collapse in={openCategories[categoryName]} timeout="auto" unmountOnExit>
+              <Collapse in={!!openCategories[categoryName]} timeout="auto" unmountOnExit>
                 <List component="div" disablePadding sx={{ pl: 4 }}> {/* Indent recipes */} 
                   {groupedRecipes[categoryName].map((recipe) => (
                     <ListItem key={recipe.id} disablePadding>
