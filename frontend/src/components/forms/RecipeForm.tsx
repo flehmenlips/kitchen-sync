@@ -101,6 +101,8 @@ const CREATE_NEW_INGREDIENT_OPTION: Ingredient = {
     id: -1,
     name: "+ Create New Ingredient",
     description: null,
+    ingredientCategoryId: null,
+    ingredientCategory: null,
     createdAt: '',
     updatedAt: ''
 };
@@ -380,11 +382,9 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
 
             {/* Category Selector */}
             <FormControl fullWidth sx={{ mb: 2 }} error={!!categoriesError || categoriesLoading}>
-                <InputLabel id="category-select-label">Category (Optional)</InputLabel>
                 <Controller
                     name="categoryId"
                     control={control}
-                    defaultValue=""
                     render={({ field }) => (
                         <Autocomplete
                             options={categories} // Use fetched categories
@@ -414,6 +414,10 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                     label="Category (Optional)" 
                                     error={!!categoriesError} 
                                     helperText={categoriesError}
+                                    InputLabelProps={{ 
+                                        ...params.InputLabelProps,
+                                        shrink: true 
+                                    }}
                                     InputProps={{
                                         ...params.InputProps,
                                         endAdornment: (
@@ -425,7 +429,6 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                     }}
                                 />
                             )}
-                            // No fullWidth needed on Autocomplete itself when in FormControl
                         />
                     )}
                 />
