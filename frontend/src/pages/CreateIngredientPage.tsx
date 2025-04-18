@@ -28,9 +28,8 @@ const CreateIngredientPage: React.FC = () => {
     try {
       const newIngredient = await createIngredient(formData); 
       console.log('Ingredient created:', newIngredient);
-      // Navigate back to the (yet to be created) ingredients list page
-      // For now, navigate back to recipes as a placeholder
-      navigate('/recipes'); // TODO: Change to /ingredients when list page exists
+      // Navigate back to the ingredients list page
+      navigate('/ingredients'); // Corrected navigation path
     } catch (error) {
       console.error('Failed to create ingredient:', error);
       let message = 'An unexpected error occurred.';

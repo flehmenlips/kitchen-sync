@@ -29,9 +29,8 @@ const CreateUnitPage: React.FC = () => {
     try {
       const newUnit = await createUnit(payload); 
       console.log('Unit created:', newUnit);
-      // Navigate back to the (yet to be created) units list page
-      // For now, navigate back to recipes as a placeholder
-      navigate('/recipes'); // TODO: Change to /units when list page exists
+      // Navigate back to the units list page
+      navigate('/units'); // Corrected navigation path
     } catch (error) {
       console.error('Failed to create unit:', error);
       let message = 'An unexpected error occurred.';
