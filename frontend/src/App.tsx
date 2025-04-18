@@ -17,6 +17,7 @@ import CreateUnitPage from './pages/CreateUnitPage'; // Import Create Unit page
 import EditUnitPage from './pages/EditUnitPage'; // Import Edit page
 import IngredientListPage from './pages/IngredientListPage'; // Import Ingredient List page
 import CreateIngredientPage from './pages/CreateIngredientPage'; // Import Create Ingredient page
+import EditIngredientPage from './pages/EditIngredientPage'; // Import Edit page
 // import RecipeDetail from './components/RecipeDetail'; // Will create this next
 // import CreateRecipePage from './pages/CreateRecipePage'; // Will create this next
 
@@ -49,6 +50,7 @@ function App() {
           {/* Ingredient Routes */}
           <Route path="/ingredients" element={<IngredientListPage />} />
           <Route path="/ingredients/new" element={<CreateIngredientPage />} />
+          <Route path="/ingredients/:id/edit" element={<EditIngredientPage />} /> {/* Added Edit Route */}
 
           {/* Add other routes for Ingredients, etc. later */}
           <Route path="*" element={<div>404 Not Found</div>} /> {/* Catch-all route */}

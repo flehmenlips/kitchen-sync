@@ -189,6 +189,16 @@ export const getIngredients = async (): Promise<Ingredient[]> => {
     }
 };
 
+export const getIngredientById = async (id: number): Promise<Ingredient> => {
+    try {
+        const response = await apiClient.get(`/ingredients/${id}`);
+        return response.data;
+    } catch (error) {
+        console.error(`Error fetching ingredient ${id}:`, error);
+        throw error;
+    }
+};
+
 export const createIngredient = async (ingredientData: IngredientFormData): Promise<Ingredient> => {
     try {
         const response = await apiClient.post('/ingredients', ingredientData);

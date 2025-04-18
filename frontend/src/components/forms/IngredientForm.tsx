@@ -5,7 +5,7 @@ import { Box, TextField, Button, Grid } from '@mui/material';
 // Interface for the raw form data
 interface IngredientFormData {
     name: string;
-    description: string; // Initially a string from TextField
+    description: string | null; // Allow null for initial data consistency
 }
 
 // Interface for processed data sent to API
@@ -26,9 +26,9 @@ const IngredientForm: React.FC<IngredientFormProps> = ({ onSubmit, initialData, 
         register,
         formState: { errors },
     } = useForm<IngredientFormData>({
-        defaultValues: initialData || {
-            name: '',
-            description: '',
+        defaultValues: {
+            name: initialData?.name || '',
+            description: initialData?.description || '',
         }
     });
 
