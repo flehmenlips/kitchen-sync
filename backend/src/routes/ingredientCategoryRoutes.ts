@@ -2,7 +2,7 @@ import express from 'express';
 import {
     getIngredientCategories,
     createIngredientCategory,
-    // getIngredientCategoryById, // Optional
+    getIngredientCategoryById,
     updateIngredientCategory,
     deleteIngredientCategory
 } from '../controllers/ingredientCategoryController';
@@ -14,7 +14,7 @@ router.route('/')
     .post(createIngredientCategory);
 
 router.route('/:id')
-    // .get(getIngredientCategoryById) // Optional
+    .get(getIngredientCategoryById)
     .put(updateIngredientCategory)
     .delete(deleteIngredientCategory);
 

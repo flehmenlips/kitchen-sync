@@ -38,9 +38,15 @@ export const updateIngredientCategory = async (req: Request, res: Response): Pro
    try {
         const { id } = req.params;
         const categoryId = parseInt(id, 10);
-        if (isNaN(categoryId)) { /* ... ID format error ... */ }
+        if (isNaN(categoryId)) {
+             res.status(400).json({ message: 'Invalid category ID format' });
+             return;
+        }
         const { name, description } = req.body;
-        if (!name) { /* ... Name required error ... */ }
+        if (!name) {
+            res.status(400).json({ message: 'Missing required field: name' });
+            return;
+        }
 
         const updatedCategory = await prisma.ingredientCategory.update({
             where: { id: categoryId },
@@ -48,10 +54,15 @@ export const updateIngredientCategory = async (req: Request, res: Response): Pro
         });
         res.status(200).json(updatedCategory);
     } catch (error: any) {
-         // Handle P2002 (unique name constraint) and P2025 (not found) errors
         console.error(error);
-        if (error.code === 'P2002') { /* ... Conflict error ... */ }
-        if (error.code === 'P2025') { /* ... Not found error ... */ }
+        if (error.code === 'P2002') { 
+            res.status(409).json({ message: `Ingredient category name '${req.body.name}' might already exist.` });
+            return;
+         }
+        if (error.code === 'P2025') { 
+            res.status(404).json({ message: 'Ingredient category not found' });
+            return;
+        }
         res.status(500).json({ message: 'Error updating ingredient category' });
     }
 };
@@ -60,20 +71,40 @@ export const deleteIngredientCategory = async (req: Request, res: Response): Pro
     try {
         const { id } = req.params;
         const categoryId = parseInt(id, 10);
-        if (isNaN(categoryId)) { /* ... ID format error ... */ }
-
-        // Note: Deleting category sets ingredientCategoryId to NULL on ingredients
+        if (isNaN(categoryId)) { 
+            res.status(400).json({ message: 'Invalid category ID format' });
+            return;
+         }
         await prisma.ingredientCategory.delete({ where: { id: categoryId } });
         res.status(200).json({ message: 'Ingredient category deleted successfully' });
     } catch (error: any) {
-         // Handle P2025 (not found) error
         console.error(error);
-        if (error.code === 'P2025') { /* ... Not found error ... */ }
+        if (error.code === 'P2025') { 
+             res.status(404).json({ message: 'Ingredient category not found' });
+             return;
+        }
         res.status(500).json({ message: 'Error deleting ingredient category' });
     }
 };
 
-// Optional Get by ID - might be less useful for categories
 export const getIngredientCategoryById = async (req: Request, res: Response): Promise<void> => {
-    // ... Implementation similar to getCategoryById ...
+    try {
+        const { id } = req.params;
+        const categoryId = parseInt(id, 10);
+        if (isNaN(categoryId)) {
+             res.status(400).json({ message: 'Invalid category ID format' });
+             return;
+        }
+        const category = await prisma.ingredientCategory.findUnique({
+            where: { id: categoryId }
+        });
+        if (!category) {
+            res.status(404).json({ message: 'Ingredient category not found' });
+            return;
+        }
+        res.status(200).json(category);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error fetching ingredient category' });
+    }
 }; 
