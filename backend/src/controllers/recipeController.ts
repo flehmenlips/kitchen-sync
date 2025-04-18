@@ -323,15 +323,18 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
                 return returnObj as MappedIngredientData;
              }).filter((ing: MappedIngredientData) => ing.ingredientId || ing.subRecipeId);
              
-             console.log(`[updateRecipe] Recipe ID: ${recipeId}, Filtered ingredients for createMany:`, JSON.stringify(recipeIngredientsData, null, 2)); // Renamed log
+             console.log(`[updateRecipe] Recipe ID: ${recipeId}, Filtered ingredients for createMany:`, JSON.stringify(recipeIngredientsData, null, 2));
 
              if (recipeIngredientsData.length > 0) {
                 try {
                     await tx.unitQuantity.createMany({ data: recipeIngredientsData });
-                 } catch (createError) {
-                     // Log specific createMany error
+                 } catch (createError: any) {
                      console.error(`[updateRecipe] Error during createMany for Recipe ID: ${recipeId}`, createError);
-                     // Re-throw the error to abort the transaction
+                     // Check specifically for foreign key constraint errors during createMany
+                     if (createError.code === 'P2003') {
+                         throw new Error(`Invalid reference during ingredient update: Make sure the selected units, ingredients, or sub-recipes exist.`);
+                     }
+                     // Re-throw other errors to abort the transaction
                      throw createError; 
                  }
              }
@@ -355,8 +358,9 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
         res.status(404).json({ message: 'Recipe not found during update.' });
         return;
     }
-     if (error.code === 'P2003') {
-        res.status(400).json({ message: `Invalid reference: Make sure the selected category, units, ingredients, or sub-recipes exist.` });
+     // Catch specific P2003 error from the transaction
+     if (error.message?.includes('Invalid reference during ingredient update')) {
+        res.status(400).json({ message: error.message });
         return;
     }
     res.status(500).json({ message: 'Error updating recipe' });
