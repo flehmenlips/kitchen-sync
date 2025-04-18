@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { ProcessedRecipeData } from '../components/forms/RecipeForm'; // Corrected relative path
 
 // Get the base URL from environment variables, defaulting to localhost:3001
 // Vite exposes env variables prefixed with VITE_
@@ -59,6 +60,17 @@ export const getRecipeById = async (id: number): Promise<Recipe> => {
     }
 };
 
-// Add other functions (create, update, delete for recipes, units, ingredients) here later
+export const createRecipe = async (recipeData: ProcessedRecipeData): Promise<Recipe> => {
+  try {
+    // The backend expects the structure defined by ProcessedRecipeData
+    const response = await apiClient.post('/recipes', recipeData);
+    return response.data; // Assuming backend returns the full new recipe object
+  } catch (error) {
+    console.error('Error creating recipe:', error);
+    throw error; // Re-throw for the component to handle
+  }
+};
+
+// Add other functions (update, delete for recipes, units, ingredients) here later
 
 export default apiClient; 
