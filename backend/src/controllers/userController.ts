@@ -3,7 +3,7 @@ import prisma from '../config/db';
 import bcrypt from 'bcrypt';
 import generateTokenAndSetCookie from '../utils/generateToken';
 // Import Prisma namespace from generated path
-import { Prisma } from '../generated/prisma'; 
+import { Prisma } from '../generated';
 
 // @desc    Register a new user
 // @route   POST /api/users/register
