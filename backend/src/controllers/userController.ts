@@ -2,7 +2,8 @@ import { Request, Response } from 'express';
 import prisma from '../config/db';
 import bcrypt from 'bcrypt';
 import generateTokenAndSetCookie from '../utils/generateToken';
-import { PrismaClientKnownRequestError } from '@prisma/client'; // Import specific error type
+// Import specific error type using relative path to generated client
+import { PrismaClientKnownRequestError } from '../generated/prisma/client/runtime/library'; 
 
 // @desc    Register a new user
 // @route   POST /api/users/register
