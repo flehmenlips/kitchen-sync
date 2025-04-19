@@ -1,7 +1,8 @@
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../config/db';
-import { User } from '@prisma/client'; // Import User type
+// Use relative path for generated User type
+import { User } from '../generated/prisma/client'; 
 
 // Extend Express Request interface to include user property
 // Place this in a types definition file (e.g., src/types/express/index.d.ts) later for better organization
@@ -33,8 +34,7 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
       // Verify token
       const decoded = jwt.verify(token, secret) as JwtPayload;
 
-      // Get user from the database based on decoded userId
-      // Select all fields except password
+      // Get user from the database - type User should resolve correctly now
       req.user = await prisma.user.findUnique({
         where: { id: decoded.userId },
         select: { 

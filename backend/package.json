@@ -7,7 +7,6 @@
     "test": "tests"
   },
   "scripts": {
-    "postinstall": "npx prisma generate",
     "build": "tsc",
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",

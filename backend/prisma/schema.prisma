@@ -6,6 +6,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -134,4 +135,19 @@ model UnitQuantity {
   @@index([ingredientId])
   @@index([subRecipeId])
   @@index([unitId])
+}
+
+// --- User Model ---
+model User {
+  id          Int      @id @default(autoincrement())
+  email       String   @unique
+  name        String?
+  password    String   // Stores the hashed password
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Optional: Add relations later if users own recipes, etc.
+  // recipes Recipe[]
+
+  @@map("users")
 }
