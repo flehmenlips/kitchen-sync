@@ -26,6 +26,8 @@ import Typography from '@mui/material/Typography';
 import IngredientCategoryListPage from './pages/IngredientCategoryListPage';
 import CreateIngredientCategoryPage from './pages/CreateIngredientCategoryPage';
 import EditIngredientCategoryPage from './pages/EditIngredientCategoryPage';
+import LoginPage from './pages/LoginPage'; // Import Login page
+import RegisterPage from './pages/RegisterPage'; // Import Register page
 
 // Placeholder Dashboard Component
 const Dashboard = () => <Typography variant="h5">Dashboard Content Placeholder</Typography>;
@@ -34,44 +36,32 @@ function App() {
   return (
     <Router>
        <Routes>
-          {/* Define MainLayout as the parent route element */}
+          {/* Routes requiring Main Layout (Sidebar/AppBar) */}
           <Route path="/" element={<MainLayout />}>
-            {/* Index route within MainLayout (Dashboard) */}
-            {/* path="/" is implied by index=true */}
             <Route index element={<Dashboard />} /> 
-            
-            {/* Recipe Routes (nested under /) */}
             <Route path="recipes" element={<RecipeList />} />
             <Route path="recipes/new" element={<CreateRecipePage />} /> 
             <Route path="recipes/:id/edit" element={<EditRecipePage />} /> 
             <Route path="recipes/:id" element={<RecipeDetail />} />
-
-            {/* Unit Routes (nested under /) */}
             <Route path="units" element={<UnitListPage />} />
             <Route path="units/new" element={<CreateUnitPage />} />
             <Route path="units/:id/edit" element={<EditUnitPage />} />
-
-            {/* Ingredient Routes (nested under /) */}
             <Route path="ingredients" element={<IngredientListPage />} />
             <Route path="ingredients/new" element={<CreateIngredientPage />} />
             <Route path="ingredients/:id/edit" element={<EditIngredientPage />} />
-
-            {/* Category Routes (nested under /) */}
             <Route path="categories" element={<CategoryListPage />} />
             <Route path="categories/new" element={<CreateCategoryPage />} />
             <Route path="categories/:id/edit" element={<EditCategoryPage />} />
-
-            {/* Ingredient Category Routes */}
             <Route path="ingredient-categories" element={<IngredientCategoryListPage />} />
             <Route path="ingredient-categories/new" element={<CreateIngredientCategoryPage />} />
             <Route path="ingredient-categories/:id/edit" element={<EditIngredientCategoryPage />} />
-
-            {/* Catch-all within layout */}
+            {/* Add other protected routes here */}
             <Route path="*" element={<div>404 Page Not Found</div>} /> 
           </Route>{/* End of routes within MainLayout */}
 
-           {/* Routes outside MainLayout (e.g., Login page) could go here later */}
-           {/* <Route path="/login" element={<LoginPage />} /> */}
+          {/* Standalone routes (no layout) */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
 
         </Routes>
     </Router>

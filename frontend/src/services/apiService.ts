@@ -105,6 +105,21 @@ export interface IngredientCategory {
     updatedAt: string;
 }
 
+// --- User Types ---
+// For login/register forms
+export interface UserCredentials {
+    email: string;
+    password: string;
+    name?: string; // Optional for registration
+}
+// For user profile data
+export interface UserProfile {
+    id: number;
+    email: string;
+    name: string | null;
+    // Add other relevant fields later if needed
+}
+
 // API functions
 export const getRecipes = async (): Promise<Recipe[]> => {
   try {
@@ -371,6 +386,51 @@ export const getIngredientCategoryById = async (id: number): Promise<IngredientC
     } catch (error) {
         console.error(`Error fetching ingredient category ${id}:`, error);
         throw error;
+    }
+};
+
+// == Auth / User ==
+export const register = async (userData: UserCredentials): Promise<UserProfile> => {
+    try {
+        const response = await apiClient.post('/users/register', userData);
+        return response.data; // Backend should return user profile on success
+    } catch (error) {
+        console.error('Error during registration:', error);
+        throw error;
+    }
+};
+
+export const login = async (credentials: UserCredentials): Promise<UserProfile> => {
+    try {
+        // Send credentials=true so browser sends cookie back
+        const response = await apiClient.post('/users/login', credentials, { withCredentials: true }); 
+        return response.data; // Backend returns user profile
+    } catch (error) {
+        console.error('Error during login:', error);
+        throw error;
+    }
+};
+
+export const logout = async (): Promise<void> => {
+    try {
+        // Send credentials=true to ensure cookie is handled correctly by backend
+        await apiClient.post('/users/logout', {}, { withCredentials: true });
+    } catch (error) {
+        console.error('Error during logout:', error);
+        throw error;
+    }
+};
+
+export const getProfile = async (): Promise<UserProfile> => {
+    try {
+         // Send credentials=true so browser sends cookie to backend
+        const response = await apiClient.get('/users/profile', { withCredentials: true });
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching profile:', error);
+        // Don't throw for profile fetch, just return null or handle differently?
+        // Depending on how we use this, throwing might be okay.
+        throw error; 
     }
 };
 
