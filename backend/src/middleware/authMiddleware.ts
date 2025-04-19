@@ -34,23 +34,22 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
       // Verify token
       const decoded = jwt.verify(token, secret) as JwtPayload;
 
-      // Get user from the database - type User should resolve correctly now
-      req.user = await prisma.user.findUnique({
+      // Get user from the database
+      const user = await prisma.user.findUnique({
         where: { id: decoded.userId },
         select: { 
-            id: true, 
-            email: true, 
-            name: true, 
-            createdAt: true, 
-            updatedAt: true 
+            id: true, email: true, name: true, createdAt: true, updatedAt: true 
         }
       });
 
-      if (!req.user) {
-          // Handle case where user ID in token doesn't exist anymore
+      // Check if user was found BEFORE assigning to req.user
+      if (!user) {
           res.status(401);
           throw new Error('Not authorized, user not found');
       }
+
+      // Assign the found user (which cannot be null here) to req.user
+      req.user = user; 
 
       next(); // Proceed to the next middleware/route handler
     } catch (error) {
