@@ -20,13 +20,18 @@ const generateTokenAndSetCookie = (res: Response, userId: number) => {
     expiresIn: '30d', // Token expiration (e.g., 30 days)
   });
 
-  // Set JWT as an HTTP-Only cookie
-  res.cookie('jwt', token, {
-    httpOnly: true, // Prevent client-side JS access
-    secure: process.env.NODE_ENV === 'production', // Use secure cookies in production (HTTPS)
-    sameSite: 'lax', // Changed from 'strict' to 'lax'
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const, // Keep lax, ensure type is literal
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days in milliseconds
-  });
+  };
+
+  // Log the options being used
+  console.log('[generateToken] Setting cookie with options:', cookieOptions);
+
+  // Set JWT as an HTTP-Only cookie
+  res.cookie('jwt', token, cookieOptions);
 };
 
 export default generateTokenAndSetCookie; 
