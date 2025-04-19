@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { Response } from 'express';
+import { CookieOptions } from 'express';
 
 // Define payload structure (adjust as needed)
 interface JwtPayload {
@@ -20,10 +21,10 @@ const generateTokenAndSetCookie = (res: Response, userId: number) => {
     expiresIn: '30d', // Token expiration (e.g., 30 days)
   });
 
-  const cookieOptions = {
+  const cookieOptions: CookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax' as const, // Keep lax, ensure type is literal
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' as const, // Use 'none' in prod, 'lax' locally
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days in milliseconds
   };
 
