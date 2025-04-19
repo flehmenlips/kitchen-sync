@@ -61,19 +61,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const logout = useCallback(async () => {
-      setIsLoading(true);
+    // Don't show loading indicator for logout
+    // setIsLoading(true);
+    
+    // Set user state to null immediately for faster UI update
+    setUser(null); 
+    
     try {
+      // Still call the backend to invalidate the cookie/session server-side
       await apiLogout();
-      setUser(null);
+      console.log('Logout API call successful');
     } catch (error) {
-        // Even if logout API fails, clear user state locally
-        setUser(null);
-        console.error("Logout failed", error);
-        throw error;
+        // Log the error but don't necessarily throw or block UI update
+        console.error("Backend logout failed (user state already cleared):", error);
+        // Optionally show a Snackbar error here if needed
+        // showSnackbar('Logout failed on server, please clear cookies if issues persist.', 'warning');
     } finally {
-        setIsLoading(false);
+        // setIsLoading(false);
     }
-  }, []);
+  }, []); // Add showSnackbar if using it in catch
 
   const register = useCallback(async (userData: UserCredentials) => {
       setIsLoading(true);
@@ -88,8 +94,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
-  // Display a loading indicator while checking initial auth status
-  if (isLoading && user === null) { // More specific loading check
+  // Display a loading indicator ONLY while checking initial auth status
+  if (isLoading) { // Simplified loading check
      return (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
             <CircularProgress />
