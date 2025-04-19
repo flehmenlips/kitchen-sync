@@ -26,6 +26,9 @@ const MainLayout: React.FC = () => {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
+  // Log whenever MainLayout re-renders and show the current user state
+  console.log("[MainLayout] Rendering - User:", user, "isLoading:", isLoading);
+
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };

@@ -61,11 +61,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const logout = useCallback(async () => {
-    // Don't show loading indicator for logout
-    // setIsLoading(true);
-    
+    console.log('[AuthContext] logout called'); // Log start
     // Set user state to null immediately for faster UI update
     setUser(null); 
+    console.log('[AuthContext] setUser(null) executed'); // Log after state set
     
     try {
       // Still call the backend to invalidate the cookie/session server-side
@@ -94,6 +93,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
+  // Log context value changes
+  useEffect(() => {
+     console.log("[AuthContext] Provider value changed - User:", user, "isLoading:", isLoading);
+  }, [user, isLoading]);
+
   // Display a loading indicator ONLY while checking initial auth status
   if (isLoading) { // Simplified loading check
      return (
@@ -105,6 +109,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   return (
     <AuthContext.Provider value={{ user, isLoading, login, logout, register }}>
+       {/* Log whenever the provider re-renders due to value change */}
+      {console.log("[AuthContext.Provider] Rendering with user:", user, "isLoading:", isLoading)}
       {children}
     </AuthContext.Provider>
   );
