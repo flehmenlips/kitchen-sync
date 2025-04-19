@@ -12,11 +12,11 @@ const router = express.Router();
 
 // Define routes
 router.route('/')
-  .get(getRecipes)       // GET /api/recipes
+  .get(protect, getRecipes)       // GET /api/recipes
   .post(protect, createRecipe);    // POST /api/recipes
 
 router.route('/:id')
-  .get(getRecipeById)    // GET /api/recipes/:id
+  .get(protect, getRecipeById)    // GET /api/recipes/:id
   .put(protect, updateRecipe)     // PUT /api/recipes/:id
   .delete(protect, deleteRecipe);  // DELETE /api/recipes/:id
 

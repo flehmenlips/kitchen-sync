@@ -11,11 +11,11 @@ import { protect } from '../middleware/authMiddleware';
 const router = express.Router();
 
 router.route('/')
-    .get(getIngredientCategories)
+    .get(protect, getIngredientCategories)
     .post(protect, createIngredientCategory);
 
 router.route('/:id')
-    // .get(getIngredientCategoryById) // Keep optional GET public for now?
+    // .get(protect, getIngredientCategoryById) // Optional: Protect if needed
     .put(protect, updateIngredientCategory)
     .delete(protect, deleteIngredientCategory);
 

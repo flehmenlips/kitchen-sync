@@ -12,11 +12,11 @@ const router = express.Router();
 
 // Define routes
 router.route('/')
-    .get(getUnits)
+    .get(protect, getUnits)
     .post(protect, createUnit);
 
 router.route('/:id')
-    .get(getUnitById)
+    .get(protect, getUnitById)
     .put(protect, updateUnit)
     .delete(protect, deleteUnit);
 

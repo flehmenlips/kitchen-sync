@@ -11,11 +11,11 @@ import { protect } from '../middleware/authMiddleware';
 const router = express.Router();
 
 router.route('/')
-    .get(getCategories)
+    .get(protect, getCategories)
     .post(protect, createCategory);
 
 router.route('/:id')
-    .get(getCategoryById) // Optional but included
+    .get(protect, getCategoryById)
     .put(protect, updateCategory)
     .delete(protect, deleteCategory);
 

@@ -12,11 +12,11 @@ const router = express.Router();
 
 // Define routes
 router.route('/')
-    .get(getIngredients)
+    .get(protect, getIngredients)
     .post(protect, createIngredient);
 
 router.route('/:id')
-    .get(getIngredientById)
+    .get(protect, getIngredientById)
     .put(protect, updateIngredient)
     .delete(protect, deleteIngredient);
 
