@@ -6,17 +6,18 @@ import {
     updateUnit,
     deleteUnit
 } from '../controllers/unitController'; // Using relative path
+import { protect } from '../middleware/authMiddleware';
 
 const router = express.Router();
 
 // Define routes
 router.route('/')
     .get(getUnits)
-    .post(createUnit);
+    .post(protect, createUnit);
 
 router.route('/:id')
     .get(getUnitById)
-    .put(updateUnit)
-    .delete(deleteUnit);
+    .put(protect, updateUnit)
+    .delete(protect, deleteUnit);
 
 export default router; 

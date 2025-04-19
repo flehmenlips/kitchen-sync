@@ -6,17 +6,18 @@ import {
     updateIngredient,
     deleteIngredient
 } from '../controllers/ingredientController'; // Using relative path
+import { protect } from '../middleware/authMiddleware';
 
 const router = express.Router();
 
 // Define routes
 router.route('/')
     .get(getIngredients)
-    .post(createIngredient);
+    .post(protect, createIngredient);
 
 router.route('/:id')
     .get(getIngredientById)
-    .put(updateIngredient)
-    .delete(deleteIngredient);
+    .put(protect, updateIngredient)
+    .delete(protect, deleteIngredient);
 
 export default router; 
