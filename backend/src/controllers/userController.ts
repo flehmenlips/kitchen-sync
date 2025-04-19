@@ -2,8 +2,8 @@ import { Request, Response } from 'express';
 import prisma from '../config/db';
 import bcrypt from 'bcrypt';
 import generateTokenAndSetCookie from '../utils/generateToken';
-// Import specific error type using relative path to generated client
-import { PrismaClientKnownRequestError } from '../generated/prisma/client/runtime/library'; 
+// Import Prisma namespace from generated path
+import { Prisma } from '../generated/prisma'; 
 
 // @desc    Register a new user
 // @route   POST /api/users/register
@@ -50,8 +50,8 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
         }
     } catch (error: any) {
         console.error('Register Error:', error);
-         // Handle potential Prisma unique constraint error more gracefully
-        if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
+        // Access error type via namespace
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') { 
              res.status(400).json({ message: 'Email address already registered' });
              return;
         }
