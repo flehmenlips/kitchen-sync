@@ -26,9 +26,11 @@ const generateTokenAndSetCookie = (res: Response, userId: number) => {
 
   const cookieOptions: CookieOptions = {
     httpOnly: true,
-    secure: nodeEnv === 'production',
-    sameSite: nodeEnv === 'production' ? 'none' : 'lax' as const, // Use 'none' in prod, 'lax' locally
-    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days in milliseconds
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', 
+    maxAge: 30 * 24 * 60 * 60 * 1000, 
+    // Explicitly set domain for cross-subdomain access on Render
+    domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : undefined
   };
 
   // Log the options being used
