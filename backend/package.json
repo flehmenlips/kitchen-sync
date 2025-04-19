@@ -7,7 +7,8 @@
     "test": "tests"
   },
   "scripts": {
-    "build": "tsc",
+    "postinstall": "npx prisma generate",
+    "build": "tsc && copyfiles -u 1 src/generated/prisma/**/* dist/generated/prisma && copyfiles -u 1 prisma/schema.prisma dist/prisma",
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -20,6 +21,12 @@
   },
   "dependencies": {
     "@prisma/client": "^6.6.0",
+    "@types/bcrypt": "^5.0.2",
+    "@types/cookie-parser": "^1.4.8",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.1",
+    "@types/jsonwebtoken": "^9.0.9",
+    "@types/node": "^22.14.1",
     "bcrypt": "^5.1.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -27,15 +34,10 @@
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.14.1",
-    "@types/bcrypt": "^5.0.2",
-    "@types/cookie-parser": "^1.4.8",
-    "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.1",
-    "@types/jsonwebtoken": "^9.0.9",
-    "@types/node": "^22.14.1",
     "typescript": "^5.8.3"
   },
   "devDependencies": {
+    "copyfiles": "^2.4.1",
     "nodemon": "^3.1.9",
     "prisma": "^6.6.0",
     "ts-node": "^10.9.2",
