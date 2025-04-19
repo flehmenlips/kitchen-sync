@@ -24,7 +24,7 @@ const generateTokenAndSetCookie = (res: Response, userId: number) => {
   res.cookie('jwt', token, {
     httpOnly: true, // Prevent client-side JS access
     secure: process.env.NODE_ENV === 'production', // Use secure cookies in production (HTTPS)
-    sameSite: 'strict', // Mitigate CSRF attacks
+    sameSite: 'lax', // Changed from 'strict' to 'lax'
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days in milliseconds
   });
 };
