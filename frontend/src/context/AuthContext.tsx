@@ -27,69 +27,68 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // Start loading initially to check auth status
+  const [isLoading, setIsLoading] = useState(true); // Still true initially
 
   // Check login status on initial load
   useEffect(() => {
     const checkUserStatus = async () => {
+      console.log('[AuthContext] Checking user status...');
       try {
-        // Cookie should be sent automatically if it exists due to httpOnly
         const profile = await getProfile(); 
+        console.log('[AuthContext] Profile fetched:', profile);
         setUser(profile);
       } catch (error) {
-        // Expected if user is not logged in (API returns 401)
-        console.log('No active session found or failed to fetch profile.');
+        console.log('[AuthContext] checkUserStatus error:', error);
         setUser(null);
       } finally {
         setIsLoading(false);
+         console.log('[AuthContext] checkUserStatus finished, isLoading: false');
       }
     };
     checkUserStatus();
   }, []);
 
   const login = useCallback(async (credentials: UserCredentials) => {
-     setIsLoading(true);
+    console.log('[AuthContext] login called');
+    // setIsLoading(true); // Loading state is handled by the component calling login
     try {
       const loggedInUser = await apiLogin(credentials);
       setUser(loggedInUser);
     } catch (error) { 
-      setUser(null); // Ensure user is null on failed login
-      throw error; // Re-throw for the form to handle
+      setUser(null); 
+      throw error; 
     } finally {
-        setIsLoading(false);
+       // setIsLoading(false);
     }
   }, []);
 
   const logout = useCallback(async () => {
-    console.log('[AuthContext] logout called'); // Log start
+    console.log('[AuthContext] logout called');
     // Set user state to null immediately for faster UI update
     setUser(null); 
-    console.log('[AuthContext] setUser(null) executed'); // Log after state set
+    console.log('[AuthContext] User state set to null');
     
     try {
       // Still call the backend to invalidate the cookie/session server-side
       await apiLogout();
       console.log('Logout API call successful');
     } catch (error) {
-        // Log the error but don't necessarily throw or block UI update
-        console.error("Backend logout failed (user state already cleared):", error);
-        // Optionally show a Snackbar error here if needed
-        // showSnackbar('Logout failed on server, please clear cookies if issues persist.', 'warning');
-    } finally {
-        // setIsLoading(false);
+        console.error("Backend logout failed:", error);
     }
-  }, []); // Add showSnackbar if using it in catch
+    // No need to set loading state for logout
+  }, []); 
 
   const register = useCallback(async (userData: UserCredentials) => {
-      setIsLoading(true);
+    console.log('[AuthContext] register called');
+    // setIsLoading(true); // Component handles loading
     try {
       const newUser = await apiRegister(userData);
-      setUser(newUser); // Automatically log in user after registration
+      setUser(newUser); 
     } catch (error) {
        setUser(null); 
-      throw error; // Re-throw for the form to handle
+      throw error; 
     } finally {
-        setIsLoading(false);
+       // setIsLoading(false);
     }
   }, []);
 
@@ -99,7 +98,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [user, isLoading]);
 
   // Display a loading indicator ONLY while checking initial auth status
-  if (isLoading) { // Simplified loading check
+  // This prevents rendering the app before we know if user is logged in or not
+  if (isLoading) { 
      return (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
             <CircularProgress />
@@ -109,8 +109,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   return (
     <AuthContext.Provider value={{ user, isLoading, login, logout, register }}>
-       {/* Log whenever the provider re-renders due to value change */}
-      {console.log("[AuthContext.Provider] Rendering with user:", user, "isLoading:", isLoading)}
       {children}
     </AuthContext.Provider>
   );
