@@ -23,7 +23,7 @@ const theme = createTheme({
 });
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
+  // <React.StrictMode>
     <ThemeProvider theme={theme}>
       <CssBaseline /> {/* Normalize CSS and apply baseline styles */} 
       <SnackbarProvider>
@@ -32,5 +32,5 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         </AuthProvider>
       </SnackbarProvider>
     </ThemeProvider>
-  </React.StrictMode>,
+  // </React.StrictMode>,
 )
