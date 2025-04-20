@@ -603,6 +603,7 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                         />
                                     )}
                                 />
+                                {/* Revert to FormControl/InputLabel/Select for Unit */}
                                 <FormControl fullWidth size="small" sx={{ flexBasis: '20%' }} error={!!unitsError || unitsLoading}>
                                     <InputLabel id={`ingredient-unit-label-${index}`}>Unit</InputLabel>
                                     <Controller
@@ -610,48 +611,36 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                         control={control}
                                         rules={{ required: 'Unit required' }}
                                         render={({ field, fieldState }) => (
-                                            <Autocomplete
-                                                options={units}
-                                                getOptionLabel={(option) => option.abbreviation || option.name || ''}
-                                                value={units.find(unit => unit.id === field.value) || null}
-                                                onChange={(event, newValue) => {
-                                                    if (newValue && newValue.id === CREATE_NEW_UNIT_OPTION.id) {
-                                                        handleOpenModal('unit', index);
-                                                    } else {
-                                                        field.onChange(newValue ? newValue.id : '');
-                                                    }
+                                            <>
+                                            <Select 
+                                                labelId={`ingredient-unit-label-${index}`}
+                                                {...field}
+                                                value={field.value ?? ''}
+                                                onChange={(e) => { 
+                                                    const selectedValue = e.target.value;
+                                                    if (selectedValue === CREATE_NEW_UNIT_OPTION.id) {
+                                                         handleOpenModal('unit', index);
+                                                     } else {
+                                                         field.onChange(selectedValue);
+                                                     }
                                                 }}
-                                                isOptionEqualToValue={(option, value) => option.id === value?.id}
-                                                renderOption={(props, option) => (
-                                                    <Box component="li" {...props} key={option.id}>
-                                                        {option.id === CREATE_NEW_UNIT_OPTION.id ? 
-                                                            <Typography color="primary" variant="body2">{option.name}</Typography> :
-                                                            option.abbreviation || option.name
-                                                        }
-                                                    </Box>
-                                                )}
-                                                loading={unitsLoading}
+                                                error={!!fieldState.error}
                                                 disabled={unitsLoading || !!unitsError}
-                                                renderInput={(params) => (
-                                                    <TextField 
-                                                        {...params} 
-                                                        size="small"
-                                                        variant="outlined"
-                                                        error={!!unitsError || !!fieldState.error}
-                                                        helperText={fieldState.error?.message || unitsError}
-                                                        InputProps={{
-                                                            ...params.InputProps,
-                                                            endAdornment: (
-                                                                <>
-                                                                    {unitsLoading ? <CircularProgress color="inherit" size={20} /> : null}
-                                                                    {params.InputProps.endAdornment}
-                                                                </>
-                                                            ),
-                                                        }}
-                                                    />
-                                                )}
-                                                fullWidth
-                                            />
+                                            >
+                                                <MenuItem value="" disabled><em>Select Unit</em></MenuItem>
+                                                {units.map((unit) => (
+                                                    <MenuItem key={unit.id} value={unit.id} disabled={unit.id === -1 && !unitsLoading}>
+                                                        {unit.id === CREATE_NEW_UNIT_OPTION.id ? 
+                                                            <Typography color="primary" variant="body2">{unit.name}</Typography> :
+                                                            unit.abbreviation || unit.name
+                                                        }
+                                                    </MenuItem>
+                                                ))}
+                                            </Select>
+                                            {/* Display helper text/errors below Select */}
+                                            {fieldState.error && <Typography variant="caption" display="block" color="error" sx={{ pl: 2 }}>{fieldState.error.message}</Typography>}
+                                            {unitsError && !fieldState.error && <Typography variant="caption" display="block" color="error" sx={{ pl: 2 }}>{unitsError}</Typography>}
+                                            </>
                                         )}
                                     />
                                 </FormControl>
