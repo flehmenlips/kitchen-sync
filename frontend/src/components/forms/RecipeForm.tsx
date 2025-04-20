@@ -24,6 +24,9 @@ import {
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
+import RestaurantMenuIcon from '@mui/icons-material/RestaurantMenu';
+import LocalFloristIcon from '@mui/icons-material/LocalFlorist';
+import AddIcon from '@mui/icons-material/Add';
 import {
     getUnits,
     UnitOfMeasure,
@@ -38,8 +41,17 @@ import {
     createCategory
 } from '../../services/apiService';
 import UnitForm from './UnitForm';
-import IngredientForm from './IngredientForm';
+import IngredientForm, { IngredientFormShape } from './IngredientForm';
 import CategoryForm from './CategoryForm';
+import { IngredientFormData as ApiIngredientFormData } from '../../services/apiService';
+
+// Define a type for the combined list items
+type IngredientOrRecipeOption = {
+    id: number; // Original ID
+    name: string;
+    type: 'ingredient' | 'recipe' | 'create-ingredient'; // Distinguish type
+    // Add original category/description if needed for display/sorting later
+};
 
 // Interface for the raw form data
 // Export this interface as well
@@ -136,6 +148,9 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
     const [categoriesLoading, setCategoriesLoading] = useState<boolean>(true);
     const [categoriesError, setCategoriesError] = useState<string | null>(null);
 
+    // Add new state for the combined list
+    const [combinedIngredientOptions, setCombinedIngredientOptions] = useState<IngredientOrRecipeOption[]>([]);
+
     // State for the creation modal
     const [modalOpen, setModalOpen] = useState(false);
     const [modalType, setModalType] = useState<'unit' | 'ingredient' | 'category' | null>(null);
@@ -162,6 +177,34 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                 setIngredientsList([CREATE_NEW_INGREDIENT_OPTION, ...fetchedIngredients]);
                 setSubRecipesList(fetchedRecipes);
                 setCategories([CREATE_NEW_CATEGORY_OPTION, ...fetchedCategories]);
+
+                // --- Create the Combined List ---
+                const ingredientOptions: IngredientOrRecipeOption[] = fetchedIngredients.map(ing => ({
+                    id: ing.id,
+                    name: ing.name,
+                    type: 'ingredient'
+                }));
+                const recipeOptions: IngredientOrRecipeOption[] = fetchedRecipes.map(rec => ({
+                    id: rec.id,
+                    name: rec.name,
+                    type: 'recipe'
+                }));
+                // Add the "Create New" option specifically for ingredients
+                const createIngredientOption: IngredientOrRecipeOption = {
+                    id: CREATE_NEW_INGREDIENT_OPTION.id, // Use the special -1 ID
+                    name: CREATE_NEW_INGREDIENT_OPTION.name,
+                    type: 'create-ingredient'
+                };
+
+                // Combine, add create option, and sort (e.g., ingredients first, then recipes, then create)
+                const combined = [
+                     createIngredientOption, // Ensure "Create New" is easily accessible (e.g., at top)
+                     ...ingredientOptions.sort((a, b) => a.name.localeCompare(b.name)),
+                     ...recipeOptions.sort((a, b) => a.name.localeCompare(b.name)),
+                ];
+                setCombinedIngredientOptions(combined);
+                 // --- End Combined List Creation ---
+
                 setUnitsError(null);
                 setIngredientsError(null);
                 setSubRecipesError(null);
@@ -169,7 +212,7 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
             } catch (error) {
                 console.error("Failed to load select data:", error);
                 setUnitsError("Could not load units.");
-                setIngredientsError("Could not load ingredients.");
+                setIngredientsError("Could not load ingredients/recipes.");
                 setSubRecipesError("Could not load potential sub-recipes.");
                 setCategoriesError("Could not load categories.");
             } finally {
@@ -181,9 +224,6 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
         };
         loadSelectData();
     }, []); 
-
-    // Watch the type field for each ingredient to conditionally render selects
-    const watchIngredientTypes = watch("ingredients");
 
     const handleFormSubmit = (data: RecipeFormData) => {
         console.log("[RecipeForm] Raw data before calling onSubmit prop:", data);
@@ -215,21 +255,52 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
     const handleModalCreateSuccess = (newItem: UnitOfMeasure | Ingredient | Category, type: 'unit' | 'ingredient' | 'category') => {
         let fieldToUpdate: string | null = null;
         if (type === 'unit') {
-            setUnits(prev => [CREATE_NEW_UNIT_OPTION, ...prev.filter(u => u.id !== -1), newItem as UnitOfMeasure].sort((a, b) => a.id === -1 ? -1 : (b.id === -1 ? 1: a.name.localeCompare(b.name))));
+            // Update units list state
+            const newUnits = [CREATE_NEW_UNIT_OPTION, ...units.filter(u => u.id !== -1), newItem as UnitOfMeasure].sort((a, b) => a.id === -1 ? -1 : (b.id === -1 ? 1: a.name.localeCompare(b.name)));
+            setUnits(newUnits);
+            
             if (modalTargetIndex === -1) { // Special index for Yield Unit
                 fieldToUpdate = `yieldUnitId`;
             } else if (modalTargetIndex !== null) {
                 fieldToUpdate = `ingredients.${modalTargetIndex}.unitId`;
             }
         } else if (type === 'ingredient') {
-             setIngredientsList(prev => [CREATE_NEW_INGREDIENT_OPTION, ...prev.filter(i => i.id !== -1), newItem as Ingredient].sort((a, b) => a.id === -1 ? -1 : (b.id === -1 ? 1 : a.name.localeCompare(b.name))));
+            const newIngredient = newItem as Ingredient;
+            // Update original ingredientsList state (still used by modal?)
+            const newIngredients = [CREATE_NEW_INGREDIENT_OPTION, ...ingredientsList.filter(i => i.id !== -1), newIngredient].sort((a, b) => a.id === -1 ? -1 : (b.id === -1 ? 1 : a.name.localeCompare(b.name)));
+             setIngredientsList(newIngredients);
+             
+             // Update combined options list state
+             const newCombinedOption: IngredientOrRecipeOption = {
+                id: newIngredient.id,
+                name: newIngredient.name,
+                type: 'ingredient'
+             };
+             setCombinedIngredientOptions(prev => 
+                [ // Rebuild to maintain sorting/structure if needed
+                    prev.find(o => o.type === 'create-ingredient')!, // Keep create option
+                    ...prev.filter(o => o.type === 'ingredient' && o.id !== -1), // Existing ingredients
+                    newCombinedOption, // Add the new one
+                    ...prev.filter(o => o.type === 'recipe') // Existing recipes
+                ].sort((a, b) => { // Re-sort (create first, then alpha ingredients, then alpha recipes)
+                    if (a.type === 'create-ingredient') return -1;
+                    if (b.type === 'create-ingredient') return 1;
+                    if (a.type === 'ingredient' && b.type !== 'ingredient') return -1;
+                    if (a.type !== 'ingredient' && b.type === 'ingredient') return 1;
+                    return a.name.localeCompare(b.name);
+                })
+             );
+
             if (modalTargetIndex !== null) {
+                // Set the type and clear subRecipeId explicitly upon selecting the new ingredient
                 setValue(`ingredients.${modalTargetIndex}.type`, 'ingredient');
                 setValue(`ingredients.${modalTargetIndex}.subRecipeId`, ''); 
                 fieldToUpdate = `ingredients.${modalTargetIndex}.ingredientId`;
             }
         } else if (type === 'category') {
-            setCategories(prev => [CREATE_NEW_CATEGORY_OPTION, ...prev.filter(c => c.id !== -1), newItem as Category].sort((a, b) => a.id === -1 ? -1 : (b.id === -1 ? 1 : a.name.localeCompare(b.name))));
+            // Update categories list state
+            const newCategories = [CREATE_NEW_CATEGORY_OPTION, ...categories.filter(c => c.id !== -1), newItem as Category].sort((a, b) => a.id === -1 ? -1 : (b.id === -1 ? 1 : a.name.localeCompare(b.name)));
+            setCategories(newCategories);
             fieldToUpdate = `categoryId`;
         }
         if (fieldToUpdate) {
@@ -410,83 +481,97 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                     </Alert>
                 )}
                 {fields.map((item, index) => {
-                    const currentType = watchIngredientTypes?.[index]?.type;
                     return (
                         <Paper key={item.id} sx={{ p: 1.5, mb: 1.5, position: 'relative' }}>
                             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems="flex-start">
-                                <FormControl fullWidth size="small" required sx={{ minWidth: 120, flexBasis: '20%' }}>
-                                    <InputLabel id={`ingredient-item-type-label-${index}`}>Type</InputLabel>
-                                    <Controller
-                                        name={`ingredients.${index}.type`}
-                                        control={control}
-                                        defaultValue=""
-                                        rules={{ required: 'Type required' }}
-                                        render={({ field }) => (
-                                            <Select 
-                                                labelId={`ingredient-item-type-label-${index}`} 
-                                                label="Type" 
-                                                {...field}
-                                                value={field.value ?? ''}
-                                                onChange={(e) => {
-                                                    field.onChange(e);
-                                                    if (e.target.value === 'ingredient') {
-                                                        setValue(`ingredients.${index}.subRecipeId`, '');
-                                                    } else if (e.target.value === 'sub-recipe') {
-                                                        setValue(`ingredients.${index}.ingredientId`, '');
-                                                    }
-                                                }}
-                                                error={!!errors.ingredients?.[index]?.type}
-                                            >
-                                                <MenuItem value=""><em>Select Type</em></MenuItem>
-                                                <MenuItem value="ingredient">Base Ingredient</MenuItem>
-                                                <MenuItem value="sub-recipe">Sub-Recipe</MenuItem>
-                                            </Select>
-                                        )}
-                                    />
-                                </FormControl>
-
                                 <Box sx={{ flexBasis: '35%' }}>
-                                    {currentType === 'ingredient' && (
-                                        <Controller
-                                            name={`ingredients.${index}.ingredientId`}
-                                            control={control}
-                                            rules={{ required: currentType === 'ingredient' ? 'Ingredient required' : false }}
-                                            render={({ field }) => (
+                                    {/* Combined Autocomplete for Ingredient/Sub-Recipe */}
+                                    <Controller
+                                        // Control one of the actual fields, e.g., ingredientId
+                                        name={`ingredients.${index}.ingredientId`} 
+                                        control={control}
+                                        // Rule: Ensure either ingredientId or subRecipeId is set
+                                        rules={{ 
+                                            validate: (value, formValues) => {
+                                                const currentItem = formValues.ingredients[index];
+                                                // Validation needs to check the item type as well now
+                                                if (currentItem.type === 'ingredient') {
+                                                    return !!currentItem.ingredientId || 'Please select an ingredient.';
+                                                } else if (currentItem.type === 'sub-recipe') {
+                                                    return !!currentItem.subRecipeId || 'Please select a sub-recipe.';
+                                                } else {
+                                                    // If type isn't set (shouldn't happen if selected), require selection
+                                                    return 'Please select an ingredient or sub-recipe.';
+                                                }
+                                            }
+                                         }}
+                                        render={({ field, fieldState }) => {
+                                            // Determine current value object based on watched state
+                                            const currentIngredientId = watch(`ingredients.${index}.ingredientId`);
+                                            const currentSubRecipeId = watch(`ingredients.${index}.subRecipeId`);
+                                            const currentType = watch(`ingredients.${index}.type`); // Watch type too
+                                            
+                                            let currentValue: IngredientOrRecipeOption | null = null;
+                                            if (currentType === 'ingredient' && currentIngredientId) {
+                                                currentValue = combinedIngredientOptions.find(opt => opt.type === 'ingredient' && opt.id === currentIngredientId) ?? null;
+                                            } else if (currentType === 'sub-recipe' && currentSubRecipeId) {
+                                                currentValue = combinedIngredientOptions.find(opt => opt.type === 'recipe' && opt.id === currentSubRecipeId) ?? null;
+                                            }
+
+                                            return (
                                                 <Autocomplete
-                                                    options={ingredientsList}
+                                                    options={combinedIngredientOptions}
                                                     getOptionLabel={(option) => option.name || ''}
-                                                    value={ingredientsList.find(ing => ing.id === field.value) || null}
+                                                    value={currentValue || null} 
                                                     onChange={(event, newValue) => {
-                                                        if (newValue && newValue.id === CREATE_NEW_INGREDIENT_OPTION.id) {
+                                                        if (!newValue) {
+                                                            // Clear related fields
+                                                            setValue(`ingredients.${index}.ingredientId`, '');
+                                                            setValue(`ingredients.${index}.subRecipeId`, '');
+                                                            setValue(`ingredients.${index}.type`, '');
+                                                        } else if (newValue.type === 'create-ingredient') {
                                                             handleOpenModal('ingredient', index);
-                                                        } else {
-                                                            field.onChange(newValue ? newValue.id : '');
+                                                            // Reset selection in Autocomplete if modal is cancelled
+                                                            // setValue(field.name, null); // Or handle via modal close
+                                                        } else if (newValue.type === 'ingredient') {
+                                                            setValue(`ingredients.${index}.ingredientId`, newValue.id);
+                                                            setValue(`ingredients.${index}.subRecipeId`, ''); // Clear other ID
+                                                            setValue(`ingredients.${index}.type`, 'ingredient');
+                                                        } else if (newValue.type === 'recipe') {
+                                                            setValue(`ingredients.${index}.subRecipeId`, newValue.id);
+                                                            setValue(`ingredients.${index}.ingredientId`, ''); // Clear other ID
+                                                            setValue(`ingredients.${index}.type`, 'sub-recipe');
                                                         }
                                                     }}
-                                                    isOptionEqualToValue={(option, value) => option.id === value?.id}
+                                                    isOptionEqualToValue={(option, val) => option.id === val?.id && option.type === val?.type}
                                                     renderOption={(props, option) => (
-                                                        <Box component="li" {...props} key={option.id}>
-                                                            {option.id === CREATE_NEW_INGREDIENT_OPTION.id ? 
-                                                                <Typography color="primary" variant="body2">{option.name}</Typography> : 
-                                                                option.name
-                                                            }
+                                                        <Box component="li" {...props} key={`${option.type}-${option.id}`}>
+                                                            {option.type === 'ingredient' && <LocalFloristIcon fontSize="small" sx={{ mr: 1, opacity: 0.6 }} />}
+                                                            {option.type === 'recipe' && <RestaurantMenuIcon fontSize="small" sx={{ mr: 1, opacity: 0.6 }} />}
+                                                            {option.type === 'create-ingredient' && <AddIcon fontSize="small" sx={{ mr: 1 }} />}
+                                                            <Typography 
+                                                                variant="body2" 
+                                                                color={option.type === 'create-ingredient' ? 'primary' : 'inherit'}
+                                                            >
+                                                                {option.name}
+                                                            </Typography>
                                                         </Box>
                                                     )}
-                                                    loading={ingredientsLoading}
-                                                    disabled={ingredientsLoading || !!ingredientsError}
+                                                    loading={ingredientsLoading || subRecipesLoading}
+                                                    disabled={ingredientsLoading || subRecipesLoading || !!ingredientsError}
                                                     renderInput={(params) => (
                                                         <TextField 
                                                             {...params} 
-                                                            label="Ingredient" 
+                                                            label="Ingredient / Sub-Recipe" 
                                                             size="small"
-                                                            required={currentType === 'ingredient'}
-                                                            error={!!ingredientsError || !!errors.ingredients?.[index]?.ingredientId}
-                                                            helperText={ingredientsError}
+                                                            required
+                                                            error={!!ingredientsError || !!fieldState.error}
+                                                            helperText={fieldState.error?.message || ingredientsError}
                                                             InputProps={{ 
                                                                 ...params.InputProps,
                                                                 endAdornment: (
                                                                     <>
-                                                                        {ingredientsLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                                                                        {(ingredientsLoading || subRecipesLoading) ? <CircularProgress color="inherit" size={20} /> : null}
                                                                         {params.InputProps.endAdornment}
                                                                     </>
                                                                 ),
@@ -495,50 +580,9 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                                     )}
                                                     fullWidth
                                                 />
-                                            )}
-                                        />
-                                    )}
-                                    {currentType === 'sub-recipe' && (
-                                        <Controller
-                                            name={`ingredients.${index}.subRecipeId`}
-                                            control={control}
-                                            rules={{ required: currentType === 'sub-recipe' ? 'Sub-recipe required' : false }}
-                                            render={({ field }) => (
-                                                <Autocomplete
-                                                    options={subRecipesList}
-                                                    getOptionLabel={(option) => option.name || ''}
-                                                    value={subRecipesList.find(sr => sr.id === field.value) || null}
-                                                    onChange={(event, newValue) => field.onChange(newValue ? newValue.id : '')}
-                                                    isOptionEqualToValue={(option, value) => option.id === value?.id}
-                                                    loading={subRecipesLoading}
-                                                    disabled={subRecipesLoading || !!subRecipesError}
-                                                    renderInput={(params) => (
-                                                        <TextField 
-                                                            {...params} 
-                                                            label="Sub-Recipe" 
-                                                            size="small"
-                                                            required={currentType === 'sub-recipe'}
-                                                            error={!!subRecipesError || !!errors.ingredients?.[index]?.subRecipeId}
-                                                            helperText={subRecipesError}
-                                                            InputProps={{
-                                                                ...params.InputProps,
-                                                                endAdornment: (
-                                                                    <>
-                                                                        {subRecipesLoading ? <CircularProgress color="inherit" size={20} /> : null}
-                                                                        {params.InputProps.endAdornment}
-                                                                    </>
-                                                                ),
-                                                            }}
-                                                        />
-                                                    )}
-                                                    fullWidth
-                                                />
-                                            )}
-                                        />
-                                    )}
-                                    {!currentType && (
-                                        <TextField label="Item" size="small" fullWidth disabled value="Select Type first" />
-                                    )}
+                                            );
+                                        }}
+                                    />
                                 </Box>
 
                                 <Controller
@@ -675,11 +719,21 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                      {modalType === 'ingredient' && (
                         <IngredientForm 
                             isSubmitting={isModalSubmitting}
-                            onSubmit={async (data) => {
+                            onSubmit={async (data: IngredientFormShape) => {
                                  setIsModalSubmitting(true);
                                  setModalSubmitError(null);
+                                 
+                                 // Process IngredientFormShape into ApiIngredientFormData
+                                 const payload: ApiIngredientFormData = {
+                                     name: data.name,
+                                     description: data.description || null,
+                                     ingredientCategoryId: data.ingredientCategoryId 
+                                                             ? parseInt(String(data.ingredientCategoryId), 10) || null 
+                                                             : null
+                                 };
+
                                  try {
-                                    const newIng = await createIngredient(data);
+                                    const newIng = await createIngredient(payload); // Pass processed payload
                                     handleModalCreateSuccess(newIng, 'ingredient');
                                 } catch (err: any) {
                                     const msg = err.response?.data?.message || err.message || 'Failed to create ingredient';
