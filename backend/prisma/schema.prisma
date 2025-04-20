@@ -41,7 +41,7 @@ model Category {
 // Add Ingredient Category model
 model IngredientCategory {
   id          Int      @id @default(autoincrement())
-  name        String   @unique @db.VarChar(150)
+  name        String   @db.VarChar(150)
   description String?  @db.Text
   userId      Int      @map("user_id")
   createdAt   DateTime @default(now()) @map("created_at")
@@ -53,12 +53,13 @@ model IngredientCategory {
 
   @@map("ingredient_categories")
   @@index([userId])
+  @@unique([name, userId])
 }
 
 model UnitOfMeasure {
   id           Int                 @id @default(autoincrement())
-  name         String              @unique @db.VarChar(100)
-  abbreviation String?             @unique @db.VarChar(20)
+  name         String              @db.VarChar(100)
+  abbreviation String?             @db.VarChar(20)
   type         UnitType?           // Optional enum type
   userId       Int                 @map("user_id")
   createdAt    DateTime            @default(now()) @map("created_at")
@@ -71,11 +72,13 @@ model UnitOfMeasure {
 
   @@map("units_of_measure")
   @@index([userId])
+  @@unique([name, userId])
+  @@unique([abbreviation, userId])
 }
 
 model Ingredient {
   id          Int              @id @default(autoincrement())
-  name        String           @unique @db.VarChar(255)
+  name        String           @db.VarChar(255)
   description String?          @db.Text
 
   // Add relation to IngredientCategory (optional)
@@ -93,6 +96,7 @@ model Ingredient {
   @@map("ingredients")
   @@index([ingredientCategoryId]) // Add index
   @@index([userId])
+  @@unique([name, userId])
 }
 
 model Recipe {
