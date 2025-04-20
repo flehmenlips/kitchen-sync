@@ -64,4 +64,7 @@ junit.xml
 .pnp.*
 
 # Generated Code
+backend/src/generated/prisma/
+
+# Generated Code
 # backend/src/generated/prisma/ 

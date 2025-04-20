@@ -23,16 +23,6 @@ const safeParseFloat = (val: unknown): number | undefined => {
   return undefined;
 };
 
-// Type for the object returned by the ingredient map function
-type MappedIngredientData = {
-    recipeId: number;
-    ingredientId: number | undefined;
-    subRecipeId: number | undefined;
-    quantity: number;
-    unitId: number;
-    order: number;
-};
-
 // @desc    Get all recipes
 // @route   GET /api/recipes
 // @access  Public (for now)
@@ -152,7 +142,7 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
 
     const tagsArray = typeof tags === 'string' ? tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '') : [];
 
-    const newRecipeWithIngredients = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const newRecipeWithIngredients = await prisma.$transaction(async (tx) => {
       const newRecipe = await tx.recipe.create({
         data: {
           name,
@@ -203,8 +193,8 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
                 quantity: quantityNum ?? 0, // Default to 0 if somehow still undefined
                 unitId: unitIdNum, 
                 order: index
-            } as MappedIngredientData;
-        }).filter((ing: MappedIngredientData) => ing.ingredientId || ing.subRecipeId);
+            };
+        }).filter(ing => ing.ingredientId || ing.subRecipeId);
 
         if (recipeIngredientsData.length > 0) {
             await tx.unitQuantity.createMany({
@@ -276,7 +266,7 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
 
     const tagsArray = typeof tags === 'string' ? tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '') : [];
 
-    const updatedRecipeResult = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const updatedRecipeResult = await prisma.$transaction(async (tx) => {
         // Check if recipe exists before attempting update/delete
         const existingRecipe = await tx.recipe.findUnique({ where: { id: recipeId }});
         if (!existingRecipe) {
@@ -305,7 +295,7 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
         await tx.unitQuantity.deleteMany({ where: { recipeId: recipeId }});
 
         if (ingredients && ingredients.length > 0) {
-            const recipeIngredientsData = ingredients.map((ing: IngredientInput, index: number) => { 
+            const recipeIngredientsData = ingredients.map((ing: IngredientInput, index: number) => {
                 console.log(`[updateRecipe] Processing ing Input:`, JSON.stringify(ing, null, 2)); // Log raw input
 
                 if ((!ing.ingredientId && !ing.subRecipeId) || !ing.quantity || !ing.unitId) {
@@ -345,8 +335,8 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
                 };
                 console.log(`[updateRecipe] Returning object before filter:`, JSON.stringify(returnObj, null, 2)); // Log object being returned
 
-                return returnObj as MappedIngredientData;
-             }).filter((ing: MappedIngredientData) => ing.ingredientId || ing.subRecipeId);
+                return returnObj;
+             }).filter(ing => ing.ingredientId || ing.subRecipeId);
              
              console.log(`[updateRecipe] Recipe ID: ${recipeId}, Filtered ingredients for createMany:`, JSON.stringify(recipeIngredientsData, null, 2));
 
