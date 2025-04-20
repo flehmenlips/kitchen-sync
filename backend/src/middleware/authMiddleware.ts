@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../config/db';
 // Use relative path for generated User type
-import { User } from '../generated/prisma/client';
+import { User } from '@prisma/client';
 
 // Extend Express Request interface to include user property
 // Place this in a types definition file (e.g., src/types/express/index.d.ts) later for better organization

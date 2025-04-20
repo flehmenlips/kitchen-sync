@@ -2,8 +2,8 @@ import { Request, Response } from 'express';
 import prisma from '../config/db';
 import bcrypt from 'bcrypt';
 import generateToken from '../utils/generateToken';
-// Import Prisma namespace from generated path
-import { Prisma } from '../generated/prisma/client';
+// Import Prisma namespace/types from default path
+import { Prisma, PrismaClientKnownRequestError } from '@prisma/client';
 
 // @desc    Register a new user
 // @route   POST /api/users/register
@@ -52,7 +52,7 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
     } catch (error: any) {
         console.error('Register Error:', error);
         // Access error type via namespace
-        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') { 
+        if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') { 
              res.status(400).json({ message: 'Email address already registered' });
              return;
         }
