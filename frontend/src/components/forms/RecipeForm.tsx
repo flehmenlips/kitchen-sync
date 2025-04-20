@@ -636,6 +636,7 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                                     <TextField 
                                                         {...params} 
                                                         size="small"
+                                                        variant="outlined"
                                                         error={!!unitsError || !!fieldState.error}
                                                         helperText={fieldState.error?.message || unitsError}
                                                         InputProps={{
