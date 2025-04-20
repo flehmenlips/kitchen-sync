@@ -605,7 +605,19 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                 />
                                 {/* Revert to FormControl/InputLabel/Select for Unit */}
                                 <FormControl fullWidth size="small" sx={{ flexBasis: '20%' }} error={!!unitsError || unitsLoading}>
-                                    <InputLabel id={`ingredient-unit-label-${index}`}>Unit</InputLabel>
+                                    <InputLabel 
+                                        id={`ingredient-unit-label-${index}`}
+                                        // Add sx prop for background when shrunk
+                                        sx={{ 
+                                            '&.MuiInputLabel-shrink': { // Target the label when shrunk
+                                                backgroundColor: (theme) => theme.palette.background.paper, // Use theme background
+                                                paddingLeft: '4px', // Add slight padding to prevent border touching text
+                                                paddingRight: '4px',
+                                            }
+                                        }}
+                                    >
+                                        Unit
+                                    </InputLabel>
                                     <Controller
                                         name={`ingredients.${index}.unitId`}
                                         control={control}
