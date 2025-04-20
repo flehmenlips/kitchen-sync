@@ -608,7 +608,8 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                     <Controller
                                         name={`ingredients.${index}.unitId`}
                                         control={control}
-                                        render={({ field }) => (
+                                        rules={{ required: 'Unit required' }}
+                                        render={({ field, fieldState }) => (
                                             <Autocomplete
                                                 options={units}
                                                 getOptionLabel={(option) => option.abbreviation || option.name || ''}
@@ -634,10 +635,10 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                                 renderInput={(params) => (
                                                     <TextField 
                                                         {...params} 
-                                                        label="Unit" 
                                                         size="small"
-                                                        error={!!unitsError || !!errors.ingredients?.[index]?.unitId}
-                                                        helperText={unitsError}
+                                                        error={!!unitsError || !!fieldState.error}
+                                                        helperText={fieldState.error?.message || unitsError}
+                                                        InputLabelProps={{ shrink: !!field.value }}
                                                         InputProps={{
                                                             ...params.InputProps,
                                                             endAdornment: (
@@ -650,7 +651,6 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                                     />
                                                 )}
                                                 fullWidth
-                                                sx={{ flexBasis: '20%' }} 
                                             />
                                         )}
                                     />
