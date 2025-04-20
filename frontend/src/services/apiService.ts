@@ -10,8 +10,30 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true // Set globally for the instance
 });
+
+// Add a request interceptor to include the token
+apiClient.interceptors.request.use(
+    (config) => {
+        let token = null;
+        try {
+            const storedUserInfo = localStorage.getItem('kitchenSyncUserInfo');
+            if (storedUserInfo) {
+                token = JSON.parse(storedUserInfo).token;
+            }
+        } catch (error) {
+            console.error("Error reading token from localStorage:", error);
+        }
+
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
+);
 
 // Define a basic type for our Recipe (can be expanded)
 // Match this structure with your backend response, especially for nested objects
@@ -401,11 +423,12 @@ export const register = async (userData: UserCredentials): Promise<UserProfile> 
     }
 };
 
-export const login = async (credentials: UserCredentials): Promise<UserProfile> => {
+export const login = async (credentials: UserCredentials): Promise<UserProfile & {token: string}> => {
     try {
-        // Send credentials=true so browser sends cookie back
+        // The interceptor will add the token for protected requests, but login doesn't need it
+        // Backend response now includes token in the body
         const response = await apiClient.post('/users/login', credentials); 
-        return response.data; // Backend returns user profile
+        return response.data; 
     } catch (error) {
         console.error('Error during login:', error);
         throw error;
@@ -414,8 +437,8 @@ export const login = async (credentials: UserCredentials): Promise<UserProfile> 
 
 export const logout = async (): Promise<void> => {
     try {
-        // Send credentials=true to ensure cookie is handled correctly by backend
-        await apiClient.post('/users/logout');
+        // Interceptor might add token, backend ignores it for logout
+        await apiClient.post('/users/logout'); 
     } catch (error) {
         console.error('Error during logout:', error);
         throw error;
@@ -424,7 +447,7 @@ export const logout = async (): Promise<void> => {
 
 export const getProfile = async (): Promise<UserProfile> => {
     try {
-         // Send credentials=true so browser sends cookie to backend
+        // Interceptor adds Authorization header
         const response = await apiClient.get('/users/profile');
         return response.data;
     } catch (error) {

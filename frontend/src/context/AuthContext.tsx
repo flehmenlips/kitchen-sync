@@ -25,87 +25,70 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // Still true initially
+// Define a type for the API response that includes the token
+interface AuthResponse extends UserProfile {
+    token: string;
+}
 
-  // Check login status on initial load
-  useEffect(() => {
-    const checkUserStatus = async () => {
-      console.log('[AuthContext] Checking user status...');
+// Key for localStorage
+const USER_INFO_KEY = 'kitchenSyncUserInfo';
+
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  // Initialize user state from localStorage
+  const [user, setUser] = useState<UserProfile | null>(() => {
       try {
-        const profile = await getProfile(); 
-        console.log('[AuthContext] Profile fetched:', profile);
-        setUser(profile);
-      } catch (error) {
-        console.log('[AuthContext] checkUserStatus error:', error);
-        setUser(null);
-      } finally {
-        setIsLoading(false);
-         console.log('[AuthContext] checkUserStatus finished, isLoading: false');
-      }
-    };
-    checkUserStatus();
-  }, []);
+        const storedUserInfo = localStorage.getItem(USER_INFO_KEY);
+        return storedUserInfo ? JSON.parse(storedUserInfo).user : null;
+      } catch (error) { 
+        console.error("Error reading user info from localStorage:", error);
+        return null;
+       }
+  });
+  const [isLoading, setIsLoading] = useState(false); // Only true initially if needed, handled by component now
+
+  // No initial profile fetch needed if we store user info
+  /* useEffect(() => { ... checkUserStatus ... }, []); */
 
   const login = useCallback(async (credentials: UserCredentials) => {
-    console.log('[AuthContext] login called');
-    // setIsLoading(true); // Loading state is handled by the component calling login
     try {
-      const loggedInUser = await apiLogin(credentials);
-      setUser(loggedInUser);
+      // API response now includes the token
+      const response: AuthResponse = await apiLogin(credentials);
+      const userInfo = { user: { id: response.id, name: response.name, email: response.email }, token: response.token };
+      // Store user profile AND token
+      localStorage.setItem(USER_INFO_KEY, JSON.stringify(userInfo));
+      setUser(userInfo.user);
     } catch (error) { 
+      localStorage.removeItem(USER_INFO_KEY); // Clear storage on failed login
       setUser(null); 
       throw error; 
-    } finally {
-       // setIsLoading(false);
     }
   }, []);
 
   const logout = useCallback(async () => {
-    console.log('[AuthContext] logout called');
-    // Set user state to null immediately for faster UI update
     setUser(null); 
-    console.log('[AuthContext] User state set to null');
-    
+    localStorage.removeItem(USER_INFO_KEY); // Remove stored info
     try {
-      // Still call the backend to invalidate the cookie/session server-side
-      await apiLogout();
-      console.log('Logout API call successful');
+      await apiLogout(); // Call backend logout (optional, but good practice)
     } catch (error) {
         console.error("Backend logout failed:", error);
     }
-    // No need to set loading state for logout
   }, []); 
 
   const register = useCallback(async (userData: UserCredentials) => {
-    console.log('[AuthContext] register called');
-    // setIsLoading(true); // Component handles loading
     try {
-      const newUser = await apiRegister(userData);
-      setUser(newUser); 
+      const response: AuthResponse = await apiRegister(userData);
+      const userInfo = { user: { id: response.id, name: response.name, email: response.email }, token: response.token };
+      localStorage.setItem(USER_INFO_KEY, JSON.stringify(userInfo));
+      setUser(userInfo.user);
     } catch (error) {
+       localStorage.removeItem(USER_INFO_KEY);
        setUser(null); 
-      throw error; 
-    } finally {
-       // setIsLoading(false);
+       throw error; 
     }
   }, []);
 
-  // Log context value changes
-  useEffect(() => {
-     console.log("[AuthContext] Provider value changed - User:", user, "isLoading:", isLoading);
-  }, [user, isLoading]);
-
-  // Display a loading indicator ONLY while checking initial auth status
-  // This prevents rendering the app before we know if user is logged in or not
-  if (isLoading) { 
-     return (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-            <CircularProgress />
-        </Box>
-    );
-  }
+  // No initial loading indicator needed here anymore
+  // if (isLoading) { /* ... */ }
 
   return (
     <AuthContext.Provider value={{ user, isLoading, login, logout, register }}>
