@@ -10,6 +10,7 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true // Set globally for the instance
 });
 
 // Define a basic type for our Recipe (can be expanded)
@@ -123,7 +124,7 @@ export interface UserProfile {
 // API functions
 export const getRecipes = async (): Promise<Recipe[]> => {
   try {
-    const response = await apiClient.get('/recipes', { withCredentials: true });
+    const response = await apiClient.get('/recipes');
     return response.data;
   } catch (error) {
     console.error('Error fetching recipes:', error);
@@ -134,7 +135,7 @@ export const getRecipes = async (): Promise<Recipe[]> => {
 
 export const getRecipeById = async (id: number): Promise<Recipe> => {
     try {
-        const response = await apiClient.get(`/recipes/${id}`, { withCredentials: true });
+        const response = await apiClient.get(`/recipes/${id}`);
         return response.data;
     } catch (error) {
         console.error(`Error fetching recipe ${id}:`, error);
@@ -176,7 +177,7 @@ export const deleteRecipe = async (id: number): Promise<void> => {
 // Units
 export const getUnits = async (): Promise<UnitOfMeasure[]> => {
     try {
-        const response = await apiClient.get('/units', { withCredentials: true });
+        const response = await apiClient.get('/units');
         return response.data;
     } catch (error) {
         console.error('Error fetching units:', error);
@@ -186,7 +187,7 @@ export const getUnits = async (): Promise<UnitOfMeasure[]> => {
 
 export const getUnitById = async (id: number): Promise<UnitOfMeasure> => {
     try {
-        const response = await apiClient.get(`/units/${id}`, { withCredentials: true });
+        const response = await apiClient.get(`/units/${id}`);
         return response.data;
     } catch (error) {
         console.error(`Error fetching unit ${id}:`, error);
@@ -232,7 +233,7 @@ export const deleteUnit = async (id: number): Promise<void> => {
 // Ingredients
 export const getIngredients = async (): Promise<Ingredient[]> => {
     try {
-        const response = await apiClient.get('/ingredients', { withCredentials: true });
+        const response = await apiClient.get('/ingredients');
         return response.data;
     } catch (error) {
         console.error('Error fetching ingredients:', error);
@@ -242,7 +243,7 @@ export const getIngredients = async (): Promise<Ingredient[]> => {
 
 export const getIngredientById = async (id: number): Promise<Ingredient> => {
     try {
-        const response = await apiClient.get(`/ingredients/${id}`, { withCredentials: true });
+        const response = await apiClient.get(`/ingredients/${id}`);
         return response.data;
     } catch (error) {
         console.error(`Error fetching ingredient ${id}:`, error);
@@ -287,7 +288,7 @@ export const deleteIngredient = async (id: number): Promise<void> => {
 // == Categories ==
 export const getCategories = async (): Promise<Category[]> => {
     try {
-        const response = await apiClient.get('/categories', { withCredentials: true });
+        const response = await apiClient.get('/categories');
         return response.data;
     } catch (error) {
         console.error('Error fetching categories:', error);
@@ -297,7 +298,7 @@ export const getCategories = async (): Promise<Category[]> => {
 
 export const getCategoryById = async (id: number): Promise<Category> => {
     try {
-        const response = await apiClient.get(`/categories/${id}`, { withCredentials: true });
+        const response = await apiClient.get(`/categories/${id}`);
         return response.data;
     } catch (error) {
         console.error(`Error fetching category ${id}:`, error);
@@ -339,7 +340,7 @@ export const deleteCategory = async (id: number): Promise<void> => {
 // == Ingredient Categories ==
 export const getIngredientCategories = async (): Promise<IngredientCategory[]> => {
     try {
-        const response = await apiClient.get('/ingredient-categories', { withCredentials: true });
+        const response = await apiClient.get('/ingredient-categories');
         return response.data;
     } catch (error) {
         console.error('Error fetching ingredient categories:', error);
@@ -381,7 +382,7 @@ export const deleteIngredientCategory = async (id: number): Promise<void> => {
 // Optional Get By ID
 export const getIngredientCategoryById = async (id: number): Promise<IngredientCategory> => {
      try {
-        const response = await apiClient.get(`/ingredient-categories/${id}`, { withCredentials: true });
+        const response = await apiClient.get(`/ingredient-categories/${id}`);
         return response.data;
     } catch (error) {
         console.error(`Error fetching ingredient category ${id}:`, error);
@@ -403,7 +404,7 @@ export const register = async (userData: UserCredentials): Promise<UserProfile> 
 export const login = async (credentials: UserCredentials): Promise<UserProfile> => {
     try {
         // Send credentials=true so browser sends cookie back
-        const response = await apiClient.post('/users/login', credentials, { withCredentials: true }); 
+        const response = await apiClient.post('/users/login', credentials); 
         return response.data; // Backend returns user profile
     } catch (error) {
         console.error('Error during login:', error);
@@ -414,7 +415,7 @@ export const login = async (credentials: UserCredentials): Promise<UserProfile> 
 export const logout = async (): Promise<void> => {
     try {
         // Send credentials=true to ensure cookie is handled correctly by backend
-        await apiClient.post('/users/logout', {}, { withCredentials: true });
+        await apiClient.post('/users/logout');
     } catch (error) {
         console.error('Error during logout:', error);
         throw error;
@@ -424,7 +425,7 @@ export const logout = async (): Promise<void> => {
 export const getProfile = async (): Promise<UserProfile> => {
     try {
          // Send credentials=true so browser sends cookie to backend
-        const response = await apiClient.get('/users/profile', { withCredentials: true });
+        const response = await apiClient.get('/users/profile');
         return response.data;
     } catch (error) {
         console.error('Error fetching profile:', error);
