@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 // Using relative path now that we know alias might be tricky initially
 import prisma from '../config/db'; 
-import { Prisma, UnitType } from '../generated/prisma/client'; // Re-import Prisma namespace
+import { Prisma, UnitType } from '@prisma/client'; // Re-import Prisma namespace
 
 // Helper function for safe integer parsing
 const safeParseInt = (val: unknown): number | undefined => {
@@ -21,6 +21,17 @@ const safeParseFloat = (val: unknown): number | undefined => {
     return !isNaN(parsed) ? parsed : undefined;
   }
   return undefined;
+};
+
+// Type for the object returned by the ingredient map function
+// Define this locally for clarity
+type MappedIngredientData = {
+    recipeId: number;
+    ingredientId: number | undefined;
+    subRecipeId: number | undefined;
+    quantity: number;
+    unitId: number;
+    order: number;
 };
 
 // @desc    Get all recipes
@@ -186,7 +197,7 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
                  throw new Error(`Invalid or missing subRecipeId for ingredient.`);
             }
 
-            return {
+            const returnObj = {
                 recipeId: newRecipe.id,
                 ingredientId: ing.type === 'ingredient' ? ingredientIdNum : undefined,
                 subRecipeId: ing.type === 'sub-recipe' ? subRecipeIdNum : undefined,
@@ -194,7 +205,8 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
                 unitId: unitIdNum, 
                 order: index
             };
-        }).filter(ing => ing.ingredientId || ing.subRecipeId);
+            return returnObj;
+        }).filter((ing: MappedIngredientData) => ing.ingredientId || ing.subRecipeId);
 
         if (recipeIngredientsData.length > 0) {
             await tx.unitQuantity.createMany({
@@ -336,7 +348,7 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
                 console.log(`[updateRecipe] Returning object before filter:`, JSON.stringify(returnObj, null, 2)); // Log object being returned
 
                 return returnObj;
-             }).filter(ing => ing.ingredientId || ing.subRecipeId);
+             }).filter((ing: MappedIngredientData) => ing.ingredientId || ing.subRecipeId);
              
              console.log(`[updateRecipe] Recipe ID: ${recipeId}, Filtered ingredients for createMany:`, JSON.stringify(recipeIngredientsData, null, 2));
 
