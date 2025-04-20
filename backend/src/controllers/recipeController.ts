@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 // Using relative path now that we know alias might be tricky initially
 import prisma from '../config/db'; 
-import { Prisma } from '@prisma/client'; // Import Prisma namespace
+import { Prisma, UnitType } from '../generated/prisma/client'; // Re-import Prisma namespace
 
 // Helper function for safe integer parsing
 const safeParseInt = (val: unknown): number | undefined => {
@@ -152,7 +152,7 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
 
     const tagsArray = typeof tags === 'string' ? tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '') : [];
 
-    const newRecipeWithIngredients = await prisma.$transaction(async (tx) => {
+    const newRecipeWithIngredients = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const newRecipe = await tx.recipe.create({
         data: {
           name,
@@ -169,7 +169,7 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
       });
 
       if (ingredients && ingredients.length > 0) {
-        const recipeIngredientsData = ingredients.map((ing) => {
+        const recipeIngredientsData = ingredients.map((ing: IngredientInput, index: number) => {
             if ((!ing.ingredientId && !ing.subRecipeId) || !ing.quantity || !ing.unitId) {
                 throw new Error(`Invalid data for ingredient: requires ingredientId or subRecipeId, quantity, and unitId.`);
             }
@@ -204,7 +204,7 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
                 unitId: unitIdNum, 
                 order: index
             } as MappedIngredientData;
-        }).filter((ing) => ing.ingredientId || ing.subRecipeId);
+        }).filter((ing: MappedIngredientData) => ing.ingredientId || ing.subRecipeId);
 
         if (recipeIngredientsData.length > 0) {
             await tx.unitQuantity.createMany({
@@ -276,7 +276,7 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
 
     const tagsArray = typeof tags === 'string' ? tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '') : [];
 
-    const updatedRecipeResult = await prisma.$transaction(async (tx) => {
+    const updatedRecipeResult = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
         // Check if recipe exists before attempting update/delete
         const existingRecipe = await tx.recipe.findUnique({ where: { id: recipeId }});
         if (!existingRecipe) {
@@ -305,7 +305,7 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
         await tx.unitQuantity.deleteMany({ where: { recipeId: recipeId }});
 
         if (ingredients && ingredients.length > 0) {
-            const recipeIngredientsData = ingredients.map((ing) => { 
+            const recipeIngredientsData = ingredients.map((ing: IngredientInput, index: number) => { 
                 console.log(`[updateRecipe] Processing ing Input:`, JSON.stringify(ing, null, 2)); // Log raw input
 
                 if ((!ing.ingredientId && !ing.subRecipeId) || !ing.quantity || !ing.unitId) {
@@ -346,7 +346,7 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
                 console.log(`[updateRecipe] Returning object before filter:`, JSON.stringify(returnObj, null, 2)); // Log object being returned
 
                 return returnObj as MappedIngredientData;
-             }).filter((ing) => ing.ingredientId || ing.subRecipeId);
+             }).filter((ing: MappedIngredientData) => ing.ingredientId || ing.subRecipeId);
              
              console.log(`[updateRecipe] Recipe ID: ${recipeId}, Filtered ingredients for createMany:`, JSON.stringify(recipeIngredientsData, null, 2));
 
