@@ -638,7 +638,6 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                                         size="small"
                                                         error={!!unitsError || !!fieldState.error}
                                                         helperText={fieldState.error?.message || unitsError}
-                                                        InputLabelProps={{ shrink: !!field.value }}
                                                         InputProps={{
                                                             ...params.InputProps,
                                                             endAdornment: (
