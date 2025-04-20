@@ -84,26 +84,32 @@ model Ingredient {
 }
 
 model Recipe {
-  id              Int       @id @default(autoincrement())
-  name            String    @db.VarChar(255)
-  description     String?   @db.Text
-  instructions    String    @db.Text
-  yieldQuantity   Decimal?  @map("yield_quantity") @db.Decimal(10, 2)
-  yieldUnitId     Int?      @map("yield_unit_id")
-  prepTimeMinutes Int?      @map("prep_time_minutes")
-  cookTimeMinutes Int?      @map("cook_time_minutes")
-  tags            String[]  @db.Text // PostgreSQL array type
-  categoryId      Int?      @map("category_id")
-  category        Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+  id              Int      @id @default(autoincrement())
+  name            String   @db.VarChar(255)
+  description     String?  @db.Text
+  instructions    String   @db.Text
+  yieldQuantity   Decimal? @map("yield_quantity") @db.Decimal(10, 2)
+  yieldUnitId     Int?     @map("yield_unit_id")
+  prepTimeMinutes Int?     @map("prep_time_minutes")
+  cookTimeMinutes Int?     @map("cook_time_minutes")
+  tags            String[] @db.Text
+  categoryId      Int?     @map("category_id")
+
+  // Add userId to associate recipe with a user - MAKE OPTIONAL FOR MIGRATION
+  userId Int? @map("user_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
+  category          Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   yieldUnit         UnitOfMeasure? @relation("RecipeYieldUnit", fields: [yieldUnitId], references: [id], onDelete: SetNull)
-  recipeIngredients UnitQuantity[] @relation("RecipeParent") // Ingredients/Sub-recipes *used in* this recipe
-  usedAsSubRecipe   UnitQuantity[] @relation("RecipeSubComponent") // Recipes where *this recipe* is used as a sub-recipe
+  recipeIngredients UnitQuantity[] @relation("RecipeParent")
+  usedAsSubRecipe   UnitQuantity[] @relation("RecipeSubComponent")
+  author            User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([categoryId])
+  @@index([userId]) // Add index for user relation
   @@map("recipes")
 }
 
@@ -142,12 +148,12 @@ model User {
   id        Int      @id @default(autoincrement())
   email     String   @unique
   name      String?
-  password  String // Stores the hashed password
+  password  String
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  // Optional: Add relations later if users own recipes, etc.
-  // recipes Recipe[]
+  // Relation back to Recipe (remains the same, one user can have many recipes)
+  recipes Recipe[]
 
   @@map("users")
 }

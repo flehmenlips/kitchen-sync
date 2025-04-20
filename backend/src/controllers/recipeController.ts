@@ -37,8 +37,13 @@ type MappedIngredientData = {
 // @route   GET /api/recipes
 // @access  Public (for now)
 export const getRecipes = async (req: Request, res: Response): Promise<void> => {
+  if (!req.user?.id) {
+     res.status(401).json({ message: 'Not authorized, user ID missing' });
+     return;
+  }
   try {
     const recipes = await prisma.recipe.findMany({
+      where: { userId: req.user.id }, // Filter by logged-in user
       include: { // Include category
         category: true,
         yieldUnit: true // Keep including yield unit too
@@ -59,10 +64,14 @@ export const getRecipes = async (req: Request, res: Response): Promise<void> => 
 // @route   GET /api/recipes/:id
 // @access  Public (for now)
 export const getRecipeById = async (req: Request, res: Response): Promise<void> => {
+  if (!req.user?.id) {
+     res.status(401).json({ message: 'Not authorized, user ID missing' });
+     return;
+  }
   try {
     const { id } = req.params;
-    const recipeId = parseInt(id, 10);
-    if (isNaN(recipeId)) {
+    const recipeId = safeParseInt(id);
+    if (recipeId === undefined) {
       res.status(400).json({ message: 'Invalid recipe ID format' });
       return;
     }
@@ -89,6 +98,11 @@ export const getRecipeById = async (req: Request, res: Response): Promise<void> 
       res.status(404).json({ message: 'Recipe not found' });
       return;
     }
+    // Ownership check
+    if (recipe.userId !== req.user.id) {
+        res.status(403).json({ message: 'Not authorized to view this recipe' });
+        return;
+    }
     res.status(200).json(recipe);
   } catch (error) {
     console.error(error);
@@ -109,6 +123,10 @@ type IngredientInput = {
 // @route   POST /api/recipes
 // @access  Private/Admin (eventually)
 export const createRecipe = async (req: Request, res: Response): Promise<void> => {
+  if (!req.user?.id) {
+     res.status(401).json({ message: 'Not authorized, user ID missing' });
+     return;
+  }
   try {
     const {
       name, description, instructions, yieldQuantity, yieldUnitId,
@@ -134,7 +152,7 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
 
     const tagsArray = typeof tags === 'string' ? tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '') : [];
 
-    const newRecipeWithIngredients = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const newRecipeWithIngredients = await prisma.$transaction(async (tx) => {
       const newRecipe = await tx.recipe.create({
         data: {
           name,
@@ -146,22 +164,17 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
           cookTimeMinutes: cookTime,
           tags: tagsArray,
           categoryId: categoryIdNum,
+          userId: req.user!.id, // Assign logged-in user's ID
         },
       });
 
       if (ingredients && ingredients.length > 0) {
-        const recipeIngredientsData = ingredients.map((ing: {
-            type: 'ingredient' | 'sub-recipe' | '';
-            ingredientId?: number | string;
-            subRecipeId?: number | string;
-            quantity: number | string;
-            unitId: number | string;
-        }, index: number) => {
+        const recipeIngredientsData = ingredients.map((ing) => {
             if ((!ing.ingredientId && !ing.subRecipeId) || !ing.quantity || !ing.unitId) {
-                throw new Error(`Invalid data for ingredient at index ${index}: requires ingredientId or subRecipeId, quantity, and unitId.`);
+                throw new Error(`Invalid data for ingredient: requires ingredientId or subRecipeId, quantity, and unitId.`);
             }
              if (ing.ingredientId && ing.subRecipeId) {
-                throw new Error(`Invalid data for ingredient at index ${index}: cannot have both ingredientId and subRecipeId.`);
+                throw new Error(`Invalid data for ingredient: cannot have both ingredientId and subRecipeId.`);
             }
             
             const quantityNum = safeParseFloat(ing.quantity);
@@ -171,16 +184,16 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
 
             // Validate parsed numbers - ensure unit is always present
             if (quantityNum === undefined) {
-                 throw new Error(`Invalid numeric quantity for ingredient at index ${index}.`);
+                 throw new Error(`Invalid numeric quantity for ingredient.`);
             }
              if (!unitIdNum) {
-                throw new Error(`Invalid or missing unitId for ingredient at index ${index}.`);
+                throw new Error(`Invalid or missing unitId for ingredient.`);
             }
             if (ing.type === 'ingredient' && !ingredientIdNum) {
-                throw new Error(`Invalid or missing ingredientId for ingredient at index ${index}.`);
+                throw new Error(`Invalid or missing ingredientId for ingredient.`);
             }
             if (ing.type === 'sub-recipe' && !subRecipeIdNum) {
-                 throw new Error(`Invalid or missing subRecipeId for ingredient at index ${index}.`);
+                 throw new Error(`Invalid or missing subRecipeId for ingredient.`);
             }
 
             return {
@@ -191,7 +204,7 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
                 unitId: unitIdNum, 
                 order: index
             } as MappedIngredientData;
-        }).filter((ing: MappedIngredientData) => ing.ingredientId || ing.subRecipeId);
+        }).filter((ing) => ing.ingredientId || ing.subRecipeId);
 
         if (recipeIngredientsData.length > 0) {
             await tx.unitQuantity.createMany({
@@ -227,6 +240,10 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
 // @route   PUT /api/recipes/:id
 // @access  Private/Admin (eventually)
 export const updateRecipe = async (req: Request, res: Response): Promise<void> => {
+  if (!req.user?.id) {
+     res.status(401).json({ message: 'Not authorized, user ID missing' });
+     return;
+  }
   try {
     const { id } = req.params;
     const recipeId = safeParseInt(id);
@@ -259,11 +276,15 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
 
     const tagsArray = typeof tags === 'string' ? tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '') : [];
 
-    const updatedRecipeResult = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const updatedRecipeResult = await prisma.$transaction(async (tx) => {
         // Check if recipe exists before attempting update/delete
         const existingRecipe = await tx.recipe.findUnique({ where: { id: recipeId }});
         if (!existingRecipe) {
             throw new Error('P2025'); // Throw specific code/error Prisma uses
+        }
+        // Ownership check before update
+        if (existingRecipe.userId !== req.user!.id) {
+             throw new Error('AUTH_ERROR'); // Custom error code for ownership
         }
 
         const updatedRecipe = await tx.recipe.update({
@@ -284,14 +305,14 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
         await tx.unitQuantity.deleteMany({ where: { recipeId: recipeId }});
 
         if (ingredients && ingredients.length > 0) {
-            const recipeIngredientsData = ingredients.map((ing: IngredientInput, index: number) => { 
-                console.log(`[updateRecipe] Processing ing[${index}] Input:`, JSON.stringify(ing, null, 2)); // Log raw input
+            const recipeIngredientsData = ingredients.map((ing) => { 
+                console.log(`[updateRecipe] Processing ing Input:`, JSON.stringify(ing, null, 2)); // Log raw input
 
                 if ((!ing.ingredientId && !ing.subRecipeId) || !ing.quantity || !ing.unitId) {
-                    throw new Error(`Invalid data for ingredient at index ${index}: requires ingredientId or subRecipeId, quantity, and unitId.`);
+                    throw new Error(`Invalid data for ingredient: requires ingredientId or subRecipeId, quantity, and unitId.`);
                 }
                 if (ing.ingredientId && ing.subRecipeId) {
-                    throw new Error(`Invalid data for ingredient at index ${index}: cannot have both ingredientId and subRecipeId.`);
+                    throw new Error(`Invalid data for ingredient: cannot have both ingredientId and subRecipeId.`);
                 }
                 
                 const quantityNum = safeParseFloat(ing.quantity);
@@ -299,19 +320,19 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
                 const ingredientIdNum = safeParseInt(ing.ingredientId);
                 const subRecipeIdNum = safeParseInt(ing.subRecipeId);
                 
-                console.log(`[updateRecipe] Parsed values[${index}]:`, { quantityNum, unitIdNum, ingredientIdNum, subRecipeIdNum, type: ing.type }); // Log parsed values + type
+                console.log(`[updateRecipe] Parsed values:`, { quantityNum, unitIdNum, ingredientIdNum, subRecipeIdNum, type: ing.type }); // Log parsed values + type
 
                 if (quantityNum === undefined) {
-                    throw new Error(`Invalid numeric quantity for ingredient at index ${index}.`);
+                    throw new Error(`Invalid numeric quantity for ingredient.`);
                 }
                  if (!unitIdNum) {
-                    throw new Error(`Invalid or missing unitId for ingredient at index ${index}.`);
+                    throw new Error(`Invalid or missing unitId for ingredient.`);
                 }
                 if (ing.type === 'ingredient' && !ingredientIdNum) {
-                    throw new Error(`Invalid or missing ingredientId for ingredient at index ${index}.`);
+                    throw new Error(`Invalid or missing ingredientId for ingredient.`);
                 }
                 if (ing.type === 'sub-recipe' && !subRecipeIdNum) {
-                     throw new Error(`Invalid or missing subRecipeId for ingredient at index ${index}.`);
+                     throw new Error(`Invalid or missing subRecipeId for ingredient.`);
                 }
 
                 const returnObj = {
@@ -322,10 +343,10 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
                     unitId: unitIdNum,
                     order: index
                 };
-                console.log(`[updateRecipe] Returning object[${index}] before filter:`, JSON.stringify(returnObj, null, 2)); // Log object being returned
+                console.log(`[updateRecipe] Returning object before filter:`, JSON.stringify(returnObj, null, 2)); // Log object being returned
 
                 return returnObj as MappedIngredientData;
-             }).filter((ing: MappedIngredientData) => ing.ingredientId || ing.subRecipeId);
+             }).filter((ing) => ing.ingredientId || ing.subRecipeId);
              
              console.log(`[updateRecipe] Recipe ID: ${recipeId}, Filtered ingredients for createMany:`, JSON.stringify(recipeIngredientsData, null, 2));
 
@@ -354,7 +375,11 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
 
   } catch (error: any) {
     console.error('Error updating recipe:', error);
-     if (error.message?.includes('Invalid data') || error.message?.includes('Invalid or missing')) {
+     if (error.message === 'AUTH_ERROR') {
+          res.status(403).json({ message: 'Not authorized to update this recipe' });
+          return;
+      }
+    if (error.message?.includes('Invalid data') || error.message?.includes('Invalid or missing')) {
         res.status(400).json({ message: error.message });
         return;
     }
@@ -375,6 +400,10 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
 // @route   DELETE /api/recipes/:id
 // @access  Private/Admin (eventually)
 export const deleteRecipe = async (req: Request, res: Response): Promise<void> => {
+  if (!req.user?.id) {
+     res.status(401).json({ message: 'Not authorized, user ID missing' });
+     return;
+  }
   try {
     const { id } = req.params;
     const recipeId = safeParseInt(id);
@@ -386,6 +415,11 @@ export const deleteRecipe = async (req: Request, res: Response): Promise<void> =
     const existingRecipe = await prisma.recipe.findUnique({ where: { id: recipeId }});
     if (!existingRecipe) {
          res.status(404).json({ message: 'Recipe not found' });
+         return;
+    }
+    // Ownership check before delete
+    if (existingRecipe.userId !== req.user!.id) {
+         res.status(403).json({ message: 'Not authorized to delete this recipe' });
          return;
     }
     // Transaction to delete recipe and its ingredients (though cascade should handle ingredients)

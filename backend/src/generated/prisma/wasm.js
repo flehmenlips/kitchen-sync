@@ -162,6 +162,7 @@ exports.Prisma.RecipeScalarFieldEnum = {
   cookTimeMinutes: 'cookTimeMinutes',
   tags: 'tags',
   categoryId: 'categoryId',
+  userId: 'userId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
