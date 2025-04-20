@@ -4,8 +4,18 @@ import prisma from '../config/db';
 // Controller functions mirroring CategoryController
 
 export const getIngredientCategories = async (req: Request, res: Response): Promise<void> => {
+    // Ensure req.user exists and has an id
+    if (!req.user || !req.user.id) {
+        res.status(401).json({ message: 'Not authorized, user not found' });
+        return;
+    }
+    const userId = req.user.id;
+
     try {
-        const categories = await prisma.ingredientCategory.findMany({ orderBy: { name: 'asc' } });
+        const categories = await prisma.ingredientCategory.findMany({
+            where: { userId: userId }, // Filter by user ID
+            orderBy: { name: 'asc' }
+        });
         res.status(200).json(categories);
     } catch (error) {
         console.error(error);
@@ -14,6 +24,13 @@ export const getIngredientCategories = async (req: Request, res: Response): Prom
 };
 
 export const createIngredientCategory = async (req: Request, res: Response): Promise<void> => {
+    // Ensure req.user exists and has an id
+    if (!req.user || !req.user.id) {
+        res.status(401).json({ message: 'Not authorized, user not found' });
+        return;
+    }
+    const userId = req.user.id;
+
     try {
         const { name, description } = req.body;
         if (!name) {
@@ -21,7 +38,11 @@ export const createIngredientCategory = async (req: Request, res: Response): Pro
             return;
         }
         const newCategory = await prisma.ingredientCategory.create({
-            data: { name, description: description || null },
+            data: {
+                name,
+                description: description || null,
+                userId: userId // Associate with the logged-in user
+            },
         });
         res.status(201).json(newCategory);
     } catch (error: any) {
@@ -35,6 +56,13 @@ export const createIngredientCategory = async (req: Request, res: Response): Pro
 };
 
 export const updateIngredientCategory = async (req: Request, res: Response): Promise<void> => {
+    // Ensure req.user exists and has an id
+    if (!req.user || !req.user.id) {
+        res.status(401).json({ message: 'Not authorized, user not found' });
+        return;
+    }
+    const userId = req.user.id;
+
    try {
         const { id } = req.params;
         const categoryId = parseInt(id, 10);
@@ -48,8 +76,24 @@ export const updateIngredientCategory = async (req: Request, res: Response): Pro
             return;
         }
 
+        // First, check if the category exists and belongs to the user
+        const existingCategory = await prisma.ingredientCategory.findUnique({
+            where: {
+                id: categoryId,
+                userId: userId, // Check ownership
+            },
+        });
+
+        if (!existingCategory) {
+            res.status(404).json({ message: 'Ingredient category not found or you do not have permission to update it.' });
+            return;
+        }
+
         const updatedCategory = await prisma.ingredientCategory.update({
-            where: { id: categoryId },
+            where: {
+                id: categoryId,
+                // No need for userId here again as we checked ownership above
+            },
             data: { name, description: description || null },
         });
         res.status(200).json(updatedCategory);
@@ -68,6 +112,13 @@ export const updateIngredientCategory = async (req: Request, res: Response): Pro
 };
 
 export const deleteIngredientCategory = async (req: Request, res: Response): Promise<void> => {
+    // Ensure req.user exists and has an id
+    if (!req.user || !req.user.id) {
+        res.status(401).json({ message: 'Not authorized, user not found' });
+        return;
+    }
+    const userId = req.user.id;
+
     try {
         const { id } = req.params;
         const categoryId = parseInt(id, 10);
@@ -75,7 +126,26 @@ export const deleteIngredientCategory = async (req: Request, res: Response): Pro
             res.status(400).json({ message: 'Invalid category ID format' });
             return;
          }
-        await prisma.ingredientCategory.delete({ where: { id: categoryId } });
+
+         // First, check if the category exists and belongs to the user
+        const existingCategory = await prisma.ingredientCategory.findUnique({
+             where: {
+                 id: categoryId,
+                 userId: userId, // Check ownership
+             },
+         });
+
+        if (!existingCategory) {
+             res.status(404).json({ message: 'Ingredient category not found or you do not have permission to delete it.' });
+             return;
+         }
+
+        await prisma.ingredientCategory.delete({
+            where: {
+                id: categoryId,
+                // No need for userId here again as we checked ownership above
+            }
+        });
         res.status(200).json({ message: 'Ingredient category deleted successfully' });
     } catch (error: any) {
         console.error(error);
@@ -88,6 +158,13 @@ export const deleteIngredientCategory = async (req: Request, res: Response): Pro
 };
 
 export const getIngredientCategoryById = async (req: Request, res: Response): Promise<void> => {
+    // Ensure req.user exists and has an id
+    if (!req.user || !req.user.id) {
+        res.status(401).json({ message: 'Not authorized, user not found' });
+        return;
+    }
+    const userId = req.user.id;
+
     try {
         const { id } = req.params;
         const categoryId = parseInt(id, 10);
@@ -96,7 +173,10 @@ export const getIngredientCategoryById = async (req: Request, res: Response): Pr
              return;
         }
         const category = await prisma.ingredientCategory.findUnique({
-            where: { id: categoryId }
+            where: {
+                id: categoryId,
+                userId: userId // Check ownership
+            }
         });
         if (!category) {
             res.status(404).json({ message: 'Ingredient category not found' });

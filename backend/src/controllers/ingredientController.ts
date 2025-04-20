@@ -1,12 +1,20 @@
 import { Request, Response } from 'express';
 import prisma from '../config/db'; // Using relative path
 
-// @desc    Get all ingredients
+// @desc    Get all ingredients for the authenticated user
 // @route   GET /api/ingredients
-// @access  Public (for now)
+// @access  Private
 export const getIngredients = async (req: Request, res: Response): Promise<void> => {
+    // Ensure req.user exists and has an id
+    if (!req.user || !req.user.id) {
+        res.status(401).json({ message: 'Not authorized, user not found' });
+        return;
+    }
+    const userId = req.user.id;
+
     try {
         const ingredients = await prisma.ingredient.findMany({
+            where: { userId: userId }, // Filter by user ID
             include: { ingredientCategory: true }, // Include category
             orderBy: [ // Order by category, then name
                  { ingredientCategory: { name: 'asc' } },
@@ -20,10 +28,17 @@ export const getIngredients = async (req: Request, res: Response): Promise<void>
     }
 };
 
-// @desc    Create a new ingredient
+// @desc    Create a new ingredient for the authenticated user
 // @route   POST /api/ingredients
-// @access  Private/Admin (eventually)
+// @access  Private
 export const createIngredient = async (req: Request, res: Response): Promise<void> => {
+    // Ensure req.user exists and has an id
+    if (!req.user || !req.user.id) {
+        res.status(401).json({ message: 'Not authorized, user not found' });
+        return;
+    }
+    const userId = req.user.id;
+
     try {
         const { name, description, ingredientCategoryId } = req.body;
 
@@ -38,7 +53,8 @@ export const createIngredient = async (req: Request, res: Response): Promise<voi
             data: {
                 name,
                 description: description || null,
-                ingredientCategoryId: categoryIdNum
+                ingredientCategoryId: categoryIdNum,
+                userId: userId, // Associate with the logged-in user
             },
             include: { ingredientCategory: true }
         });
@@ -54,10 +70,17 @@ export const createIngredient = async (req: Request, res: Response): Promise<voi
     }
 };
 
-// @desc    Get single ingredient by ID
+// @desc    Get single ingredient by ID (owned by the authenticated user)
 // @route   GET /api/ingredients/:id
-// @access  Public (for now)
+// @access  Private
 export const getIngredientById = async (req: Request, res: Response): Promise<void> => {
+    // Ensure req.user exists and has an id
+    if (!req.user || !req.user.id) {
+        res.status(401).json({ message: 'Not authorized, user not found' });
+        return;
+    }
+    const userId = req.user.id;
+
     try {
         const { id } = req.params;
         const ingredientId = parseInt(id, 10);
@@ -67,7 +90,10 @@ export const getIngredientById = async (req: Request, res: Response): Promise<vo
         }
 
         const ingredient = await prisma.ingredient.findUnique({
-            where: { id: ingredientId },
+            where: {
+                id: ingredientId,
+                userId: userId // Ensure the user owns this ingredient
+            },
             include: { ingredientCategory: true }
         });
 
@@ -82,10 +108,17 @@ export const getIngredientById = async (req: Request, res: Response): Promise<vo
     }
 };
 
-// @desc    Update an ingredient
+// @desc    Update an ingredient (owned by the authenticated user)
 // @route   PUT /api/ingredients/:id
-// @access  Private/Admin (eventually)
+// @access  Private
 export const updateIngredient = async (req: Request, res: Response): Promise<void> => {
+    // Ensure req.user exists and has an id
+    if (!req.user || !req.user.id) {
+        res.status(401).json({ message: 'Not authorized, user not found' });
+        return;
+    }
+    const userId = req.user.id;
+
     try {
         const { id } = req.params;
         const ingredientId = parseInt(id, 10);
@@ -103,8 +136,24 @@ export const updateIngredient = async (req: Request, res: Response): Promise<voi
 
         const categoryIdNum = ingredientCategoryId ? parseInt(ingredientCategoryId, 10) : null;
 
+        // First, check if the ingredient exists and belongs to the user
+        const existingIngredient = await prisma.ingredient.findUnique({
+            where: {
+                id: ingredientId,
+                userId: userId, // Check ownership
+            },
+        });
+
+        if (!existingIngredient) {
+            res.status(404).json({ message: 'Ingredient not found or you do not have permission to update it.' });
+            return;
+        }
+
         const updatedIngredient = await prisma.ingredient.update({
-            where: { id: ingredientId },
+            where: {
+                id: ingredientId,
+                // No need for userId here again as we checked ownership above
+            },
             data: {
                 name,
                 description: description || null,
@@ -127,10 +176,17 @@ export const updateIngredient = async (req: Request, res: Response): Promise<voi
     }
 };
 
-// @desc    Delete an ingredient
+// @desc    Delete an ingredient (owned by the authenticated user)
 // @route   DELETE /api/ingredients/:id
-// @access  Private/Admin (eventually)
+// @access  Private
 export const deleteIngredient = async (req: Request, res: Response): Promise<void> => {
+    // Ensure req.user exists and has an id
+    if (!req.user || !req.user.id) {
+        res.status(401).json({ message: 'Not authorized, user not found' });
+        return;
+    }
+    const userId = req.user.id;
+
     try {
         const { id } = req.params;
         const ingredientId = parseInt(id, 10);
@@ -139,8 +195,24 @@ export const deleteIngredient = async (req: Request, res: Response): Promise<voi
             return;
         }
 
+        // First, check if the ingredient exists and belongs to the user
+        const existingIngredient = await prisma.ingredient.findUnique({
+             where: {
+                 id: ingredientId,
+                 userId: userId, // Check ownership
+             },
+         });
+
+        if (!existingIngredient) {
+             res.status(404).json({ message: 'Ingredient not found or you do not have permission to delete it.' });
+             return;
+         }
+
         await prisma.ingredient.delete({
-            where: { id: ingredientId },
+            where: {
+                id: ingredientId,
+                // No need for userId here again as we checked ownership above
+            },
         });
 
         res.status(200).json({ message: 'Ingredient deleted successfully' });

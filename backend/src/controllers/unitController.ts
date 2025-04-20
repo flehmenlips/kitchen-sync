@@ -3,12 +3,23 @@ import prisma from '../config/db'; // Using relative path
 // Import the type from the generated location
 import { UnitType } from '@prisma/client';
 
-// @desc    Get all units
+// @desc    Get all units for the authenticated user
 // @route   GET /api/units
-// @access  Public (for now)
+// @access  Private (User must be logged in)
 export const getUnits = async (req: Request, res: Response): Promise<void> => {
+    // Ensure req.user exists and has an id
+    if (!req.user || !req.user.id) {
+        res.status(401).json({ message: 'Not authorized, user not found' });
+        return;
+    }
+
     try {
-        const units = await prisma.unitOfMeasure.findMany();
+        const userId = req.user.id;
+        const units = await prisma.unitOfMeasure.findMany({
+             where: {
+                 userId: userId,
+             },
+         });
         res.status(200).json(units);
     } catch (error) {
         console.error(error);
@@ -16,10 +27,17 @@ export const getUnits = async (req: Request, res: Response): Promise<void> => {
     }
 };
 
-// @desc    Create a new unit
+// @desc    Create a new unit for the authenticated user
 // @route   POST /api/units
-// @access  Private/Admin (eventually)
+// @access  Private
 export const createUnit = async (req: Request, res: Response): Promise<void> => {
+    // Ensure req.user exists and has an id
+    if (!req.user || !req.user.id) {
+        res.status(401).json({ message: 'Not authorized, user not found' });
+        return;
+    }
+    const userId = req.user.id; // Get userId from authenticated user
+
     try {
         const { name, abbreviation, type } = req.body;
 
@@ -43,6 +61,7 @@ export const createUnit = async (req: Request, res: Response): Promise<void> => 
                 name,
                 abbreviation,
                 type: unitType,
+                userId: userId, // Associate with the logged-in user
             },
         });
         res.status(201).json(newUnit);
@@ -57,10 +76,17 @@ export const createUnit = async (req: Request, res: Response): Promise<void> => 
     }
 };
 
-// @desc    Get single unit by ID
+// @desc    Get single unit by ID (owned by the authenticated user)
 // @route   GET /api/units/:id
-// @access  Public (for now)
+// @access  Private
 export const getUnitById = async (req: Request, res: Response): Promise<void> => {
+    // Ensure req.user exists and has an id
+    if (!req.user || !req.user.id) {
+        res.status(401).json({ message: 'Not authorized, user not found' });
+        return;
+    }
+    const userId = req.user.id;
+
     try {
         const { id } = req.params;
         const unitId = parseInt(id, 10);
@@ -70,7 +96,10 @@ export const getUnitById = async (req: Request, res: Response): Promise<void> =>
         }
 
         const unit = await prisma.unitOfMeasure.findUnique({
-            where: { id: unitId },
+            where: {
+                id: unitId,
+                userId: userId, // Ensure the user owns this unit
+            },
         });
 
         if (!unit) {
@@ -84,10 +113,17 @@ export const getUnitById = async (req: Request, res: Response): Promise<void> =>
     }
 };
 
-// @desc    Update a unit
+// @desc    Update a unit (owned by the authenticated user)
 // @route   PUT /api/units/:id
-// @access  Private/Admin (eventually)
+// @access  Private
 export const updateUnit = async (req: Request, res: Response): Promise<void> => {
+    // Ensure req.user exists and has an id
+    if (!req.user || !req.user.id) {
+        res.status(401).json({ message: 'Not authorized, user not found' });
+        return;
+    }
+    const userId = req.user.id;
+
     try {
         const { id } = req.params;
         const unitId = parseInt(id, 10);
@@ -109,8 +145,24 @@ export const updateUnit = async (req: Request, res: Response): Promise<void> => 
             unitType = type as UnitType;
         }
 
+        // First, check if the unit exists and belongs to the user
+        const existingUnit = await prisma.unitOfMeasure.findUnique({
+            where: {
+                id: unitId,
+                userId: userId, // Check ownership
+            },
+        });
+
+        if (!existingUnit) {
+            res.status(404).json({ message: 'Unit not found or you do not have permission to update it.' });
+            return;
+        }
+
         const updatedUnit = await prisma.unitOfMeasure.update({
-            where: { id: unitId },
+            where: {
+                id: unitId,
+                // No need for userId here again as we checked ownership above
+            },
             data: {
                 name,
                 abbreviation,
@@ -132,10 +184,17 @@ export const updateUnit = async (req: Request, res: Response): Promise<void> => 
     }
 };
 
-// @desc    Delete a unit
+// @desc    Delete a unit (owned by the authenticated user)
 // @route   DELETE /api/units/:id
-// @access  Private/Admin (eventually)
+// @access  Private
 export const deleteUnit = async (req: Request, res: Response): Promise<void> => {
+    // Ensure req.user exists and has an id
+    if (!req.user || !req.user.id) {
+        res.status(401).json({ message: 'Not authorized, user not found' });
+        return;
+    }
+    const userId = req.user.id;
+
     try {
         const { id } = req.params;
         const unitId = parseInt(id, 10);
@@ -144,8 +203,24 @@ export const deleteUnit = async (req: Request, res: Response): Promise<void> => 
             return;
         }
 
+        // First, check if the unit exists and belongs to the user
+        const existingUnit = await prisma.unitOfMeasure.findUnique({
+             where: {
+                 id: unitId,
+                 userId: userId, // Check ownership
+             },
+         });
+
+        if (!existingUnit) {
+             res.status(404).json({ message: 'Unit not found or you do not have permission to delete it.' });
+             return;
+         }
+
         await prisma.unitOfMeasure.delete({
-            where: { id: unitId },
+            where: {
+                id: unitId,
+                 // No need for userId here again as we checked ownership above
+            },
         });
 
         res.status(200).json({ message: 'Unit deleted successfully' });
