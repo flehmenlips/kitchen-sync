@@ -7,17 +7,10 @@ import Link from '@mui/material/Link';
 import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import Box from '@mui/material/Box';
-import UnitForm from '../components/forms/UnitForm'; // Re-use the form
+import UnitForm, { UnitFormShape } from '../components/forms/UnitForm';
 import { getUnitById, updateUnit, UnitOfMeasure, UnitFormData } from '../services/apiService';
-import { useSnackbar } from '../context/SnackbarContext'; // Import hook
+import { useSnackbar } from '../context/SnackbarContext';
 import { AxiosError } from 'axios';
-
-// Define the type for the processed form data expected by onSubmit
-interface ProcessedUnitFormData {
-    name: string;
-    abbreviation: string | null;
-    type: string | null;
-}
 
 const EditUnitPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -27,7 +20,7 @@ const EditUnitPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const { showSnackbar } = useSnackbar(); // Use hook
+  const { showSnackbar } = useSnackbar();
 
   useEffect(() => {
     const fetchUnit = async () => {
@@ -40,7 +33,7 @@ const EditUnitPage: React.FC = () => {
         setLoading(true);
         const unitId = parseInt(id, 10);
         if (isNaN(unitId)) throw new Error('Invalid unit ID format');
-        const data = await getUnitById(unitId); // Use hypothetical getUnitById
+        const data = await getUnitById(unitId);
         setUnit(data);
         setError(null);
       } catch (err: any) {
@@ -53,14 +46,19 @@ const EditUnitPage: React.FC = () => {
     fetchUnit();
   }, [id]);
 
-  const handleFormSubmit = async (formData: ProcessedUnitFormData) => { // Expect Processed type
+  const handleFormSubmit = async (formData: UnitFormShape) => {
     if (!id) return;
     setSubmitError(null);
     setIsSubmitting(true);
-    console.log('Submitting updated Unit data:', formData);
+    console.log('Received updated Unit form data:', formData);
     
-    // Payload is already processed by the form's internal handler
-    const payload = formData; 
+    const payload: UnitFormData = {
+        name: formData.name,
+        abbreviation: formData.abbreviation || null,
+        type: formData.type || null
+    };
+
+    console.log('Submitting updated Unit API payload:', payload);
 
     try {
       const unitId = parseInt(id, 10);
@@ -70,26 +68,28 @@ const EditUnitPage: React.FC = () => {
       navigate('/units'); 
     } catch (error) {
       console.error('Failed to update unit:', error);
-      let message = 'An unexpected error occurred.';
+      let message = 'An unexpected error occurred while updating the unit.';
       if (error instanceof AxiosError && error.response) {
-        message = error.response.data?.message || error.message;
+        if (error.response.status === 409) {
+          message = error.response.data?.message || "An item with this name or abbreviation already exists.";
+        } else {
+          message = error.response.data?.message || error.message;
+        }
       } else if (error instanceof Error) {
         message = error.message;
       }
-      setSubmitError(`Failed to update unit: ${message}`);
-      // showSnackbar('Failed to update unit.', 'error');
+      setSubmitError(message);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-   // Transform fetched data for the form
-   const transformUnitToFormData = (unitData: UnitOfMeasure | null): Partial<UnitFormData> | undefined => {
+  const transformUnitToFormData = (unitData: UnitOfMeasure | null): Partial<UnitFormShape> | undefined => {
     if (!unitData) return undefined;
     return {
         name: unitData.name,
-        abbreviation: unitData.abbreviation || '',
-        type: unitData.type || ''
+        abbreviation: unitData.abbreviation ?? '',
+        type: unitData.type ?? ''
     };
   };
 

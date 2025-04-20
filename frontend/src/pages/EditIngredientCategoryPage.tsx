@@ -8,7 +8,7 @@ import Link from '@mui/material/Link';
 import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import Box from '@mui/material/Box';
-import IngredientCategoryForm from '../components/forms/IngredientCategoryForm';
+import IngredientCategoryForm, { IngredientCategoryFormShape } from '../components/forms/IngredientCategoryForm';
 import { getIngredientCategoryById, updateIngredientCategory, IngredientCategory, IngredientCategoryFormData } from '../services/apiService';
 import { useSnackbar } from '../context/SnackbarContext';
 import { AxiosError } from 'axios';
@@ -39,27 +39,42 @@ const EditIngredientCategoryPage: React.FC = () => {
     fetchCategory();
   }, [id]);
 
-  const handleFormSubmit = async (formData: IngredientCategoryFormData) => {
+  const handleFormSubmit = async (formData: IngredientCategoryFormShape) => {
     if (!id) return;
     setSubmitError(null);
     setIsSubmitting(true);
+
+    const payload: IngredientCategoryFormData = {
+        name: formData.name,
+        description: formData.description || null
+    };
+
     try {
       const categoryId = parseInt(id, 10);
-      const updated = await updateIngredientCategory(categoryId, formData);
+      const updated = await updateIngredientCategory(categoryId, payload);
       showSnackbar(`Ingredient Category "${updated.name}" updated.`, 'success');
       navigate('/ingredient-categories');
     } catch (error) {
-      console.error('Failed:', error);
-      let message = 'Update failed.';
-      if (error instanceof AxiosError && error.response) { message = error.response.data?.message || error.message; }
+      console.error('Failed to update ingredient category:', error);
+      let message = 'An unexpected error occurred while updating the category.';
+      if (error instanceof AxiosError && error.response) {
+          if (error.response.status === 409) {
+               message = error.response.data?.message || "An ingredient category with this name already exists.";
+           } else {
+              message = error.response.data?.message || error.message; 
+          }
+      }
        else if (error instanceof Error) { message = error.message; }
-      setSubmitError(`Failed: ${message}`);
+      setSubmitError(message);
     } finally { setIsSubmitting(false); }
   };
 
-   const transformData = (catData: IngredientCategory | null): Partial<IngredientCategoryFormData> | undefined => {
+   const transformData = (catData: IngredientCategory | null): Partial<IngredientCategoryFormShape> | undefined => {
     if (!catData) return undefined;
-    return { name: catData.name, description: catData.description || '' };
+    return { 
+        name: catData.name, 
+        description: catData.description || ''
+    };
   };
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center'}}><CircularProgress /></Box>;

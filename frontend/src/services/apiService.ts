@@ -84,6 +84,7 @@ export interface UnitOfMeasure {
 export interface IngredientFormData {
     name: string;
     description?: string | null;
+    ingredientCategoryId?: number | null; // Add category ID here
 }
 
 // Interface for Ingredient returned by API (match prisma model)
@@ -275,7 +276,13 @@ export const getIngredientById = async (id: number): Promise<Ingredient> => {
 
 export const createIngredient = async (ingredientData: IngredientFormData): Promise<Ingredient> => {
     try {
-        const response = await apiClient.post('/ingredients', ingredientData);
+        // Ensure payload includes ingredientCategoryId (null if not provided/invalid)
+        const payload = { 
+            ...ingredientData,
+            description: ingredientData.description || null,
+            ingredientCategoryId: ingredientData.ingredientCategoryId || null
+        };
+        const response = await apiClient.post('/ingredients', payload); // Send processed payload
         return response.data;
     } catch (error) {
         console.error('Error creating ingredient:', error);
@@ -285,10 +292,11 @@ export const createIngredient = async (ingredientData: IngredientFormData): Prom
 
 export const updateIngredient = async (id: number, ingredientData: IngredientFormData): Promise<Ingredient> => {
     try {
-         // Ensure empty description is sent as null if needed by backend
+         // Ensure payload includes description and ingredientCategoryId (null if needed)
         const payload = {
              ...ingredientData,
              description: ingredientData.description || null,
+             ingredientCategoryId: ingredientData.ingredientCategoryId || null
          };
         const response = await apiClient.put(`/ingredients/${id}`, payload);
         return response.data;

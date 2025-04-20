@@ -5,16 +5,10 @@ import Typography from '@mui/material/Typography';
 import Breadcrumbs from '@mui/material/Breadcrumbs';
 import Link from '@mui/material/Link';
 import Alert from '@mui/material/Alert';
-import IngredientForm from '../components/forms/IngredientForm';
-import { createIngredient } from '../services/apiService';
+import IngredientForm, { IngredientFormShape } from '../components/forms/IngredientForm';
+import { createIngredient, IngredientFormData } from '../services/apiService';
 import { useSnackbar } from '../context/SnackbarContext';
 import { AxiosError } from 'axios';
-
-// Define the type for the processed form data expected by onSubmit
-interface ProcessedIngredientFormData {
-    name: string;
-    description: string | null;
-}
 
 const CreateIngredientPage: React.FC = () => {
   const navigate = useNavigate();
@@ -22,27 +16,39 @@ const CreateIngredientPage: React.FC = () => {
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState<boolean>(false);
 
-  const handleFormSubmit = async (formData: ProcessedIngredientFormData) => {
+  const handleFormSubmit = async (formData: IngredientFormShape) => {
     setSubmitError(null);
     setIsSubmitting(true);
-    console.log('Submitting Ingredient data:', formData);
+    console.log('Received Ingredient form data:', formData);
     
-    const payload = formData; 
+    const payload: IngredientFormData = { 
+        name: formData.name,
+        description: formData.description || null,
+        ingredientCategoryId: formData.ingredientCategoryId 
+                                ? parseInt(String(formData.ingredientCategoryId), 10) || null 
+                                : null
+    };
+
+    console.log('Submitting Ingredient API payload:', payload);
 
     try {
-      const newIngredient = await createIngredient(payload); 
+      const newIngredient = await createIngredient(payload);
       console.log('Ingredient created:', newIngredient);
       showSnackbar(`Ingredient "${newIngredient.name}" created successfully!`, 'success');
       navigate('/ingredients'); 
     } catch (error) {
       console.error('Failed to create ingredient:', error);
-      let message = 'An unexpected error occurred.';
+      let message = 'An unexpected error occurred while creating the ingredient.';
       if (error instanceof AxiosError && error.response) {
-        message = error.response.data?.message || error.message;
+        if (error.response.status === 409) {
+             message = error.response.data?.message || "An ingredient with this name already exists.";
+         } else {
+            message = error.response.data?.message || error.message;
+        }
       } else if (error instanceof Error) {
         message = error.message;
       }
-      setSubmitError(`Failed to create ingredient: ${message}`);
+      setSubmitError(message);
     } finally {
       setIsSubmitting(false);
     }

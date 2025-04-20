@@ -5,17 +5,10 @@ import Typography from '@mui/material/Typography';
 import Breadcrumbs from '@mui/material/Breadcrumbs';
 import Link from '@mui/material/Link';
 import Alert from '@mui/material/Alert';
-import UnitForm from '../components/forms/UnitForm';
+import UnitForm, { UnitFormShape } from '../components/forms/UnitForm';
 import { createUnit, UnitFormData } from '../services/apiService';
 import { useSnackbar } from '../context/SnackbarContext';
 import { AxiosError } from 'axios';
-
-// Define the type for the processed form data expected by onSubmit
-interface ProcessedUnitFormData {
-    name: string;
-    abbreviation: string | null;
-    type: string | null;
-}
 
 const CreateUnitPage: React.FC = () => {
   const navigate = useNavigate();
@@ -23,13 +16,19 @@ const CreateUnitPage: React.FC = () => {
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState<boolean>(false);
 
-  const handleFormSubmit = async (formData: ProcessedUnitFormData) => {
+  const handleFormSubmit = async (formData: UnitFormShape) => {
     setSubmitError(null);
     setIsSubmitting(true);
-    console.log('Submitting Unit data:', formData);
+    console.log('Received Unit form data:', formData);
     
-    // Payload is already processed by the form's internal handler
-    const payload = formData; 
+    // Process formData (UnitFormShape) into payload (UnitFormData)
+    const payload: UnitFormData = { 
+        name: formData.name,
+        abbreviation: formData.abbreviation || null, // Convert empty string to null
+        type: formData.type || null // Convert empty string to null
+    };
+
+    console.log('Submitting Unit API payload:', payload);
 
     try {
       const newUnit = await createUnit(payload); 
@@ -38,13 +37,17 @@ const CreateUnitPage: React.FC = () => {
       navigate('/units'); 
     } catch (error) {
       console.error('Failed to create unit:', error);
-      let message = 'An unexpected error occurred.';
+      let message = 'An unexpected error occurred while creating the unit.';
       if (error instanceof AxiosError && error.response) {
-        message = error.response.data?.message || error.message;
+        if (error.response.status === 409) {
+            message = error.response.data?.message || "An item with this name or abbreviation already exists.";
+        } else {
+            message = error.response.data?.message || error.message;
+        }
       } else if (error instanceof Error) {
         message = error.message;
       }
-      setSubmitError(`Failed to create unit: ${message}`);
+      setSubmitError(message);
     } finally {
       setIsSubmitting(false);
     }

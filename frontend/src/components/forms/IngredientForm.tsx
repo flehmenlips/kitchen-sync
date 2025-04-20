@@ -8,22 +8,15 @@ import DialogContent from '@mui/material/DialogContent';
 import IngredientCategoryForm from './IngredientCategoryForm';
 
 // Interface for the raw form data
-export interface IngredientFormData {
+interface IngredientFormShape {
     name: string;
-    description: string | null; // Allow null for initial data consistency
-    ingredientCategoryId: number | string; // Added category ID field
-}
-
-// Interface for processed data sent to API
-interface ProcessedIngredientFormData {
-    name: string;
-    description: string | null; // Can be null after processing
-    ingredientCategoryId: number | null; // Category ID can be null
+    description: string; // Form fields are strings
+    ingredientCategoryId: number | string; // Store ID or empty string
 }
 
 interface IngredientFormProps {
-    onSubmit: (data: ProcessedIngredientFormData) => void; // Use processed type
-    initialData?: Partial<IngredientFormData>;
+    onSubmit: (data: IngredientFormShape) => void; // Expect raw form shape
+    initialData?: Partial<IngredientFormShape>;
     isSubmitting: boolean;
 }
 
@@ -39,7 +32,7 @@ const IngredientForm: React.FC<IngredientFormProps> = ({ onSubmit, initialData, 
         control,
         formState: { errors },
         setValue
-    } = useForm<IngredientFormData>({
+    } = useForm<IngredientFormShape>({
         defaultValues: {
             name: initialData?.name || '',
             description: initialData?.description || '',
@@ -73,15 +66,6 @@ const IngredientForm: React.FC<IngredientFormProps> = ({ onSubmit, initialData, 
         loadCategories();
     }, []);
 
-    const handleFormSubmit = (data: IngredientFormData) => {
-        const payload: ProcessedIngredientFormData = {
-            name: data.name,
-            description: data.description || null,
-            ingredientCategoryId: data.ingredientCategoryId ? parseInt(data.ingredientCategoryId as string, 10) : null,
-        };
-        onSubmit(payload);
-    };
-
     // --- Modal Handlers --- 
     const handleOpenModal = () => {
         setModalSubmitError(null);
@@ -103,7 +87,7 @@ const IngredientForm: React.FC<IngredientFormProps> = ({ onSubmit, initialData, 
     // --- End Modal Handlers ---
 
     return (
-        <Box component="form" onSubmit={handleSubmit(handleFormSubmit)} noValidate sx={{ mt: 1 }}>
+        <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate sx={{ mt: 1 }}>
             <Stack spacing={2}>
                 <TextField
                     {...register("name", { required: "Ingredient name is required" })}
@@ -211,4 +195,6 @@ const IngredientForm: React.FC<IngredientFormProps> = ({ onSubmit, initialData, 
     );
 };
 
+// Export the shape
+export type { IngredientFormShape };
 export default IngredientForm; 

@@ -2,21 +2,15 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { Box, TextField, Button, Stack } from '@mui/material';
 
-// Raw form data
-export interface CategoryFormData {
+// Renamed interface for the form's internal data structure
+interface CategoryFormShape {
     name: string;
-    description: string | null;
-}
-
-// Processed data for API
-interface ProcessedCategoryFormData {
-    name: string;
-    description: string | null;
+    description: string; // TextField value is always string
 }
 
 interface CategoryFormProps {
-    onSubmit: (data: ProcessedCategoryFormData) => void;
-    initialData?: Partial<CategoryFormData>;
+    onSubmit: (data: CategoryFormShape) => void; // Expect raw form shape
+    initialData?: Partial<CategoryFormShape>; // Initial data matches form shape
     isSubmitting: boolean;
 }
 
@@ -25,24 +19,15 @@ const CategoryForm: React.FC<CategoryFormProps> = ({ onSubmit, initialData, isSu
         handleSubmit,
         register,
         formState: { errors },
-    } = useForm<CategoryFormData>({
+    } = useForm<CategoryFormShape>({
         defaultValues: {
              name: initialData?.name || '',
              description: initialData?.description || '',
         }
     });
 
-    const handleFormSubmit = (data: CategoryFormData) => {
-        // Process description (empty string to null)
-        const payload: ProcessedCategoryFormData = {
-            ...data,
-            description: data.description || null,
-        };
-        onSubmit(payload);
-    };
-
     return (
-        <Box component="form" onSubmit={handleSubmit(handleFormSubmit)} noValidate sx={{ mt: 1 }}>
+        <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate sx={{ mt: 1 }}>
             <Stack spacing={2}>
                 <TextField
                     {...register("name", { required: "Category name is required" })}
@@ -74,4 +59,6 @@ const CategoryForm: React.FC<CategoryFormProps> = ({ onSubmit, initialData, isSu
     );
 };
 
+// Export the shape
+export type { CategoryFormShape };
 export default CategoryForm; 

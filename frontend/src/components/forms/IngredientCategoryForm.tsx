@@ -2,21 +2,15 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { Box, TextField, Button, Stack } from '@mui/material';
 
-// Raw form data
-export interface IngredientCategoryFormData {
+// Renamed interface for the form's internal data structure
+interface IngredientCategoryFormShape {
     name: string;
-    description: string | null;
-}
-
-// Processed data for API
-interface ProcessedIngredientCategoryFormData {
-    name: string;
-    description: string | null;
+    description: string; // TextField value is always string
 }
 
 interface IngredientCategoryFormProps {
-    onSubmit: (data: ProcessedIngredientCategoryFormData) => void;
-    initialData?: Partial<IngredientCategoryFormData>;
+    onSubmit: (data: IngredientCategoryFormShape) => void; // Expect raw form shape
+    initialData?: Partial<IngredientCategoryFormShape>; // Initial data matches form shape
     isSubmitting: boolean;
 }
 
@@ -25,23 +19,15 @@ const IngredientCategoryForm: React.FC<IngredientCategoryFormProps> = ({ onSubmi
         handleSubmit,
         register,
         formState: { errors },
-    } = useForm<IngredientCategoryFormData>({
+    } = useForm<IngredientCategoryFormShape>({
         defaultValues: {
              name: initialData?.name || '',
              description: initialData?.description || '',
         }
     });
 
-    const handleFormSubmit = (data: IngredientCategoryFormData) => {
-        const payload: ProcessedIngredientCategoryFormData = {
-            ...data,
-            description: data.description || null,
-        };
-        onSubmit(payload);
-    };
-
     return (
-        <Box component="form" onSubmit={handleSubmit(handleFormSubmit)} noValidate sx={{ mt: 1 }}>
+        <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate sx={{ mt: 1 }}>
             <Stack spacing={2}>
                 <TextField
                     {...register("name", { required: "Category name is required" })}
@@ -73,4 +59,6 @@ const IngredientCategoryForm: React.FC<IngredientCategoryFormProps> = ({ onSubmi
     );
 };
 
+// Export the shape
+export type { IngredientCategoryFormShape };
 export default IngredientCategoryForm; 

@@ -7,16 +7,10 @@ import Link from '@mui/material/Link';
 import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import Box from '@mui/material/Box';
-import CategoryForm from '../components/forms/CategoryForm';
-import { getCategoryById, updateCategory, Category, CategoryFormData } from '../services/apiService'; // Need getCategoryById
+import CategoryForm, { CategoryFormShape } from '../components/forms/CategoryForm';
+import { getCategoryById, updateCategory, Category, CategoryFormData } from '../services/apiService';
 import { useSnackbar } from '../context/SnackbarContext';
 import { AxiosError } from 'axios';
-
-// Processed form data type
-interface ProcessedCategoryFormData {
-    name: string;
-    description: string | null;
-}
 
 const EditCategoryPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -39,7 +33,6 @@ const EditCategoryPage: React.FC = () => {
         setLoading(true);
         const categoryId = parseInt(id, 10);
         if (isNaN(categoryId)) throw new Error('Invalid category ID format');
-        // We need getCategoryById in apiService
         const data = await getCategoryById(categoryId); 
         setCategory(data);
         setError(null);
@@ -53,41 +46,56 @@ const EditCategoryPage: React.FC = () => {
     fetchCategory();
   }, [id]);
 
-  const handleFormSubmit = async (formData: ProcessedCategoryFormData) => {
+  const handleFormSubmit = async (formData: CategoryFormShape) => {
     if (!id) return;
     setSubmitError(null);
     setIsSubmitting(true);
+
+    const payload: CategoryFormData = {
+        name: formData.name,
+        description: formData.description || null
+    };
+
     try {
       const categoryId = parseInt(id, 10);
-      const updated = await updateCategory(categoryId, formData);
+      const updated = await updateCategory(categoryId, payload);
       showSnackbar(`Category "${updated.name}" updated successfully!`, 'success');
       navigate('/categories'); 
     } catch (error) {
       console.error('Failed to update category:', error);
-      let message = 'An unexpected error occurred.';
+      let message = 'An unexpected error occurred while updating the category.';
       if (error instanceof AxiosError && error.response) {
-        message = error.response.data?.message || error.message;
+        if (error.response.status === 409) {
+            message = error.response.data?.message || "A category with this name already exists.";
+        } else {
+             message = error.response.data?.message || error.message;
+        }
       } else if (error instanceof Error) {
         message = error.message;
       }
-      setSubmitError(`Failed to update category: ${message}`);
+      setSubmitError(message);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-   // Transform fetched data for the form
-   const transformCategoryToFormData = (catData: Category | null): Partial<CategoryFormData> | undefined => {
+  const transformCategoryToFormData = (catData: Category | null): Partial<CategoryFormShape> | undefined => {
     if (!catData) return undefined;
     return {
         name: catData.name,
-        description: catData.description || '' // Form expects string or null
+        description: catData.description || ''
     };
   };
 
-  if (loading) { /* ... loading spinner ... */}
-  if (error) { /* ... error alert ... */}
-  if (!category) { /* ... not found alert ... */}
+  if (loading) {
+    return (
+       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+           <CircularProgress />
+       </Box>
+   );
+ }
+ if (error) { return <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>; }
+ if (!category) { return <Alert severity="warning" sx={{ m: 2 }}>Category data not found.</Alert>; }
 
   return (
     <Container maxWidth="sm" sx={{ mt: 2 }}>

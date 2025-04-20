@@ -2,26 +2,19 @@ import React from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { Box, TextField, Button, Grid, Select, MenuItem, FormControl, InputLabel, Stack } from '@mui/material';
 
-// Interface for the raw form data from react-hook-form
-interface UnitFormData {
+// Renamed interface for the form's internal data structure
+interface UnitFormShape {
     name: string;
     abbreviation: string; // TextField value is always string
     type: string; 
-}
-
-// Interface for processed data sent to API
-interface ProcessedUnitFormData {
-    name: string;
-    abbreviation: string | null; // Can be null after processing
-    type: string | null; // Can be null after processing
 }
 
 // TODO: Ideally get these enum keys from backend or shared types
 const UNIT_TYPES = ['WEIGHT', 'VOLUME', 'COUNT', 'OTHER'];
 
 interface UnitFormProps {
-    onSubmit: (data: ProcessedUnitFormData) => void; // Expect processed data
-    initialData?: Partial<UnitFormData>; // Initial data matches form shape
+    onSubmit: (data: UnitFormShape) => void; // Expect raw form shape
+    initialData?: Partial<UnitFormShape>; // Initial data matches form shape
     isSubmitting: boolean;
 }
 
@@ -31,7 +24,7 @@ const UnitForm: React.FC<UnitFormProps> = ({ onSubmit, initialData, isSubmitting
         control,
         register,
         formState: { errors },
-    } = useForm<UnitFormData>({
+    } = useForm<UnitFormShape>({
         defaultValues: initialData || {
             name: '',
             abbreviation: '',
@@ -39,18 +32,8 @@ const UnitForm: React.FC<UnitFormProps> = ({ onSubmit, initialData, isSubmitting
         }
     });
 
-    const handleFormSubmit = (data: UnitFormData) => {
-        // Process before calling the passed onSubmit
-        const payload: ProcessedUnitFormData = {
-            name: data.name,
-            abbreviation: data.abbreviation || null,
-            type: data.type || null
-        };
-        onSubmit(payload);
-    };
-
     return (
-        <Box component="form" onSubmit={handleSubmit(handleFormSubmit)} noValidate sx={{ mt: 1 }}>
+        <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate sx={{ mt: 1 }}>
             <Stack spacing={2}>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                     <TextField
@@ -98,4 +81,6 @@ const UnitForm: React.FC<UnitFormProps> = ({ onSubmit, initialData, isSubmitting
     );
 };
 
+// Export the shape for parent components to use
+export type { UnitFormShape };
 export default UnitForm; 

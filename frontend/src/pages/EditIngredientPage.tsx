@@ -7,17 +7,10 @@ import Link from '@mui/material/Link';
 import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import Box from '@mui/material/Box';
-import IngredientForm from '../components/forms/IngredientForm'; // Re-use the form
-import { getIngredientById, updateIngredient, Ingredient } from '../services/apiService';
-import { useSnackbar } from '../context/SnackbarContext'; // Import hook
+import IngredientForm, { IngredientFormShape } from '../components/forms/IngredientForm';
+import { getIngredientById, updateIngredient, Ingredient, IngredientFormData } from '../services/apiService';
+import { useSnackbar } from '../context/SnackbarContext';
 import { AxiosError } from 'axios';
-import { IngredientFormData } from '../components/forms/IngredientForm';
-
-// Define the type for the processed form data expected by onSubmit
-interface ProcessedIngredientFormData {
-    name: string;
-    description: string | null;
-}
 
 const EditIngredientPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -27,7 +20,7 @@ const EditIngredientPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const { showSnackbar } = useSnackbar(); // Use hook
+  const { showSnackbar } = useSnackbar();
 
   useEffect(() => {
     const fetchIngredient = async () => {
@@ -53,14 +46,21 @@ const EditIngredientPage: React.FC = () => {
     fetchIngredient();
   }, [id]);
 
-  const handleFormSubmit = async (formData: ProcessedIngredientFormData) => {
+  const handleFormSubmit = async (formData: IngredientFormShape) => {
     if (!id) return;
     setSubmitError(null);
     setIsSubmitting(true);
-    console.log('Submitting updated Ingredient data:', formData);
+    console.log('Received updated Ingredient form data:', formData);
     
-    // Payload is already processed by the form's internal handler
-    const payload = formData; 
+    const payload: IngredientFormData = { 
+        name: formData.name,
+        description: formData.description || null,
+        ingredientCategoryId: formData.ingredientCategoryId 
+                                ? parseInt(String(formData.ingredientCategoryId), 10) || null 
+                                : null
+    };
+
+    console.log('Submitting updated Ingredient API payload:', payload);
 
     try {
       const ingredientId = parseInt(id, 10);
@@ -70,26 +70,28 @@ const EditIngredientPage: React.FC = () => {
       navigate('/ingredients'); 
     } catch (error) {
       console.error('Failed to update ingredient:', error);
-      let message = 'An unexpected error occurred.';
+      let message = 'An unexpected error occurred while updating the ingredient.';
       if (error instanceof AxiosError && error.response) {
-        message = error.response.data?.message || error.message;
+        if (error.response.status === 409) {
+             message = error.response.data?.message || "An ingredient with this name already exists.";
+         } else {
+            message = error.response.data?.message || error.message;
+        }
       } else if (error instanceof Error) {
         message = error.message;
       }
-      setSubmitError(`Failed to update ingredient: ${message}`);
-      // showSnackbar('Failed to update ingredient.', 'error');
+      setSubmitError(message);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-   // Transform fetched data for the form
-   const transformData = (ingredientData: Ingredient | null): Partial<IngredientFormData> | undefined => {
+  const transformData = (ingredientData: Ingredient | null): Partial<IngredientFormShape> | undefined => {
     if (!ingredientData) return undefined;
     return {
         name: ingredientData.name,
-        description: ingredientData.description || '', // Form expects string or null
-        ingredientCategoryId: ingredientData.ingredientCategory?.id || '' // Added category mapping, Added comma
+        description: ingredientData.description || '',
+        ingredientCategoryId: ingredientData.ingredientCategoryId ?? '' 
     };
   };
 

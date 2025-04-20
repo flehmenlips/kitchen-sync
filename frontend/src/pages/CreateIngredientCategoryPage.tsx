@@ -6,7 +6,7 @@ import Typography from '@mui/material/Typography';
 import Breadcrumbs from '@mui/material/Breadcrumbs';
 import Link from '@mui/material/Link';
 import Alert from '@mui/material/Alert';
-import IngredientCategoryForm from '../components/forms/IngredientCategoryForm';
+import IngredientCategoryForm, { IngredientCategoryFormShape } from '../components/forms/IngredientCategoryForm';
 import { createIngredientCategory, IngredientCategoryFormData } from '../services/apiService';
 import { useSnackbar } from '../context/SnackbarContext';
 import { AxiosError } from 'axios';
@@ -17,19 +17,31 @@ const CreateIngredientCategoryPage: React.FC = () => {
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState<boolean>(false);
 
-  const handleFormSubmit = async (formData: IngredientCategoryFormData) => {
+  const handleFormSubmit = async (formData: IngredientCategoryFormShape) => {
     setSubmitError(null);
     setIsSubmitting(true);
+
+    const payload: IngredientCategoryFormData = {
+        name: formData.name,
+        description: formData.description || null
+    };
+
     try {
-      const newCategory = await createIngredientCategory(formData); 
+      const newCategory = await createIngredientCategory(payload);
       showSnackbar(`Ingredient Category "${newCategory.name}" created.`, 'success');
-      navigate('/ingredient-categories'); // Go to list
+      navigate('/ingredient-categories');
     } catch (error) {
-      console.error('Failed:', error);
-      let message = 'An unexpected error occurred.';
-      if (error instanceof AxiosError && error.response) { message = error.response.data?.message || error.message; }
+      console.error('Failed to create ingredient category:', error);
+      let message = 'An unexpected error occurred while creating the category.';
+      if (error instanceof AxiosError && error.response) {
+          if (error.response.status === 409) {
+               message = error.response.data?.message || "An ingredient category with this name already exists.";
+           } else {
+              message = error.response.data?.message || error.message; 
+          }
+      }
        else if (error instanceof Error) { message = error.message; }
-      setSubmitError(`Failed: ${message}`);
+      setSubmitError(message);
     } finally { setIsSubmitting(false); }
   };
 
