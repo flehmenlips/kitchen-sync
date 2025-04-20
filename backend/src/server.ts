@@ -7,7 +7,6 @@ import ingredientRoutes from './routes/ingredientRoutes'; // Import ingredient r
 import categoryRoutes from './routes/categoryRoutes'; // Import category routes
 import ingredientCategoryRoutes from './routes/ingredientCategoryRoutes'; // Import ingredient category routes
 import userRoutes from './routes/userRoutes'; // Import user routes
-import cookieParser from 'cookie-parser'; // Import cookie-parser
 import { Request, Response, NextFunction } from 'express';
 
 // Load environment variables
@@ -18,9 +17,8 @@ const app = express();
 // Middleware
 app.use(cors({ 
     origin: process.env.FRONTEND_URL || 'http://localhost:5173', // Allow frontend origin
-    credentials: true // Allow cookies to be sent
+    // credentials: true // Remove - not needed for Bearer token
 })); 
-app.use(cookieParser()); // Use cookie-parser middleware BEFORE routes
 app.use(express.json()); // Middleware to parse JSON request bodies
 app.use(express.urlencoded({ extended: true })); // Middleware to parse URL-encoded bodies
 

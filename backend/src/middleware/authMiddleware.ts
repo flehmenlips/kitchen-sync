@@ -22,58 +22,54 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
   console.log('[AuthMiddleware] protect called for path:', req.path); // Log entry
   let token;
 
-  // Read JWT from the httpOnly cookie
-  token = req.cookies.jwt;
-  console.log('[AuthMiddleware] Cookie found:', token ? 'Yes' : 'No'); // Log if cookie exists
-  // console.log('[AuthMiddleware] Full req.cookies:', req.cookies); // Optional: Log all cookies
-
-  if (token) {
+  // Read JWT from the Authorization header
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     try {
-      console.log('[AuthMiddleware] Token exists, verifying...');
-      const secret = process.env.JWT_SECRET;
-      if (!secret) {
-        throw new Error('JWT_SECRET not configured');
-      }
-      
-      // Verify token
-      const decoded = jwt.verify(token, secret) as JwtPayload;
-      console.log('[AuthMiddleware] Token verified, decoded userId:', decoded.userId);
+      // Get token from header (e.g., "Bearer eyJhbGci...")
+      token = req.headers.authorization.split(' ')[1];
+       console.log('[AuthMiddleware] Token found in header');
 
-      // Get user from the database
+      const secret = process.env.JWT_SECRET;
+      if (!secret) { throw new Error('JWT_SECRET not configured'); }
+      
+      const decoded = jwt.verify(token, secret) as JwtPayload;
+       console.log('[AuthMiddleware] Token verified, decoded userId:', decoded.userId);
+
+      // Get user from DB (excluding password)
       const user = await prisma.user.findUnique({
         where: { id: decoded.userId },
         select: { 
             id: true, email: true, name: true, createdAt: true, updatedAt: true 
         }
       });
-      console.log('[AuthMiddleware] User found in DB:', user ? user.id : 'Not Found');
+       console.log('[AuthMiddleware] User found in DB:', user ? user.id : 'Not Found');
 
-      // Check if user was found BEFORE assigning to req.user
       if (!user) {
           res.status(401);
           throw new Error('Not authorized, user not found');
       }
-
-      // Assign the found user (which cannot be null here) to req.user
-      req.user = user; 
+      req.user = user;
       console.log('[AuthMiddleware] User attached to request, calling next()');
-      next(); // Proceed to the next middleware/route handler
+      next(); 
     } catch (error) {
-      console.error('[AuthMiddleware] Auth Error:', error);
-      res.status(401); // Unauthorized
-      // Send specific message based on error type if needed
-      if (error instanceof jwt.JsonWebTokenError) {
-          next(new Error('Not authorized, token failed'));
-      } else if (error instanceof jwt.TokenExpiredError) {
-          next(new Error('Not authorized, token expired'));
-      } else {
-          next(new Error('Not authorized, no token or invalid token'));
-      }
+       console.error('[AuthMiddleware] Auth Error:', error);
+       res.status(401);
+       // Send specific message based on error type if needed
+       if (error instanceof jwt.JsonWebTokenError) {
+           next(new Error('Not authorized, token failed'));
+       } else if (error instanceof jwt.TokenExpiredError) {
+           next(new Error('Not authorized, token expired'));
+       } else {
+           next(new Error('Not authorized, no token or invalid token'));
+       }
     }
-  } else {
-    console.log('[AuthMiddleware] No token found in cookies');
+  } 
+
+  // If no token found in header
+  if (!token) {
+    console.log('[AuthMiddleware] No token found in header');
     res.status(401);
-    next(new Error('Not authorized, no token')); // Pass error to error handler
+    next(new Error('Not authorized, no token')); 
   }
 };
 

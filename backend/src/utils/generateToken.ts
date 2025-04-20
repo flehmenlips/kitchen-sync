@@ -1,6 +1,4 @@
 import jwt from 'jsonwebtoken';
-import { Response } from 'express';
-import { CookieOptions } from 'express';
 
 // Define payload structure (adjust as needed)
 interface JwtPayload {
@@ -8,15 +6,12 @@ interface JwtPayload {
   // Add other fields like email or roles if useful
 }
 
-const generateTokenAndSetCookie = (res: Response, userId: number) => {
+const generateToken = (userId: number): string => {
   const secret = process.env.JWT_SECRET;
   if (!secret) {
-    console.error('JWT_SECRET not defined in environment variables');
-    throw new Error('Server configuration error'); // Don't leak details
+    console.error('JWT_SECRET not defined');
+    throw new Error('Server configuration error');
   }
-
-  const nodeEnv = process.env.NODE_ENV;
-  console.log(`[generateToken] NODE_ENV value: ${nodeEnv}`); // Log NODE_ENV
 
   const payload: JwtPayload = { userId };
 
@@ -24,20 +19,7 @@ const generateTokenAndSetCookie = (res: Response, userId: number) => {
     expiresIn: '30d', // Token expiration (e.g., 30 days)
   });
 
-  const cookieOptions: CookieOptions = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', 
-    domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : undefined,
-    path: '/',
-    maxAge: 30 * 24 * 60 * 60 * 1000, 
-  };
-
-  // Log the options being used
-  console.log('[generateToken] Setting cookie with options:', cookieOptions);
-
-  // Set JWT as an HTTP-Only cookie
-  res.cookie('jwt', token, cookieOptions);
+  return token;
 };
 
-export default generateTokenAndSetCookie; 
+export default generateToken; 

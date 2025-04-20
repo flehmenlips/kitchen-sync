@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../config/db';
 import bcrypt from 'bcrypt';
-import generateTokenAndSetCookie from '../utils/generateToken';
+import generateToken from '../utils/generateToken';
 // Import Prisma namespace from generated path
 import { Prisma } from '../generated/prisma/client';
 
@@ -39,11 +39,12 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
         });
 
         if (user) {
-            generateTokenAndSetCookie(res, user.id);
+            const token = generateToken(user.id);
             res.status(201).json({
                 id: user.id,
                 name: user.name,
                 email: user.email,
+                token: token,
             });
         } else {
             res.status(400).json({ message: 'Invalid user data' });
@@ -74,11 +75,12 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
         const user = await prisma.user.findUnique({ where: { email } });
 
         if (user && (await bcrypt.compare(password, user.password))) {
-            generateTokenAndSetCookie(res, user.id);
+            const token = generateToken(user.id);
             res.status(200).json({
                 id: user.id,
                 name: user.name,
                 email: user.email,
+                token: token,
             });
         } else {
             res.status(401).json({ message: 'Invalid email or password' });
@@ -93,14 +95,8 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
 // @route   POST /api/users/logout
 // @access  Public (or Private if needed)
 export const logoutUser = async (req: Request, res: Response): Promise<void> => {
-    // Clear the cookie by setting it to empty and expiring it immediately
-    res.cookie('jwt', '', {
-        httpOnly: true,
-        expires: new Date(0),
-        secure: process.env.NODE_ENV === 'production', 
-        sameSite: 'strict', 
-    });
-    res.status(200).json({ message: 'User logged out successfully' });
+    // No server-side action needed for stateless JWT logout
+    res.status(200).json({ message: 'Logout endpoint called (no action needed)' });
 };
 
 // @desc    Get user profile
