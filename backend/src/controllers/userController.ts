@@ -3,7 +3,8 @@ import prisma from '../config/db';
 import bcrypt from 'bcrypt';
 import generateToken from '../utils/generateToken';
 // Import Prisma namespace from default path
-import { Prisma } from '@prisma/client';
+import { Prisma, User } from '@prisma/client';
+import jwt from 'jsonwebtoken';
 
 // @desc    Register a new user
 // @route   POST /api/users/register
@@ -71,14 +72,33 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
     }
 
     try {
-        const user = await prisma.user.findUnique({ where: { email } });
+        const user = await prisma.user.findUnique({
+            where: { email },
+            select: {
+                id: true,
+                email: true,
+                name: true,
+                password: true,
+                role: true
+            }
+        });
 
         if (user && (await bcrypt.compare(password, user.password))) {
-            const token = generateToken(user.id);
+            const token = jwt.sign(
+                { 
+                    userId: user.id,
+                    email: user.email,
+                    role: user.role 
+                },
+                process.env.JWT_SECRET || 'your-secret-key',
+                { expiresIn: '30d' }
+            );
+            
             res.status(200).json({
                 id: user.id,
                 name: user.name,
                 email: user.email,
+                role: user.role,
                 token: token,
             });
         } else {

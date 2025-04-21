@@ -160,11 +160,18 @@ model UnitQuantity {
 }
 
 // --- User Model ---
+enum UserRole {
+  USER
+  ADMIN
+  SUPERADMIN
+}
+
 model User {
   id          Int      @id @default(autoincrement())
   email       String   @unique
   name        String?
   password    String   
+  role        UserRole   @default(USER)
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
