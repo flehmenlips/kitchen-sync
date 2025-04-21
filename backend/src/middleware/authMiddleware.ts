@@ -39,7 +39,12 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
       const user = await prisma.user.findUnique({
         where: { id: decoded.userId },
         select: { 
-            id: true, email: true, name: true, createdAt: true, updatedAt: true 
+            id: true,
+            email: true,
+            name: true,
+            role: true,
+            createdAt: true,
+            updatedAt: true
         }
       });
        console.log('[AuthMiddleware] User found in DB:', user ? user.id : 'Not Found');

@@ -1,20 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
-type UserRole = 'USER' | 'ADMIN' | 'SUPERADMIN';
+import { User, UserRole } from '@prisma/client';
 
 // Extend Express Request type to include user
 declare global {
     namespace Express {
         interface Request {
-            user?: {
-                id: number;
-                email: string;
-                role: UserRole;
-                name?: string | null;
-            };
+            user?: Omit<User, 'password'>;
         }
     }
 }
@@ -43,7 +34,7 @@ export const requireRole = (requiredRole: UserRole) => {
 };
 
 // Specific middleware for SuperAdmin
-export const requireSuperAdmin = requireRole('SUPERADMIN');
+export const requireSuperAdmin = requireRole('SUPERADMIN' as UserRole);
 
 // Middleware to check if user is accessing their own resource or is an admin
 export const requireOwnershipOrAdmin = (req: Request, res: Response, next: NextFunction) => {
