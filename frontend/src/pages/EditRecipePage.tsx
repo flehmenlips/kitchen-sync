@@ -81,7 +81,7 @@ const EditRecipePage: React.FC = () => {
         yieldUnitId: recipeData.yieldUnit?.id || '',
         prepTimeMinutes: recipeData.prepTimeMinutes?.toString() || '',
         cookTimeMinutes: recipeData.cookTimeMinutes?.toString() || '',
-        tags: recipeData.tags?.join(', ') || '',
+        tags: recipeData.tags || [],
         instructions: recipeData.instructions || '',
         categoryId: recipeData.category?.id || '',
         ingredients: recipeData.recipeIngredients?.map(ing => ({
@@ -95,9 +95,8 @@ const EditRecipePage: React.FC = () => {
     };
   };
 
-  // Transform fetched data for the form
-  const transformIngredientToFormData = ( /* ... */ ): Partial<IngredientFormData> | undefined => { /* ... */ };
-  const initialFormData = transformRecipeToFormData(recipe);
+  // We still need to call transformRecipeToFormData to prepare data for the form
+  const initialFormData = transformRecipeToFormData(recipe); 
   console.log('Initial data passed to RecipeForm:', initialFormData);
 
   if (loading) {
