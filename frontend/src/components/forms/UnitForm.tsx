@@ -57,7 +57,7 @@ const UnitForm: React.FC<UnitFormProps> = ({ onSubmit, initialData, isSubmitting
                         control={control}
                         defaultValue=""
                         render={({ field }) => (
-                            <Select labelId="unit-type-label" label="Type (Optional)" {...field} value={field.value ?? ''}>
+                            <Select labelId="unit-type-label" {...field} value={field.value ?? ''}>
                                 <MenuItem value=""><em>None</em></MenuItem>
                                 {UNIT_TYPES.map(type => (
                                     <MenuItem key={type} value={type}>{type}</MenuItem>
