@@ -58,4 +58,4 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
   );
 };
 
-export default ConfirmationDialog; 
+export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({ ... }) => { ... }; 

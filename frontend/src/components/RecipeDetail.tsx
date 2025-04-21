@@ -18,7 +18,7 @@ import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import ConfirmationDialog from './common/ConfirmationDialog'; // Import the dialog
+import { ConfirmationDialog } from './common/ConfirmationDialog'; // Use named import
 
 const RecipeDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -205,15 +205,14 @@ const RecipeDetail: React.FC = () => {
                 </Typography>
             )}
 
-            {/* Temporarily comment out ConfirmationDialog to isolate error */}
-            {/* <ConfirmationDialog
+            <ConfirmationDialog
                 open={dialogOpen}
                 onClose={handleCloseDialog}
                 onConfirm={handleConfirmDelete}
                 title="Confirm Deletion"
-                contentText={`Are you sure you want to delete the recipe \"${recipe?.name || \'\'}\"? This action cannot be undone.`}
+                contentText={`Are you sure you want to delete the recipe "${recipe?.name || ''}"? This action cannot be undone.`}
                 confirmText={isDeleting ? 'Deleting...' : 'Delete'}
-            /> */}
+            />
         </Container>
     );
 };

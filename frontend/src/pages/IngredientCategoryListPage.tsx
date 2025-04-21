@@ -18,7 +18,7 @@ import IconButton from '@mui/material/IconButton';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import Stack from '@mui/material/Stack';
-import ConfirmationDialog from '../components/common/ConfirmationDialog';
+import { ConfirmationDialog } from '../components/common/ConfirmationDialog';
 import { useSnackbar } from '../context/SnackbarContext';
 import ListItemButton from '@mui/material/ListItemButton';
 
