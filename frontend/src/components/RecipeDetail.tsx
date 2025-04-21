@@ -205,17 +205,15 @@ const RecipeDetail: React.FC = () => {
                 </Typography>
             )}
 
-            {/* Render Confirmation Dialog */}
-            <ConfirmationDialog
+            {/* Temporarily comment out ConfirmationDialog to isolate error */}
+            {/* <ConfirmationDialog
                 open={dialogOpen}
                 onClose={handleCloseDialog}
                 onConfirm={handleConfirmDelete}
                 title="Confirm Deletion"
-                contentText={`Are you sure you want to delete the recipe "${recipe?.name || ''}"? This action cannot be undone.`}
+                contentText={`Are you sure you want to delete the recipe \"${recipe?.name || \'\'}\"? This action cannot be undone.`}
                 confirmText={isDeleting ? 'Deleting...' : 'Delete'}
-                // Optionally make confirm button red
-                // confirmButtonProps={{ color: 'error' }} 
-            />
+            /> */}
         </Container>
     );
 };
