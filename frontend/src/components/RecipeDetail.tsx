@@ -192,9 +192,18 @@ const RecipeDetail: React.FC = () => {
              <Divider sx={{ my: 2 }}/>
 
             <Typography variant="h5" component="h3" gutterBottom>Instructions</Typography>
-            <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', mb: 4 }}>
-                {recipe.instructions || 'No instructions provided.'}
-            </Typography>
+            {/* Use dangerouslySetInnerHTML to render formatted instructions */}
+            {recipe.instructions && recipe.instructions !== '<p><br></p>' ? (
+                <Typography 
+                    variant="body1" 
+                    sx={{ mb: 4 }} 
+                    dangerouslySetInnerHTML={{ __html: recipe.instructions }}
+                />
+            ) : (
+                <Typography variant="body1" sx={{ mb: 4, fontStyle: 'italic' }}>
+                    No instructions provided.
+                </Typography>
+            )}
 
             {/* Render Confirmation Dialog */}
             <ConfirmationDialog
