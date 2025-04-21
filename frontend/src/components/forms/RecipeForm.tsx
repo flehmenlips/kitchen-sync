@@ -22,7 +22,8 @@ import {
     Autocomplete,
     CircularProgress,
     Tabs,
-    Tab
+    Tab,
+    Chip
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
@@ -64,7 +65,7 @@ export interface RecipeFormData {
     yieldUnitId: number | string;
     prepTimeMinutes: number | string;
     cookTimeMinutes: number | string;
-    tags: string;
+    tags: string[];
     instructions: string;
     categoryId: number | string;
     ingredients: {
@@ -124,7 +125,7 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
             yieldUnitId: '',
             prepTimeMinutes: '',
             cookTimeMinutes: '',
-            tags: '',
+            tags: [],
             instructions: '',
             categoryId: '',
             ingredients: [{ type: '', ingredientId: '', quantity: '', unitId: '' }]
@@ -236,13 +237,8 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
 
     const handleFormSubmit = (data: RecipeFormData) => {
         console.log("[RecipeForm] Raw data before calling onSubmit prop:", data);
-        // Basic processing that doesn't remove needed fields like 'type'
-        const dataToSend = {
-            ...data,
-            tags: data.tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '').join(','), // Keep tags as string for raw data? Or process here?
-            // Let the page component handle final number/null conversion if needed before API
-        };
-        onSubmit(dataToSend); // Pass slightly processed data (tags) 
+        // Pass data directly - tags is already string[]
+        onSubmit(data);
     };
 
     // --- Modal Logic --- 
@@ -422,10 +418,37 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                             )}
                         />
                     </Stack>
-                    <TextField
-                        {...register("tags")}
-                        label="Tags (comma-separated)"
-                        fullWidth
+                    <Controller
+                        name="tags"
+                        control={control}
+                        defaultValue={[]}
+                        render={({ field }) => (
+                            <Autocomplete
+                                multiple
+                                freeSolo
+                                options={[]}
+                                value={field.value || []}
+                                onChange={(event, newValue) => {
+                                    const stringValues = newValue.map(value => 
+                                        typeof value === 'string' ? value.trim() : (value as any).inputValue || ''
+                                    ).filter(tag => tag !== '');
+                                    field.onChange(stringValues);
+                                }}
+                                renderTags={(value: readonly string[], getTagProps) =>
+                                    value.map((option: string, index: number) => (
+                                        <Chip variant="outlined" label={option} {...getTagProps({ index })} />
+                                    ))
+                                }
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        variant="outlined"
+                                        label="Tags"
+                                        placeholder="Add tags (e.g., vegan, quick, dessert)"
+                                    />
+                                )}
+                            />
+                        )}
                     />
                     <FormControl fullWidth error={!!categoriesError || categoriesLoading}>
                         <Controller
