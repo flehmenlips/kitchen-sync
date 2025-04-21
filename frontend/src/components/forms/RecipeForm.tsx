@@ -118,9 +118,17 @@ const quillModules = {
         [{ 'header': [1, 2, 3, false] }],
         ['bold', 'italic', 'underline'],
         [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+        [{ 'align': [] }],  // Add alignment options
         ['clean']
     ]
 };
+
+const quillFormats = [
+    'header',
+    'bold', 'italic', 'underline',
+    'list', 'bullet',
+    'align'
+];
 
 const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmitting }) => {
     const {
@@ -747,6 +755,7 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                     onChange={field.onChange}
                                     theme="snow"
                                     modules={quillModules}
+                                    formats={quillFormats}
                                     placeholder="Enter recipe instructions..."
                                 />
                             </Box>
@@ -755,13 +764,36 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                 />
 
                 <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>Preview</Typography>
-                {/* Preview section */}
+                {/* Preview section with fixed alignment */}
                 {watch('instructions') && watch('instructions') !== '<p><br></p>' ? (
-                    <Typography
-                        variant="body1"
-                        sx={{ mb: 4 }}
-                        dangerouslySetInnerHTML={{ __html: watch('instructions') }}
-                    />
+                    <Box sx={{
+                        '& .ql-align-center': {
+                            textAlign: 'center'
+                        },
+                        '& .ql-align-right': {
+                            textAlign: 'right'
+                        },
+                        '& .ql-align-justify': {
+                            textAlign: 'justify'
+                        },
+                        // Fix list alignment
+                        '& ul, & ol': {
+                            paddingLeft: '2em',
+                            marginLeft: 0,
+                            '& li': {
+                                textAlign: 'left',
+                                '&::marker': {
+                                    marginRight: '1em'
+                                }
+                            }
+                        }
+                    }}>
+                        <Typography
+                            variant="body1"
+                            sx={{ mb: 4 }}
+                            dangerouslySetInnerHTML={{ __html: watch('instructions') }}
+                        />
+                    </Box>
                 ) : (
                     <Typography variant="body1" sx={{ mb: 4, fontStyle: 'italic' }}>
                         No instructions provided.
