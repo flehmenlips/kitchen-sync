@@ -29,9 +29,10 @@ import EditIngredientCategoryPage from './pages/EditIngredientCategoryPage';
 import LoginPage from './pages/LoginPage'; // Import Login page
 import RegisterPage from './pages/RegisterPage'; // Import Register page
 import ProtectedRoute from './components/common/ProtectedRoute'; // Import ProtectedRoute
+import DashboardPage from './pages/DashboardPage'; // <-- Import new DashboardPage
 
-// Placeholder Dashboard Component
-const Dashboard = () => <Typography variant="h5">Dashboard Content Placeholder</Typography>;
+// Remove Placeholder Dashboard Component
+// const Dashboard = () => <Typography variant="h5">Dashboard Content Placeholder</Typography>;
 
 function App() {
   return (
@@ -40,7 +41,7 @@ function App() {
           {/* Routes requiring Main Layout AND Authentication */}
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<MainLayout />}>
-              <Route index element={<Dashboard />} /> 
+              <Route index element={<DashboardPage />} /> 
               <Route path="recipes" element={<RecipeList />} />
               <Route path="recipes/new" element={<CreateRecipePage />} /> 
               <Route path="recipes/:id/edit" element={<EditRecipePage />} /> 
