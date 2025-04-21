@@ -18,7 +18,7 @@ import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-// import ConfirmationDialog from './common/ConfirmationDialog'; // <-- Comment out the import
+import ConfirmationDialog from './common/ConfirmationDialog'; // Import the dialog
 
 const RecipeDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
