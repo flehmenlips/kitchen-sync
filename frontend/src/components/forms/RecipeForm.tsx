@@ -702,40 +702,25 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
 
             {/* --- Instructions Panel (Tab 2) --- */}
             <Box role="tabpanel" hidden={activeTab !== 2} id={`recipe-tabpanel-2`} aria-labelledby={`recipe-tab-2`} sx={{ pt: 2 }}>
-                <Controller
-                    name="instructions"
-                    control={control}
-                    rules={{ 
-                        required: 'Instructions are required',
-                        validate: (value) => 
-                            (value && value !== '<p><br></p>') || 'Instructions cannot be empty' 
-                    }}
-                    render={({ field, fieldState }) => (
-                        <FormControl fullWidth error={!!fieldState.error}>
-                            <Typography variant="subtitle2" component="label" sx={{ mb: 1, color: fieldState.error ? 'error.main' : 'inherit' }}>
-                                Instructions *
-                            </Typography>
-                            <ReactQuill 
-                                theme="snow"
-                                value={field.value}
-                                onChange={field.onChange}
-                                modules={{
-                                    toolbar: [
-                                        [{'header': [1, 2, false]}],
-                                        ['bold', 'italic', 'underline'],
-                                        [{'list': 'ordered'}, {'list': 'bullet'}],
-                                        ['clean']
-                                    ],
-                                }}
-                                style={{ backgroundColor: 'white' }} // Ensure background contrast
-                            />
-                            {fieldState.error && (
-                                <Typography variant="caption" color="error" sx={{ mt: 1, ml: 2 }}>
-                                    {fieldState.error.message}
-                                </Typography>
-                            )}
-                        </FormControl>
-                    )}
+                <Divider sx={{ my: 2 }}/>
+
+                <Typography variant="h5" component="h3" gutterBottom>Instructions</Typography>
+                {/* Use dangerouslySetInnerHTML to render formatted instructions */}
+                {watch('instructions') && watch('instructions') !== '<p><br></p>' ? (
+                    <Typography
+                        variant="body1"
+                        sx={{ mb: 4 }}
+                        dangerouslySetInnerHTML={{ __html: watch('instructions') }}
+                    />
+                ) : (
+                    <Typography variant="body1" sx={{ mb: 4, fontStyle: 'italic' }}>
+                        No instructions provided.
+                    </Typography>
+                )}
+
+                {/* Render Confirmation Dialog */}
+                <ConfirmationDialog
+                    // ... props
                 />
             </Box>
             
