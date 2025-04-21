@@ -323,6 +323,7 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
     return (
         <Box component="form" onSubmit={handleSubmit(handleFormSubmit)} noValidate sx={{ mt: 1 }}>
             
+            {/* === TABS START === */}
             <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
                 <Tabs value={activeTab} onChange={handleTabChange} aria-label="recipe form sections">
                     <Tab label="Details" id="recipe-tab-0" aria-controls="recipe-tabpanel-0" />
@@ -331,11 +332,12 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                 </Tabs>
             </Box>
 
-            {/* Tab Panels (conditionally rendered content) */}
+            {/* === TAB PANELS START === */}
+
+            {/* --- Details Panel (Tab 0) --- */}
             <Box role="tabpanel" hidden={activeTab !== 0} id={`recipe-tabpanel-0`} aria-labelledby={`recipe-tab-0`}>
                 {activeTab === 0 && (
-                    <Stack spacing={2}>
-                        {/* Move Name, Description, Yield, Times, Tags, Category here */}
+                    <Stack spacing={2}> 
                         <TextField
                             {...register("name", { required: "Recipe name is required" })}
                             label="Recipe Name"
@@ -426,7 +428,6 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                             label="Tags (comma-separated)"
                             fullWidth
                         />
-                         {/* Category Selector */}
                         <FormControl fullWidth error={!!categoriesError || categoriesLoading}>
                             <Controller
                                 name="categoryId"
@@ -483,10 +484,10 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                 )}
             </Box>
 
+            {/* --- Ingredients Panel (Tab 1) --- */}
             <Box role="tabpanel" hidden={activeTab !== 1} id={`recipe-tabpanel-1`} aria-labelledby={`recipe-tab-1`}>
                 {activeTab === 1 && (
                     <Box>
-                        {/* Move Ingredients Section (mapping fields) here */}
                         <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Ingredients</Typography>
                         {(unitsError || ingredientsError) && (
                             <Alert severity="warning" sx={{ mb: 1 }}>
@@ -498,39 +499,31 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                 <Paper key={item.id} sx={{ p: 1.5, mb: 1.5, position: 'relative' }}>
                                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems="flex-start">
                                         <Box sx={{ flexBasis: '35%' }}>
-                                            {/* Combined Autocomplete for Ingredient/Sub-Recipe */}
                                             <Controller
-                                                // Control one of the actual fields, e.g., ingredientId
                                                 name={`ingredients.${index}.ingredientId`} 
                                                 control={control}
-                                                // Rule: Ensure either ingredientId or subRecipeId is set
                                                 rules={{ 
                                                     validate: (value, formValues) => {
                                                         const currentItem = formValues.ingredients[index];
-                                                        // Validation needs to check the item type as well now
                                                         if (currentItem.type === 'ingredient') {
                                                             return !!currentItem.ingredientId || 'Please select an ingredient.';
                                                         } else if (currentItem.type === 'sub-recipe') {
                                                             return !!currentItem.subRecipeId || 'Please select a sub-recipe.';
                                                         } else {
-                                                            // If type isn't set (shouldn't happen if selected), require selection
                                                             return 'Please select an ingredient or sub-recipe.';
                                                         }
                                                     }
                                                  }}
                                                 render={({ field, fieldState }) => {
-                                                    // Determine current value object based on watched state
                                                     const currentIngredientId = watch(`ingredients.${index}.ingredientId`);
                                                     const currentSubRecipeId = watch(`ingredients.${index}.subRecipeId`);
-                                                    const currentType = watch(`ingredients.${index}.type`); // Watch type too
-                                                    
+                                                    const currentType = watch(`ingredients.${index}.type`);
                                                     let currentValue: IngredientOrRecipeOption | null = null;
                                                     if (currentType === 'ingredient' && currentIngredientId) {
                                                         currentValue = combinedIngredientOptions.find(opt => opt.type === 'ingredient' && opt.id === currentIngredientId) ?? null;
                                                     } else if (currentType === 'sub-recipe' && currentSubRecipeId) {
                                                         currentValue = combinedIngredientOptions.find(opt => opt.type === 'recipe' && opt.id === currentSubRecipeId) ?? null;
                                                     }
-
                                                     return (
                                                         <Autocomplete
                                                             options={combinedIngredientOptions}
@@ -538,21 +531,18 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                                             value={currentValue || null} 
                                                             onChange={(event, newValue) => {
                                                                 if (!newValue) {
-                                                                    // Clear related fields
                                                                     setValue(`ingredients.${index}.ingredientId`, '');
                                                                     setValue(`ingredients.${index}.subRecipeId`, '');
                                                                     setValue(`ingredients.${index}.type`, '');
                                                                 } else if (newValue.type === 'create-ingredient') {
                                                                     handleOpenModal('ingredient', index);
-                                                                    // Reset selection in Autocomplete if modal is cancelled
-                                                                    // setValue(field.name, null); // Or handle via modal close
                                                                 } else if (newValue.type === 'ingredient') {
                                                                     setValue(`ingredients.${index}.ingredientId`, newValue.id);
-                                                                    setValue(`ingredients.${index}.subRecipeId`, ''); // Clear other ID
+                                                                    setValue(`ingredients.${index}.subRecipeId`, '');
                                                                     setValue(`ingredients.${index}.type`, 'ingredient');
                                                                 } else if (newValue.type === 'recipe') {
                                                                     setValue(`ingredients.${index}.subRecipeId`, newValue.id);
-                                                                    setValue(`ingredients.${index}.ingredientId`, ''); // Clear other ID
+                                                                    setValue(`ingredients.${index}.ingredientId`, '');
                                                                     setValue(`ingredients.${index}.type`, 'sub-recipe');
                                                                 }
                                                             }}
@@ -597,7 +587,6 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                                 }}
                                             />
                                         </Box>
-
                                         <Controller
                                             name={`ingredients.${index}.quantity`}
                                             control={control}
@@ -616,15 +605,13 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                                 />
                                             )}
                                         />
-                                        {/* Revert to FormControl/InputLabel/Select for Unit */}
                                         <FormControl fullWidth size="small" sx={{ flexBasis: '20%' }} error={!!unitsError || unitsLoading}>
                                             <InputLabel 
                                                 id={`ingredient-unit-label-${index}`}
-                                                // Add sx prop for background when shrunk
                                                 sx={{ 
-                                                    '&.MuiInputLabel-shrink': { // Target the label when shrunk
-                                                        backgroundColor: (theme) => theme.palette.background.paper, // Use theme background
-                                                        paddingLeft: '4px', // Add slight padding to prevent border touching text
+                                                    '&.MuiInputLabel-shrink': { 
+                                                        backgroundColor: (theme) => theme.palette.background.paper,
+                                                        paddingLeft: '4px',
                                                         paddingRight: '4px',
                                                     }
                                                 }}
@@ -662,7 +649,6 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                                             </MenuItem>
                                                         ))}
                                                     </Select>
-                                                    {/* Display helper text/errors below Select */}
                                                     {fieldState.error && <Typography variant="caption" display="block" color="error" sx={{ pl: 2 }}>{fieldState.error.message}</Typography>}
                                                     {unitsError && !fieldState.error && <Typography variant="caption" display="block" color="error" sx={{ pl: 2 }}>{unitsError}</Typography>}
                                                     </>
@@ -695,17 +681,17 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                 )}
             </Box>
 
+            {/* --- Instructions Panel (Tab 2) --- */}
             <Box role="tabpanel" hidden={activeTab !== 2} id={`recipe-tabpanel-2`} aria-labelledby={`recipe-tab-2`}>
                  {activeTab === 2 && (
                     <Box>
-                        {/* Move Instructions TextField here */}
                         <TextField
                             {...register("instructions", { required: "Instructions are required" })}
                             label="Instructions"
                             fullWidth
                             required
                             multiline
-                            rows={10} // Maybe increase rows when it has its own tab
+                            rows={10} 
                             error={!!errors.instructions}
                             helperText={errors.instructions?.message}
                         />
@@ -713,7 +699,9 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                  )}
             </Box>
             
-            {/* Keep Submit Button outside tabs */}
+            {/* === TAB PANELS END === */}
+
+            {/* Submit Button (Outside Tabs) */}
             <Button
                 type="submit"
                 fullWidth
@@ -724,7 +712,7 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                 {isSubmitting ? 'Saving...' : (initialData ? 'Save Changes' : 'Create Recipe')}
             </Button>
 
-            {/* Creation Modal */}
+            {/* Modals (Outside Tabs) */}
             <Dialog open={modalOpen} onClose={handleCloseModal} maxWidth="xs" fullWidth>
                 <DialogTitle>
                     {modalType === 'unit' ? 'Create New Unit' : 
@@ -798,7 +786,6 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                         />
                     )}
                 </DialogContent>
-                 {/* Optional: Add Actions with Cancel button to modal */}
             </Dialog>
         </Box>
     );
