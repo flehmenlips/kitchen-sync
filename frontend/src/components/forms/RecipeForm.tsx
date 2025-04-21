@@ -20,7 +20,9 @@ import {
     SelectChangeEvent,
     Grid,
     Autocomplete,
-    CircularProgress
+    CircularProgress,
+    Tabs,
+    Tab
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
@@ -158,6 +160,13 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
     const [modalTargetIndex, setModalTargetIndex] = useState<number | null>(null); 
     const [modalSubmitError, setModalSubmitError] = useState<string | null>(null);
     const [isModalSubmitting, setIsModalSubmitting] = useState<boolean>(false);
+
+    // Add state for active tab index
+    const [activeTab, setActiveTab] = useState(0);
+
+    const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+        setActiveTab(newValue);
+    };
 
     // Fetch units AND ingredients on component mount
     useEffect(() => {
@@ -313,373 +322,398 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
 
     return (
         <Box component="form" onSubmit={handleSubmit(handleFormSubmit)} noValidate sx={{ mt: 1 }}>
-            <TextField
-                {...register("name", { required: "Recipe name is required" })}
-                label="Recipe Name"
-                fullWidth
-                required
-                error={!!errors.name}
-                helperText={errors.name?.message}
-                sx={{ mb: 2 }}
-            />
-            <TextField
-                {...register("description")}
-                label="Description"
-                fullWidth
-                multiline
-                rows={2}
-                sx={{ mb: 2 }}
-            />
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }}>
-                <Controller
-                    name="yieldQuantity"
-                    control={control}
-                    render={({ field }) => (
-                        <TextField {...field} label="Yield Qty" type="number" fullWidth InputLabelProps={{ shrink: true }} />
-                    )}
-                />
-                <Controller
-                    name="yieldUnitId"
-                    control={control}
-                    render={({ field }) => (
-                        <Autocomplete
-                            options={units} 
-                            getOptionLabel={(option) => option.name || ''} 
-                            value={units.find(unit => unit.id === field.value) || null} 
-                            onChange={(event, newValue) => {
-                                if (newValue && newValue.id === CREATE_NEW_UNIT_OPTION.id) {
-                                    // Use special index -1 for yield unit trigger
-                                    handleOpenModal('unit', -1); 
-                                } else {
-                                    field.onChange(newValue ? newValue.id : ''); 
-                                }
-                            }}
-                            isOptionEqualToValue={(option, value) => option.id === value?.id}
-                            renderOption={(props, option) => (
-                                <Box component="li" {...props} key={option.id}>
-                                    {option.id === CREATE_NEW_UNIT_OPTION.id ? 
-                                        <Typography color="primary">{option.name}</Typography> : 
-                                        option.name
-                                    }
-                                </Box>
-                            )}
-                            loading={unitsLoading}
-                            disabled={unitsLoading || !!unitsError}
-                            renderInput={(params) => (
-                                <TextField 
-                                    {...params} 
-                                    label="Yield Unit" 
-                                    error={!!unitsError} 
-                                    helperText={unitsError}
-                                    InputProps={{
-                                        ...params.InputProps,
-                                        endAdornment: (
-                                            <>
-                                                {unitsLoading ? <CircularProgress color="inherit" size={20} /> : null}
-                                                {params.InputProps.endAdornment}
-                                            </>
-                                        ),
-                                    }}
-                                />
-                            )}
-                            fullWidth
-                        />
-                    )}
-                />
-                <Controller
-                    name="prepTimeMinutes"
-                    control={control}
-                    render={({ field }) => (
-                        <TextField {...field} label="Prep Time (min)" type="number" fullWidth InputLabelProps={{ shrink: true }} />
-                    )}
-                />
-                <Controller
-                    name="cookTimeMinutes"
-                    control={control}
-                    render={({ field }) => (
-                        <TextField {...field} label="Cook Time (min)" type="number" fullWidth InputLabelProps={{ shrink: true }} />
-                    )}
-                />
-            </Stack>
-            <TextField
-                {...register("tags")}
-                label="Tags (comma-separated)"
-                fullWidth
-                sx={{ mb: 2 }}
-            />
-            <TextField
-                {...register("instructions", { required: "Instructions are required" })}
-                label="Instructions"
-                fullWidth
-                required
-                multiline
-                rows={6}
-                error={!!errors.instructions}
-                helperText={errors.instructions?.message}
-                sx={{ mb: 2 }}
-            />
-
-            {/* Category Selector */}
-            <FormControl fullWidth sx={{ mb: 2 }} error={!!categoriesError || categoriesLoading}>
-                <Controller
-                    name="categoryId"
-                    control={control}
-                    render={({ field }) => (
-                        <Autocomplete
-                            options={categories} // Use fetched categories
-                            getOptionLabel={(option) => option.name || ''}
-                            value={categories.find(cat => cat.id === field.value) || null}
-                            onChange={(event, newValue) => {
-                                if (newValue && newValue.id === CREATE_NEW_CATEGORY_OPTION.id) {
-                                    handleOpenModal('category', -2); // Use different special index for category
-                                } else {
-                                    field.onChange(newValue ? newValue.id : '');
-                                }
-                            }}
-                            isOptionEqualToValue={(option, value) => option.id === value?.id}
-                            renderOption={(props, option) => (
-                                <Box component="li" {...props} key={option.id}>
-                                    {option.id === CREATE_NEW_CATEGORY_OPTION.id ? 
-                                        <Typography color="primary">{option.name}</Typography> : 
-                                        option.name
-                                    }
-                                </Box>
-                            )}
-                            loading={categoriesLoading}
-                            disabled={categoriesLoading || !!categoriesError}
-                            renderInput={(params) => (
-                                <TextField 
-                                    {...params} 
-                                    label="Category (Optional)" 
-                                    error={!!categoriesError} 
-                                    helperText={categoriesError}
-                                    InputLabelProps={{ 
-                                        ...params.InputLabelProps,
-                                        shrink: true 
-                                    }}
-                                    InputProps={{
-                                        ...params.InputProps,
-                                        endAdornment: (
-                                            <>
-                                                {categoriesLoading ? <CircularProgress color="inherit" size={20} /> : null}
-                                                {params.InputProps.endAdornment}
-                                            </>
-                                        ),
-                                    }}
-                                />
-                            )}
-                        />
-                    )}
-                />
-            </FormControl>
-
-            <Box>
-                <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Ingredients</Typography>
-                {(unitsError || ingredientsError) && (
-                    <Alert severity="warning" sx={{ mb: 1 }}>
-                        {unitsError} {ingredientsError}
-                    </Alert>
-                )}
-                {fields.map((item, index) => {
-                    return (
-                        <Paper key={item.id} sx={{ p: 1.5, mb: 1.5, position: 'relative' }}>
-                            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems="flex-start">
-                                <Box sx={{ flexBasis: '35%' }}>
-                                    {/* Combined Autocomplete for Ingredient/Sub-Recipe */}
-                                    <Controller
-                                        // Control one of the actual fields, e.g., ingredientId
-                                        name={`ingredients.${index}.ingredientId`} 
-                                        control={control}
-                                        // Rule: Ensure either ingredientId or subRecipeId is set
-                                        rules={{ 
-                                            validate: (value, formValues) => {
-                                                const currentItem = formValues.ingredients[index];
-                                                // Validation needs to check the item type as well now
-                                                if (currentItem.type === 'ingredient') {
-                                                    return !!currentItem.ingredientId || 'Please select an ingredient.';
-                                                } else if (currentItem.type === 'sub-recipe') {
-                                                    return !!currentItem.subRecipeId || 'Please select a sub-recipe.';
-                                                } else {
-                                                    // If type isn't set (shouldn't happen if selected), require selection
-                                                    return 'Please select an ingredient or sub-recipe.';
-                                                }
-                                            }
-                                         }}
-                                        render={({ field, fieldState }) => {
-                                            // Determine current value object based on watched state
-                                            const currentIngredientId = watch(`ingredients.${index}.ingredientId`);
-                                            const currentSubRecipeId = watch(`ingredients.${index}.subRecipeId`);
-                                            const currentType = watch(`ingredients.${index}.type`); // Watch type too
-                                            
-                                            let currentValue: IngredientOrRecipeOption | null = null;
-                                            if (currentType === 'ingredient' && currentIngredientId) {
-                                                currentValue = combinedIngredientOptions.find(opt => opt.type === 'ingredient' && opt.id === currentIngredientId) ?? null;
-                                            } else if (currentType === 'sub-recipe' && currentSubRecipeId) {
-                                                currentValue = combinedIngredientOptions.find(opt => opt.type === 'recipe' && opt.id === currentSubRecipeId) ?? null;
-                                            }
-
-                                            return (
-                                                <Autocomplete
-                                                    options={combinedIngredientOptions}
-                                                    getOptionLabel={(option) => option.name || ''}
-                                                    value={currentValue || null} 
-                                                    onChange={(event, newValue) => {
-                                                        if (!newValue) {
-                                                            // Clear related fields
-                                                            setValue(`ingredients.${index}.ingredientId`, '');
-                                                            setValue(`ingredients.${index}.subRecipeId`, '');
-                                                            setValue(`ingredients.${index}.type`, '');
-                                                        } else if (newValue.type === 'create-ingredient') {
-                                                            handleOpenModal('ingredient', index);
-                                                            // Reset selection in Autocomplete if modal is cancelled
-                                                            // setValue(field.name, null); // Or handle via modal close
-                                                        } else if (newValue.type === 'ingredient') {
-                                                            setValue(`ingredients.${index}.ingredientId`, newValue.id);
-                                                            setValue(`ingredients.${index}.subRecipeId`, ''); // Clear other ID
-                                                            setValue(`ingredients.${index}.type`, 'ingredient');
-                                                        } else if (newValue.type === 'recipe') {
-                                                            setValue(`ingredients.${index}.subRecipeId`, newValue.id);
-                                                            setValue(`ingredients.${index}.ingredientId`, ''); // Clear other ID
-                                                            setValue(`ingredients.${index}.type`, 'sub-recipe');
-                                                        }
-                                                    }}
-                                                    isOptionEqualToValue={(option, val) => option.id === val?.id && option.type === val?.type}
-                                                    renderOption={(props, option) => (
-                                                        <Box component="li" {...props} key={`${option.type}-${option.id}`}>
-                                                            {option.type === 'ingredient' && <LocalFloristIcon fontSize="small" sx={{ mr: 1, opacity: 0.6 }} />}
-                                                            {option.type === 'recipe' && <RestaurantMenuIcon fontSize="small" sx={{ mr: 1, opacity: 0.6 }} />}
-                                                            {option.type === 'create-ingredient' && <AddIcon fontSize="small" sx={{ mr: 1 }} />}
-                                                            <Typography 
-                                                                variant="body2" 
-                                                                color={option.type === 'create-ingredient' ? 'primary' : 'inherit'}
-                                                            >
-                                                                {option.name}
-                                                            </Typography>
-                                                        </Box>
-                                                    )}
-                                                    loading={ingredientsLoading || subRecipesLoading}
-                                                    disabled={ingredientsLoading || subRecipesLoading || !!ingredientsError}
-                                                    renderInput={(params) => (
-                                                        <TextField 
-                                                            {...params} 
-                                                            label="Ingredient / Sub-Recipe" 
-                                                            size="small"
-                                                            required
-                                                            error={!!ingredientsError || !!fieldState.error}
-                                                            helperText={fieldState.error?.message || ingredientsError}
-                                                            InputProps={{ 
-                                                                ...params.InputProps,
-                                                                endAdornment: (
-                                                                    <>
-                                                                        {(ingredientsLoading || subRecipesLoading) ? <CircularProgress color="inherit" size={20} /> : null}
-                                                                        {params.InputProps.endAdornment}
-                                                                    </>
-                                                                ),
-                                                            }}
-                                                        />
-                                                    )}
-                                                    fullWidth
-                                                />
-                                            );
-                                        }}
-                                    />
-                                </Box>
-
-                                <Controller
-                                    name={`ingredients.${index}.quantity`}
-                                    control={control}
-                                    rules={{ required: 'Qty required', min: { value: 0.01, message: "Qty > 0"} }}
-                                    render={({ field, fieldState }) => (
-                                        <TextField 
-                                            {...field}
-                                            label="Qty"
-                                            type="number"
-                                            required
-                                            size="small"
-                                            error={!!fieldState.error}
-                                            helperText={fieldState.error?.message}
-                                            inputProps={{ step: "any" }}
-                                            sx={{ flexBasis: '15%' }}
-                                        />
-                                    )}
-                                />
-                                {/* Revert to FormControl/InputLabel/Select for Unit */}
-                                <FormControl fullWidth size="small" sx={{ flexBasis: '20%' }} error={!!unitsError || unitsLoading}>
-                                    <InputLabel 
-                                        id={`ingredient-unit-label-${index}`}
-                                        // Add sx prop for background when shrunk
-                                        sx={{ 
-                                            '&.MuiInputLabel-shrink': { // Target the label when shrunk
-                                                backgroundColor: (theme) => theme.palette.background.paper, // Use theme background
-                                                paddingLeft: '4px', // Add slight padding to prevent border touching text
-                                                paddingRight: '4px',
-                                            }
-                                        }}
-                                    >
-                                        Unit
-                                    </InputLabel>
-                                    <Controller
-                                        name={`ingredients.${index}.unitId`}
-                                        control={control}
-                                        rules={{ required: 'Unit required' }}
-                                        render={({ field, fieldState }) => (
-                                            <>
-                                            <Select 
-                                                labelId={`ingredient-unit-label-${index}`}
-                                                {...field}
-                                                value={field.value ?? ''}
-                                                onChange={(e) => { 
-                                                    const selectedValue = e.target.value;
-                                                    if (selectedValue === CREATE_NEW_UNIT_OPTION.id) {
-                                                         handleOpenModal('unit', index);
-                                                     } else {
-                                                         field.onChange(selectedValue);
-                                                     }
-                                                }}
-                                                error={!!fieldState.error}
-                                                disabled={unitsLoading || !!unitsError}
-                                            >
-                                                <MenuItem value="" disabled><em>Select Unit</em></MenuItem>
-                                                {units.map((unit) => (
-                                                    <MenuItem key={unit.id} value={unit.id} disabled={unit.id === -1 && !unitsLoading}>
-                                                        {unit.id === CREATE_NEW_UNIT_OPTION.id ? 
-                                                            <Typography color="primary" variant="body2">{unit.name}</Typography> :
-                                                            unit.abbreviation || unit.name
-                                                        }
-                                                    </MenuItem>
-                                                ))}
-                                            </Select>
-                                            {/* Display helper text/errors below Select */}
-                                            {fieldState.error && <Typography variant="caption" display="block" color="error" sx={{ pl: 2 }}>{fieldState.error.message}</Typography>}
-                                            {unitsError && !fieldState.error && <Typography variant="caption" display="block" color="error" sx={{ pl: 2 }}>{unitsError}</Typography>}
-                                            </>
-                                        )}
-                                    />
-                                </FormControl>
-                                <Box sx={{ flexBasis: '10%', textAlign: 'center', pt: 0.5 }}>
-                                    <IconButton 
-                                        onClick={() => remove(index)} 
-                                        color="error" 
-                                        disabled={fields.length <= 1} 
-                                        sx={{ mt: 0.5 }}
-                                    >
-                                        <RemoveCircleOutlineIcon />
-                                    </IconButton>
-                                </Box>
-                            </Stack>
-                        </Paper>
-                    );
-                })}
-                <Button
-                    type="button"
-                    startIcon={<AddCircleOutlineIcon />}
-                    onClick={() => append({ type: '', ingredientId: '', subRecipeId: '', quantity: '', unitId: '' })}
-                    sx={{ mt: 1 }}
-                >
-                    Add Ingredient / Sub-Recipe
-                </Button>
+            
+            <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+                <Tabs value={activeTab} onChange={handleTabChange} aria-label="recipe form sections">
+                    <Tab label="Details" id="recipe-tab-0" aria-controls="recipe-tabpanel-0" />
+                    <Tab label="Ingredients" id="recipe-tab-1" aria-controls="recipe-tabpanel-1" />
+                    <Tab label="Instructions" id="recipe-tab-2" aria-controls="recipe-tabpanel-2" />
+                </Tabs>
             </Box>
 
+            {/* Tab Panels (conditionally rendered content) */}
+            <Box role="tabpanel" hidden={activeTab !== 0} id={`recipe-tabpanel-0`} aria-labelledby={`recipe-tab-0`}>
+                {activeTab === 0 && (
+                    <Stack spacing={2}>
+                        {/* Move Name, Description, Yield, Times, Tags, Category here */}
+                        <TextField
+                            {...register("name", { required: "Recipe name is required" })}
+                            label="Recipe Name"
+                            fullWidth
+                            required
+                            error={!!errors.name}
+                            helperText={errors.name?.message}
+                        />
+                        <TextField
+                            {...register("description")}
+                            label="Description"
+                            fullWidth
+                            multiline
+                            rows={2}
+                        />
+                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                            <Controller
+                                name="yieldQuantity"
+                                control={control}
+                                render={({ field }) => (
+                                    <TextField {...field} label="Yield Qty" type="number" fullWidth InputLabelProps={{ shrink: true }} />
+                                )}
+                            />
+                            <Controller
+                                name="yieldUnitId"
+                                control={control}
+                                render={({ field }) => (
+                                    <Autocomplete
+                                        options={units} 
+                                        getOptionLabel={(option) => option.name || ''} 
+                                        value={units.find(unit => unit.id === field.value) || null} 
+                                        onChange={(event, newValue) => {
+                                            if (newValue && newValue.id === CREATE_NEW_UNIT_OPTION.id) {
+                                                handleOpenModal('unit', -1);
+                                            } else {
+                                                field.onChange(newValue ? newValue.id : ''); 
+                                            }
+                                        }}
+                                        isOptionEqualToValue={(option, value) => option.id === value?.id}
+                                        renderOption={(props, option) => (
+                                            <Box component="li" {...props} key={option.id}>
+                                                {option.id === CREATE_NEW_UNIT_OPTION.id ? 
+                                                    <Typography color="primary">{option.name}</Typography> : 
+                                                    option.name
+                                                }
+                                            </Box>
+                                        )}
+                                        loading={unitsLoading}
+                                        disabled={unitsLoading || !!unitsError}
+                                        renderInput={(params) => (
+                                            <TextField 
+                                                {...params} 
+                                                label="Yield Unit" 
+                                                error={!!unitsError} 
+                                                helperText={unitsError}
+                                                InputProps={{
+                                                    ...params.InputProps,
+                                                    endAdornment: (
+                                                        <>
+                                                            {unitsLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                                                            {params.InputProps.endAdornment}
+                                                        </>
+                                                    ),
+                                                }}
+                                            />
+                                        )}
+                                        fullWidth
+                                    />
+                                )}
+                            />
+                            <Controller
+                                name="prepTimeMinutes"
+                                control={control}
+                                render={({ field }) => (
+                                    <TextField {...field} label="Prep Time (min)" type="number" fullWidth InputLabelProps={{ shrink: true }} />
+                                )}
+                            />
+                            <Controller
+                                name="cookTimeMinutes"
+                                control={control}
+                                render={({ field }) => (
+                                    <TextField {...field} label="Cook Time (min)" type="number" fullWidth InputLabelProps={{ shrink: true }} />
+                                )}
+                            />
+                        </Stack>
+                        <TextField
+                            {...register("tags")}
+                            label="Tags (comma-separated)"
+                            fullWidth
+                        />
+                         {/* Category Selector */}
+                        <FormControl fullWidth error={!!categoriesError || categoriesLoading}>
+                            <Controller
+                                name="categoryId"
+                                control={control}
+                                render={({ field }) => (
+                                    <Autocomplete
+                                        options={categories} 
+                                        getOptionLabel={(option) => option.name || ''}
+                                        value={categories.find(cat => cat.id === field.value) || null}
+                                        onChange={(event, newValue) => {
+                                            if (newValue && newValue.id === CREATE_NEW_CATEGORY_OPTION.id) {
+                                                handleOpenModal('category', -2);
+                                            } else {
+                                                field.onChange(newValue ? newValue.id : '');
+                                            }
+                                        }}
+                                        isOptionEqualToValue={(option, value) => option.id === value?.id}
+                                        renderOption={(props, option) => (
+                                            <Box component="li" {...props} key={option.id}>
+                                                {option.id === CREATE_NEW_CATEGORY_OPTION.id ? 
+                                                    <Typography color="primary">{option.name}</Typography> : 
+                                                    option.name
+                                                }
+                                            </Box>
+                                        )}
+                                        loading={categoriesLoading}
+                                        disabled={categoriesLoading || !!categoriesError}
+                                        renderInput={(params) => (
+                                            <TextField 
+                                                {...params} 
+                                                label="Category (Optional)" 
+                                                error={!!categoriesError} 
+                                                helperText={categoriesError}
+                                                InputLabelProps={{ 
+                                                    ...params.InputLabelProps,
+                                                    shrink: true 
+                                                }}
+                                                InputProps={{
+                                                    ...params.InputProps,
+                                                    endAdornment: (
+                                                        <>
+                                                            {categoriesLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                                                            {params.InputProps.endAdornment}
+                                                        </>
+                                                    ),
+                                                }}
+                                            />
+                                        )}
+                                    />
+                                )}
+                            />
+                        </FormControl>
+                    </Stack>
+                )}
+            </Box>
+
+            <Box role="tabpanel" hidden={activeTab !== 1} id={`recipe-tabpanel-1`} aria-labelledby={`recipe-tab-1`}>
+                {activeTab === 1 && (
+                    <Box>
+                        {/* Move Ingredients Section (mapping fields) here */}
+                        <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Ingredients</Typography>
+                        {(unitsError || ingredientsError) && (
+                            <Alert severity="warning" sx={{ mb: 1 }}>
+                                {unitsError} {ingredientsError}
+                            </Alert>
+                        )}
+                        {fields.map((item, index) => {
+                            return (
+                                <Paper key={item.id} sx={{ p: 1.5, mb: 1.5, position: 'relative' }}>
+                                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems="flex-start">
+                                        <Box sx={{ flexBasis: '35%' }}>
+                                            {/* Combined Autocomplete for Ingredient/Sub-Recipe */}
+                                            <Controller
+                                                // Control one of the actual fields, e.g., ingredientId
+                                                name={`ingredients.${index}.ingredientId`} 
+                                                control={control}
+                                                // Rule: Ensure either ingredientId or subRecipeId is set
+                                                rules={{ 
+                                                    validate: (value, formValues) => {
+                                                        const currentItem = formValues.ingredients[index];
+                                                        // Validation needs to check the item type as well now
+                                                        if (currentItem.type === 'ingredient') {
+                                                            return !!currentItem.ingredientId || 'Please select an ingredient.';
+                                                        } else if (currentItem.type === 'sub-recipe') {
+                                                            return !!currentItem.subRecipeId || 'Please select a sub-recipe.';
+                                                        } else {
+                                                            // If type isn't set (shouldn't happen if selected), require selection
+                                                            return 'Please select an ingredient or sub-recipe.';
+                                                        }
+                                                    }
+                                                 }}
+                                                render={({ field, fieldState }) => {
+                                                    // Determine current value object based on watched state
+                                                    const currentIngredientId = watch(`ingredients.${index}.ingredientId`);
+                                                    const currentSubRecipeId = watch(`ingredients.${index}.subRecipeId`);
+                                                    const currentType = watch(`ingredients.${index}.type`); // Watch type too
+                                                    
+                                                    let currentValue: IngredientOrRecipeOption | null = null;
+                                                    if (currentType === 'ingredient' && currentIngredientId) {
+                                                        currentValue = combinedIngredientOptions.find(opt => opt.type === 'ingredient' && opt.id === currentIngredientId) ?? null;
+                                                    } else if (currentType === 'sub-recipe' && currentSubRecipeId) {
+                                                        currentValue = combinedIngredientOptions.find(opt => opt.type === 'recipe' && opt.id === currentSubRecipeId) ?? null;
+                                                    }
+
+                                                    return (
+                                                        <Autocomplete
+                                                            options={combinedIngredientOptions}
+                                                            getOptionLabel={(option) => option.name || ''}
+                                                            value={currentValue || null} 
+                                                            onChange={(event, newValue) => {
+                                                                if (!newValue) {
+                                                                    // Clear related fields
+                                                                    setValue(`ingredients.${index}.ingredientId`, '');
+                                                                    setValue(`ingredients.${index}.subRecipeId`, '');
+                                                                    setValue(`ingredients.${index}.type`, '');
+                                                                } else if (newValue.type === 'create-ingredient') {
+                                                                    handleOpenModal('ingredient', index);
+                                                                    // Reset selection in Autocomplete if modal is cancelled
+                                                                    // setValue(field.name, null); // Or handle via modal close
+                                                                } else if (newValue.type === 'ingredient') {
+                                                                    setValue(`ingredients.${index}.ingredientId`, newValue.id);
+                                                                    setValue(`ingredients.${index}.subRecipeId`, ''); // Clear other ID
+                                                                    setValue(`ingredients.${index}.type`, 'ingredient');
+                                                                } else if (newValue.type === 'recipe') {
+                                                                    setValue(`ingredients.${index}.subRecipeId`, newValue.id);
+                                                                    setValue(`ingredients.${index}.ingredientId`, ''); // Clear other ID
+                                                                    setValue(`ingredients.${index}.type`, 'sub-recipe');
+                                                                }
+                                                            }}
+                                                            isOptionEqualToValue={(option, val) => option.id === val?.id && option.type === val?.type}
+                                                            renderOption={(props, option) => (
+                                                                <Box component="li" {...props} key={`${option.type}-${option.id}`}>
+                                                                    {option.type === 'ingredient' && <LocalFloristIcon fontSize="small" sx={{ mr: 1, opacity: 0.6 }} />}
+                                                                    {option.type === 'recipe' && <RestaurantMenuIcon fontSize="small" sx={{ mr: 1, opacity: 0.6 }} />}
+                                                                    {option.type === 'create-ingredient' && <AddIcon fontSize="small" sx={{ mr: 1 }} />}
+                                                                    <Typography 
+                                                                        variant="body2" 
+                                                                        color={option.type === 'create-ingredient' ? 'primary' : 'inherit'}
+                                                                    >
+                                                                        {option.name}
+                                                                    </Typography>
+                                                                </Box>
+                                                            )}
+                                                            loading={ingredientsLoading || subRecipesLoading}
+                                                            disabled={ingredientsLoading || subRecipesLoading || !!ingredientsError}
+                                                            renderInput={(params) => (
+                                                                <TextField 
+                                                                    {...params} 
+                                                                    label="Ingredient / Sub-Recipe" 
+                                                                    size="small"
+                                                                    required
+                                                                    error={!!ingredientsError || !!fieldState.error}
+                                                                    helperText={fieldState.error?.message || ingredientsError}
+                                                                    InputProps={{ 
+                                                                        ...params.InputProps,
+                                                                        endAdornment: (
+                                                                            <>
+                                                                                {(ingredientsLoading || subRecipesLoading) ? <CircularProgress color="inherit" size={20} /> : null}
+                                                                                {params.InputProps.endAdornment}
+                                                                            </>
+                                                                        ),
+                                                                    }}
+                                                                />
+                                                            )}
+                                                            fullWidth
+                                                        />
+                                                    );
+                                                }}
+                                            />
+                                        </Box>
+
+                                        <Controller
+                                            name={`ingredients.${index}.quantity`}
+                                            control={control}
+                                            rules={{ required: 'Qty required', min: { value: 0.01, message: "Qty > 0"} }}
+                                            render={({ field, fieldState }) => (
+                                                <TextField 
+                                                    {...field}
+                                                    label="Qty"
+                                                    type="number"
+                                                    required
+                                                    size="small"
+                                                    error={!!fieldState.error}
+                                                    helperText={fieldState.error?.message}
+                                                    inputProps={{ step: "any" }}
+                                                    sx={{ flexBasis: '15%' }}
+                                                />
+                                            )}
+                                        />
+                                        {/* Revert to FormControl/InputLabel/Select for Unit */}
+                                        <FormControl fullWidth size="small" sx={{ flexBasis: '20%' }} error={!!unitsError || unitsLoading}>
+                                            <InputLabel 
+                                                id={`ingredient-unit-label-${index}`}
+                                                // Add sx prop for background when shrunk
+                                                sx={{ 
+                                                    '&.MuiInputLabel-shrink': { // Target the label when shrunk
+                                                        backgroundColor: (theme) => theme.palette.background.paper, // Use theme background
+                                                        paddingLeft: '4px', // Add slight padding to prevent border touching text
+                                                        paddingRight: '4px',
+                                                    }
+                                                }}
+                                            >
+                                                Unit
+                                            </InputLabel>
+                                            <Controller
+                                                name={`ingredients.${index}.unitId`}
+                                                control={control}
+                                                rules={{ required: 'Unit required' }}
+                                                render={({ field, fieldState }) => (
+                                                    <>
+                                                    <Select 
+                                                        labelId={`ingredient-unit-label-${index}`}
+                                                        {...field}
+                                                        value={field.value ?? ''}
+                                                        onChange={(e) => { 
+                                                            const selectedValue = e.target.value;
+                                                            if (selectedValue === CREATE_NEW_UNIT_OPTION.id) {
+                                                                 handleOpenModal('unit', index);
+                                                             } else {
+                                                                 field.onChange(selectedValue);
+                                                             }
+                                                        }}
+                                                        error={!!fieldState.error}
+                                                        disabled={unitsLoading || !!unitsError}
+                                                    >
+                                                        <MenuItem value="" disabled><em>Select Unit</em></MenuItem>
+                                                        {units.map((unit) => (
+                                                            <MenuItem key={unit.id} value={unit.id} disabled={unit.id === -1 && !unitsLoading}>
+                                                                {unit.id === CREATE_NEW_UNIT_OPTION.id ? 
+                                                                    <Typography color="primary" variant="body2">{unit.name}</Typography> :
+                                                                    unit.abbreviation || unit.name
+                                                                }
+                                                            </MenuItem>
+                                                        ))}
+                                                    </Select>
+                                                    {/* Display helper text/errors below Select */}
+                                                    {fieldState.error && <Typography variant="caption" display="block" color="error" sx={{ pl: 2 }}>{fieldState.error.message}</Typography>}
+                                                    {unitsError && !fieldState.error && <Typography variant="caption" display="block" color="error" sx={{ pl: 2 }}>{unitsError}</Typography>}
+                                                    </>
+                                                )}
+                                            />
+                                        </FormControl>
+                                        <Box sx={{ flexBasis: '10%', textAlign: 'center', pt: 0.5 }}>
+                                            <IconButton 
+                                                onClick={() => remove(index)} 
+                                                color="error" 
+                                                disabled={fields.length <= 1} 
+                                                sx={{ mt: 0.5 }}
+                                            >
+                                                <RemoveCircleOutlineIcon />
+                                            </IconButton>
+                                        </Box>
+                                    </Stack>
+                                </Paper>
+                            );
+                        })}
+                        <Button
+                            type="button"
+                            startIcon={<AddCircleOutlineIcon />}
+                            onClick={() => append({ type: '', ingredientId: '', subRecipeId: '', quantity: '', unitId: '' })}
+                            sx={{ mt: 1 }}
+                        >
+                            Add Ingredient / Sub-Recipe
+                        </Button>
+                    </Box>
+                )}
+            </Box>
+
+            <Box role="tabpanel" hidden={activeTab !== 2} id={`recipe-tabpanel-2`} aria-labelledby={`recipe-tab-2`}>
+                 {activeTab === 2 && (
+                    <Box>
+                        {/* Move Instructions TextField here */}
+                        <TextField
+                            {...register("instructions", { required: "Instructions are required" })}
+                            label="Instructions"
+                            fullWidth
+                            required
+                            multiline
+                            rows={10} // Maybe increase rows when it has its own tab
+                            error={!!errors.instructions}
+                            helperText={errors.instructions?.message}
+                        />
+                    </Box>
+                 )}
+            </Box>
+            
+            {/* Keep Submit Button outside tabs */}
             <Button
                 type="submit"
                 fullWidth
