@@ -47,6 +47,8 @@ import UnitForm from './UnitForm';
 import IngredientForm, { IngredientFormShape } from './IngredientForm';
 import CategoryForm from './CategoryForm';
 import { IngredientFormData as ApiIngredientFormData } from '../../services/apiService';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
 // Define a type for the combined list items
 type IngredientOrRecipeOption = {
@@ -700,15 +702,40 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
 
             {/* --- Instructions Panel (Tab 2) --- */}
             <Box role="tabpanel" hidden={activeTab !== 2} id={`recipe-tabpanel-2`} aria-labelledby={`recipe-tab-2`} sx={{ pt: 2 }}>
-                <TextField
-                    {...register("instructions", { required: "Instructions are required" })}
-                    label="Instructions"
-                    fullWidth
-                    required
-                    multiline
-                    rows={10} 
-                    error={!!errors.instructions}
-                    helperText={errors.instructions?.message}
+                <Controller
+                    name="instructions"
+                    control={control}
+                    rules={{ 
+                        required: 'Instructions are required',
+                        validate: (value) => 
+                            (value && value !== '<p><br></p>') || 'Instructions cannot be empty' 
+                    }}
+                    render={({ field, fieldState }) => (
+                        <FormControl fullWidth error={!!fieldState.error}>
+                            <Typography variant="subtitle2" component="label" sx={{ mb: 1, color: fieldState.error ? 'error.main' : 'inherit' }}>
+                                Instructions *
+                            </Typography>
+                            <ReactQuill 
+                                theme="snow"
+                                value={field.value}
+                                onChange={field.onChange}
+                                modules={{
+                                    toolbar: [
+                                        [{'header': [1, 2, false]}],
+                                        ['bold', 'italic', 'underline'],
+                                        [{'list': 'ordered'}, {'list': 'bullet'}],
+                                        ['clean']
+                                    ],
+                                }}
+                                style={{ backgroundColor: 'white' }} // Ensure background contrast
+                            />
+                            {fieldState.error && (
+                                <Typography variant="caption" color="error" sx={{ mt: 1, ml: 2 }}>
+                                    {fieldState.error.message}
+                                </Typography>
+                            )}
+                        </FormControl>
+                    )}
                 />
             </Box>
             
