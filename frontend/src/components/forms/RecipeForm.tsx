@@ -49,6 +49,7 @@ import CategoryForm from './CategoryForm';
 import { IngredientFormData as ApiIngredientFormData } from '../../services/apiService';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import { ConfirmationDialog } from '../common/ConfirmationDialog';
 
 // Define a type for the combined list items
 type IngredientOrRecipeOption = {
@@ -166,6 +167,14 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
 
     // Add state for active tab index
     const [activeTab, setActiveTab] = useState(0);
+
+    // Add state for confirmation dialog
+    const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+    const [confirmDialogProps, setConfirmDialogProps] = useState<{
+        title: string;
+        contentText: string;
+        onConfirm: () => void;
+    } | null>(null);
 
     const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
         setActiveTab(newValue);
@@ -318,6 +327,15 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
     
     // --- End Modal Logic ---
 
+    const handleRemoveIngredient = (index: number) => {
+        setConfirmDialogProps({
+            title: 'Remove Ingredient',
+            contentText: 'Are you sure you want to remove this ingredient?',
+            onConfirm: () => remove(index)
+        });
+        setConfirmDialogOpen(true);
+    };
+
     return (
         <Box component="form" onSubmit={handleSubmit(handleFormSubmit)} noValidate sx={{ mt: 1 }}>
             
@@ -335,91 +353,91 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
             {/* --- Details Panel (Tab 0) --- */}
             <Box role="tabpanel" hidden={activeTab !== 0} id={`recipe-tabpanel-0`} aria-labelledby={`recipe-tab-0`} sx={{ pt: 2 }}>
                 <Stack spacing={2}> 
-                    <TextField
-                        {...register("name", { required: "Recipe name is required" })}
-                        label="Recipe Name"
-                        fullWidth
-                        required
-                        error={!!errors.name}
-                        helperText={errors.name?.message}
-                    />
-                    <TextField
-                        {...register("description")}
-                        label="Description"
-                        fullWidth
-                        multiline
-                        rows={2}
-                    />
+            <TextField
+                {...register("name", { required: "Recipe name is required" })}
+                label="Recipe Name"
+                fullWidth
+                required
+                error={!!errors.name}
+                helperText={errors.name?.message}
+            />
+            <TextField
+                {...register("description")}
+                label="Description"
+                fullWidth
+                multiline
+                rows={2}
+            />
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                        <Controller
-                            name="yieldQuantity"
-                            control={control}
-                            render={({ field }) => (
-                                <TextField {...field} label="Yield Qty" type="number" fullWidth InputLabelProps={{ shrink: true }} />
+                <Controller
+                    name="yieldQuantity"
+                    control={control}
+                    render={({ field }) => (
+                        <TextField {...field} label="Yield Qty" type="number" fullWidth InputLabelProps={{ shrink: true }} />
+                    )}
+                />
+                <Controller
+                    name="yieldUnitId"
+                    control={control}
+                    render={({ field }) => (
+                        <Autocomplete
+                            options={units} 
+                            getOptionLabel={(option) => option.name || ''} 
+                            value={units.find(unit => unit.id === field.value) || null} 
+                            onChange={(event, newValue) => {
+                                if (newValue && newValue.id === CREATE_NEW_UNIT_OPTION.id) {
+                                    handleOpenModal('unit', -1); 
+                                } else {
+                                    field.onChange(newValue ? newValue.id : ''); 
+                                }
+                            }}
+                            isOptionEqualToValue={(option, value) => option.id === value?.id}
+                            renderOption={(props, option) => (
+                                <Box component="li" {...props} key={option.id}>
+                                    {option.id === CREATE_NEW_UNIT_OPTION.id ? 
+                                        <Typography color="primary">{option.name}</Typography> : 
+                                        option.name
+                                    }
+                                </Box>
                             )}
-                        />
-                        <Controller
-                            name="yieldUnitId"
-                            control={control}
-                            render={({ field }) => (
-                                <Autocomplete
-                                    options={units} 
-                                    getOptionLabel={(option) => option.name || ''} 
-                                    value={units.find(unit => unit.id === field.value) || null} 
-                                    onChange={(event, newValue) => {
-                                        if (newValue && newValue.id === CREATE_NEW_UNIT_OPTION.id) {
-                                            handleOpenModal('unit', -1);
-                                        } else {
-                                            field.onChange(newValue ? newValue.id : ''); 
-                                        }
+                            loading={unitsLoading}
+                            disabled={unitsLoading || !!unitsError}
+                            renderInput={(params) => (
+                                <TextField 
+                                    {...params} 
+                                    label="Yield Unit" 
+                                    error={!!unitsError} 
+                                    helperText={unitsError}
+                                    InputProps={{
+                                        ...params.InputProps,
+                                        endAdornment: (
+                                            <>
+                                                {unitsLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                                                {params.InputProps.endAdornment}
+                                            </>
+                                        ),
                                     }}
-                                    isOptionEqualToValue={(option, value) => option.id === value?.id}
-                                    renderOption={(props, option) => (
-                                        <Box component="li" {...props} key={option.id}>
-                                            {option.id === CREATE_NEW_UNIT_OPTION.id ? 
-                                                <Typography color="primary">{option.name}</Typography> : 
-                                                option.name
-                                            }
-                                        </Box>
-                                    )}
-                                    loading={unitsLoading}
-                                    disabled={unitsLoading || !!unitsError}
-                                    renderInput={(params) => (
-                                        <TextField 
-                                            {...params} 
-                                            label="Yield Unit" 
-                                            error={!!unitsError} 
-                                            helperText={unitsError}
-                                            InputProps={{
-                                                ...params.InputProps,
-                                                endAdornment: (
-                                                    <>
-                                                        {unitsLoading ? <CircularProgress color="inherit" size={20} /> : null}
-                                                        {params.InputProps.endAdornment}
-                                                    </>
-                                                ),
-                                            }}
-                                        />
-                                    )}
-                                    fullWidth
                                 />
                             )}
+                            fullWidth
                         />
-                        <Controller
-                            name="prepTimeMinutes"
-                            control={control}
-                            render={({ field }) => (
-                                <TextField {...field} label="Prep Time (min)" type="number" fullWidth InputLabelProps={{ shrink: true }} />
-                            )}
-                        />
-                        <Controller
-                            name="cookTimeMinutes"
-                            control={control}
-                            render={({ field }) => (
-                                <TextField {...field} label="Cook Time (min)" type="number" fullWidth InputLabelProps={{ shrink: true }} />
-                            )}
-                        />
-                    </Stack>
+                    )}
+                />
+                <Controller
+                    name="prepTimeMinutes"
+                    control={control}
+                    render={({ field }) => (
+                        <TextField {...field} label="Prep Time (min)" type="number" fullWidth InputLabelProps={{ shrink: true }} />
+                    )}
+                />
+                <Controller
+                    name="cookTimeMinutes"
+                    control={control}
+                    render={({ field }) => (
+                        <TextField {...field} label="Cook Time (min)" type="number" fullWidth InputLabelProps={{ shrink: true }} />
+                    )}
+                />
+            </Stack>
                     <Controller
                         name="tags"
                         control={control}
@@ -442,7 +460,7 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                     ))
                                 }
                                 renderInput={(params) => (
-                                    <TextField
+            <TextField
                                         {...params}
                                         variant="outlined"
                                         label="Tags"
@@ -451,59 +469,59 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                 )}
                             />
                         )}
-                    />
+            />
                     <FormControl fullWidth error={!!categoriesError || categoriesLoading}>
-                        <Controller
-                            name="categoryId"
-                            control={control}
-                            render={({ field }) => (
-                                <Autocomplete
+                <Controller
+                    name="categoryId"
+                    control={control}
+                    render={({ field }) => (
+                        <Autocomplete
                                     options={categories} 
-                                    getOptionLabel={(option) => option.name || ''}
-                                    value={categories.find(cat => cat.id === field.value) || null}
-                                    onChange={(event, newValue) => {
-                                        if (newValue && newValue.id === CREATE_NEW_CATEGORY_OPTION.id) {
+                            getOptionLabel={(option) => option.name || ''}
+                            value={categories.find(cat => cat.id === field.value) || null}
+                            onChange={(event, newValue) => {
+                                if (newValue && newValue.id === CREATE_NEW_CATEGORY_OPTION.id) {
                                             handleOpenModal('category', -2);
-                                        } else {
-                                            field.onChange(newValue ? newValue.id : '');
-                                        }
+                                } else {
+                                    field.onChange(newValue ? newValue.id : '');
+                                }
+                            }}
+                            isOptionEqualToValue={(option, value) => option.id === value?.id}
+                            renderOption={(props, option) => (
+                                <Box component="li" {...props} key={option.id}>
+                                    {option.id === CREATE_NEW_CATEGORY_OPTION.id ? 
+                                        <Typography color="primary">{option.name}</Typography> : 
+                                        option.name
+                                    }
+                                </Box>
+                            )}
+                            loading={categoriesLoading}
+                            disabled={categoriesLoading || !!categoriesError}
+                            renderInput={(params) => (
+                                <TextField 
+                                    {...params} 
+                                    label="Category (Optional)" 
+                                    error={!!categoriesError} 
+                                    helperText={categoriesError}
+                                    InputLabelProps={{ 
+                                        ...params.InputLabelProps,
+                                        shrink: true 
                                     }}
-                                    isOptionEqualToValue={(option, value) => option.id === value?.id}
-                                    renderOption={(props, option) => (
-                                        <Box component="li" {...props} key={option.id}>
-                                            {option.id === CREATE_NEW_CATEGORY_OPTION.id ? 
-                                                <Typography color="primary">{option.name}</Typography> : 
-                                                option.name
-                                            }
-                                        </Box>
-                                    )}
-                                    loading={categoriesLoading}
-                                    disabled={categoriesLoading || !!categoriesError}
-                                    renderInput={(params) => (
-                                        <TextField 
-                                            {...params} 
-                                            label="Category (Optional)" 
-                                            error={!!categoriesError} 
-                                            helperText={categoriesError}
-                                            InputLabelProps={{ 
-                                                ...params.InputLabelProps,
-                                                shrink: true 
-                                            }}
-                                            InputProps={{
-                                                ...params.InputProps,
-                                                endAdornment: (
-                                                    <>
-                                                        {categoriesLoading ? <CircularProgress color="inherit" size={20} /> : null}
-                                                        {params.InputProps.endAdornment}
-                                                    </>
-                                                ),
-                                            }}
-                                        />
-                                    )}
+                                    InputProps={{
+                                        ...params.InputProps,
+                                        endAdornment: (
+                                            <>
+                                                {categoriesLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                                                {params.InputProps.endAdornment}
+                                            </>
+                                        ),
+                                    }}
                                 />
                             )}
                         />
-                    </FormControl>
+                    )}
+                />
+            </FormControl>
                 </Stack>
             </Box>
 
@@ -652,7 +670,7 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                                 onChange={(e) => { 
                                                     const selectedValue = e.target.value;
                                                     if (selectedValue === CREATE_NEW_UNIT_OPTION.id) {
-                                                         handleOpenModal('unit', index);
+                                                        handleOpenModal('unit', index);
                                                     } else {
                                                         field.onChange(selectedValue);
                                                     }
@@ -678,7 +696,7 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                                 </FormControl>
                                 <Box sx={{ flexBasis: '10%', textAlign: 'center', pt: 0.5 }}>
                                     <IconButton 
-                                        onClick={() => remove(index)} 
+                                        onClick={() => handleRemoveIngredient(index)} 
                                         color="error" 
                                         disabled={fields.length <= 1} 
                                         sx={{ mt: 0.5 }}
@@ -720,7 +738,16 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
 
                 {/* Render Confirmation Dialog */}
                 <ConfirmationDialog
-                    // ... props
+                    open={confirmDialogOpen}
+                    onClose={() => setConfirmDialogOpen(false)}
+                    onConfirm={() => {
+                        if (confirmDialogProps?.onConfirm) {
+                            confirmDialogProps.onConfirm();
+                        }
+                        setConfirmDialogOpen(false);
+                    }}
+                    title={confirmDialogProps?.title || ''}
+                    contentText={confirmDialogProps?.contentText || ''}
                 />
             </Box>
             
