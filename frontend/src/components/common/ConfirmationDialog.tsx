@@ -19,7 +19,7 @@ interface ConfirmationDialogProps {
   isProcessing?: boolean;
 }
 
-const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
+export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
   open,
   onClose,
   onConfirm,
@@ -56,6 +56,4 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
       </DialogActions>
     </Dialog>
   );
-};
-
-export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({ ... }) => { ... }; 
+}; 
