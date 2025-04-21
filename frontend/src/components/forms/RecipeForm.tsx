@@ -112,6 +112,16 @@ const CREATE_NEW_CATEGORY_OPTION: Category = {
     updatedAt: ''
 };
 
+// Add CSS for ReactQuill
+const quillModules = {
+    toolbar: [
+        [{ 'header': [1, 2, 3, false] }],
+        ['bold', 'italic', 'underline'],
+        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+        ['clean']
+    ]
+};
+
 const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmitting }) => {
     const {
         handleSubmit,
@@ -723,7 +733,29 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                 <Divider sx={{ my: 2 }}/>
 
                 <Typography variant="h5" component="h3" gutterBottom>Instructions</Typography>
-                {/* Use dangerouslySetInnerHTML to render formatted instructions */}
+                
+                {/* Rich Text Editor */}
+                <Controller
+                    name="instructions"
+                    control={control}
+                    rules={{ required: "Instructions are required" }}
+                    render={({ field }) => (
+                        <Box sx={{ mb: 4 }}>
+                            <Box sx={{ '.ql-container': { minHeight: '200px' } }}>
+                                <ReactQuill
+                                    value={field.value || ''}
+                                    onChange={field.onChange}
+                                    theme="snow"
+                                    modules={quillModules}
+                                    placeholder="Enter recipe instructions..."
+                                />
+                            </Box>
+                        </Box>
+                    )}
+                />
+
+                <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>Preview</Typography>
+                {/* Preview section */}
                 {watch('instructions') && watch('instructions') !== '<p><br></p>' ? (
                     <Typography
                         variant="body1"
