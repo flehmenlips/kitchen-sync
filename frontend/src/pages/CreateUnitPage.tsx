@@ -42,7 +42,7 @@ const CreateUnitPage: React.FC = () => {
         if (error.response.status === 409) {
             message = error.response.data?.message || "An item with this name or abbreviation already exists.";
         } else {
-            message = error.response.data?.message || error.message;
+        message = error.response.data?.message || error.message;
         }
       } else if (error instanceof Error) {
         message = error.message;

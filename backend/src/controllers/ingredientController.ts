@@ -205,8 +205,8 @@ export const deleteIngredient = async (req: Request, res: Response): Promise<voi
 
         if (!existingIngredient) {
              res.status(404).json({ message: 'Ingredient not found or you do not have permission to delete it.' });
-             return;
-         }
+            return;
+        }
 
         await prisma.ingredient.delete({
             where: {

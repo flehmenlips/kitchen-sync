@@ -96,7 +96,7 @@ const EditRecipePage: React.FC = () => {
   };
 
   // We still need to call transformRecipeToFormData to prepare data for the form
-  const initialFormData = transformRecipeToFormData(recipe); 
+  const initialFormData = transformRecipeToFormData(recipe);
   console.log('Initial data passed to RecipeForm:', initialFormData);
 
   if (loading) {

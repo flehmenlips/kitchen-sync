@@ -213,8 +213,8 @@ export const deleteUnit = async (req: Request, res: Response): Promise<void> => 
 
         if (!existingUnit) {
              res.status(404).json({ message: 'Unit not found or you do not have permission to delete it.' });
-             return;
-         }
+            return;
+        }
 
         await prisma.unitOfMeasure.delete({
             where: {

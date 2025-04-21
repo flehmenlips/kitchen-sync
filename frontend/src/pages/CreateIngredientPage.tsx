@@ -32,7 +32,7 @@ const CreateIngredientPage: React.FC = () => {
     console.log('Submitting Ingredient API payload:', payload);
 
     try {
-      const newIngredient = await createIngredient(payload);
+      const newIngredient = await createIngredient(payload); 
       console.log('Ingredient created:', newIngredient);
       showSnackbar(`Ingredient "${newIngredient.name}" created successfully!`, 'success');
       navigate('/ingredients'); 
@@ -43,7 +43,7 @@ const CreateIngredientPage: React.FC = () => {
         if (error.response.status === 409) {
              message = error.response.data?.message || "An ingredient with this name already exists.";
          } else {
-            message = error.response.data?.message || error.message;
+        message = error.response.data?.message || error.message;
         }
       } else if (error instanceof Error) {
         message = error.message;

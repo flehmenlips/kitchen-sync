@@ -196,13 +196,41 @@ const RecipeDetail: React.FC = () => {
             {recipe.instructions && recipe.instructions !== '<p><br></p>' ? (
                 <Typography 
                     variant="body1" 
-                    sx={{ mb: 4 }} 
+                    sx={{ 
+                        mb: 4,
+                        '& ul, & ol': {
+                            paddingLeft: '40px',
+                            marginTop: '1em',
+                            marginBottom: '1em',
+                        },
+                        '& li': {
+                            display: 'list-item',
+                            textAlign: 'left',
+                            marginBottom: '0.5em',
+                        },
+                        '& p': {
+                            textAlign: 'inherit',
+                            marginBottom: '1em',
+                        },
+                        '& .ql-align-left': {
+                            textAlign: 'left',
+                        },
+                        '& .ql-align-center': {
+                            textAlign: 'center',
+                        },
+                        '& .ql-align-right': {
+                            textAlign: 'right',
+                        },
+                        '& .ql-align-justify': {
+                            textAlign: 'justify',
+                        },
+                    }} 
                     dangerouslySetInnerHTML={{ __html: recipe.instructions }}
                 />
             ) : (
                 <Typography variant="body1" sx={{ mb: 4, fontStyle: 'italic' }}>
                     No instructions provided.
-                </Typography>
+            </Typography>
             )}
 
             <ConfirmationDialog

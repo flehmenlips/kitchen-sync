@@ -129,6 +129,15 @@ export interface IngredientCategory {
     updatedAt: string;
 }
 
+// --- Dashboard Stats Types ---
+export interface DashboardStats {
+    recipes: number;
+    ingredients: number;
+    units: number;
+    recipeCategories: number;
+    ingredientCategories: number;
+}
+
 // --- User Types ---
 // For login/register forms
 export interface UserCredentials {
@@ -417,6 +426,17 @@ export const getIngredientCategoryById = async (id: number): Promise<IngredientC
     } catch (error) {
         console.error(`Error fetching ingredient category ${id}:`, error);
         throw error;
+    }
+};
+
+// == Dashboard ==
+export const getDashboardStats = async (): Promise<DashboardStats> => {
+    try {
+        const response = await apiClient.get('/dashboard/stats');
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching dashboard stats:', error);
+        throw error; // Re-throw for the component to handle
     }
 };
 

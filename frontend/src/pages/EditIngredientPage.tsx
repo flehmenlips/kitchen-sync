@@ -75,7 +75,7 @@ const EditIngredientPage: React.FC = () => {
         if (error.response.status === 409) {
              message = error.response.data?.message || "An ingredient with this name already exists.";
          } else {
-            message = error.response.data?.message || error.message;
+        message = error.response.data?.message || error.message;
         }
       } else if (error instanceof Error) {
         message = error.message;
