@@ -212,11 +212,73 @@ const RecipeImportPage: React.FC = () => {
         loadData();
     }, []);
 
+    // Helper function to normalize unit names
+    const normalizeUnit = (unit: string): string => {
+        const unitMap: { [key: string]: string } = {
+            'tbsp': 'tablespoon',
+            'tbs': 'tablespoon',
+            'tablespoons': 'tablespoon',
+            'tablespoon': 'tablespoon',
+            'tsp': 'teaspoon',
+            'teaspoons': 'teaspoon',
+            'teaspoon': 'teaspoon',
+            'oz': 'ounce',
+            'ounces': 'ounce',
+            'ounce': 'ounce',
+            'lb': 'pound',
+            'lbs': 'pound',
+            'pounds': 'pound',
+            'pound': 'pound',
+            'cup': 'cup',
+            'cups': 'cup',
+            'g': 'gram',
+            'grams': 'gram',
+            'gram': 'gram',
+            'kg': 'kilogram',
+            'kilograms': 'kilogram',
+            'kilogram': 'kilogram',
+            'ml': 'milliliter',
+            'milliliters': 'milliliter',
+            'milliliter': 'milliliter',
+            'l': 'liter',
+            'liters': 'liter',
+            'liter': 'liter',
+            'whole': 'piece',
+            'wholes': 'piece',
+            'piece': 'piece',
+            'pieces': 'piece',
+            'count': 'piece',
+            'counts': 'piece',
+            '#': 'pound'
+        };
+        return unitMap[unit.toLowerCase()] || unit.toLowerCase();
+    };
+
     // Helper function to find or create a unit
     const findOrCreateUnit = async (unitName: string): Promise<number> => {
         if (!unitName) {
             throw new Error('Unit name is required');
         }
+
+        // Map of common units to their types
+        const unitTypeMap: { [key: string]: 'WEIGHT' | 'VOLUME' | 'COUNT' | 'LENGTH' | 'TEMPERATURE' } = {
+            'tablespoon': 'VOLUME',
+            'teaspoon': 'VOLUME',
+            'cup': 'VOLUME',
+            'milliliter': 'VOLUME',
+            'liter': 'VOLUME',
+            'pound': 'WEIGHT',
+            'ounce': 'WEIGHT',
+            'gram': 'WEIGHT',
+            'kilogram': 'WEIGHT',
+            'piece': 'COUNT',
+            'whole': 'COUNT',
+            'count': 'COUNT',
+            'inch': 'LENGTH',
+            'centimeter': 'LENGTH',
+            'fahrenheit': 'TEMPERATURE',
+            'celsius': 'TEMPERATURE'
+        };
 
         // If the unit is "whole", try to find or create a default unit for countable items
         if (unitName.toLowerCase() === 'whole') {
@@ -249,11 +311,16 @@ const RecipeImportPage: React.FC = () => {
         );
         if (exactMatch) return exactMatch.id;
 
+        // Normalize the unit name for type lookup
+        const normalizedUnit = normalizeUnit(unitName);
+        const unitType = unitTypeMap[normalizedUnit] || 'COUNT'; // Default to COUNT if unknown
+
         // If no match, create a new unit
         try {
             const newUnit = await createUnit({
                 name: unitName,
-                abbreviation: unitName.length <= 5 ? unitName : null
+                abbreviation: unitName.length <= 5 ? unitName : null,
+                type: unitType
             });
             setUnits([...units, newUnit]);
             return newUnit.id;

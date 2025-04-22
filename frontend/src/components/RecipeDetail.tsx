@@ -1,246 +1,349 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link as RouterLink, useNavigate } from 'react-router-dom';
-import { getRecipeById, Recipe, deleteRecipe } from '../services/apiService';
-
-// Import MUI components
-import Container from '@mui/material/Container';
-import Typography from '@mui/material/Typography';
-import Box from '@mui/material/Box';
-import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
-import Chip from '@mui/material/Chip';
-import CircularProgress from '@mui/material/CircularProgress';
-import Alert from '@mui/material/Alert';
-import Divider from '@mui/material/Divider';
-import Link from '@mui/material/Link'; // MUI Link
-import Breadcrumbs from '@mui/material/Breadcrumbs';
-import Button from '@mui/material/Button';
-import Stack from '@mui/material/Stack';
+import { useParams, useNavigate } from 'react-router-dom';
+import {
+    Container,
+    Typography,
+    Box,
+    Paper,
+    CircularProgress,
+    Alert,
+    Breadcrumbs,
+    Link,
+    Button,
+    List,
+    ListItem,
+    ListItemText,
+    Divider,
+    IconButton,
+    Tooltip,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+} from '@mui/material';
+import { Link as RouterLink } from 'react-router-dom';
+import { getRecipeById, Recipe as ApiRecipe, RecipeIngredient, updateRecipe } from '../services/apiService';
 import EditIcon from '@mui/icons-material/Edit';
+import ScaleIcon from '@mui/icons-material/Scale';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { ConfirmationDialog } from './common/ConfirmationDialog'; // Use named import
+import SaveIcon from '@mui/icons-material/Save';
+import CloseIcon from '@mui/icons-material/Close';
+import { RecipeScaleDialog } from './RecipeScaleDialog';
+import { scaleRecipe } from '../utils/recipeScaling';
+
+type UnitType = 'WEIGHT' | 'VOLUME' | 'COUNT' | 'LENGTH' | 'TEMPERATURE';
+
+interface ScalingIngredient {
+    id: number;
+    name: string;
+    quantity: number;
+    unit: {
+        id: number;
+        name: string;
+        type: UnitType;
+    };
+}
+
+interface ScaledRecipeIngredient extends RecipeIngredient {
+    note?: string;
+}
+
+type DisplayedIngredient = {
+    id: number;
+    quantity: number;
+    unit: {
+        id: number;
+        name: string;
+        abbreviation: string;
+    };
+    ingredient?: {
+        id: number;
+        name: string;
+    };
+    note?: string;
+};
 
 const RecipeDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
-    const navigate = useNavigate(); // Hook for navigation
-    const [recipe, setRecipe] = useState<Recipe | null>(null);
-    const [loading, setLoading] = useState<boolean>(true);
+    const navigate = useNavigate();
+    const [recipe, setRecipe] = useState<ApiRecipe | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const [deleteError, setDeleteError] = useState<string | null>(null);
-    const [isDeleting, setIsDeleting] = useState<boolean>(false);
-    const [dialogOpen, setDialogOpen] = useState(false); // State for dialog
+    const [isLoading, setIsLoading] = useState(true);
+    const [isScaleDialogOpen, setIsScaleDialogOpen] = useState(false);
+    const [scaledIngredients, setScaledIngredients] = useState<DisplayedIngredient[] | null>(null);
+    const [scaleFactor, setScaleFactor] = useState<number>(1);
+    const [isSaveDialogOpen, setSaveDialogOpen] = useState(false);
 
     useEffect(() => {
-        const fetchRecipe = async () => {
-            if (!id) {
-                setError('No recipe ID provided');
-                setLoading(false);
-                return;
-            }
+        const loadRecipe = async () => {
             try {
-                setLoading(true);
-                const recipeId = parseInt(id, 10);
-                if (isNaN(recipeId)) {
-                    throw new Error('Invalid recipe ID format');
-                }
-                const data = await getRecipeById(recipeId);
+                if (!id) throw new Error('Recipe ID is required');
+                const data = await getRecipeById(parseInt(id, 10));
                 setRecipe(data);
-                setError(null);
-            } catch (err: any) {
-                console.error(err);
-                setError(err.message || 'Failed to fetch recipe details.');
+            } catch (err) {
+                setError(err instanceof Error ? err.message : 'Failed to load recipe');
             } finally {
-                setLoading(false);
+                setIsLoading(false);
             }
         };
 
-        fetchRecipe();
-    }, [id]); // Re-run effect if the ID changes
+        loadRecipe();
+    }, [id]);
 
-    const handleDeleteClick = () => {
-        setDeleteError(null); // Clear previous errors
-        setDialogOpen(true); // Open the dialog
+    const handleScale = (options: { type: 'multiply' | 'divide' | 'constraint'; value: number }) => {
+        if (!recipe?.recipeIngredients) return;
+
+        const ingredients: ScalingIngredient[] = recipe.recipeIngredients.map(ri => ({
+            id: ri.id,
+            name: ri.ingredient?.name || '',
+            quantity: ri.quantity,
+            unit: {
+                ...ri.unit,
+                type: 'VOLUME' as UnitType // Default to VOLUME if not specified
+            }
+        }));
+
+        const scaled = scaleRecipe(ingredients, options);
+
+        // Update the recipe ingredients with scaled values
+        setScaledIngredients(recipe.recipeIngredients.map((ri, index) => ({
+            ...ri,
+            quantity: scaled[index].quantity,
+            note: scaled[index].note
+        })) as DisplayedIngredient[]);
+
+        setScaleFactor(options.value);
     };
 
-    const handleCloseDialog = () => {
-        setDialogOpen(false);
-    };
-
-    const handleConfirmDelete = async () => {
-        if (!recipe) return;
-        // Actual delete logic moved here from handleDeleteClick
-        setIsDeleting(true);
-        setDeleteError(null);
+    const handleSaveScaledVersion = async () => {
+        if (!recipe || !scaledIngredients) return;
+        
         try {
-            await deleteRecipe(recipe.id);
-            console.log('Recipe deleted successfully');
-            navigate('/recipes'); 
-        } catch (err: any) {
-            console.error('Failed to delete recipe:', err);
-            setDeleteError(err.response?.data?.message || err.message || 'Failed to delete recipe.');
-            // Keep dialog open on error? Or close and show alert?
-            // For now, dialog closes automatically via onClose in onConfirm call
-        } finally {
-            setIsDeleting(false);
-            // No need to close dialog here, ConfirmationDialog handles it
+            // Create new recipe data with scaled quantities
+            const updatedRecipe = {
+                name: recipe.name,
+                description: recipe.description || '',
+                instructions: recipe.instructions,
+                yieldQuantity: (recipe.yieldQuantity || 1) * scaleFactor,
+                yieldUnitId: recipe.yieldUnit?.id || 1,
+                prepTimeMinutes: recipe.prepTimeMinutes || 0,
+                cookTimeMinutes: recipe.cookTimeMinutes || 0,
+                categoryId: recipe.categoryId || 1,
+                tags: recipe.tags,
+                ingredients: scaledIngredients.map(ing => ({
+                    type: 'ingredient' as const,
+                    ingredientId: ing.ingredient?.id,
+                    quantity: ing.quantity,
+                    unitId: ing.unit.id,
+                }))
+            };
+            
+            await updateRecipe(recipe.id, updatedRecipe);
+            // Reload the recipe to show updated values
+            const refreshedRecipe = await getRecipeById(recipe.id);
+            setRecipe(refreshedRecipe);
+            setScaledIngredients(null);
+            setScaleFactor(1);
+            setSaveDialogOpen(false);
+        } catch (err) {
+            setError('Failed to save scaled version');
         }
     };
 
-    if (loading) {
+    const resetScale = () => {
+        setScaledIngredients(null);
+        setScaleFactor(1);
+    };
+
+    if (isLoading) {
         return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+            <Container sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
                 <CircularProgress />
-            </Box>
+            </Container>
         );
     }
 
-    if (error) {
-        return <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>;
+    if (error || !recipe || !recipe.recipeIngredients) {
+        return (
+            <Container sx={{ mt: 4 }}>
+                <Alert severity="error">{error || 'Recipe not found'}</Alert>
+            </Container>
+        );
     }
 
-    if (!recipe) {
-        return <Alert severity="warning" sx={{ m: 2 }}>Recipe not found.</Alert>;
-    }
+    const displayedIngredients: DisplayedIngredient[] = scaledIngredients || 
+        recipe.recipeIngredients.map(ri => ({
+            id: ri.id,
+            quantity: ri.quantity,
+            unit: ri.unit,
+            ingredient: ri.ingredient,
+        }));
+    const scaledYield = (recipe.yieldQuantity || 1) * scaleFactor;
 
-    // Helper to format time
-    const formatTime = (minutes: number | null): string => {
-        if (minutes === null || minutes === undefined) return 'N/A';
-        if (minutes < 60) return `${minutes} min`;
-        const hours = Math.floor(minutes / 60);
-        const remainingMinutes = minutes % 60;
-        return `${hours} hr${hours > 1 ? 's' : ''}${remainingMinutes > 0 ? ` ${remainingMinutes} min` : ''}`;
-    };
+    const RecipeContent = ({ ingredients, yield: yieldQty, isScaled = false }: { 
+        ingredients: DisplayedIngredient[], 
+        yield: number,
+        isScaled?: boolean 
+    }) => (
+        <Paper sx={{ p: 3, mb: 3, height: '100%' }}>
+            {isScaled && (
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="subtitle1" color="primary">
+                        Scaled Version ({scaleFactor}x)
+                    </Typography>
+                    <Box>
+                        <Tooltip title="Save as New Base Recipe">
+                            <IconButton 
+                                onClick={() => setSaveDialogOpen(true)}
+                                color="primary"
+                                size="small"
+                            >
+                                <SaveIcon />
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Close Scaled Version">
+                            <IconButton 
+                                onClick={resetScale}
+                                size="small"
+                            >
+                                <CloseIcon />
+                            </IconButton>
+                        </Tooltip>
+                    </Box>
+                </Box>
+            )}
+
+            {recipe.description && (
+                <>
+                    <Typography variant="h6" gutterBottom>
+                        Description
+                    </Typography>
+                    <Typography variant="body1" paragraph>
+                        {recipe.description}
+                    </Typography>
+                </>
+            )}
+
+            <Typography variant="h6" gutterBottom>
+                Yield
+            </Typography>
+            <Typography variant="body1" paragraph>
+                {yieldQty} {recipe.yieldUnit?.name || 'servings'}
+            </Typography>
+
+            <Typography variant="h6" gutterBottom>
+                Ingredients
+            </Typography>
+            <List>
+                {ingredients.map((ing, idx) => (
+                    <React.Fragment key={ing.id}>
+                        {idx > 0 && <Divider />}
+                        <ListItem>
+                            <ListItemText
+                                primary={`${ing.quantity} ${ing.unit.name} ${ing.ingredient?.name || ''}`}
+                                secondary={ing.note}
+                            />
+                        </ListItem>
+                    </React.Fragment>
+                ))}
+            </List>
+
+            <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
+                Instructions
+            </Typography>
+            <div dangerouslySetInnerHTML={{ __html: recipe.instructions }} />
+        </Paper>
+    );
 
     return (
-        <Container maxWidth="md" sx={{ mt: 2 }}> {/* Main container */} 
-             <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
+        <Container maxWidth="xl" sx={{ mt: 2 }}>
+            {/* Breadcrumbs */}
+            <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
                 <Link component={RouterLink} underline="hover" color="inherit" to="/">
                     KitchenSync
                 </Link>
-                 <Link component={RouterLink} underline="hover" color="inherit" to="/recipes">
+                <Link component={RouterLink} underline="hover" color="inherit" to="/recipes">
                     Recipes
                 </Link>
                 <Typography color="text.primary">{recipe.name}</Typography>
             </Breadcrumbs>
 
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                <Typography variant="h4" component="h2" gutterBottom>{recipe.name}</Typography>
-                <Stack direction="row" spacing={1}>
-                    <Button 
-                        variant="outlined" 
-                        startIcon={<EditIcon />} 
-                        component={RouterLink}
-                        to={`/recipes/${recipe.id}/edit`}
-                        size="small"
-                    >
-                        Edit
-                    </Button>
-                    <Button 
-                        variant="outlined" 
-                        color="error" 
-                        startIcon={<DeleteIcon />} 
-                        onClick={handleDeleteClick}
-                        disabled={isDeleting || !recipe}
-                        size="small"
-                    >
-                        Delete
-                    </Button>
-                </Stack>
-            </Box>
-            {deleteError && <Alert severity="error" sx={{ mb: 2 }}>{deleteError}</Alert>}
-            
-            {recipe.description && <Typography variant="body1" sx={{ mb: 2 }}><em>{recipe.description}</em></Typography>}
-            
-            <Box sx={{ display: 'flex', gap: 3, mb: 2, flexWrap: 'wrap' }}>
-                <Typography variant="body2">
-                    <strong>Yield:</strong> {recipe.yieldQuantity || 'N/A'} {recipe.yieldUnit?.name || ''}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
+                <Typography variant="h4" component="h1">
+                    {recipe.name}
                 </Typography>
-                <Typography variant="body2">
-                    <strong>Prep Time:</strong> {formatTime(recipe.prepTimeMinutes)}
-                </Typography>
-                 <Typography variant="body2">
-                    <strong>Cook Time:</strong> {formatTime(recipe.cookTimeMinutes)}
-                </Typography>
-            </Box>
-            {recipe.tags && recipe.tags.length > 0 && (
-                <Box sx={{ mb: 2 }}>
-                    <strong>Tags:</strong> {recipe.tags.map(tag => <Chip key={tag} label={tag} size="small" sx={{ ml: 0.5 }} />)}
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Tooltip title="Scale Recipe">
+                        <IconButton 
+                            onClick={() => setIsScaleDialogOpen(true)} 
+                            color="primary"
+                            disabled={Boolean(scaledIngredients)}
+                        >
+                            <ScaleIcon />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Edit Recipe">
+                        <IconButton onClick={() => navigate(`/recipes/${recipe.id}/edit`)} color="primary">
+                            <EditIcon />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete Recipe">
+                        <IconButton color="error">
+                            <DeleteIcon />
+                        </IconButton>
+                    </Tooltip>
                 </Box>
-            )}
+            </Box>
 
-            <Divider sx={{ my: 2 }}/>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                <Box sx={{ flex: 1, minWidth: scaledIngredients ? '45%' : '100%' }}>
+                    <RecipeContent 
+                        ingredients={recipe.recipeIngredients} 
+                        yield={recipe.yieldQuantity || 1}
+                    />
+                </Box>
+                {scaledIngredients && (
+                    <Box sx={{ flex: 1, minWidth: '45%' }}>
+                        <RecipeContent 
+                            ingredients={scaledIngredients} 
+                            yield={scaledYield}
+                            isScaled
+                        />
+                    </Box>
+                )}
+            </Box>
 
-            <Typography variant="h5" component="h3" gutterBottom>Ingredients</Typography>
-            {recipe.recipeIngredients && recipe.recipeIngredients.length > 0 ? (
-                 <List dense> {/* Use dense list for ingredients */} 
-                    {recipe.recipeIngredients.map((item) => (
-                        <ListItem key={item.id} disableGutters>
-                             <Typography variant="body1">
-                                {item.quantity} {item.unit.abbreviation || item.unit.name}
-                                {item.ingredient ? ` ${item.ingredient.name}` : ''}
-                                {item.subRecipe ? 
-                                    <> {item.subRecipe.name} (<Link component={RouterLink} to={`/recipes/${item.subRecipe.id}`}>Sub-Recipe</Link>)
-                                    </> : ''}
-                             </Typography>
-                        </ListItem>
-                    ))}
-                </List>
-            ) : (
-                <Typography>No ingredients listed.</Typography>
-            )}
-
-             <Divider sx={{ my: 2 }}/>
-
-            <Typography variant="h5" component="h3" gutterBottom>Instructions</Typography>
-            {/* Use dangerouslySetInnerHTML to render formatted instructions */}
-            {recipe.instructions && recipe.instructions !== '<p><br></p>' ? (
-                <Typography 
-                    variant="body1" 
-                    sx={{ 
-                        mb: 4,
-                        '& ul, & ol': {
-                            paddingLeft: '40px',
-                            marginTop: '1em',
-                            marginBottom: '1em',
-                        },
-                        '& li': {
-                            display: 'list-item',
-                            textAlign: 'left',
-                            marginBottom: '0.5em',
-                        },
-                        '& p': {
-                            textAlign: 'inherit',
-                            marginBottom: '1em',
-                        },
-                        '& .ql-align-left': {
-                            textAlign: 'left',
-                        },
-                        '& .ql-align-center': {
-                            textAlign: 'center',
-                        },
-                        '& .ql-align-right': {
-                            textAlign: 'right',
-                        },
-                        '& .ql-align-justify': {
-                            textAlign: 'justify',
-                        },
-                    }} 
-                    dangerouslySetInnerHTML={{ __html: recipe.instructions }}
-                />
-            ) : (
-                <Typography variant="body1" sx={{ mb: 4, fontStyle: 'italic' }}>
-                    No instructions provided.
-            </Typography>
-            )}
-
-            <ConfirmationDialog
-                open={dialogOpen}
-                onClose={handleCloseDialog}
-                onConfirm={handleConfirmDelete}
-                title="Confirm Deletion"
-                contentText={`Are you sure you want to delete the recipe "${recipe?.name || ''}"? This action cannot be undone.`}
-                confirmText={isDeleting ? 'Deleting...' : 'Delete'}
+            <RecipeScaleDialog
+                open={isScaleDialogOpen}
+                onClose={() => setIsScaleDialogOpen(false)}
+                onScale={handleScale}
+                ingredients={recipe.recipeIngredients.map(ri => ({
+                    id: ri.id,
+                    name: ri.ingredient?.name || '',
+                    quantity: ri.quantity,
+                    unit: {
+                        ...ri.unit,
+                        type: 'VOLUME' as UnitType // Default to VOLUME if not specified
+                    }
+                }))}
             />
+
+            {/* Confirmation Dialog for Saving Scaled Version */}
+            <Dialog open={isSaveDialogOpen} onClose={() => setSaveDialogOpen(false)}>
+                <DialogTitle>Save Scaled Version?</DialogTitle>
+                <DialogContent>
+                    <Typography>
+                        Are you sure you want to replace your base recipe with the scaled version? 
+                        This action cannot be undone.
+                    </Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setSaveDialogOpen(false)}>Cancel</Button>
+                    <Button onClick={handleSaveScaledVersion} variant="contained" color="primary">
+                        Save as Base Recipe
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Container>
     );
 };

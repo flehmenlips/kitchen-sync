@@ -453,37 +453,164 @@ export const parseRecipe = async (req: Request, res: Response): Promise<void> =>
             return;
         }
 
-        // Split the text into sections
-        const sections = recipeText.split(/\n\s*\n/); // Split on empty lines
+        // Split the text into sections, handling multiple newlines
+        const sections = recipeText.split(/\n\s*\n+/); // Split on one or more empty lines
         let name = "";
         let description = "";
         let ingredients: { type: string; name: string; quantity: number; unit: string; raw: string }[] = [];
         let instructions = "";
+        let yieldQuantity = 1;
+        let yieldUnit = "serving";
+
+        // Helper function to normalize section headers
+        const normalizeSectionHeader = (text: string): string => {
+            return text.toLowerCase().replace(/[:\s-]+/g, '').trim();
+        };
+
+        // Helper function to parse quantities
+        const parseQuantity = (quantityStr: string): number => {
+            // Remove any trailing periods
+            quantityStr = quantityStr.replace(/\.$/, '');
+            
+            // Handle fractions
+            if (quantityStr.includes('/')) {
+                const [num, denom] = quantityStr.split('/');
+                return parseFloat(num) / parseFloat(denom);
+            }
+            // Handle ranges (take average)
+            if (quantityStr.includes('-')) {
+                const [min, max] = quantityStr.split('-').map(n => parseFloat(n));
+                return (min + max) / 2;
+            }
+            // Handle decimal numbers
+            return parseFloat(quantityStr) || 1;
+        };
+
+        // Helper function to normalize units
+        const normalizeUnit = (unit: string): string => {
+            // Remove any trailing periods
+            unit = unit.replace(/\.$/, '');
+            
+            const unitMap: { [key: string]: string } = {
+                'tbsp': 'tablespoon',
+                'tbs': 'tablespoon',
+                'tablespoons': 'tablespoon',
+                'tablespoon': 'tablespoon',
+                'tsp': 'teaspoon',
+                'teaspoons': 'teaspoon',
+                'teaspoon': 'teaspoon',
+                'oz': 'ounce',
+                'ounces': 'ounce',
+                'ounce': 'ounce',
+                'lb': 'pound',
+                'lbs': 'pound',
+                'pounds': 'pound',
+                'pound': 'pound',
+                'cup': 'cup',
+                'cups': 'cup',
+                'g': 'gram',
+                'grams': 'gram',
+                'gram': 'gram',
+                'kg': 'kilogram',
+                'kilograms': 'kilogram',
+                'kilogram': 'kilogram',
+                'ml': 'milliliter',
+                'milliliters': 'milliliter',
+                'milliliter': 'milliliter',
+                'l': 'liter',
+                'liters': 'liter',
+                'liter': 'liter',
+                'whole': 'piece',
+                'wholes': 'piece',
+                'piece': 'piece',
+                'pieces': 'piece',
+                'count': 'piece',
+                'counts': 'piece',
+                '#': 'pound', // Handle # symbol for pounds
+                'serving': 'serving',
+                'servings': 'serving',
+                'portion': 'serving',
+                'portions': 'serving',
+                'batch': 'batch',
+                'batches': 'batch'
+            };
+            return unitMap[unit.toLowerCase()] || unit.toLowerCase();
+        };
+
+        // Helper function to detect if a line is likely an ingredient
+        const isLikelyIngredient = (line: string): boolean => {
+            // Check for common ingredient patterns
+            const patterns = [
+                /^\d+\.?\d*\s*[a-zA-Z]+/, // Starts with number and unit
+                /^\d+\.?\d*\s*#/, // Starts with number and #
+                /^[a-zA-Z]+\s*$/, // Just a word (like "salt")
+                /^[a-zA-Z]+\s+to\s+taste/, // "salt to taste"
+                /^[a-zA-Z]+\s+as\s+needed/ // "water as needed"
+            ];
+            return patterns.some(pattern => pattern.test(line.trim()));
+        };
+
+        // Helper function to detect if a line is likely an instruction
+        const isLikelyInstruction = (line: string): boolean => {
+            // Check for common instruction patterns
+            const patterns = [
+                /^\d+\./, // Starts with number and period
+                /^[A-Z]/, // Starts with capital letter
+                /^(mix|combine|add|stir|heat|cook|bake|preheat|place|put|remove|serve)/i, // Common instruction verbs
+                /^(until|while|when|if|then|and|or)/i // Common instruction conjunctions
+            ];
+            return patterns.some(pattern => pattern.test(line.trim()));
+        };
+
+        // Helper function to parse yield information from title
+        const parseYieldFromTitle = (title: string): { name: string; yieldQuantity: number; yieldUnit: string } => {
+            const yieldPattern = /yields?\s+(?:approximately\s+)?(\d+)\s*([a-zA-Z#]+)/i;
+            const match = title.match(yieldPattern);
+            
+            if (match) {
+                const [_, quantity, unit] = match;
+                // Extract the recipe name by removing the yield information
+                const name = title.replace(/\s*--\s*yields?\s+(?:approximately\s+)?\d+\s*[a-zA-Z#]+/i, '').trim();
+                return {
+                    name,
+                    yieldQuantity: parseQuantity(quantity),
+                    yieldUnit: normalizeUnit(unit)
+                };
+            }
+            
+            return {
+                name: title,
+                yieldQuantity: 1,
+                yieldUnit: "serving"
+            };
+        };
 
         // Process each section
         sections.forEach((section: string) => {
             const trimmedSection = section.trim();
             if (!trimmedSection) return;
 
-            // Check if this is the ingredients section
-            if (trimmedSection.toLowerCase().includes('ingredients:')) {
-                const lines = trimmedSection
-                    .split('\n')
-                    .slice(1) // Skip the "Ingredients:" line
-                    .filter((line: string) => line.trim()); // Remove empty lines
+            const normalizedSection = normalizeSectionHeader(trimmedSection);
+            const lines = trimmedSection.split('\n').filter(line => line.trim());
 
-                ingredients = lines.map((line: string) => {
+            // Check if this is the ingredients section
+            if (normalizedSection.includes('ingredients') || lines.some(isLikelyIngredient)) {
+                const ingredientLines = normalizedSection.includes('ingredients') 
+                    ? lines.slice(1) // Skip the header if it exists
+                    : lines; // Use all lines if no header
+
+                const newIngredients = ingredientLines.map((line: string) => {
                     const raw = line.trim();
                     
                     // Try different patterns for ingredient parsing
                     
-                    // Pattern 1: quantity unit ingredient (e.g., "2 cups flour")
-                    const standardPattern = /^([\d./]+)\s*([a-zA-Z]+)\s+(.+)$/;
+                    // Pattern 1: quantity unit ingredient (e.g., "2 cups flour", "1½ cups sugar", "4 lb. pork")
+                    const standardPattern = /^([\d./½⅓⅔¼¾-]+)\s*([a-zA-Z#.]+)\s+(.+)$/;
                     
-                    // Pattern 2: quantity ingredient (e.g., "2 eggs")
-                    const noUnitPattern = /^([\d./]+)\s+(.+)$/;
+                    // Pattern 2: quantity ingredient (e.g., "2 eggs", "1½ lemons")
+                    const noUnitPattern = /^([\d./½⅓⅔¼¾-]+)\s+(.+)$/;
                     
-                    // Pattern 3: just ingredient (e.g., "salt to taste")
+                    // Pattern 3: just ingredient (e.g., "salt to taste", "water as needed")
                     const noQuantityPattern = /^(.+)$/;
 
                     let match;
@@ -495,8 +622,8 @@ export const parseRecipe = async (req: Request, res: Response): Promise<void> =>
                         return {
                             type: "ingredient",
                             name: name.trim(),
-                            quantity: eval(quantity) || 1,
-                            unit: unit.trim().toLowerCase(),
+                            quantity: parseQuantity(quantity),
+                            unit: normalizeUnit(unit),
                             raw
                         };
                     }
@@ -508,8 +635,8 @@ export const parseRecipe = async (req: Request, res: Response): Promise<void> =>
                         return {
                             type: "ingredient",
                             name: name.trim(),
-                            quantity: eval(quantity) || 1,
-                            unit: "whole", // Default unit for countable items
+                            quantity: parseQuantity(quantity),
+                            unit: "piece", // Default unit for countable items
                             raw
                         };
                     }
@@ -521,7 +648,7 @@ export const parseRecipe = async (req: Request, res: Response): Promise<void> =>
                             type: "ingredient",
                             name: match[1].trim(),
                             quantity: 1,
-                            unit: "whole",
+                            unit: "piece",
                             raw
                         };
                     }
@@ -531,32 +658,44 @@ export const parseRecipe = async (req: Request, res: Response): Promise<void> =>
                         type: "ingredient",
                         name: raw,
                         quantity: 1,
-                        unit: "whole",
+                        unit: "piece",
                         raw
                     };
                 });
+
+                // Append new ingredients to existing ones
+                ingredients = [...ingredients, ...newIngredients];
             }
             // Check if this is the instructions section
-            else if (trimmedSection.toLowerCase().includes('instructions:')) {
-                instructions = trimmedSection
-                    .split('\n')
-                    .slice(1) // Skip the "Instructions:" line
-                    .filter((line: string) => line.trim()) // Remove empty lines
+            else if (normalizedSection.includes('instructions') || lines.some(isLikelyInstruction)) {
+                const instructionLines = normalizedSection.includes('instructions') 
+                    ? lines.slice(1) // Skip header if it exists
+                    : lines; // Use all lines if no header
+
+                // If we already have instructions, append with a newline
+                if (instructions) {
+                    instructions += '\n\n';
+                }
+                instructions += instructionLines
+                    .filter((line: string) => line.trim())
                     .map((line: string) => line.trim())
                     .join('\n');
             }
             // Check if this is the description section
-            else if (trimmedSection.toLowerCase().includes('description:')) {
-                description = trimmedSection
-                    .split('\n')
-                    .slice(1) // Skip the "Description:" line
+            else if (normalizedSection.includes('description')) {
+                description = lines
+                    .slice(1) // Skip the header
                     .filter((line: string) => line.trim())
                     .join('\n')
                     .trim();
             }
             // If it's the first section and doesn't match other patterns, it's probably the name
             else if (!name) {
-                name = trimmedSection;
+                // Parse yield information from the title
+                const { name: parsedName, yieldQuantity: parsedYieldQuantity, yieldUnit: parsedYieldUnit } = parseYieldFromTitle(trimmedSection);
+                name = parsedName;
+                yieldQuantity = parsedYieldQuantity;
+                yieldUnit = parsedYieldUnit;
             }
         });
 
@@ -576,7 +715,9 @@ export const parseRecipe = async (req: Request, res: Response): Promise<void> =>
             name,
             description,
             instructions: formattedInstructions ? `<ol>${formattedInstructions}</ol>` : "",
-            ingredients
+            ingredients,
+            yieldQuantity,
+            yieldUnit
         };
 
         res.status(200).json(parsedRecipe);
