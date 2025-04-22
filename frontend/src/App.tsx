@@ -17,6 +17,7 @@ import ProtectedRoute from './components/common/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
+import ProfilePage from './pages/ProfilePage';
 
 // Recipe Components
 import RecipeList from './components/RecipeList';
@@ -38,6 +39,11 @@ import EditIngredientPage from './pages/EditIngredientPage';
 import UnitListPage from './pages/UnitListPage';
 import CreateUnitPage from './pages/CreateUnitPage';
 import EditUnitPage from './pages/EditUnitPage';
+
+// Issue Tracker Components
+import IssueListPage from './pages/IssueListPage';
+import IssueDetailPage from './pages/IssueDetailPage';
+import IssueFormPage from './pages/IssueFormPage';
 
 const App: React.FC = () => {
   return (
@@ -76,6 +82,15 @@ const App: React.FC = () => {
                 <Route path="units" element={<UnitListPage />} />
                 <Route path="units/new" element={<CreateUnitPage />} />
                 <Route path="units/:id/edit" element={<EditUnitPage />} />
+
+                {/* Issue Tracker Routes */}
+                <Route path="issues" element={<IssueListPage />} />
+                <Route path="issues/new" element={<IssueFormPage />} />
+                <Route path="issues/:id" element={<IssueDetailPage />} />
+                <Route path="issues/:id/edit" element={<IssueFormPage />} />
+
+                {/* Profile Route */}
+                <Route path="profile" element={<ProfilePage />} />
 
                 {/* Redirect any unknown routes to dashboard */}
                 <Route path="*" element={<Navigate to="/" replace />} />

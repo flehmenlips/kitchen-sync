@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Link as RouterLink } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useParams, Link as RouterLink, useNavigate } from 'react-router-dom';
 import {
     Container,
     Typography,
@@ -78,72 +78,21 @@ interface Comment {
     };
 }
 
+import { useIssue, useUpdateIssue, useDeleteIssue } from '../hooks/useIssues';
+import { useComments, useCreateComment } from '../hooks/useComments';
+
 const IssueDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
-    const [issue, setIssue] = useState<Issue | null>(null);
-    const [comments, setComments] = useState<Comment[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const navigate = useNavigate();
+    const { data: issue, isLoading: issueLoading, error: issueError } = useIssue(id!);
+    const { data: comments = [], isLoading: commentsLoading } = useComments(id!);
+    const { mutate: updateIssue } = useUpdateIssue(id!);
+    const { mutate: deleteIssue } = useDeleteIssue();
+    const { mutate: createComment } = useCreateComment(id!);
+    
     const [newComment, setNewComment] = useState('');
     const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
     const [statusAnchorEl, setStatusAnchorEl] = useState<null | HTMLElement>(null);
-
-    useEffect(() => {
-        // TODO: Replace with actual API call
-        const mockIssue: Issue = {
-            id: 1,
-            title: "Implement Database Backup System",
-            description: "Create an automated backup system with verification and restore capabilities. This should include:\n\n- Daily automated backups\n- Backup verification\n- Easy restore process\n- Backup rotation policy",
-            type: "FEATURE",
-            status: "OPEN",
-            priority: "HIGH",
-            isPublic: false,
-            createdBy: {
-                id: 1,
-                name: "George Page",
-                email: "george@seabreeze.farm"
-            },
-            labels: [
-                {
-                    label: {
-                        id: 1,
-                        name: "feature",
-                        color: "#0052CC"
-                    }
-                },
-                {
-                    label: {
-                        id: 5,
-                        name: "security",
-                        color: "#FF4500"
-                    }
-                }
-            ],
-            _count: {
-                comments: 2
-            },
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
-
-        const mockComments: Comment[] = [
-            {
-                id: 1,
-                content: "I can help with implementing the backup verification system.",
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-                user: {
-                    id: 2,
-                    name: "Jane Smith",
-                    email: "jane@example.com"
-                }
-            }
-        ];
-
-        setIssue(mockIssue);
-        setComments(mockComments);
-        setLoading(false);
-    }, [id]);
 
     const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
         setMenuAnchorEl(event.currentTarget);
@@ -153,10 +102,9 @@ const IssueDetailPage: React.FC = () => {
         setMenuAnchorEl(null);
     };
 
-    const handleStatusChange = (newStatus: string) => {
+    const handleStatusChange = (newStatus: Issue['status']) => {
         if (issue) {
-            // TODO: API call to update status
-            setIssue({ ...issue, status: newStatus as Issue['status'] });
+            updateIssue({ status: newStatus });
         }
         setStatusAnchorEl(null);
     };
@@ -165,25 +113,23 @@ const IssueDetailPage: React.FC = () => {
         e.preventDefault();
         if (!newComment.trim()) return;
 
-        // TODO: API call to create comment
-        const newCommentObj: Comment = {
-            id: comments.length + 1,
-            content: newComment,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            user: {
-                id: 1,
-                name: "George Page",
-                email: "george@seabreeze.farm"
-            }
-        };
-
-        setComments([...comments, newCommentObj]);
+        createComment(newComment);
         setNewComment('');
     };
 
-    if (loading) return <Typography>Loading...</Typography>;
-    if (error) return <Typography color="error">{error}</Typography>;
+    const handleDelete = () => {
+        if (window.confirm('Are you sure you want to delete this issue?')) {
+            deleteIssue(id!, {
+                onSuccess: () => {
+                    navigate('/issues');
+                }
+            });
+        }
+        handleMenuClose();
+    };
+
+    if (issueLoading || commentsLoading) return <Typography>Loading...</Typography>;
+    if (issueError) return <Typography color="error">Error loading issue</Typography>;
     if (!issue) return <Typography>Issue not found</Typography>;
 
     return (
@@ -252,7 +198,7 @@ const IssueDetailPage: React.FC = () => {
                     {['OPEN', 'IN_PROGRESS', 'REVIEW', 'DONE', 'CLOSED'].map((status) => (
                         <MenuItem
                             key={status}
-                            onClick={() => handleStatusChange(status)}
+                            onClick={() => handleStatusChange(status as Issue['status'])}
                             selected={issue.status === status}
                         >
                             {status.replace('_', ' ')}
@@ -268,7 +214,7 @@ const IssueDetailPage: React.FC = () => {
                     <MenuItem component={RouterLink} to={`/issues/${issue.id}/edit`}>
                         <EditIcon sx={{ mr: 1 }} /> Edit
                     </MenuItem>
-                    <MenuItem onClick={handleMenuClose} sx={{ color: 'error.main' }}>
+                    <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
                         <DeleteIcon sx={{ mr: 1 }} /> Delete
                     </MenuItem>
                 </Menu>

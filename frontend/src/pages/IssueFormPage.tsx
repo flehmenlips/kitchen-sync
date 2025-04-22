@@ -19,6 +19,8 @@ import {
     Autocomplete,
 } from '@mui/material';
 
+import { useIssue, useCreateIssue, useUpdateIssue } from '../hooks/useIssues';
+
 interface Label {
     id: number;
     name: string;
@@ -56,9 +58,12 @@ const IssueFormPage: React.FC = () => {
     const navigate = useNavigate();
     const isEditMode = Boolean(id);
 
+    const { data: issue, isLoading: issueLoading } = useIssue(id!);
+    const { mutate: createIssue, isLoading: isCreating } = useCreateIssue();
+    const { mutate: updateIssue, isLoading: isUpdating } = useUpdateIssue(id!);
+
     const [formData, setFormData] = useState<IssueFormData>(INITIAL_FORM_DATA);
     const [errors, setErrors] = useState<Partial<Record<keyof IssueFormData, string>>>({});
-    const [loading, setLoading] = useState(false);
     const [labels, setLabels] = useState<Label[]>([]);
     const [users, setUsers] = useState<User[]>([]);
 
@@ -80,20 +85,21 @@ const IssueFormPage: React.FC = () => {
 
         setLabels(mockLabels);
         setUsers(mockUsers);
+    }, []);
 
-        if (isEditMode) {
-            // TODO: Replace with actual API call to fetch issue
+    useEffect(() => {
+        if (isEditMode && issue) {
             setFormData({
-                title: 'Implement Database Backup System',
-                description: 'Create an automated backup system with verification and restore capabilities.',
-                type: 'FEATURE',
-                priority: 'HIGH',
-                assignedToId: 2,
-                labelIds: [1, 5],
-                isPublic: true,
+                title: issue.title,
+                description: issue.description,
+                type: issue.type,
+                priority: issue.priority,
+                assignedToId: issue.assignedTo?.id,
+                labelIds: issue.labels.map(l => l.label.id),
+                isPublic: issue.isPublic,
             });
         }
-    }, [id, isEditMode]);
+    }, [isEditMode, issue]);
 
     const validateForm = (): boolean => {
         const newErrors: Partial<Record<keyof IssueFormData, string>> = {};
@@ -117,17 +123,14 @@ const IssueFormPage: React.FC = () => {
             return;
         }
 
-        setLoading(true);
-
-        try {
-            // TODO: Replace with actual API call
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            navigate('/issues');
-        } catch (error) {
-            console.error('Error saving issue:', error);
-            // Handle error appropriately
-        } finally {
-            setLoading(false);
+        if (isEditMode) {
+            updateIssue(formData, {
+                onSuccess: () => navigate('/issues')
+            });
+        } else {
+            createIssue(formData, {
+                onSuccess: () => navigate('/issues')
+            });
         }
     };
 
@@ -147,6 +150,10 @@ const IssueFormPage: React.FC = () => {
             }));
         }
     };
+
+    if (isEditMode && issueLoading) {
+        return <Typography>Loading...</Typography>;
+    }
 
     return (
         <Container maxWidth="lg" sx={{ mt: 2 }}>
@@ -267,9 +274,9 @@ const IssueFormPage: React.FC = () => {
                             <Button
                                 type="submit"
                                 variant="contained"
-                                disabled={loading}
+                                disabled={isCreating || isUpdating}
                             >
-                                {loading ? 'Saving...' : (isEditMode ? 'Update Issue' : 'Create Issue')}
+                                {isCreating || isUpdating ? 'Saving...' : (isEditMode ? 'Update Issue' : 'Create Issue')}
                             </Button>
                         </Box>
                     </Stack>

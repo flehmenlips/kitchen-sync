@@ -44,6 +44,7 @@ import BlenderIcon from '@mui/icons-material/Blender';
 import ScaleIcon from '@mui/icons-material/Scale';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import Logout from '@mui/icons-material/Logout';
+import PersonIcon from '@mui/icons-material/Person';
 
 // Constants
 const DRAWER_WIDTH = 280;
@@ -280,7 +281,16 @@ const MainLayout: React.FC = () => {
                                 <MenuItem disabled sx={{ fontStyle: 'italic' }}>
                                     {user.email}
                                 </MenuItem>
+                                <MenuItem disabled sx={{ color: 'text.secondary' }}>
+                                    Role: {user.role.charAt(0) + user.role.slice(1).toLowerCase()}
+                                </MenuItem>
                                 <Divider />
+                                <MenuItem component={RouterLink} to="/profile">
+                                    <ListItemIcon>
+                                        <PersonIcon fontSize="small" />
+                                    </ListItemIcon>
+                                    Profile Settings
+                                </MenuItem>
                                 <MenuItem onClick={handleLogout}>
                                     <ListItemIcon>
                                         <Logout fontSize="small" />

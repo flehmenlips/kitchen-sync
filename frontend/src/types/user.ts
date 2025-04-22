@@ -3,8 +3,13 @@ export interface UserProfile {
     name: string | null;
     email: string;
     role: 'USER' | 'ADMIN' | 'SUPERADMIN';
-    createdAt?: string;
-    updatedAt?: string;
+    company?: string;
+    position?: string;
+    phone?: string;
+    address?: string;
+    bio?: string;
+    createdAt: string;
+    updatedAt: string;
 }
 
 export interface UserCredentials {

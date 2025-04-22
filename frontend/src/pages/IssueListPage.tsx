@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import {
     Container,
@@ -35,6 +35,8 @@ import LowPriorityIcon from '@mui/icons-material/LowPriority';
 import PriorityHighIcon from '@mui/icons-material/PriorityHigh';
 import ErrorIcon from '@mui/icons-material/Error';
 
+import { useIssues } from '../hooks/useIssues';
+
 // Types
 interface Issue {
     id: number;
@@ -69,10 +71,7 @@ interface Issue {
 }
 
 const IssueListPage: React.FC = () => {
-    // State
-    const [issues, setIssues] = useState<Issue[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const { data: issues = [], isLoading, error } = useIssues();
     const [searchTerm, setSearchTerm] = useState('');
     const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(null);
     const [filters, setFilters] = useState({
@@ -81,52 +80,6 @@ const IssueListPage: React.FC = () => {
         priority: 'all',
         assignedTo: 'all'
     });
-
-    // Mock data for testing - replace with actual API call
-    useEffect(() => {
-        // TODO: Replace with actual API call
-        const mockIssues: Issue[] = [
-            {
-                id: 1,
-                title: "Implement Database Backup System",
-                description: "Create automated backup system with verification",
-                type: "FEATURE",
-                status: "OPEN",
-                priority: "HIGH",
-                isPublic: false,
-                createdBy: {
-                    id: 1,
-                    name: "George Page",
-                    email: "george@seabreeze.farm"
-                },
-                labels: [
-                    {
-                        label: {
-                            id: 1,
-                            name: "feature",
-                            color: "#0052CC"
-                        }
-                    },
-                    {
-                        label: {
-                            id: 5,
-                            name: "security",
-                            color: "#FF4500"
-                        }
-                    }
-                ],
-                _count: {
-                    comments: 2
-                },
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
-            }
-            // Add more mock issues as needed
-        ];
-
-        setIssues(mockIssues);
-        setLoading(false);
-    }, []);
 
     // Handlers
     const handleFilterClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -165,6 +118,9 @@ const IssueListPage: React.FC = () => {
                 return <ErrorIcon color="error" />;
         }
     };
+
+    if (isLoading) return <Typography>Loading...</Typography>;
+    if (error) return <Typography color="error">Error loading issues</Typography>;
 
     // Filter and search issues
     const filteredIssues = issues.filter(issue => {
