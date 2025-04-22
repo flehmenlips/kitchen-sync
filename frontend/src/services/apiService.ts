@@ -139,6 +139,49 @@ export interface DashboardStats {
     ingredientCategories: number;
 }
 
+// Issue Types
+export interface Issue {
+    id: number;
+    title: string;
+    description: string;
+    type: 'FEATURE' | 'BUG' | 'ENHANCEMENT';
+    status: 'OPEN' | 'IN_PROGRESS' | 'REVIEW' | 'DONE' | 'CLOSED';
+    priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+    isPublic: boolean;
+    createdBy: {
+        id: number;
+        name: string;
+        email: string;
+    };
+    assignedTo?: {
+        id: number;
+        name: string;
+        email: string;
+    };
+    labels: {
+        label: {
+            id: number;
+            name: string;
+            color: string;
+        };
+    }[];
+    _count: {
+        comments: number;
+    };
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface CreateIssueData {
+    title: string;
+    description: string;
+    type: Issue['type'];
+    priority: Issue['priority'];
+    isPublic: boolean;
+    assignedToId?: number;
+    labelIds?: number[];
+}
+
 // API functions
 export const getRecipes = async (): Promise<Recipe[]> => {
   try {
@@ -467,6 +510,56 @@ export const getProfile = async (): Promise<UserProfile> => {
         // Don't throw for profile fetch, just return null or handle differently?
         // Depending on how we use this, throwing might be okay.
         throw error; 
+    }
+};
+
+// Issue API functions
+export const getIssues = async (): Promise<Issue[]> => {
+    try {
+        const response = await apiClient.get('/issues');
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching issues:', error);
+        throw error;
+    }
+};
+
+export const getIssueById = async (id: number): Promise<Issue> => {
+    try {
+        const response = await apiClient.get(`/issues/${id}`);
+        return response.data;
+    } catch (error) {
+        console.error(`Error fetching issue ${id}:`, error);
+        throw error;
+    }
+};
+
+export const createIssue = async (issueData: CreateIssueData): Promise<Issue> => {
+    try {
+        const response = await apiClient.post('/issues', issueData);
+        return response.data;
+    } catch (error) {
+        console.error('Error creating issue:', error);
+        throw error;
+    }
+};
+
+export const updateIssue = async (id: number, issueData: Partial<CreateIssueData>): Promise<Issue> => {
+    try {
+        const response = await apiClient.put(`/issues/${id}`, issueData);
+        return response.data;
+    } catch (error) {
+        console.error(`Error updating issue ${id}:`, error);
+        throw error;
+    }
+};
+
+export const deleteIssue = async (id: number): Promise<void> => {
+    try {
+        await apiClient.delete(`/issues/${id}`);
+    } catch (error) {
+        console.error(`Error deleting issue ${id}:`, error);
+        throw error;
     }
 };
 
