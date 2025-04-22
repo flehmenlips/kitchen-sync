@@ -208,23 +208,23 @@ const MainLayout: React.FC = () => {
                     </React.Fragment>
                 ))}
 
+                <Divider sx={{ my: 1 }} />
+                <ListItem disablePadding>
+                    <ListItemButton component={RouterLink} to="/issues">
+                        <ListItemIcon>
+                            <Badge color="error" variant="dot">
+                                <BugReportIcon />
+                            </Badge>
+                        </ListItemIcon>
+                        <ListItemText primary="Issue Tracker" />
+                    </ListItemButton>
+                </ListItem>
+
                 {/* Admin Tools - Only visible to SuperAdmin */}
                 {user?.role === 'SUPERADMIN' && (
                     <>
                         <Divider sx={{ my: 1 }} />
-                        <ListItem disablePadding>
-                            <ListItemButton component={RouterLink} to="/issues">
-                                <ListItemIcon>
-                                    <Badge color="error" variant="dot">
-                                        <BugReportIcon />
-                                    </Badge>
-                                </ListItemIcon>
-                                <ListItemText 
-                                    primary="Issue Tracker" 
-                                    secondary="Admin Only"
-                                />
-                            </ListItemButton>
-                        </ListItem>
+                        {/* Add any other admin-only tools here */}
                     </>
                 )}
             </List>
