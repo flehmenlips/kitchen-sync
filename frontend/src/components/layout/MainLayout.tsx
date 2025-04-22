@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useLocation, Link as RouterLink } from 'react-router-dom';
+import { useLocation, Link as RouterLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { UserProfile } from '../../types/user';
 
@@ -97,7 +97,7 @@ const KITCHEN_SYNC_MODULES = [
     }
 ];
 
-const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const MainLayout: React.FC = () => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const { user, logout } = useAuth();
@@ -343,7 +343,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                     minHeight: '100vh'
                 }}
             >
-                {children}
+                <Outlet />
             </Box>
         </Box>
     );

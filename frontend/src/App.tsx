@@ -3,7 +3,7 @@ import {
   BrowserRouter as Router,
   Routes,
   Route,
-  // Navigate, // Might not need Navigate at root anymore
+  Navigate,
   Link as RouterLink
 } from 'react-router-dom';
 import './App.css';
@@ -30,46 +30,61 @@ import LoginPage from './pages/LoginPage'; // Import Login page
 import RegisterPage from './pages/RegisterPage'; // Import Register page
 import ProtectedRoute from './components/common/ProtectedRoute'; // Import ProtectedRoute
 import DashboardPage from './pages/DashboardPage'; // <-- Import new DashboardPage
+import RecipeListPage from './pages/RecipeListPage';
+import RecipeDetailPage from './pages/RecipeDetailPage';
+import { AuthProvider } from './context/AuthContext';
+import { SnackbarProvider } from './context/SnackbarContext';
 
 // Remove Placeholder Dashboard Component
 // const Dashboard = () => <Typography variant="h5">Dashboard Content Placeholder</Typography>;
 
-function App() {
+const App: React.FC = () => {
   return (
     <Router>
-       <Routes>
-          {/* Routes requiring Main Layout AND Authentication */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/" element={<MainLayout />}>
-              <Route index element={<DashboardPage />} /> 
-              <Route path="recipes" element={<RecipeList />} />
-              <Route path="recipes/new" element={<CreateRecipePage />} /> 
-              <Route path="recipes/:id/edit" element={<EditRecipePage />} /> 
-              <Route path="recipes/:id" element={<RecipeDetail />} />
-              <Route path="units" element={<UnitListPage />} />
-              <Route path="units/new" element={<CreateUnitPage />} />
-              <Route path="units/:id/edit" element={<EditUnitPage />} />
-              <Route path="ingredients" element={<IngredientListPage />} />
-              <Route path="ingredients/new" element={<CreateIngredientPage />} />
-              <Route path="ingredients/:id/edit" element={<EditIngredientPage />} />
-              <Route path="categories" element={<CategoryListPage />} />
-              <Route path="categories/new" element={<CreateCategoryPage />} />
-              <Route path="categories/:id/edit" element={<EditCategoryPage />} />
-              <Route path="ingredient-categories" element={<IngredientCategoryListPage />} />
-              <Route path="ingredient-categories/new" element={<CreateIngredientCategoryPage />} />
-              <Route path="ingredient-categories/:id/edit" element={<EditIngredientCategoryPage />} />
-              {/* Add other protected routes here */}
-              <Route path="*" element={<div>404 Page Not Found</div>} /> 
-            </Route>{/* End of routes within MainLayout */}
-          </Route> {/* End of protected routes */}
+      <AuthProvider>
+        <SnackbarProvider>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
 
-          {/* Standalone routes (no layout, public) */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
+            {/* Protected routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route element={<MainLayout children={undefined} />}>
+                {/* Dashboard */}
+                <Route index element={<DashboardPage />} />
 
-        </Routes>
+                {/* CookBook Module Routes */}
+                {/* Recipes */}
+                <Route path="recipes" element={<RecipeListPage />} />
+                <Route path="recipes/new" element={<CreateRecipePage />} />
+                <Route path="recipes/:id" element={<RecipeDetailPage />} />
+                <Route path="recipes/:id/edit" element={<EditRecipePage />} />
+
+                {/* Categories */}
+                <Route path="categories" element={<CategoryListPage />} />
+                <Route path="categories/new" element={<CreateCategoryPage />} />
+                <Route path="categories/:id/edit" element={<EditCategoryPage />} />
+
+                {/* Ingredients */}
+                <Route path="ingredients" element={<IngredientListPage />} />
+                <Route path="ingredients/new" element={<CreateIngredientPage />} />
+                <Route path="ingredients/:id/edit" element={<EditIngredientPage />} />
+
+                {/* Units */}
+                <Route path="units" element={<UnitListPage />} />
+                <Route path="units/new" element={<CreateUnitPage />} />
+                <Route path="units/:id/edit" element={<EditUnitPage />} />
+
+                {/* Redirect any unknown routes to dashboard */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Route>
+            </Route>
+          </Routes>
+        </SnackbarProvider>
+      </AuthProvider>
     </Router>
   );
-}
+};
 
 export default App;
