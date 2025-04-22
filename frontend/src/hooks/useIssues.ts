@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
-import { API_URL } from '../config';
+import apiClient from '../services/apiService';
 
 export interface Issue {
     id: number;
@@ -50,7 +49,7 @@ export const useIssues = () => {
     return useQuery<Issue[]>({
         queryKey: ['issues'],
         queryFn: async () => {
-            const { data } = await axios.get(`${API_URL}/api/issues`);
+            const { data } = await apiClient.get('/issues');
             return data;
         }
     });
@@ -61,7 +60,7 @@ export const useIssue = (id: string) => {
     return useQuery<Issue>({
         queryKey: ['issues', id],
         queryFn: async () => {
-            const { data } = await axios.get(`${API_URL}/api/issues/${id}`);
+            const { data } = await apiClient.get(`/issues/${id}`);
             return data;
         },
         enabled: !!id
@@ -74,7 +73,7 @@ export const useCreateIssue = () => {
     
     return useMutation({
         mutationFn: async (issueData: CreateIssueData) => {
-            const { data } = await axios.post(`${API_URL}/api/issues`, issueData);
+            const { data } = await apiClient.post('/issues', issueData);
             return data;
         },
         onSuccess: () => {
@@ -89,7 +88,7 @@ export const useUpdateIssue = (id: string) => {
     
     return useMutation({
         mutationFn: async (issueData: Partial<CreateIssueData>) => {
-            const { data } = await axios.put(`${API_URL}/api/issues/${id}`, issueData);
+            const { data } = await apiClient.put(`/issues/${id}`, issueData);
             return data;
         },
         onSuccess: () => {
@@ -105,7 +104,7 @@ export const useDeleteIssue = () => {
     
     return useMutation({
         mutationFn: async (id: string) => {
-            await axios.delete(`${API_URL}/api/issues/${id}`);
+            await apiClient.delete(`/issues/${id}`);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['issues'] });
