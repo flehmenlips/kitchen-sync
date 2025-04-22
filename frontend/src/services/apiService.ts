@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { RecipeFormData } from '../components/forms/RecipeForm';
+import { UserProfile, UserCredentials, AuthResponse } from '../types/user';
 
 // Get the base URL from environment variables, defaulting to localhost:3001
 // Vite exposes env variables prefixed with VITE_
@@ -136,21 +137,6 @@ export interface DashboardStats {
     units: number;
     recipeCategories: number;
     ingredientCategories: number;
-}
-
-// --- User Types ---
-// For login/register forms
-export interface UserCredentials {
-    email: string;
-    password: string;
-    name?: string; // Optional for registration
-}
-// For user profile data
-export interface UserProfile {
-    id: number;
-    email: string;
-    name: string | null;
-    // Add other relevant fields later if needed
 }
 
 // API functions
@@ -441,22 +427,20 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
 };
 
 // == Auth / User ==
-export const register = async (userData: UserCredentials): Promise<UserProfile> => {
+export const register = async (userData: UserCredentials): Promise<AuthResponse> => {
     try {
         const response = await apiClient.post('/users/register', userData);
-        return response.data; // Backend should return user profile on success
+        return response.data;
     } catch (error) {
         console.error('Error during registration:', error);
         throw error;
     }
 };
 
-export const login = async (credentials: UserCredentials): Promise<UserProfile & {token: string}> => {
+export const login = async (credentials: UserCredentials): Promise<AuthResponse> => {
     try {
-        // The interceptor will add the token for protected requests, but login doesn't need it
-        // Backend response now includes token in the body
-        const response = await apiClient.post('/users/login', credentials); 
-        return response.data; 
+        const response = await apiClient.post('/users/login', credentials);
+        return response.data;
     } catch (error) {
         console.error('Error during login:', error);
         throw error;
