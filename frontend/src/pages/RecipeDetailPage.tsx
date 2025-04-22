@@ -20,7 +20,7 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
-    ToggleButton,
+    Grid,
 } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import { getRecipeById, Recipe as ApiRecipe, RecipeIngredient, updateRecipe } from '../services/apiService';
@@ -29,14 +29,42 @@ import ScaleIcon from '@mui/icons-material/Scale';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SaveIcon from '@mui/icons-material/Save';
 import CloseIcon from '@mui/icons-material/Close';
-import MenuBookIcon from '@mui/icons-material/MenuBook';
-import ListAltIcon from '@mui/icons-material/ListAlt';
-import { RecipeScaleDialog } from './RecipeScaleDialog';
-import { ConciseRecipeView } from './ConciseRecipeView';
+import { RecipeScaleDialog } from '../components/RecipeScaleDialog';
 import { scaleRecipe } from '../utils/recipeScaling';
-import { DisplayedIngredient, ScalingIngredient, UnitType } from '../types/recipe';
 
-const RecipeDetail: React.FC = () => {
+type UnitType = 'WEIGHT' | 'VOLUME' | 'COUNT' | 'LENGTH' | 'TEMPERATURE';
+
+interface ScalingIngredient {
+    id: number;
+    name: string;
+    quantity: number;
+    unit: {
+        id: number;
+        name: string;
+        type: UnitType;
+    };
+}
+
+interface ScaledRecipeIngredient extends RecipeIngredient {
+    note?: string;
+}
+
+type DisplayedIngredient = {
+    id: number;
+    quantity: number;
+    unit: {
+        id: number;
+        name: string;
+        abbreviation: string;
+    };
+    ingredient?: {
+        id: number;
+        name: string;
+    };
+    note?: string;
+};
+
+const RecipeDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [recipe, setRecipe] = useState<ApiRecipe | null>(null);
@@ -46,7 +74,6 @@ const RecipeDetail: React.FC = () => {
     const [scaledIngredients, setScaledIngredients] = useState<DisplayedIngredient[] | null>(null);
     const [scaleFactor, setScaleFactor] = useState<number>(1);
     const [isSaveDialogOpen, setSaveDialogOpen] = useState(false);
-    const [isConciseMode, setIsConciseMode] = useState(false);
 
     useEffect(() => {
         const loadRecipe = async () => {
@@ -89,6 +116,11 @@ const RecipeDetail: React.FC = () => {
         setScaleFactor(options.value);
     };
 
+    const resetScale = () => {
+        setScaledIngredients(null);
+        setScaleFactor(1);
+    };
+
     const handleSaveScaledVersion = async () => {
         if (!recipe || !scaledIngredients) return;
         
@@ -124,90 +156,6 @@ const RecipeDetail: React.FC = () => {
         }
     };
 
-    const resetScale = () => {
-        setScaledIngredients(null);
-        setScaleFactor(1);
-    };
-
-    const RecipeContent = ({ ingredients, yield: yieldQty, isScaled = false }: { 
-        ingredients: DisplayedIngredient[], 
-        yield: number,
-        isScaled?: boolean 
-    }) => (
-        <Paper sx={{ p: 3, mb: 3, height: '100%' }}>
-            {isScaled && (
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                    <Typography variant="subtitle1" color="primary">
-                        Scaled Version ({scaleFactor}x)
-                    </Typography>
-                    <Box>
-                        <Tooltip title="Save as New Base Recipe">
-                            <IconButton 
-                                onClick={() => setSaveDialogOpen(true)}
-                                color="primary"
-                                size="small"
-                            >
-                                <SaveIcon />
-                            </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Close Scaled Version">
-                            <IconButton 
-                                onClick={resetScale}
-                                size="small"
-                            >
-                                <CloseIcon />
-                            </IconButton>
-                        </Tooltip>
-                    </Box>
-                </Box>
-            )}
-
-            {recipe?.description && !isConciseMode && (
-                <>
-                    <Typography variant="h6" gutterBottom>
-                        Description
-                    </Typography>
-                    <Typography variant="body1" paragraph>
-                        {recipe.description}
-                    </Typography>
-                </>
-            )}
-
-            <Typography variant="h6" gutterBottom>
-                Yield
-            </Typography>
-            <Typography variant="body1" paragraph>
-                {yieldQty} {recipe?.yieldUnit?.name || 'servings'}
-            </Typography>
-
-            <Typography variant="h6" gutterBottom>
-                Ingredients
-            </Typography>
-            <List>
-                {ingredients.map((ing, idx) => (
-                    <React.Fragment key={ing.id}>
-                        {idx > 0 && <Divider />}
-                        <ListItem>
-                            <ListItemText
-                                primary={`${ing.quantity} ${ing.unit.name} ${ing.ingredient?.name || ''}`}
-                                secondary={ing.note}
-                            />
-                        </ListItem>
-                    </React.Fragment>
-                ))}
-            </List>
-
-            {!isConciseMode && recipe?.instructions && (
-                <>
-                    <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
-                        Instructions
-                    </Typography>
-                    <div dangerouslySetInnerHTML={{ __html: recipe.instructions }} />
-                </>
-            )}
-        </Paper>
-    );
-
     if (isLoading) {
         return (
             <Container sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
@@ -233,6 +181,84 @@ const RecipeDetail: React.FC = () => {
         }));
     const scaledYield = (recipe.yieldQuantity || 1) * scaleFactor;
 
+    const RecipeContent = ({ ingredients, yield: yieldQty, isScaled = false }: { 
+        ingredients: DisplayedIngredient[], 
+        yield: number,
+        isScaled?: boolean 
+    }) => (
+        <Paper sx={{ p: 3, mb: 3, height: '100%' }}>
+            {isScaled && (
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="subtitle1" color="primary">
+                        Scaled Version ({scaleFactor}x)
+                    </Typography>
+                    <Box>
+                        <Tooltip title="Save as New Base Recipe">
+                            <IconButton 
+                                onClick={() => setSaveDialogOpen(true)}
+                                color="primary"
+                                size="small"
+                            >
+                                <SaveIcon />
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Close Scaled Version">
+                            <IconButton 
+                                onClick={() => {
+                                    setScaledIngredients(null);
+                                    setScaleFactor(1);
+                                }}
+                                size="small"
+                            >
+                                <CloseIcon />
+                            </IconButton>
+                        </Tooltip>
+                    </Box>
+                </Box>
+            )}
+
+            {recipe.description && (
+                <>
+                    <Typography variant="h6" gutterBottom>
+                        Description
+                    </Typography>
+                    <Typography variant="body1" paragraph>
+                        {recipe.description}
+                    </Typography>
+                </>
+            )}
+
+            <Typography variant="h6" gutterBottom>
+                Yield
+            </Typography>
+            <Typography variant="body1" paragraph>
+                {yieldQty} {recipe.yieldUnit?.name || 'servings'}
+            </Typography>
+
+            <Typography variant="h6" gutterBottom>
+                Ingredients
+            </Typography>
+            <List>
+                {ingredients.map((ing, idx) => (
+                    <React.Fragment key={ing.id}>
+                        {idx > 0 && <Divider />}
+                        <ListItem>
+                            <ListItemText
+                                primary={`${ing.quantity} ${ing.unit.name} ${ing.ingredient?.name || ''}`}
+                                secondary={ing.note}
+                            />
+                        </ListItem>
+                    </React.Fragment>
+                ))}
+            </List>
+
+            <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
+                Instructions
+            </Typography>
+            <div dangerouslySetInnerHTML={{ __html: recipe.instructions }} />
+        </Paper>
+    );
+
     return (
         <Container maxWidth="xl" sx={{ mt: 2 }}>
             {/* Breadcrumbs */}
@@ -243,24 +269,14 @@ const RecipeDetail: React.FC = () => {
                 <Link component={RouterLink} underline="hover" color="inherit" to="/recipes">
                     Recipes
                 </Link>
-                <Typography color="text.primary">{recipe?.name}</Typography>
+                <Typography color="text.primary">{recipe.name}</Typography>
             </Breadcrumbs>
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
                 <Typography variant="h4" component="h1">
-                    {recipe?.name}
+                    {recipe.name}
                 </Typography>
-                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                    <Tooltip title={isConciseMode ? "Show Full Recipe" : "Show Concise View"}>
-                        <ToggleButton
-                            value="concise"
-                            selected={isConciseMode}
-                            onChange={() => setIsConciseMode(!isConciseMode)}
-                            size="small"
-                        >
-                            {isConciseMode ? <MenuBookIcon /> : <ListAltIcon />}
-                        </ToggleButton>
-                    </Tooltip>
+                <Box sx={{ display: 'flex', gap: 1 }}>
                     <Tooltip title="Scale Recipe">
                         <IconButton 
                             onClick={() => setIsScaleDialogOpen(true)} 
@@ -271,7 +287,7 @@ const RecipeDetail: React.FC = () => {
                         </IconButton>
                     </Tooltip>
                     <Tooltip title="Edit Recipe">
-                        <IconButton onClick={() => navigate(`/recipes/${recipe?.id}/edit`)} color="primary">
+                        <IconButton onClick={() => navigate(`/recipes/${recipe.id}/edit`)} color="primary">
                             <EditIcon />
                         </IconButton>
                     </Tooltip>
@@ -285,38 +301,18 @@ const RecipeDetail: React.FC = () => {
 
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
                 <Box sx={{ flex: 1, minWidth: scaledIngredients ? '45%' : '100%' }}>
-                    {isConciseMode ? (
-                        <ConciseRecipeView 
-                            name={recipe?.name || ''}
-                            ingredients={recipe?.recipeIngredients || []}
-                            yieldQuantity={recipe?.yieldQuantity || 1}
-                            yieldUnit={recipe?.yieldUnit ? { name: recipe.yieldUnit.name } : undefined}
-                        />
-                    ) : (
-                        <RecipeContent 
-                            ingredients={recipe?.recipeIngredients || []} 
-                            yield={recipe?.yieldQuantity || 1}
-                        />
-                    )}
+                    <RecipeContent 
+                        ingredients={recipe.recipeIngredients} 
+                        yield={recipe.yieldQuantity || 1}
+                    />
                 </Box>
                 {scaledIngredients && (
                     <Box sx={{ flex: 1, minWidth: '45%' }}>
-                        {isConciseMode ? (
-                            <ConciseRecipeView 
-                                name={recipe?.name || ''}
-                                ingredients={scaledIngredients}
-                                yieldQuantity={scaledYield}
-                                yieldUnit={recipe?.yieldUnit ? { name: recipe.yieldUnit.name } : undefined}
-                                isScaled
-                                scaleFactor={scaleFactor}
-                            />
-                        ) : (
-                            <RecipeContent 
-                                ingredients={scaledIngredients} 
-                                yield={scaledYield}
-                                isScaled
-                            />
-                        )}
+                        <RecipeContent 
+                            ingredients={scaledIngredients} 
+                            yield={scaledYield}
+                            isScaled
+                        />
                     </Box>
                 )}
             </Box>
@@ -356,4 +352,4 @@ const RecipeDetail: React.FC = () => {
     );
 };
 
-export default RecipeDetail; 
+export default RecipeDetailPage; 
