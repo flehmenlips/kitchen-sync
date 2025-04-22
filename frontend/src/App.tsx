@@ -3,40 +3,41 @@ import {
   BrowserRouter as Router,
   Routes,
   Route,
-  Navigate,
-  Link as RouterLink
+  Navigate
 } from 'react-router-dom';
 import './App.css';
-import Box from '@mui/material/Box'; 
-import MainLayout from './components/layout/MainLayout'; // Import the layout
+
+// Layout and Context Providers
+import MainLayout from './components/layout/MainLayout';
+import { AuthProvider } from './context/AuthContext';
+import { SnackbarProvider } from './context/SnackbarContext';
+import ProtectedRoute from './components/common/ProtectedRoute';
+
+// Pages
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import DashboardPage from './pages/DashboardPage';
+
+// Recipe Components
 import RecipeList from './components/RecipeList';
 import RecipeDetail from './components/RecipeDetail';
-import CreateRecipePage from './pages/CreateRecipePage'; 
+import CreateRecipePage from './pages/CreateRecipePage';
 import EditRecipePage from './pages/EditRecipePage';
+
+// Category Components
+import CategoryListPage from './pages/CategoryListPage';
+import CreateCategoryPage from './pages/CreateCategoryPage';
+import EditCategoryPage from './pages/EditCategoryPage';
+
+// Ingredient Components
+import IngredientListPage from './pages/IngredientListPage';
+import CreateIngredientPage from './pages/CreateIngredientPage';
+import EditIngredientPage from './pages/EditIngredientPage';
+
+// Unit Components
 import UnitListPage from './pages/UnitListPage';
 import CreateUnitPage from './pages/CreateUnitPage';
 import EditUnitPage from './pages/EditUnitPage';
-import IngredientListPage from './pages/IngredientListPage'; 
-import CreateIngredientPage from './pages/CreateIngredientPage'; 
-import EditIngredientPage from './pages/EditIngredientPage';
-import CategoryListPage from './pages/CategoryListPage'; 
-import CreateCategoryPage from './pages/CreateCategoryPage'; 
-import EditCategoryPage from './pages/EditCategoryPage';
-import Typography from '@mui/material/Typography';
-import IngredientCategoryListPage from './pages/IngredientCategoryListPage';
-import CreateIngredientCategoryPage from './pages/CreateIngredientCategoryPage';
-import EditIngredientCategoryPage from './pages/EditIngredientCategoryPage';
-import LoginPage from './pages/LoginPage'; // Import Login page
-import RegisterPage from './pages/RegisterPage'; // Import Register page
-import ProtectedRoute from './components/common/ProtectedRoute'; // Import ProtectedRoute
-import DashboardPage from './pages/DashboardPage'; // <-- Import new DashboardPage
-import RecipeListPage from './pages/RecipeListPage';
-import RecipeDetailPage from './pages/RecipeDetailPage';
-import { AuthProvider } from './context/AuthContext';
-import { SnackbarProvider } from './context/SnackbarContext';
-
-// Remove Placeholder Dashboard Component
-// const Dashboard = () => <Typography variant="h5">Dashboard Content Placeholder</Typography>;
 
 const App: React.FC = () => {
   return (
@@ -50,15 +51,15 @@ const App: React.FC = () => {
 
             {/* Protected routes */}
             <Route element={<ProtectedRoute />}>
-              <Route element={<MainLayout children={undefined} />}>
+              <Route element={<MainLayout />}>
                 {/* Dashboard */}
                 <Route index element={<DashboardPage />} />
 
                 {/* CookBook Module Routes */}
                 {/* Recipes */}
-                <Route path="recipes" element={<RecipeListPage />} />
+                <Route path="recipes" element={<RecipeList />} />
                 <Route path="recipes/new" element={<CreateRecipePage />} />
-                <Route path="recipes/:id" element={<RecipeDetailPage />} />
+                <Route path="recipes/:id" element={<RecipeDetail />} />
                 <Route path="recipes/:id/edit" element={<EditRecipePage />} />
 
                 {/* Categories */}
