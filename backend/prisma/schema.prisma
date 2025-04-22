@@ -166,6 +166,27 @@ enum UserRole {
   SUPERADMIN
 }
 
+enum IssueType {
+  FEATURE
+  BUG
+  ENHANCEMENT
+}
+
+enum IssueStatus {
+  OPEN
+  IN_PROGRESS
+  REVIEW
+  DONE
+  CLOSED
+}
+
+enum IssuePriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
 model User {
   id          Int      @id @default(autoincrement())
   email       String   @unique
@@ -182,5 +203,91 @@ model User {
   recipeCategories   Category[]           @relation("UserRecipeCategories")
   ingredientCategories IngredientCategory[] @relation("UserIngredientCategories")
 
+  // Add new relations
+  createdIssues  Issue[]    @relation("CreatedIssues")
+  assignedIssues Issue[]    @relation("AssignedIssues")
+  comments       Comment[]
+
   @@map("users")
+}
+
+model Issue {
+  id          Int           @id @default(autoincrement())
+  title       String        @db.VarChar(255)
+  description String        @db.Text
+  type        IssueType
+  status      IssueStatus   @default(OPEN)
+  priority    IssuePriority @default(MEDIUM)
+  isPublic    Boolean       @default(false) @map("is_public")
+  
+  // Metadata
+  createdById Int          @map("created_by_id")
+  assignedToId Int?        @map("assigned_to_id")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  
+  // Relations
+  createdBy   User         @relation("CreatedIssues", fields: [createdById], references: [id])
+  assignedTo  User?        @relation("AssignedIssues", fields: [assignedToId], references: [id])
+  comments    Comment[]
+  labels      IssueLabel[]
+
+  @@map("issues")
+  @@index([createdById])
+  @@index([assignedToId])
+  @@index([status])
+  @@index([type])
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String   @db.Text
+  isInternal Boolean @default(false) @map("is_internal")
+  
+  // Metadata
+  issueId   Int      @map("issue_id")
+  userId    Int      @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("comments")
+  @@index([issueId])
+  @@index([userId])
+}
+
+model Label {
+  id          Int           @id @default(autoincrement())
+  name        String        @db.VarChar(50)
+  color       String        @db.VarChar(7) // Hex color code
+  description String?       @db.Text
+  
+  // Metadata
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  
+  // Relations
+  issues      IssueLabel[]
+
+  @@map("labels")
+  @@unique([name])
+}
+
+// Junction table for Issue-Label many-to-many relationship
+model IssueLabel {
+  issueId   Int      @map("issue_id")
+  labelId   Int      @map("label_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  // Relations
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  label     Label    @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@id([issueId, labelId])
+  @@map("issue_labels")
+  @@index([issueId])
+  @@index([labelId])
 }
