@@ -5,6 +5,7 @@ import {
   createRecipe,
   updateRecipe,
   deleteRecipe,
+  parseRecipe,
 } from '../controllers/recipeController'; // Using relative path
 import { protect } from '../middleware/authMiddleware';
 
@@ -14,6 +15,9 @@ const router = express.Router();
 router.route('/')
   .get(protect, getRecipes)       // GET /api/recipes
   .post(protect, createRecipe);    // POST /api/recipes
+
+router.route('/parse')
+  .post(protect, parseRecipe);     // POST /api/recipes/parse
 
 router.route('/:id')
   .get(protect, getRecipeById)    // GET /api/recipes/:id

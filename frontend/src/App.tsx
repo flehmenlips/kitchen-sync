@@ -25,6 +25,7 @@ import RecipeList from './components/RecipeList';
 import RecipeDetail from './components/RecipeDetail';
 import CreateRecipePage from './pages/CreateRecipePage';
 import EditRecipePage from './pages/EditRecipePage';
+import RecipeImportPage from './pages/RecipeImportPage';
 
 // Category Components
 import CategoryListPage from './pages/CategoryListPage';
@@ -77,6 +78,7 @@ const App: React.FC = () => {
                   {/* Recipes */}
                   <Route path="recipes" element={<RecipeList />} />
                   <Route path="recipes/new" element={<CreateRecipePage />} />
+                  <Route path="recipes/import" element={<RecipeImportPage />} />
                   <Route path="recipes/:id" element={<RecipeDetail />} />
                   <Route path="recipes/:id/edit" element={<EditRecipePage />} />
 

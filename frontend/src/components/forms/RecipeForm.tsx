@@ -149,7 +149,7 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
             tags: [],
             instructions: '',
             categoryId: '',
-            ingredients: [{ type: '', ingredientId: '', quantity: '', unitId: '' }]
+            ingredients: []
         }
     });
 

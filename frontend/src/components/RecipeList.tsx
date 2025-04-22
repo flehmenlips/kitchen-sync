@@ -13,6 +13,7 @@ import Box from '@mui/material/Box';
 import ListItemButton from '@mui/material/ListItemButton'; // For clickable list items
 import Button from '@mui/material/Button'; // Import Button
 import AddIcon from '@mui/icons-material/Add'; // Import an icon
+import FileUploadIcon from '@mui/icons-material/FileUpload';
 import Collapse from '@mui/material/Collapse'; // For collapsible sections
 import ListSubheader from '@mui/material/ListSubheader'; // For category headers
 import ExpandLess from '@mui/icons-material/ExpandLess';
@@ -148,15 +149,24 @@ const RecipeList: React.FC = () => {
         <Typography variant="h4" component="h2">
           Recipes
         </Typography>
-        {/* Add Recipe Button */}
-        <Button 
-          variant="contained" 
-          startIcon={<AddIcon />} 
-          component={RouterLink} 
-          to="/recipes/new"
-        >
-          Add Recipe
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button 
+            variant="outlined"
+            startIcon={<FileUploadIcon />}
+            component={RouterLink}
+            to="/recipes/import"
+          >
+            Import Recipe
+          </Button>
+          <Button 
+            variant="contained" 
+            startIcon={<AddIcon />} 
+            component={RouterLink} 
+            to="/recipes/new"
+          >
+            Add Recipe
+          </Button>
+        </Box>
       </Box>
       {recipes.length === 0 && !loading ? (
         <Typography sx={{ mt: 2 }}>No recipes found.</Typography>

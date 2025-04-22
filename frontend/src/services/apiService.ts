@@ -563,4 +563,14 @@ export const deleteIssue = async (id: number): Promise<void> => {
     }
 };
 
+export const parseRecipe = async (recipeText: string): Promise<any> => {
+    try {
+        const response = await apiClient.post('/recipes/parse', { recipeText });
+        return response.data;
+    } catch (error) {
+        console.error('Error parsing recipe:', error);
+        throw error;
+    }
+};
+
 export default apiClient; 

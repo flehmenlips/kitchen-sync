@@ -133,11 +133,11 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
       name, description, instructions, yieldQuantity, yieldUnitId,
       prepTimeMinutes, cookTimeMinutes, tags,
       categoryId,
-      ingredients // Expect an array: [{ ingredientId?, subRecipeId?, quantity, unitId }, ...]
+      ingredients
     } = req.body;
 
-    if (!name || !instructions) {
-      res.status(400).json({ message: 'Missing required fields: name, instructions' });
+    if (!name) {
+      res.status(400).json({ message: 'Missing required field: name' });
       return;
     }
     if (ingredients && !Array.isArray(ingredients)) {
@@ -258,15 +258,15 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
         name, description, instructions, yieldQuantity, yieldUnitId,
         prepTimeMinutes, cookTimeMinutes, tags,
         categoryId,
-        ingredients // Expect an array: [{ ingredientId?, subRecipeId?, quantity, unitId }, ...]
+        ingredients
     } = req.body;
 
     if (ingredients && !Array.isArray(ingredients)) {
         res.status(400).json({ message: "'ingredients' field must be an array." });
         return;
     }
-    if (!name || !instructions) {
-        res.status(400).json({ message: 'Missing required fields: name, instructions' });
+    if (!name) {
+        res.status(400).json({ message: 'Missing required field: name' });
         return;
     }
 
@@ -434,4 +434,154 @@ export const deleteRecipe = async (req: Request, res: Response): Promise<void> =
     console.error(error);
     res.status(500).json({ message: 'Error deleting recipe' });
   }
+};
+
+// @desc    Parse recipe text using AI
+// @route   POST /api/recipes/parse
+// @access  Private
+export const parseRecipe = async (req: Request, res: Response): Promise<void> => {
+    if (!req.user?.id) {
+        res.status(401).json({ message: 'Not authorized, user ID missing' });
+        return;
+    }
+
+    try {
+        const { recipeText } = req.body;
+
+        if (!recipeText) {
+            res.status(400).json({ message: 'Recipe text is required' });
+            return;
+        }
+
+        // Split the text into sections
+        const sections = recipeText.split(/\n\s*\n/); // Split on empty lines
+        let name = "";
+        let description = "";
+        let ingredients: { type: string; name: string; quantity: number; unit: string; raw: string }[] = [];
+        let instructions = "";
+
+        // Process each section
+        sections.forEach((section: string) => {
+            const trimmedSection = section.trim();
+            if (!trimmedSection) return;
+
+            // Check if this is the ingredients section
+            if (trimmedSection.toLowerCase().includes('ingredients:')) {
+                const lines = trimmedSection
+                    .split('\n')
+                    .slice(1) // Skip the "Ingredients:" line
+                    .filter((line: string) => line.trim()); // Remove empty lines
+
+                ingredients = lines.map((line: string) => {
+                    const raw = line.trim();
+                    
+                    // Try different patterns for ingredient parsing
+                    
+                    // Pattern 1: quantity unit ingredient (e.g., "2 cups flour")
+                    const standardPattern = /^([\d./]+)\s*([a-zA-Z]+)\s+(.+)$/;
+                    
+                    // Pattern 2: quantity ingredient (e.g., "2 eggs")
+                    const noUnitPattern = /^([\d./]+)\s+(.+)$/;
+                    
+                    // Pattern 3: just ingredient (e.g., "salt to taste")
+                    const noQuantityPattern = /^(.+)$/;
+
+                    let match;
+                    
+                    // Try standard pattern first (quantity + unit + ingredient)
+                    match = raw.match(standardPattern);
+                    if (match) {
+                        const [_, quantity, unit, name] = match;
+                        return {
+                            type: "ingredient",
+                            name: name.trim(),
+                            quantity: eval(quantity) || 1,
+                            unit: unit.trim().toLowerCase(),
+                            raw
+                        };
+                    }
+
+                    // Try pattern without unit (quantity + ingredient)
+                    match = raw.match(noUnitPattern);
+                    if (match) {
+                        const [_, quantity, name] = match;
+                        return {
+                            type: "ingredient",
+                            name: name.trim(),
+                            quantity: eval(quantity) || 1,
+                            unit: "whole", // Default unit for countable items
+                            raw
+                        };
+                    }
+
+                    // Fallback: treat entire line as ingredient name
+                    match = raw.match(noQuantityPattern);
+                    if (match) {
+                        return {
+                            type: "ingredient",
+                            name: match[1].trim(),
+                            quantity: 1,
+                            unit: "whole",
+                            raw
+                        };
+                    }
+
+                    // Final fallback
+                    return {
+                        type: "ingredient",
+                        name: raw,
+                        quantity: 1,
+                        unit: "whole",
+                        raw
+                    };
+                });
+            }
+            // Check if this is the instructions section
+            else if (trimmedSection.toLowerCase().includes('instructions:')) {
+                instructions = trimmedSection
+                    .split('\n')
+                    .slice(1) // Skip the "Instructions:" line
+                    .filter((line: string) => line.trim()) // Remove empty lines
+                    .map((line: string) => line.trim())
+                    .join('\n');
+            }
+            // Check if this is the description section
+            else if (trimmedSection.toLowerCase().includes('description:')) {
+                description = trimmedSection
+                    .split('\n')
+                    .slice(1) // Skip the "Description:" line
+                    .filter((line: string) => line.trim())
+                    .join('\n')
+                    .trim();
+            }
+            // If it's the first section and doesn't match other patterns, it's probably the name
+            else if (!name) {
+                name = trimmedSection;
+            }
+        });
+
+        // Format instructions with rich text
+        const formattedInstructions = instructions
+            .split('\n')
+            .map((line: string) => {
+                // If line starts with a number and period (e.g., "1.", "2.", etc.)
+                if (/^\d+\./.test(line)) {
+                    return `<li>${line.replace(/^\d+\.\s*/, '')}</li>`;
+                }
+                return line;
+            })
+            .join('\n');
+
+        const parsedRecipe = {
+            name,
+            description,
+            instructions: formattedInstructions ? `<ol>${formattedInstructions}</ol>` : "",
+            ingredients
+        };
+
+        res.status(200).json(parsedRecipe);
+    } catch (error) {
+        console.error('Error parsing recipe:', error);
+        res.status(500).json({ message: 'Error parsing recipe' });
+    }
 }; 
