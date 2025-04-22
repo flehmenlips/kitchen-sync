@@ -1,5 +1,8 @@
 {
   "devDependencies": {
     "ts-node-dev": "^2.0.0"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.74.4"
   }
 }

@@ -6,6 +6,7 @@ import {
   Navigate
 } from 'react-router-dom';
 import './App.css';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Layout and Context Providers
 import MainLayout from './components/layout/MainLayout';
@@ -45,61 +46,73 @@ import IssueListPage from './pages/IssueListPage';
 import IssueDetailPage from './pages/IssueDetailPage';
 import IssueFormPage from './pages/IssueFormPage';
 
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      retry: 1,
+    },
+  },
+});
+
 const App: React.FC = () => {
   return (
-    <Router>
-      <AuthProvider>
-        <SnackbarProvider>
-          <Routes>
-            {/* Public routes */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
+    <QueryClientProvider client={queryClient}>
+      <Router>
+        <AuthProvider>
+          <SnackbarProvider>
+            <Routes>
+              {/* Public routes */}
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
 
-            {/* Protected routes */}
-            <Route element={<ProtectedRoute />}>
-              <Route element={<MainLayout />}>
-                {/* Dashboard */}
-                <Route index element={<DashboardPage />} />
+              {/* Protected routes */}
+              <Route element={<ProtectedRoute />}>
+                <Route element={<MainLayout />}>
+                  {/* Dashboard */}
+                  <Route index element={<DashboardPage />} />
 
-                {/* CookBook Module Routes */}
-                {/* Recipes */}
-                <Route path="recipes" element={<RecipeList />} />
-                <Route path="recipes/new" element={<CreateRecipePage />} />
-                <Route path="recipes/:id" element={<RecipeDetail />} />
-                <Route path="recipes/:id/edit" element={<EditRecipePage />} />
+                  {/* CookBook Module Routes */}
+                  {/* Recipes */}
+                  <Route path="recipes" element={<RecipeList />} />
+                  <Route path="recipes/new" element={<CreateRecipePage />} />
+                  <Route path="recipes/:id" element={<RecipeDetail />} />
+                  <Route path="recipes/:id/edit" element={<EditRecipePage />} />
 
-                {/* Categories */}
-                <Route path="categories" element={<CategoryListPage />} />
-                <Route path="categories/new" element={<CreateCategoryPage />} />
-                <Route path="categories/:id/edit" element={<EditCategoryPage />} />
+                  {/* Categories */}
+                  <Route path="categories" element={<CategoryListPage />} />
+                  <Route path="categories/new" element={<CreateCategoryPage />} />
+                  <Route path="categories/:id/edit" element={<EditCategoryPage />} />
 
-                {/* Ingredients */}
-                <Route path="ingredients" element={<IngredientListPage />} />
-                <Route path="ingredients/new" element={<CreateIngredientPage />} />
-                <Route path="ingredients/:id/edit" element={<EditIngredientPage />} />
+                  {/* Ingredients */}
+                  <Route path="ingredients" element={<IngredientListPage />} />
+                  <Route path="ingredients/new" element={<CreateIngredientPage />} />
+                  <Route path="ingredients/:id/edit" element={<EditIngredientPage />} />
 
-                {/* Units */}
-                <Route path="units" element={<UnitListPage />} />
-                <Route path="units/new" element={<CreateUnitPage />} />
-                <Route path="units/:id/edit" element={<EditUnitPage />} />
+                  {/* Units */}
+                  <Route path="units" element={<UnitListPage />} />
+                  <Route path="units/new" element={<CreateUnitPage />} />
+                  <Route path="units/:id/edit" element={<EditUnitPage />} />
 
-                {/* Issue Tracker Routes */}
-                <Route path="issues" element={<IssueListPage />} />
-                <Route path="issues/new" element={<IssueFormPage />} />
-                <Route path="issues/:id" element={<IssueDetailPage />} />
-                <Route path="issues/:id/edit" element={<IssueFormPage />} />
+                  {/* Issue Tracker Routes */}
+                  <Route path="issues" element={<IssueListPage />} />
+                  <Route path="issues/new" element={<IssueFormPage />} />
+                  <Route path="issues/:id" element={<IssueDetailPage />} />
+                  <Route path="issues/:id/edit" element={<IssueFormPage />} />
 
-                {/* Profile Route */}
-                <Route path="profile" element={<ProfilePage />} />
+                  {/* Profile Route */}
+                  <Route path="profile" element={<ProfilePage />} />
 
-                {/* Redirect any unknown routes to dashboard */}
-                <Route path="*" element={<Navigate to="/" replace />} />
+                  {/* Redirect any unknown routes to dashboard */}
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Route>
               </Route>
-            </Route>
-          </Routes>
-        </SnackbarProvider>
-      </AuthProvider>
-    </Router>
+            </Routes>
+          </SnackbarProvider>
+        </AuthProvider>
+      </Router>
+    </QueryClientProvider>
   );
 };
 
