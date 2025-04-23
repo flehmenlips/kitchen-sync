@@ -47,6 +47,9 @@ import IssueListPage from './pages/IssueListPage';
 import IssueDetailPage from './pages/IssueDetailPage';
 import IssueFormPage from './pages/IssueFormPage';
 
+// Prep Board Component
+import { PrepBoard } from './components/prep/PrepBoard';
+
 // Create a client
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -96,6 +99,9 @@ const App: React.FC = () => {
                   <Route path="units" element={<UnitListPage />} />
                   <Route path="units/new" element={<CreateUnitPage />} />
                   <Route path="units/:id/edit" element={<EditUnitPage />} />
+
+                  {/* Prep Board */}
+                  <Route path="prep" element={<PrepBoard />} />
 
                   {/* Issue Tracker Routes */}
                   <Route path="issues" element={<IssueListPage />} />

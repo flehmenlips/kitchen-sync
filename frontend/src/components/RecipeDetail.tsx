@@ -23,7 +23,8 @@ import {
     ToggleButton,
 } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
-import { getRecipeById, Recipe as ApiRecipe, RecipeIngredient, updateRecipe } from '../services/apiService';
+import { getRecipeById, updateRecipe } from '../services/apiService';
+import { Recipe } from '../types/recipe';
 import EditIcon from '@mui/icons-material/Edit';
 import ScaleIcon from '@mui/icons-material/Scale';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -31,15 +32,21 @@ import SaveIcon from '@mui/icons-material/Save';
 import CloseIcon from '@mui/icons-material/Close';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import ListAltIcon from '@mui/icons-material/ListAlt';
+import AddIcon from '@mui/icons-material/Add';
 import { RecipeScaleDialog } from './RecipeScaleDialog';
 import { ConciseRecipeView } from './ConciseRecipeView';
 import { scaleRecipe } from '../utils/recipeScaling';
 import { DisplayedIngredient, ScalingIngredient, UnitType } from '../types/recipe';
+import { useSnackbar } from '../context/SnackbarContext';
+import { usePrepBoardStore } from '../stores/prepBoardStore';
+import { PrepTask } from '../components/prep/types';
+import { v4 as uuidv4 } from 'uuid';
+import { COLUMN_IDS } from '../stores/prepBoardStore';
 
 const RecipeDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const [recipe, setRecipe] = useState<ApiRecipe | null>(null);
+    const [recipe, setRecipe] = useState<Recipe | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isScaleDialogOpen, setIsScaleDialogOpen] = useState(false);
@@ -47,6 +54,8 @@ const RecipeDetail: React.FC = () => {
     const [scaleFactor, setScaleFactor] = useState<number>(1);
     const [isSaveDialogOpen, setSaveDialogOpen] = useState(false);
     const [isConciseMode, setIsConciseMode] = useState(false);
+    const { showSnackbar } = useSnackbar();
+    const { addTask } = usePrepBoardStore();
 
     useEffect(() => {
         const loadRecipe = async () => {
@@ -102,7 +111,7 @@ const RecipeDetail: React.FC = () => {
                 yieldUnitId: recipe.yieldUnit?.id || 1,
                 prepTimeMinutes: recipe.prepTimeMinutes || 0,
                 cookTimeMinutes: recipe.cookTimeMinutes || 0,
-                categoryId: recipe.categoryId || 1,
+                categoryId: recipe.category?.id || 1,
                 tags: recipe.tags,
                 ingredients: scaledIngredients.map(ing => ({
                     type: 'ingredient' as const,
@@ -127,6 +136,27 @@ const RecipeDetail: React.FC = () => {
     const resetScale = () => {
         setScaledIngredients(null);
         setScaleFactor(1);
+    };
+
+    const handleAddToPrep = () => {
+        if (!recipe) return;
+
+        console.log('Creating new prep task from recipe:', recipe);
+        const newTask: PrepTask = {
+            id: uuidv4(),
+            recipeId: recipe.id,
+            recipeName: recipe.name,
+            description: recipe.description || '',
+            status: COLUMN_IDS.TO_PREP,
+            priority: 'MEDIUM' as const,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        console.log('New prep task:', newTask);
+
+        addTask(newTask);
+        console.log('Task added to store');
+        showSnackbar('Recipe added to prep board', 'success');
     };
 
     const RecipeContent = ({ ingredients, yield: yieldQty, isScaled = false }: { 
@@ -268,6 +298,14 @@ const RecipeDetail: React.FC = () => {
                             disabled={Boolean(scaledIngredients)}
                         >
                             <ScaleIcon />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Add to Prep Board">
+                        <IconButton
+                            onClick={handleAddToPrep}
+                            color="secondary"
+                        >
+                            <AddIcon />
                         </IconButton>
                     </Tooltip>
                     <Tooltip title="Edit Recipe">
