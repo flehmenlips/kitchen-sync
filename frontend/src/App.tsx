@@ -100,7 +100,7 @@ const App: React.FC = () => {
                   <Route path="units/new" element={<CreateUnitPage />} />
                   <Route path="units/:id/edit" element={<EditUnitPage />} />
 
-                  {/* Prep Board */}
+                  {/* AgileChef Module Routes */}
                   <Route path="prep" element={<PrepBoard />} />
 
                   {/* Issue Tracker Routes */}
