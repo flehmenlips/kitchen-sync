@@ -123,6 +123,7 @@ model Recipe {
   recipeIngredients UnitQuantity[]   @relation("RecipeParent") 
   usedAsSubRecipe   UnitQuantity[]   @relation("RecipeSubComponent") 
   author            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prepTasks         PrepTask[]       @relation("RecipePrepTasks")
 
   @@map("recipes")
   @@index([categoryId])
@@ -187,6 +188,13 @@ enum IssuePriority {
   URGENT
 }
 
+enum PrepTaskStatus {
+  TO_PREP
+  PREPPING
+  READY
+  COMPLETE
+}
+
 model User {
   id          Int      @id @default(autoincrement())
   email       String   @unique
@@ -207,6 +215,7 @@ model User {
   createdIssues  Issue[]    @relation("CreatedIssues")
   assignedIssues Issue[]    @relation("AssignedIssues")
   comments       Comment[]
+  prepTasks      PrepTask[]   @relation("UserPrepTasks")
 
   @@map("users")
 }
@@ -290,4 +299,25 @@ model IssueLabel {
   @@map("issue_labels")
   @@index([issueId])
   @@index([labelId])
+}
+
+model PrepTask {
+  id          String        @id @default(uuid())
+  title       String        @db.VarChar(255)
+  description String?       @db.Text
+  status      PrepTaskStatus @default(TO_PREP)
+  recipeId    Int?         @map("recipe_id")
+  userId      Int          @map("user_id")
+  order       Int          @default(0)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  recipe      Recipe?      @relation("RecipePrepTasks", fields: [recipeId], references: [id], onDelete: SetNull)
+  user        User         @relation("UserPrepTasks", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("prep_tasks")
+  @@index([userId])
+  @@index([recipeId])
+  @@index([status])
 }
