@@ -70,7 +70,9 @@ const KITCHEN_SYNC_MODULES = [
         icon: <KitchenIcon />,
         description: 'Kitchen Prep Management',
         path: '/prep',
-        comingSoon: true
+        subItems: [
+            { name: 'Prep Board', icon: <DashboardIcon />, path: '/prep' },
+        ]
     },
     {
         id: 'menubuilder',

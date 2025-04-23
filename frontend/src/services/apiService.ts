@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { RecipeFormData } from '../components/forms/RecipeForm';
 import { UserProfile, UserCredentials, AuthResponse } from '../types/user';
+import { Recipe, RecipeApiData } from '../types/recipe';
 
 // Get the base URL from environment variables, defaulting to localhost:3001
 // Vite exposes env variables prefixed with VITE_
@@ -186,7 +187,10 @@ export interface CreateIssueData {
 export const getRecipes = async (): Promise<Recipe[]> => {
   try {
     const response = await apiClient.get('/recipes');
-    return response.data;
+    return response.data.map((recipe: any) => ({
+        ...recipe,
+        recipeIngredients: recipe.recipeIngredients || []
+    }));
   } catch (error) {
     console.error('Error fetching recipes:', error);
     // Handle or throw error appropriately for UI
@@ -197,7 +201,10 @@ export const getRecipes = async (): Promise<Recipe[]> => {
 export const getRecipeById = async (id: number): Promise<Recipe> => {
     try {
         const response = await apiClient.get(`/recipes/${id}`);
-        return response.data;
+        return {
+            ...response.data,
+            recipeIngredients: response.data.recipeIngredients || []
+        };
     } catch (error) {
         console.error(`Error fetching recipe ${id}:`, error);
         throw error;
@@ -483,6 +490,11 @@ export const register = async (userData: UserCredentials): Promise<AuthResponse>
 export const login = async (credentials: UserCredentials): Promise<AuthResponse> => {
     try {
         const response = await apiClient.post('/users/login', credentials);
+        const { token, user } = response.data;
+        // Store the token
+        localStorage.setItem('token', token);
+        // Update default headers
+        apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         return response.data;
     } catch (error) {
         console.error('Error during login:', error);
@@ -494,6 +506,8 @@ export const logout = async (): Promise<void> => {
     try {
         // Interceptor might add token, backend ignores it for logout
         await apiClient.post('/users/logout'); 
+        localStorage.removeItem('token');
+        delete apiClient.defaults.headers.common['Authorization'];
     } catch (error) {
         console.error('Error during logout:', error);
         throw error;
