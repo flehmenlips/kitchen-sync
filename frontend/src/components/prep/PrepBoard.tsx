@@ -7,7 +7,7 @@ import { PrepColumn } from './PrepColumn';
 import AddRecipeDialog from './AddRecipeDialog';
 
 export const PrepBoard: React.FC = () => {
-    const { columns, moveTask, isLoading, error, fetchTasks } = usePrepBoardStore();
+    const { columns, moveTask, removeTask, isLoading, error, fetchTasks } = usePrepBoardStore();
     const [addDialogOpen, setAddDialogOpen] = useState(false);
 
     useEffect(() => {
@@ -69,6 +69,7 @@ export const PrepBoard: React.FC = () => {
                                     <PrepColumn
                                         column={column}
                                         provided={provided}
+                                        onDelete={removeTask}
                                     />
                                 )}
                             </Droppable>

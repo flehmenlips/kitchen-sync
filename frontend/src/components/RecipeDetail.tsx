@@ -138,25 +138,22 @@ const RecipeDetail: React.FC = () => {
         setScaleFactor(1);
     };
 
-    const handleAddToPrep = () => {
+    const handleAddToPrep = async () => {
         if (!recipe) return;
 
-        console.log('Creating new prep task from recipe:', recipe);
-        const newTask: PrepTask = {
-            id: uuidv4(),
-            recipeId: recipe.id,
-            recipeName: recipe.name,
-            description: recipe.description || '',
-            status: COLUMN_IDS.TO_PREP,
-            priority: 'MEDIUM' as const,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
-        console.log('New prep task:', newTask);
-
-        addTask(newTask);
-        console.log('Task added to store');
-        showSnackbar('Recipe added to prep board', 'success');
+        try {
+            await addTask({
+                title: recipe.name,
+                description: recipe.description || '',
+                status: COLUMN_IDS.TO_PREP,
+                recipeId: recipe.id,
+                order: 0
+            });
+            showSnackbar('Recipe added to prep board', 'success');
+        } catch (err) {
+            console.error('Error adding recipe to prep board:', err);
+            showSnackbar('Failed to add recipe to prep board', 'error');
+        }
     };
 
     const RecipeContent = ({ ingredients, yield: yieldQty, isScaled = false }: { 

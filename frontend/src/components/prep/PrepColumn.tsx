@@ -8,6 +8,7 @@ import { COLUMN_IDS } from '../../stores/prepBoardStore';
 interface PrepColumnProps {
     column: ColumnType;
     provided: any;
+    onDelete: (taskId: string) => void;
 }
 
 const getColumnColor = (columnId: string) => {
@@ -25,7 +26,7 @@ const getColumnColor = (columnId: string) => {
     }
 };
 
-export const PrepColumn: React.FC<PrepColumnProps> = ({ column, provided }) => {
+export const PrepColumn: React.FC<PrepColumnProps> = ({ column, provided, onDelete }) => {
     return (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Paper
@@ -66,7 +67,7 @@ export const PrepColumn: React.FC<PrepColumnProps> = ({ column, provided }) => {
                                 {...provided.dragHandleProps}
                                 sx={{ mb: 1 }}
                             >
-                                <PrepCard task={task} />
+                                <PrepCard task={task} onDelete={onDelete} />
                             </Box>
                         )}
                     </Draggable>
