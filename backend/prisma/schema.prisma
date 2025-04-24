@@ -127,7 +127,8 @@ model Recipe {
 
   @@map("recipes")
   @@index([categoryId])
-  @@index([userId]) // Add index for user relation
+  @@index([userId])
+  @@unique([name, userId], name: "unique_recipe_name_per_user")
 }
 
 // Explicit Many-to-Many / Linking Table for Recipe Ingredients & Sub-Recipes
