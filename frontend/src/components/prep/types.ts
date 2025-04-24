@@ -1,18 +1,25 @@
+import { COLUMN_IDS } from '../../stores/prepBoardStore';
+
+export type PrepTaskStatus = typeof COLUMN_IDS[keyof typeof COLUMN_IDS];
+
 export interface PrepTask {
     id: string;
-    recipeId: number;
-    recipeName: string;
-    description: string;
-    status: 'to-prep' | 'prepping' | 'ready' | 'complete';
-    priority: 'LOW' | 'MEDIUM' | 'HIGH';
-    assignedTo?: string;
-    dueDate?: string;
+    title: string;
+    description?: string | null;
+    status: PrepTaskStatus;
+    recipeId?: number | null;
+    recipe?: {
+        id: number;
+        name: string;
+        description: string;
+    } | null;
+    order: number;
     createdAt: string;
     updatedAt: string;
 }
 
 export interface PrepColumn {
-    id: string;
+    id: PrepTaskStatus;
     title: string;
     tasks: PrepTask[];
 }

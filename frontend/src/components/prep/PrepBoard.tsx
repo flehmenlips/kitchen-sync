@@ -53,10 +53,15 @@ export const PrepBoard: React.FC = () => {
             ) : (
                 <DragDropContext onDragEnd={handleDragEnd}>
                     <Box sx={{ 
-                        display: 'grid', 
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(4, 1fr)',
                         gap: 2,
-                        alignItems: 'start'
+                        alignItems: 'start',
+                        minHeight: 'calc(100vh - 200px)',
+                        '& > *': {
+                            minWidth: 250,
+                            height: '100%'
+                        }
                     }}>
                         {columns.map(column => (
                             <Droppable key={column.id} droppableId={column.id}>
