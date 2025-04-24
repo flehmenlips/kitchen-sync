@@ -10,6 +10,7 @@ import userRoutes from './routes/userRoutes'; // Import user routes
 import dashboardRoutes from './routes/dashboardRoutes'; // <-- Import dashboard routes
 import issueRoutes from './routes/issueRoutes';
 import commentRoutes from './routes/commentRoutes';
+import prepTaskRoutes from './routes/prepTaskRoutes';
 import { Request, Response, NextFunction } from 'express';
 
 // Load environment variables
@@ -35,6 +36,7 @@ app.use('/api/ingredient-categories', ingredientCategoryRoutes); // Mount ingred
 app.use('/api/dashboard', dashboardRoutes); // <-- Mount dashboard routes
 app.use('/api/issues', issueRoutes);
 app.use('/api/issues/:issueId/comments', commentRoutes);
+app.use('/api/prep-tasks', prepTaskRoutes);
 
 // Basic route for testing
 app.get('/', (req, res) => {
