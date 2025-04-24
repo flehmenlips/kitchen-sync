@@ -1,21 +1,24 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
 import { PrepTask, PrepColumn } from '../components/prep/types';
+import { prepTaskService } from '../services/prepTaskService';
 
 // Define column IDs as constants to ensure consistency
 export const COLUMN_IDS = {
-    TO_PREP: 'to-prep',
-    PREPPING: 'prepping',
-    READY: 'ready',
-    COMPLETE: 'complete'
+    TO_PREP: 'TO_PREP',
+    PREPPING: 'PREPPING',
+    READY: 'READY',
+    COMPLETE: 'COMPLETE'
 } as const;
 
 interface PrepBoardState {
     columns: PrepColumn[];
-    addTask: (task: PrepTask) => void;
-    moveTask: (taskId: string, sourceColId: string, destColId: string, destinationIndex: number) => void;
-    updateTask: (taskId: string, updates: Partial<PrepTask>) => void;
-    removeTask: (taskId: string) => void;
+    isLoading: boolean;
+    error: string | null;
+    addTask: (task: Omit<PrepTask, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+    moveTask: (taskId: string, sourceColId: string, destColId: string, destinationIndex: number) => Promise<void>;
+    updateTask: (taskId: string, updates: Partial<PrepTask>) => Promise<void>;
+    removeTask: (taskId: string) => Promise<void>;
+    fetchTasks: () => Promise<void>;
 }
 
 const initialColumns: PrepColumn[] = [
@@ -41,109 +44,119 @@ const initialColumns: PrepColumn[] = [
     }
 ];
 
-export const usePrepBoardStore = create<PrepBoardState>()(
-    persist(
-        (set, get) => ({
-            columns: initialColumns,
+export const usePrepBoardStore = create<PrepBoardState>()((set, get) => ({
+    columns: initialColumns,
+    isLoading: false,
+    error: null,
 
-            addTask: (task) => {
-                console.log('Adding task to store:', task);
-                const currentState = get();
-                console.log('Current store state:', currentState);
-                
-                set((state) => {
-                    // Ensure we're working with a fresh state
-                    const columns = state.columns.length > 0 ? state.columns : initialColumns;
-                    const toPrepColumn = columns.find(col => col.id === COLUMN_IDS.TO_PREP);
-                    
-                    if (!toPrepColumn) {
-                        console.error('To Prep column not found! Current columns:', columns);
-                        // If column structure is broken, reset to initial state with new task
-                        return {
-                            columns: initialColumns.map(col => 
-                                col.id === COLUMN_IDS.TO_PREP
-                                    ? { ...col, tasks: [task] }
-                                    : col
-                            )
-                        };
-                    }
+    fetchTasks: async () => {
+        set({ isLoading: true, error: null });
+        try {
+            const tasks = await prepTaskService.getAllTasks();
+            
+            // Group tasks by status
+            const columns = initialColumns.map(col => ({
+                ...col,
+                tasks: tasks.filter(task => task.status === col.id)
+            }));
 
-                    const newState = {
-                        columns: columns.map(col => 
-                            col.id === COLUMN_IDS.TO_PREP
-                                ? { ...col, tasks: [...col.tasks, task] }
-                                : col
-                        )
-                    };
-                    console.log('New store state:', newState);
-                    return newState;
-                });
+            set({ columns, isLoading: false });
+        } catch (error) {
+            console.error('Error fetching tasks:', error);
+            set({ error: 'Failed to fetch tasks', isLoading: false });
+        }
+    },
 
-                // Verify the update
-                const newState = get();
-                console.log('Store state after update:', newState);
-                const toPrepColumn = newState.columns.find(col => col.id === COLUMN_IDS.TO_PREP);
-                console.log('To Prep column tasks:', toPrepColumn?.tasks);
-            },
+    addTask: async (task) => {
+        set({ isLoading: true, error: null });
+        try {
+            const newTask = await prepTaskService.createTask(task);
+            
+            set(state => ({
+                columns: state.columns.map(col =>
+                    col.id === newTask.status
+                        ? { ...col, tasks: [...col.tasks, newTask] }
+                        : col
+                ),
+                isLoading: false
+            }));
+        } catch (error) {
+            console.error('Error adding task:', error);
+            set({ error: 'Failed to add task', isLoading: false });
+        }
+    },
 
-            moveTask: (taskId, sourceColId, destColId, destinationIndex) => set((state) => {
-                const sourceColumn = state.columns.find(col => col.id === sourceColId);
-                const destColumn = state.columns.find(col => col.id === destColId);
-                
-                if (!sourceColumn || !destColumn) return state;
+    moveTask: async (taskId, sourceColId, destColId, destinationIndex) => {
+        // Find the task
+        const sourceColumn = get().columns.find(col => col.id === sourceColId);
+        const task = sourceColumn?.tasks.find(t => t.id === taskId);
+        
+        if (!task) return;
 
-                const task = sourceColumn.tasks.find(t => t.id === taskId);
-                if (!task) return state;
+        // Optimistically update the UI
+        set(state => ({
+            columns: state.columns.map(col => {
+                if (col.id === sourceColId) {
+                    return { ...col, tasks: col.tasks.filter(t => t.id !== taskId) };
+                }
+                if (col.id === destColId) {
+                    const newTasks = [...col.tasks];
+                    newTasks.splice(destinationIndex, 0, { ...task, status: destColId });
+                    return { ...col, tasks: newTasks };
+                }
+                return col;
+            })
+        }));
 
-                // Remove from source
-                const sourceColumnTasks = sourceColumn.tasks.filter(t => t.id !== taskId);
-                
-                // Add to destination
-                const destColumnTasks = [...destColumn.tasks];
-                destColumnTasks.splice(destinationIndex, 0, {
-                    ...task,
-                    status: destColId as PrepTask['status'],
-                    updatedAt: new Date().toISOString()
-                });
+        // Update in the backend
+        try {
+            await prepTaskService.updateTask(taskId, {
+                status: destColId,
+                order: destinationIndex
+            });
+        } catch (error) {
+            console.error('Error moving task:', error);
+            // Revert the change on error
+            get().fetchTasks();
+            set({ error: 'Failed to move task' });
+        }
+    },
 
-                return {
-                    columns: state.columns.map(col => {
-                        if (col.id === sourceColId) {
-                            return { ...col, tasks: sourceColumnTasks };
-                        }
-                        if (col.id === destColId) {
-                            return { ...col, tasks: destColumnTasks };
-                        }
-                        return col;
-                    })
-                };
-            }),
-
-            updateTask: (taskId, updates) => set((state) => ({
+    updateTask: async (taskId, updates) => {
+        set({ isLoading: true, error: null });
+        try {
+            const updatedTask = await prepTaskService.updateTask(taskId, updates);
+            
+            set(state => ({
                 columns: state.columns.map(col => ({
                     ...col,
-                    tasks: col.tasks.map(task => 
-                        task.id === taskId 
-                            ? { ...task, ...updates, updatedAt: new Date().toISOString() }
-                            : task
+                    tasks: col.tasks.map(task =>
+                        task.id === taskId ? updatedTask : task
                     )
-                }))
-            })),
+                })),
+                isLoading: false
+            }));
+        } catch (error) {
+            console.error('Error updating task:', error);
+            set({ error: 'Failed to update task', isLoading: false });
+        }
+    },
 
-            removeTask: (taskId) => set((state) => ({
+    removeTask: async (taskId) => {
+        set({ isLoading: true, error: null });
+        try {
+            await prepTaskService.deleteTask(taskId);
+            
+            set(state => ({
                 columns: state.columns.map(col => ({
                     ...col,
                     tasks: col.tasks.filter(task => task.id !== taskId)
-                }))
-            })),
-        }),
-        {
-            name: 'prep-board-storage',
-            version: 1,
-            storage: createJSONStorage(() => localStorage),
-            onRehydrateStorage: () => (state) => {
-                console.log('Store rehydrated with state:', state);
-            }
+                })),
+                isLoading: false
+            }));
+        } catch (error) {
+            console.error('Error removing task:', error);
+            set({ error: 'Failed to remove task', isLoading: false });
         }
-    )
-); 
+    }
+})); 
