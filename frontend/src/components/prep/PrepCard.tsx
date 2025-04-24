@@ -6,23 +6,47 @@ import IconButton from '@mui/material/IconButton';
 import DeleteIcon from '@mui/icons-material/Delete';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
 import { PrepTask } from './types';
-import { useNavigate } from 'react-router-dom';
+import { COLUMN_IDS } from '../../stores/prepBoardStore';
 
 interface PrepCardProps {
     task: PrepTask;
     onDelete: (taskId: string) => void;
+    onViewRecipe: (taskId: string) => void;
 }
 
-const PrepCard: React.FC<PrepCardProps> = ({ task, onDelete }) => {
-    const navigate = useNavigate();
+const getStatusColor = (status: string) => {
+    switch (status) {
+        case COLUMN_IDS.TO_PREP:
+            return 'info';
+        case COLUMN_IDS.PREPPING:
+            return 'warning';
+        case COLUMN_IDS.READY:
+            return 'success';
+        case COLUMN_IDS.COMPLETE:
+            return 'default';
+        default:
+            return 'default';
+    }
+};
 
-    const handleViewRecipe = () => {
-        if (task.recipeId) {
-            navigate(`/recipe/${task.recipeId}`);
-        }
-    };
+const getStatusLabel = (status: string) => {
+    switch (status) {
+        case COLUMN_IDS.TO_PREP:
+            return 'To Prep';
+        case COLUMN_IDS.PREPPING:
+            return 'Prepping';
+        case COLUMN_IDS.READY:
+            return 'Ready';
+        case COLUMN_IDS.COMPLETE:
+            return 'Complete';
+        default:
+            return status;
+    }
+};
 
+const PrepCard: React.FC<PrepCardProps> = ({ task, onDelete, onViewRecipe }) => {
     return (
         <Card sx={{ 
             width: '100%', 
@@ -39,21 +63,22 @@ const PrepCard: React.FC<PrepCardProps> = ({ task, onDelete }) => {
                             {task.title}
                         </Typography>
                         {task.description && (
-                            <Typography variant="body2" color="text.secondary">
+                            <Typography variant="body2" color="text.secondary" gutterBottom>
                                 {task.description}
                             </Typography>
                         )}
-                        {task.recipe && (
-                            <Typography variant="body2" color="primary" sx={{ mt: 1 }}>
-                                From recipe: {task.recipe.name}
-                            </Typography>
-                        )}
+                        <Chip 
+                            label={getStatusLabel(task.status)}
+                            color={getStatusColor(task.status)}
+                            size="small"
+                            sx={{ mt: 1 }}
+                        />
                     </Box>
                     <Box>
                         {task.recipeId && (
                             <IconButton 
                                 size="small" 
-                                onClick={handleViewRecipe}
+                                onClick={() => onViewRecipe(task.id)}
                                 sx={{ mr: 1 }}
                             >
                                 <VisibilityIcon />

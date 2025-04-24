@@ -5,10 +5,12 @@ import AddIcon from '@mui/icons-material/Add';
 import { usePrepBoardStore } from '../../stores/prepBoardStore';
 import { PrepColumn } from './PrepColumn';
 import AddRecipeDialog from './AddRecipeDialog';
+import RecipeViewDialog from './RecipeViewDialog';
 
 export const PrepBoard: React.FC = () => {
     const { columns, moveTask, removeTask, isLoading, error, fetchTasks } = usePrepBoardStore();
     const [addDialogOpen, setAddDialogOpen] = useState(false);
+    const [viewRecipeId, setViewRecipeId] = useState<number | null>(null);
 
     useEffect(() => {
         fetchTasks();
@@ -26,6 +28,13 @@ export const PrepBoard: React.FC = () => {
                 destination.droppableId,
                 destination.index
             );
+        }
+    };
+
+    const handleViewRecipe = (taskId: string) => {
+        const task = columns.flatMap(col => col.tasks).find(t => t.id === taskId);
+        if (task?.recipeId) {
+            setViewRecipeId(task.recipeId);
         }
     };
 
@@ -70,6 +79,7 @@ export const PrepBoard: React.FC = () => {
                                         column={column}
                                         provided={provided}
                                         onDelete={removeTask}
+                                        onViewRecipe={handleViewRecipe}
                                     />
                                 )}
                             </Droppable>
@@ -81,6 +91,12 @@ export const PrepBoard: React.FC = () => {
             <AddRecipeDialog
                 open={addDialogOpen}
                 onClose={() => setAddDialogOpen(false)}
+            />
+
+            <RecipeViewDialog
+                open={viewRecipeId !== null}
+                onClose={() => setViewRecipeId(null)}
+                recipeId={viewRecipeId}
             />
         </Box>
     );

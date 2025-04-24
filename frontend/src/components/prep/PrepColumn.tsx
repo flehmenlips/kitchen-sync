@@ -9,6 +9,7 @@ interface PrepColumnProps {
     column: ColumnType;
     provided: any;
     onDelete: (taskId: string) => void;
+    onViewRecipe: (taskId: string) => void;
 }
 
 const getColumnColor = (columnId: string) => {
@@ -26,7 +27,7 @@ const getColumnColor = (columnId: string) => {
     }
 };
 
-export const PrepColumn: React.FC<PrepColumnProps> = ({ column, provided, onDelete }) => {
+export const PrepColumn: React.FC<PrepColumnProps> = ({ column, provided, onDelete, onViewRecipe }) => {
     return (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Paper
@@ -67,7 +68,11 @@ export const PrepColumn: React.FC<PrepColumnProps> = ({ column, provided, onDele
                                 {...provided.dragHandleProps}
                                 sx={{ mb: 1 }}
                             >
-                                <PrepCard task={task} onDelete={onDelete} />
+                                <PrepCard 
+                                    task={task} 
+                                    onDelete={onDelete}
+                                    onViewRecipe={onViewRecipe}
+                                />
                             </Box>
                         )}
                     </Draggable>
