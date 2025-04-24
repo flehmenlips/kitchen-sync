@@ -10,6 +10,12 @@ export const COLUMN_IDS = {
     COMPLETE: 'COMPLETE'
 } as const;
 
+type PrepTaskStatus = typeof COLUMN_IDS[keyof typeof COLUMN_IDS];
+
+const isValidStatus = (status: string): status is PrepTaskStatus => {
+    return Object.values(COLUMN_IDS).includes(status as PrepTaskStatus);
+};
+
 interface PrepBoardState {
     columns: PrepColumn[];
     isLoading: boolean;
@@ -52,12 +58,23 @@ export const usePrepBoardStore = create<PrepBoardState>()((set, get) => ({
     fetchTasks: async () => {
         set({ isLoading: true, error: null });
         try {
-            const tasks = await prepTaskService.getAllTasks();
+            const response = await prepTaskService.getAllTasks();
+            const tasks = Array.isArray(response) ? response : [];
             
-            // Group tasks by status
+            if (!Array.isArray(tasks)) {
+                throw new Error('Invalid response format: tasks is not an array');
+            }
+            
+            // Group tasks by status, ensuring each task has a valid status
             const columns = initialColumns.map(col => ({
                 ...col,
-                tasks: tasks.filter(task => task.status === col.id)
+                tasks: tasks.filter(task => 
+                    task && 
+                    typeof task === 'object' && 
+                    'status' in task && 
+                    isValidStatus(task.status) &&
+                    task.status === col.id
+                )
             }));
 
             set({ columns, isLoading: false });
@@ -87,6 +104,12 @@ export const usePrepBoardStore = create<PrepBoardState>()((set, get) => ({
     },
 
     moveTask: async (taskId, sourceColId, destColId, destinationIndex) => {
+        // Validate status
+        if (!isValidStatus(destColId)) {
+            console.error('Invalid status:', destColId);
+            return;
+        }
+
         // Find the task
         const sourceColumn = get().columns.find(col => col.id === sourceColId);
         const task = sourceColumn?.tasks.find(t => t.id === taskId);
@@ -101,7 +124,7 @@ export const usePrepBoardStore = create<PrepBoardState>()((set, get) => ({
                 }
                 if (col.id === destColId) {
                     const newTasks = [...col.tasks];
-                    newTasks.splice(destinationIndex, 0, { ...task, status: destColId });
+                    newTasks.splice(destinationIndex, 0, { ...task, status: destColId as PrepTaskStatus });
                     return { ...col, tasks: newTasks };
                 }
                 return col;
@@ -111,7 +134,7 @@ export const usePrepBoardStore = create<PrepBoardState>()((set, get) => ({
         // Update in the backend
         try {
             await prepTaskService.updateTask(taskId, {
-                status: destColId,
+                status: destColId as PrepTaskStatus,
                 order: destinationIndex
             });
         } catch (error) {
