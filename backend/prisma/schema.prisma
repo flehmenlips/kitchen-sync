@@ -196,6 +196,25 @@ enum PrepTaskStatus {
   COMPLETE
 }
 
+model PrepColumn {
+    id          String    @id @default(uuid())
+    name        String    @db.VarChar(255)
+    order       Int       @default(0)
+    color       String    @default("#1976d2") @db.VarChar(7)  // Default to Material-UI primary blue
+    userId      Int       @map("user_id")
+    createdAt   DateTime  @default(now()) @map("created_at")
+    updatedAt   DateTime  @updatedAt @map("updated_at")
+
+    // Relations
+    tasks       PrepTask[]
+    user        User       @relation("UserPrepColumns", fields: [userId], references: [id], onDelete: Cascade)
+
+    @@map("prep_columns")
+    @@index([userId])
+    @@index([order])
+    @@unique([name, userId])
+}
+
 model User {
   id          Int      @id @default(autoincrement())
   email       String   @unique
@@ -217,6 +236,7 @@ model User {
   assignedIssues Issue[]    @relation("AssignedIssues")
   comments       Comment[]
   prepTasks      PrepTask[]   @relation("UserPrepTasks")
+  prepColumns    PrepColumn[] @relation("UserPrepColumns")
 
   @@map("users")
 }
@@ -306,7 +326,7 @@ model PrepTask {
   id          String        @id @default(uuid())
   title       String        @db.VarChar(255)
   description String?       @db.Text
-  status      PrepTaskStatus @default(TO_PREP)
+  columnId    String        @map("column_id")
   recipeId    Int?         @map("recipe_id")
   userId      Int          @map("user_id")
   order       Int          @default(0)
@@ -314,11 +334,13 @@ model PrepTask {
   updatedAt   DateTime     @updatedAt @map("updated_at")
 
   // Relations
+  column      PrepColumn   @relation(fields: [columnId], references: [id])
   recipe      Recipe?      @relation("RecipePrepTasks", fields: [recipeId], references: [id], onDelete: SetNull)
   user        User         @relation("UserPrepTasks", fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("prep_tasks")
   @@index([userId])
   @@index([recipeId])
-  @@index([status])
+  @@index([columnId])
+  @@index([order])
 }
