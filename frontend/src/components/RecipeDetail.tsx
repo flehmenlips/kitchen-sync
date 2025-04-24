@@ -23,7 +23,7 @@ import {
     ToggleButton,
 } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
-import { getRecipeById, updateRecipe } from '../services/apiService';
+import { getRecipeById, updateRecipe, deleteRecipe } from '../services/apiService';
 import { Recipe } from '../types/recipe';
 import EditIcon from '@mui/icons-material/Edit';
 import ScaleIcon from '@mui/icons-material/Scale';
@@ -56,6 +56,7 @@ const RecipeDetail: React.FC = () => {
     const [isConciseMode, setIsConciseMode] = useState(false);
     const { showSnackbar } = useSnackbar();
     const { addTask } = usePrepBoardStore();
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
     useEffect(() => {
         const loadRecipe = async () => {
@@ -153,6 +154,19 @@ const RecipeDetail: React.FC = () => {
         } catch (err) {
             console.error('Error adding recipe to prep board:', err);
             showSnackbar('Failed to add recipe to prep board', 'error');
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!recipe?.id) return;
+        
+        try {
+            await deleteRecipe(recipe.id);
+            showSnackbar('Recipe deleted successfully', 'success');
+            navigate('/recipes');
+        } catch (err) {
+            console.error('Error deleting recipe:', err);
+            showSnackbar('Failed to delete recipe', 'error');
         }
     };
 
@@ -311,7 +325,7 @@ const RecipeDetail: React.FC = () => {
                         </IconButton>
                     </Tooltip>
                     <Tooltip title="Delete Recipe">
-                        <IconButton color="error">
+                        <IconButton onClick={() => setIsDeleteDialogOpen(true)} color="error">
                             <DeleteIcon />
                         </IconButton>
                     </Tooltip>
@@ -384,6 +398,25 @@ const RecipeDetail: React.FC = () => {
                     <Button onClick={() => setSaveDialogOpen(false)}>Cancel</Button>
                     <Button onClick={handleSaveScaledVersion} variant="contained" color="primary">
                         Save as Base Recipe
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog
+                open={isDeleteDialogOpen}
+                onClose={() => setIsDeleteDialogOpen(false)}
+            >
+                <DialogTitle>Delete Recipe?</DialogTitle>
+                <DialogContent>
+                    <Typography>
+                        Are you sure you want to delete "{recipe?.name}"? This action cannot be undone.
+                    </Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
+                    <Button onClick={handleDelete} color="error" variant="contained">
+                        Delete
                     </Button>
                 </DialogActions>
             </Dialog>

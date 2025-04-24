@@ -124,278 +124,309 @@ type IngredientInput = {
 // @route   POST /api/recipes
 // @access  Private/Admin (eventually)
 export const createRecipe = async (req: Request, res: Response): Promise<void> => {
-  if (!req.user?.id) {
-     res.status(401).json({ message: 'Not authorized, user ID missing' });
-     return;
-  }
-  try {
-    const {
-      name, description, instructions, yieldQuantity, yieldUnitId,
-      prepTimeMinutes, cookTimeMinutes, tags,
-      categoryId,
-      ingredients
-    } = req.body;
-
-    if (!name) {
-      res.status(400).json({ message: 'Missing required field: name' });
-      return;
-    }
-    if (ingredients && !Array.isArray(ingredients)) {
-        res.status(400).json({ message: "'ingredients' field must be an array." });
+    if (!req.user?.id) {
+        res.status(401).json({ message: 'Not authorized, user ID missing' });
         return;
     }
 
-    const prepTime = safeParseInt(prepTimeMinutes);
-    const cookTime = safeParseInt(cookTimeMinutes);
-    const yieldQty = safeParseFloat(yieldQuantity);
-    const yieldUnit = safeParseInt(yieldUnitId);
-    const categoryIdNum = safeParseInt(categoryId) ?? null;
+    try {
+        const {
+            name, description, instructions, yieldQuantity, yieldUnitId,
+            prepTimeMinutes, cookTimeMinutes, tags,
+            categoryId,
+            ingredients
+        } = req.body;
 
-    const tagsArray = typeof tags === 'string' ? tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '') : [];
-
-    const newRecipeWithIngredients = await prisma.$transaction(async (tx) => {
-      const newRecipe = await tx.recipe.create({
-        data: {
-          name,
-          description,
-          instructions,
-          yieldQuantity: yieldQty,
-          yieldUnitId: yieldUnit,
-          prepTimeMinutes: prepTime,
-          cookTimeMinutes: cookTime,
-          tags: tagsArray,
-          categoryId: categoryIdNum,
-          userId: req.user!.id, // Assign logged-in user's ID
-        },
-      });
-
-      if (ingredients && ingredients.length > 0) {
-        const recipeIngredientsData = ingredients.map((ing: IngredientInput, index: number) => {
-            if ((!ing.ingredientId && !ing.subRecipeId) || !ing.quantity || !ing.unitId) {
-                throw new Error(`Invalid data for ingredient: requires ingredientId or subRecipeId, quantity, and unitId.`);
-            }
-             if (ing.ingredientId && ing.subRecipeId) {
-                throw new Error(`Invalid data for ingredient: cannot have both ingredientId and subRecipeId.`);
-            }
-            
-            const quantityNum = safeParseFloat(ing.quantity);
-            const unitIdNum = safeParseInt(ing.unitId);
-            const ingredientIdNum = safeParseInt(ing.ingredientId);
-            const subRecipeIdNum = safeParseInt(ing.subRecipeId);
-
-            // Validate parsed numbers - ensure unit is always present
-            if (quantityNum === undefined) {
-                 throw new Error(`Invalid numeric quantity for ingredient.`);
-            }
-             if (!unitIdNum) {
-                throw new Error(`Invalid or missing unitId for ingredient.`);
-            }
-            if (ing.type === 'ingredient' && !ingredientIdNum) {
-                throw new Error(`Invalid or missing ingredientId for ingredient.`);
-            }
-            if (ing.type === 'sub-recipe' && !subRecipeIdNum) {
-                 throw new Error(`Invalid or missing subRecipeId for ingredient.`);
-            }
-
-            const returnObj = {
-                recipeId: newRecipe.id,
-                ingredientId: ing.type === 'ingredient' ? ingredientIdNum : undefined,
-                subRecipeId: ing.type === 'sub-recipe' ? subRecipeIdNum : undefined,
-                quantity: quantityNum ?? 0, // Default to 0 if somehow still undefined
-                unitId: unitIdNum, 
-                order: index
-            };
-            return returnObj;
-        }).filter((ing: MappedIngredientData) => ing.ingredientId || ing.subRecipeId);
-
-        if (recipeIngredientsData.length > 0) {
-            await tx.unitQuantity.createMany({
-              data: recipeIngredientsData,
-            });
+        if (!name) {
+            res.status(400).json({ message: 'Missing required field: name' });
+            return;
         }
-      }
-      return newRecipe;
-    });
 
-    const finalRecipe = await prisma.recipe.findUnique({
-        where: { id: newRecipeWithIngredients.id },
-        include: { category: true, yieldUnit: true, recipeIngredients: { orderBy: { order: 'asc' }, include: { unit: true, ingredient: true, subRecipe: { select: { id: true, name: true } } } } }
-    });
-    res.status(201).json(finalRecipe);
+        // Check for duplicate recipe name for this user
+        const existingRecipe = await prisma.recipe.findFirst({
+            where: {
+                name,
+                userId: req.user.id
+            }
+        });
 
-  } catch (error: any) {
-    console.error('Error creating recipe:', error);
-    if (error.message.includes('Invalid data') || error.message.includes('Invalid or missing')) {
-        res.status(400).json({ message: error.message });
-        return;
+        if (existingRecipe) {
+            res.status(400).json({ message: 'A recipe with this name already exists' });
+            return;
+        }
+
+        if (ingredients && !Array.isArray(ingredients)) {
+            res.status(400).json({ message: "'ingredients' field must be an array." });
+            return;
+        }
+
+        const prepTime = safeParseInt(prepTimeMinutes);
+        const cookTime = safeParseInt(cookTimeMinutes);
+        const yieldQty = safeParseFloat(yieldQuantity);
+        const yieldUnit = safeParseInt(yieldUnitId);
+        const categoryIdNum = safeParseInt(categoryId) ?? null;
+
+        const tagsArray = typeof tags === 'string' ? tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '') : [];
+
+        const newRecipeWithIngredients = await prisma.$transaction(async (tx) => {
+            const newRecipe = await tx.recipe.create({
+                data: {
+                    name,
+                    description,
+                    instructions,
+                    yieldQuantity: yieldQty,
+                    yieldUnitId: yieldUnit,
+                    prepTimeMinutes: prepTime,
+                    cookTimeMinutes: cookTime,
+                    tags: tagsArray,
+                    categoryId: categoryIdNum,
+                    userId: req.user!.id,
+                },
+            });
+
+            if (ingredients && ingredients.length > 0) {
+                const recipeIngredientsData = ingredients.map((ing: IngredientInput, index: number) => {
+                    if ((!ing.ingredientId && !ing.subRecipeId) || !ing.quantity || !ing.unitId) {
+                        throw new Error(`Invalid data for ingredient: requires ingredientId or subRecipeId, quantity, and unitId.`);
+                    }
+                    if (ing.ingredientId && ing.subRecipeId) {
+                        throw new Error(`Invalid data for ingredient: cannot have both ingredientId and subRecipeId.`);
+                    }
+                    
+                    const quantityNum = safeParseFloat(ing.quantity);
+                    const unitIdNum = safeParseInt(ing.unitId);
+                    const ingredientIdNum = safeParseInt(ing.ingredientId);
+                    const subRecipeIdNum = safeParseInt(ing.subRecipeId);
+
+                    // Validate parsed numbers - ensure unit is always present
+                    if (quantityNum === undefined) {
+                        throw new Error(`Invalid numeric quantity for ingredient.`);
+                    }
+                    if (!unitIdNum) {
+                        throw new Error(`Invalid or missing unitId for ingredient.`);
+                    }
+                    if (ing.type === 'ingredient' && !ingredientIdNum) {
+                        throw new Error(`Invalid or missing ingredientId for ingredient.`);
+                    }
+                    if (ing.type === 'sub-recipe' && !subRecipeIdNum) {
+                        throw new Error(`Invalid or missing subRecipeId for ingredient.`);
+                    }
+
+                    return {
+                        recipeId: newRecipe.id,
+                        ingredientId: ingredientIdNum,
+                        subRecipeId: subRecipeIdNum,
+                        quantity: quantityNum,
+                        unitId: unitIdNum,
+                        order: index
+                    };
+                });
+
+                await tx.unitQuantity.createMany({
+                    data: recipeIngredientsData
+                });
+            }
+
+            return newRecipe;
+        });
+
+        res.status(201).json(newRecipeWithIngredients);
+    } catch (error) {
+        console.error('Error creating recipe:', error);
+        res.status(500).json({ message: 'Error creating recipe' });
     }
-    // Handle Prisma errors P2003 (Foreign key constraint) e.g. if unitId or ingredientId doesn't exist
-     if (error.code === 'P2003') {
-        res.status(400).json({ message: `Invalid reference: Make sure the selected category, units, ingredients, or sub-recipes exist.` });
-        return;
-    }
-    res.status(500).json({ message: 'Error creating recipe' });
-  }
 };
 
 // @desc    Update a recipe
 // @route   PUT /api/recipes/:id
 // @access  Private/Admin (eventually)
 export const updateRecipe = async (req: Request, res: Response): Promise<void> => {
-  if (!req.user?.id) {
-     res.status(401).json({ message: 'Not authorized, user ID missing' });
-     return;
-  }
-  try {
-    const { id } = req.params;
-    const recipeId = safeParseInt(id);
-    if (recipeId === undefined) {
-       res.status(400).json({ message: 'Invalid recipe ID format' });
-       return;
-    }
-
-    const {
-        name, description, instructions, yieldQuantity, yieldUnitId,
-        prepTimeMinutes, cookTimeMinutes, tags,
-        categoryId,
-        ingredients
-    } = req.body;
-
-    if (ingredients && !Array.isArray(ingredients)) {
-        res.status(400).json({ message: "'ingredients' field must be an array." });
-        return;
-    }
-    if (!name) {
-        res.status(400).json({ message: 'Missing required field: name' });
+    if (!req.user?.id) {
+        res.status(401).json({ message: 'Not authorized, user ID missing' });
         return;
     }
 
-    const prepTime = safeParseInt(prepTimeMinutes);
-    const cookTime = safeParseInt(cookTimeMinutes);
-    const yieldQty = safeParseFloat(yieldQuantity);
-    const yieldUnit = safeParseInt(yieldUnitId);
-    const categoryIdNum = safeParseInt(categoryId) ?? null;
+    try {
+        const { id } = req.params;
+        const {
+            name, description, instructions, yieldQuantity, yieldUnitId,
+            prepTimeMinutes, cookTimeMinutes, tags,
+            categoryId,
+            ingredients
+        } = req.body;
 
-    const tagsArray = typeof tags === 'string' ? tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '') : [];
-
-    const updatedRecipeResult = await prisma.$transaction(async (tx) => {
-        // Check if recipe exists before attempting update/delete
-        const existingRecipe = await tx.recipe.findUnique({ where: { id: recipeId }});
-        if (!existingRecipe) {
-            throw new Error('P2025'); // Throw specific code/error Prisma uses
-        }
-        // Ownership check before update
-        if (existingRecipe.userId !== req.user!.id) {
-             throw new Error('AUTH_ERROR'); // Custom error code for ownership
+        const recipeId = safeParseInt(id);
+        if (!recipeId) {
+            res.status(400).json({ message: 'Invalid recipe ID' });
+            return;
         }
 
-        const updatedRecipe = await tx.recipe.update({
-            where: { id: recipeId },
-            data: {
-                name,
-                description,
-                instructions,
-                yieldQuantity: yieldQty,
-                yieldUnitId: yieldUnit,
-                prepTimeMinutes: prepTime,
-                cookTimeMinutes: cookTime,
-                tags: tagsArray,
-                categoryId: categoryIdNum,
-            },
+        // Check if recipe exists and belongs to user
+        const existingRecipe = await prisma.recipe.findUnique({
+            where: { id: recipeId }
         });
 
-        await tx.unitQuantity.deleteMany({ where: { recipeId: recipeId }});
-
-        if (ingredients && ingredients.length > 0) {
-            const recipeIngredientsData = ingredients.map((ing: IngredientInput, index: number) => {
-                console.log(`[updateRecipe] Processing ing Input:`, JSON.stringify(ing, null, 2)); // Log raw input
-
-                if ((!ing.ingredientId && !ing.subRecipeId) || !ing.quantity || !ing.unitId) {
-                    throw new Error(`Invalid data for ingredient: requires ingredientId or subRecipeId, quantity, and unitId.`);
-                }
-                if (ing.ingredientId && ing.subRecipeId) {
-                    throw new Error(`Invalid data for ingredient: cannot have both ingredientId and subRecipeId.`);
-                }
-                
-                const quantityNum = safeParseFloat(ing.quantity);
-                const unitIdNum = safeParseInt(ing.unitId);
-                const ingredientIdNum = safeParseInt(ing.ingredientId);
-                const subRecipeIdNum = safeParseInt(ing.subRecipeId);
-                
-                console.log(`[updateRecipe] Parsed values:`, { quantityNum, unitIdNum, ingredientIdNum, subRecipeIdNum, type: ing.type }); // Log parsed values + type
-
-                if (quantityNum === undefined) {
-                    throw new Error(`Invalid numeric quantity for ingredient.`);
-                }
-                 if (!unitIdNum) {
-                    throw new Error(`Invalid or missing unitId for ingredient.`);
-                }
-                if (ing.type === 'ingredient' && !ingredientIdNum) {
-                    throw new Error(`Invalid or missing ingredientId for ingredient.`);
-                }
-                if (ing.type === 'sub-recipe' && !subRecipeIdNum) {
-                     throw new Error(`Invalid or missing subRecipeId for ingredient.`);
-                }
-
-                const returnObj = {
-                    recipeId: updatedRecipe.id,
-                    ingredientId: ing.type === 'ingredient' ? ingredientIdNum : undefined,
-                    subRecipeId: ing.type === 'sub-recipe' ? subRecipeIdNum : undefined,
-                    quantity: quantityNum ?? 0,
-                    unitId: unitIdNum,
-                    order: index
-                };
-                console.log(`[updateRecipe] Returning object before filter:`, JSON.stringify(returnObj, null, 2)); // Log object being returned
-
-                return returnObj;
-             }).filter((ing: MappedIngredientData) => ing.ingredientId || ing.subRecipeId);
-             
-             console.log(`[updateRecipe] Recipe ID: ${recipeId}, Filtered ingredients for createMany:`, JSON.stringify(recipeIngredientsData, null, 2));
-
-             if (recipeIngredientsData.length > 0) {
-                try {
-                    await tx.unitQuantity.createMany({ data: recipeIngredientsData });
-                 } catch (createError: any) {
-                     console.error(`[updateRecipe] Error during createMany for Recipe ID: ${recipeId}`, createError);
-                     // Check specifically for foreign key constraint errors during createMany
-                     if (createError.code === 'P2003') {
-                         throw new Error(`Invalid reference during ingredient update: Make sure the selected units, ingredients, or sub-recipes exist.`);
-                     }
-                     // Re-throw other errors to abort the transaction
-                     throw createError; 
-                 }
-             }
+        if (!existingRecipe) {
+            res.status(404).json({ message: 'Recipe not found' });
+            return;
         }
-        return updatedRecipe.id;
-    });
 
-     const finalRecipe = await prisma.recipe.findUnique({ 
-         where: { id: updatedRecipeResult },
-         include: { category: true, yieldUnit: true, recipeIngredients: { orderBy: { order: 'asc' }, include: { unit: true, ingredient: true, subRecipe: { select: { id: true, name: true } } } } }
-      });
-    res.status(200).json(finalRecipe);
+        if (existingRecipe.userId !== req.user.id) {
+            res.status(403).json({ message: 'Not authorized to update this recipe' });
+            return;
+        }
 
-  } catch (error: any) {
-    console.error('Error updating recipe:', error);
-     if (error.message === 'AUTH_ERROR') {
-          res.status(403).json({ message: 'Not authorized to update this recipe' });
-          return;
-      }
-    if (error.message?.includes('Invalid data') || error.message?.includes('Invalid or missing')) {
-        res.status(400).json({ message: error.message });
-        return;
+        // If name is being changed, check for duplicates
+        if (name && name !== existingRecipe.name) {
+            const duplicateRecipe = await prisma.recipe.findFirst({
+                where: {
+                    name,
+                    userId: req.user.id,
+                    id: { not: recipeId } // Exclude current recipe
+                }
+            });
+
+            if (duplicateRecipe) {
+                res.status(400).json({ message: 'A recipe with this name already exists' });
+                return;
+            }
+        }
+
+        if (ingredients && !Array.isArray(ingredients)) {
+            res.status(400).json({ message: "'ingredients' field must be an array." });
+            return;
+        }
+        if (!name) {
+            res.status(400).json({ message: 'Missing required field: name' });
+            return;
+        }
+
+        const prepTime = safeParseInt(prepTimeMinutes);
+        const cookTime = safeParseInt(cookTimeMinutes);
+        const yieldQty = safeParseFloat(yieldQuantity);
+        const yieldUnit = safeParseInt(yieldUnitId);
+        const categoryIdNum = safeParseInt(categoryId) ?? null;
+
+        const tagsArray = typeof tags === 'string' ? tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '') : [];
+
+        const updatedRecipeResult = await prisma.$transaction(async (tx) => {
+            // Check if recipe exists before attempting update/delete
+            const existingRecipe = await tx.recipe.findUnique({ where: { id: recipeId }});
+            if (!existingRecipe) {
+                throw new Error('P2025'); // Throw specific code/error Prisma uses
+            }
+            // Ownership check before update
+            if (existingRecipe.userId !== req.user!.id) {
+                 throw new Error('AUTH_ERROR'); // Custom error code for ownership
+            }
+
+            const updatedRecipe = await tx.recipe.update({
+                where: { id: recipeId },
+                data: {
+                    name,
+                    description,
+                    instructions,
+                    yieldQuantity: yieldQty,
+                    yieldUnitId: yieldUnit,
+                    prepTimeMinutes: prepTime,
+                    cookTimeMinutes: cookTime,
+                    tags: tagsArray,
+                    categoryId: categoryIdNum,
+                },
+            });
+
+            await tx.unitQuantity.deleteMany({ where: { recipeId: recipeId }});
+
+            if (ingredients && ingredients.length > 0) {
+                const recipeIngredientsData = ingredients.map((ing: IngredientInput, index: number) => {
+                    console.log(`[updateRecipe] Processing ing Input:`, JSON.stringify(ing, null, 2)); // Log raw input
+
+                    if ((!ing.ingredientId && !ing.subRecipeId) || !ing.quantity || !ing.unitId) {
+                        throw new Error(`Invalid data for ingredient: requires ingredientId or subRecipeId, quantity, and unitId.`);
+                    }
+                    if (ing.ingredientId && ing.subRecipeId) {
+                        throw new Error(`Invalid data for ingredient: cannot have both ingredientId and subRecipeId.`);
+                    }
+                    
+                    const quantityNum = safeParseFloat(ing.quantity);
+                    const unitIdNum = safeParseInt(ing.unitId);
+                    const ingredientIdNum = safeParseInt(ing.ingredientId);
+                    const subRecipeIdNum = safeParseInt(ing.subRecipeId);
+                    
+                    console.log(`[updateRecipe] Parsed values:`, { quantityNum, unitIdNum, ingredientIdNum, subRecipeIdNum, type: ing.type }); // Log parsed values + type
+
+                    if (quantityNum === undefined) {
+                        throw new Error(`Invalid numeric quantity for ingredient.`);
+                    }
+                     if (!unitIdNum) {
+                        throw new Error(`Invalid or missing unitId for ingredient.`);
+                    }
+                    if (ing.type === 'ingredient' && !ingredientIdNum) {
+                        throw new Error(`Invalid or missing ingredientId for ingredient.`);
+                    }
+                    if (ing.type === 'sub-recipe' && !subRecipeIdNum) {
+                         throw new Error(`Invalid or missing subRecipeId for ingredient.`);
+                    }
+
+                    const returnObj = {
+                        recipeId: updatedRecipe.id,
+                        ingredientId: ing.type === 'ingredient' ? ingredientIdNum : undefined,
+                        subRecipeId: ing.type === 'sub-recipe' ? subRecipeIdNum : undefined,
+                        quantity: quantityNum ?? 0,
+                        unitId: unitIdNum,
+                        order: index
+                    };
+                    console.log(`[updateRecipe] Returning object before filter:`, JSON.stringify(returnObj, null, 2)); // Log object being returned
+
+                    return returnObj;
+                 }).filter((ing: MappedIngredientData) => ing.ingredientId || ing.subRecipeId);
+                 
+                 console.log(`[updateRecipe] Recipe ID: ${recipeId}, Filtered ingredients for createMany:`, JSON.stringify(recipeIngredientsData, null, 2));
+
+                 if (recipeIngredientsData.length > 0) {
+                    try {
+                        await tx.unitQuantity.createMany({ data: recipeIngredientsData });
+                     } catch (createError: any) {
+                         console.error(`[updateRecipe] Error during createMany for Recipe ID: ${recipeId}`, createError);
+                         // Check specifically for foreign key constraint errors during createMany
+                         if (createError.code === 'P2003') {
+                             throw new Error(`Invalid reference during ingredient update: Make sure the selected units, ingredients, or sub-recipes exist.`);
+                         }
+                         // Re-throw other errors to abort the transaction
+                         throw createError; 
+                     }
+                 }
+            }
+            return updatedRecipe.id;
+        });
+
+         const finalRecipe = await prisma.recipe.findUnique({ 
+             where: { id: updatedRecipeResult },
+             include: { category: true, yieldUnit: true, recipeIngredients: { orderBy: { order: 'asc' }, include: { unit: true, ingredient: true, subRecipe: { select: { id: true, name: true } } } } }
+          });
+        res.status(200).json(finalRecipe);
+
+    } catch (error: any) {
+        console.error('Error updating recipe:', error);
+         if (error.message === 'AUTH_ERROR') {
+              res.status(403).json({ message: 'Not authorized to update this recipe' });
+              return;
+          }
+        if (error.message?.includes('Invalid data') || error.message?.includes('Invalid or missing')) {
+            res.status(400).json({ message: error.message });
+            return;
+        }
+        if (error.message === 'P2025' || error.code === 'P2025') { // Catch our thrown error or Prisma's
+            res.status(404).json({ message: 'Recipe not found during update.' });
+            return;
+        }
+         // Catch specific P2003 error from the transaction
+         if (error.message?.includes('Invalid reference during ingredient update')) {
+            res.status(400).json({ message: error.message });
+            return;
+        }
+        res.status(500).json({ message: 'Error updating recipe' });
     }
-    if (error.message === 'P2025' || error.code === 'P2025') { // Catch our thrown error or Prisma's
-        res.status(404).json({ message: 'Recipe not found during update.' });
-        return;
-    }
-     // Catch specific P2003 error from the transaction
-     if (error.message?.includes('Invalid reference during ingredient update')) {
-        res.status(400).json({ message: error.message });
-        return;
-    }
-    res.status(500).json({ message: 'Error updating recipe' });
-  }
 };
 
 // @desc    Delete a recipe
