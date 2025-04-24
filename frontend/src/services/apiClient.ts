@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+// In production, the API is served from the same domain
+const API_URL = import.meta.env.PROD 
+    ? '' // Empty string means use relative URLs, which will hit the same domain
+    : (import.meta.env.VITE_API_URL || 'http://localhost:3001');
 
 export const apiClient = axios.create({
     baseURL: API_URL,
