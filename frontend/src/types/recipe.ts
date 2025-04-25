@@ -131,12 +131,25 @@ export interface RecipeIngredient {
 }
 
 export interface Recipe {
-    id: string;
+    id: number;
     name: string;
-    description?: string;
-    ingredients: string[];
-    instructions: string[];
+    description: string | null;
+    yieldQuantity: number | null;
+    yieldUnit: {
+        id: number;
+        name: string;
+        abbreviation: string;
+    } | null;
+    prepTimeMinutes: number | null;
+    cookTimeMinutes: number | null;
+    tags: string[];
+    instructions: string;
+    category: {
+        id: number;
+        name: string;
+        description: string | null;
+    } | null;
+    recipeIngredients: RecipeIngredient[];
     createdAt: string;
     updatedAt: string;
-    userId: string;
 } 

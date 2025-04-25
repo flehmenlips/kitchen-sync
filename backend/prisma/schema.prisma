@@ -1,3 +1,9 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,245 +13,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Category {
-  id          Int      @id @default(autoincrement())
-  name        String   @db.VarChar(150)
-  description String?
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  userId      Int      @map("user_id")
-  author      User     @relation("UserRecipeCategories", fields: [userId], references: [id], onDelete: Cascade)
-  recipes     Recipe[]
-
-  @@unique([name, userId])
-  @@index([userId])
-  @@map("categories")
-}
-
-model IngredientCategory {
-  id          Int          @id @default(autoincrement())
-  name        String       @db.VarChar(150)
-  description String?
-  createdAt   DateTime     @default(now()) @map("created_at")
-  updatedAt   DateTime     @updatedAt @map("updated_at")
-  userId      Int          @map("user_id")
-  author      User         @relation("UserIngredientCategories", fields: [userId], references: [id], onDelete: Cascade)
-  ingredients Ingredient[]
-
-  @@unique([name, userId])
-  @@index([userId])
-  @@map("ingredient_categories")
-}
-
-model UnitOfMeasure {
-  id                Int            @id @default(autoincrement())
-  name              String         @db.VarChar(100)
-  abbreviation      String?        @db.VarChar(20)
-  type              UnitType?
-  createdAt         DateTime       @default(now()) @map("created_at")
-  updatedAt         DateTime       @updatedAt @map("updated_at")
-  userId            Int            @map("user_id")
-  recipeIngredients UnitQuantity[] @relation("RecipeIngredientUnit")
-  recipesYield      Recipe[]       @relation("RecipeYieldUnit")
-  author            User           @relation("UserUnits", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([name, userId])
-  @@unique([abbreviation, userId])
-  @@index([userId])
-  @@map("units_of_measure")
-}
-
-model Ingredient {
-  id                   Int                 @id @default(autoincrement())
-  name                 String              @db.VarChar(255)
-  description          String?
-  createdAt            DateTime            @default(now()) @map("created_at")
-  updatedAt            DateTime            @updatedAt @map("updated_at")
-  ingredientCategoryId Int?                @map("ingredient_category_id")
-  userId               Int                 @map("user_id")
-  ingredientCategory   IngredientCategory? @relation(fields: [ingredientCategoryId], references: [id])
-  author               User                @relation("UserIngredients", fields: [userId], references: [id], onDelete: Cascade)
-  recipeIngredients    UnitQuantity[]      @relation("RecipeIngredientBase")
-
-  @@unique([name, userId])
-  @@index([ingredientCategoryId])
-  @@index([userId])
-  @@map("ingredients")
-}
-
-model Recipe {
-  id                Int            @id @default(autoincrement())
-  name              String         @db.VarChar(255)
-  description       String?
-  instructions      String
-  yieldQuantity     Decimal?       @map("yield_quantity") @db.Decimal(10, 2)
-  yieldUnitId       Int?           @map("yield_unit_id")
-  prepTimeMinutes   Int?           @map("prep_time_minutes")
-  cookTimeMinutes   Int?           @map("cook_time_minutes")
-  tags              String[]
-  createdAt         DateTime       @default(now()) @map("created_at")
-  updatedAt         DateTime       @updatedAt @map("updated_at")
-  categoryId        Int?           @map("category_id")
-  userId            Int            @map("user_id")
-  prepTasks         PrepTask[]     @relation("RecipePrepTasks")
-  recipeIngredients UnitQuantity[] @relation("RecipeParent")
-  usedAsSubRecipe   UnitQuantity[] @relation("RecipeSubComponent")
-  category          Category?      @relation(fields: [categoryId], references: [id])
-  author            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  yieldUnit         UnitOfMeasure? @relation("RecipeYieldUnit", fields: [yieldUnitId], references: [id])
-
-  @@index([categoryId])
-  @@index([userId])
-  @@map("recipes")
-}
-
-model UnitQuantity {
-  id           Int           @id @default(autoincrement())
-  recipeId     Int           @map("recipe_id")
-  ingredientId Int?          @map("ingredient_id")
-  subRecipeId  Int?          @map("sub_recipe_id")
-  quantity     Decimal       @db.Decimal(10, 2)
-  unitId       Int           @map("unit_id")
-  order        Int           @default(0)
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
-  ingredient   Ingredient?   @relation("RecipeIngredientBase", fields: [ingredientId], references: [id], onDelete: Restrict)
-  recipe       Recipe        @relation("RecipeParent", fields: [recipeId], references: [id], onDelete: Cascade)
-  subRecipe    Recipe?       @relation("RecipeSubComponent", fields: [subRecipeId], references: [id], onDelete: Restrict)
-  unit         UnitOfMeasure @relation("RecipeIngredientUnit", fields: [unitId], references: [id])
-
-  @@index([recipeId])
-  @@index([ingredientId])
-  @@index([subRecipeId])
-  @@index([unitId])
-  @@map("recipe_ingredients")
-}
-
-model PrepColumn {
-  id        String     @id @default(uuid())
-  name      String     @db.VarChar(255)
-  order     Int        @default(0)
-  color     String     @default("#1976d2") @db.VarChar(7)
-  userId    Int        @map("user_id")
-  createdAt DateTime   @default(now()) @map("created_at")
-  updatedAt DateTime   @updatedAt @map("updated_at")
-  user      User       @relation("UserPrepColumns", fields: [userId], references: [id], onDelete: Cascade)
-  tasks     PrepTask[]
-
-  @@unique([name, userId])
-  @@index([userId])
-  @@index([order])
-  @@map("prep_columns")
-}
-
-model User {
-  id                   Int                  @id @default(autoincrement())
-  email                String               @unique
-  name                 String?
-  password             String
-  createdAt            DateTime             @default(now()) @map("created_at")
-  updatedAt            DateTime             @updatedAt @map("updated_at")
-  role                 UserRole             @default(USER)
-  recipeCategories     Category[]           @relation("UserRecipeCategories")
-  comments             Comment[]
-  ingredientCategories IngredientCategory[] @relation("UserIngredientCategories")
-  ingredients          Ingredient[]         @relation("UserIngredients")
-  assignedIssues       Issue[]              @relation("AssignedIssues")
-  createdIssues        Issue[]              @relation("CreatedIssues")
-  prepColumns          PrepColumn[]         @relation("UserPrepColumns")
-  prepTasks            PrepTask[]           @relation("UserPrepTasks")
-  recipes              Recipe[]
-  units                UnitOfMeasure[]      @relation("UserUnits")
-
-  @@map("users")
-}
-
-model Issue {
-  id           Int           @id @default(autoincrement())
-  title        String        @db.VarChar(255)
-  description  String
-  type         IssueType
-  status       IssueStatus   @default(OPEN)
-  priority     IssuePriority @default(MEDIUM)
-  isPublic     Boolean       @default(false) @map("is_public")
-  createdById  Int           @map("created_by_id")
-  assignedToId Int?          @map("assigned_to_id")
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
-  comments     Comment[]
-  labels       IssueLabel[]
-  assignedTo   User?         @relation("AssignedIssues", fields: [assignedToId], references: [id])
-  createdBy    User          @relation("CreatedIssues", fields: [createdById], references: [id])
-
-  @@index([createdById])
-  @@index([assignedToId])
-  @@index([status])
-  @@index([type])
-  @@map("issues")
-}
-
-model Comment {
-  id         Int      @id @default(autoincrement())
-  content    String
-  isInternal Boolean  @default(false) @map("is_internal")
-  issueId    Int      @map("issue_id")
-  userId     Int      @map("user_id")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
-  issue      Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
-  user       User     @relation(fields: [userId], references: [id])
-
-  @@index([issueId])
-  @@index([userId])
-  @@map("comments")
-}
-
-model Label {
-  id          Int          @id @default(autoincrement())
-  name        String       @unique @db.VarChar(50)
-  color       String       @db.VarChar(7)
-  description String?
-  createdAt   DateTime     @default(now()) @map("created_at")
-  updatedAt   DateTime     @updatedAt @map("updated_at")
-  issues      IssueLabel[]
-
-  @@map("labels")
-}
-
-model IssueLabel {
-  issueId   Int      @map("issue_id")
-  labelId   Int      @map("label_id")
-  createdAt DateTime @default(now()) @map("created_at")
-  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
-  label     Label    @relation(fields: [labelId], references: [id], onDelete: Cascade)
-
-  @@id([issueId, labelId])
-  @@index([issueId])
-  @@index([labelId])
-  @@map("issue_labels")
-}
-
-model PrepTask {
-  id          String     @id @default(uuid())
-  title       String     @db.VarChar(255)
-  description String?
-  recipeId    Int?       @map("recipe_id")
-  userId      Int        @map("user_id")
-  order       Int        @default(0)
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
-  columnId    String     @map("column_id")
-  column      PrepColumn @relation(fields: [columnId], references: [id])
-  recipe      Recipe?    @relation("RecipePrepTasks", fields: [recipeId], references: [id])
-  user        User       @relation("UserPrepTasks", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([recipeId])
-  @@index([columnId])
-  @@index([order])
-  @@map("prep_tasks")
-}
-
+// Enum for Unit Types (Optional but helpful)
 enum UnitType {
   WEIGHT
   VOLUME
@@ -253,6 +21,147 @@ enum UnitType {
   OTHER
 }
 
+model Category {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(150)
+  description String?  @db.Text
+  userId      Int      @map("user_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relation: One category has many recipes
+  recipes     Recipe[]
+  author      User     @relation("UserRecipeCategories", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("categories")
+  @@index([userId])
+  @@unique([name, userId])
+}
+
+// Add Ingredient Category model
+model IngredientCategory {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(150)
+  description String?  @db.Text
+  userId      Int      @map("user_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relation: One category has many ingredients
+  ingredients Ingredient[]
+  author      User     @relation("UserIngredientCategories", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("ingredient_categories")
+  @@index([userId])
+  @@unique([name, userId])
+}
+
+model UnitOfMeasure {
+  id           Int                 @id @default(autoincrement())
+  name         String              @db.VarChar(100)
+  abbreviation String?             @db.VarChar(20)
+  type         UnitType?           // Optional enum type
+  userId       Int                 @map("user_id")
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt @map("updated_at")
+
+  // Relations
+  recipesYield       Recipe[]            @relation("RecipeYieldUnit")
+  recipeIngredients UnitQuantity[]      @relation("RecipeIngredientUnit")
+  author       User                @relation("UserUnits", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("units_of_measure")
+  @@index([userId])
+  @@unique([name, userId])
+  @@unique([abbreviation, userId])
+}
+
+model Ingredient {
+  id          Int              @id @default(autoincrement())
+  name        String           @db.VarChar(255)
+  description String?          @db.Text
+
+  // Add relation to IngredientCategory (optional)
+  ingredientCategoryId Int?     @map("ingredient_category_id")
+  userId      Int              @map("user_id")
+  ingredientCategory   IngredientCategory? @relation(fields: [ingredientCategoryId], references: [id], onDelete: SetNull)
+  author               User                @relation("UserIngredients", fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  // Relation to recipe ingredients
+  recipeIngredients UnitQuantity[]   @relation("RecipeIngredientBase")
+
+  @@map("ingredients")
+  @@index([ingredientCategoryId]) // Add index
+  @@index([userId])
+  @@unique([name, userId])
+}
+
+model Recipe {
+  id                Int              @id @default(autoincrement())
+  name              String           @db.VarChar(255)
+  description       String?          @db.Text
+  instructions      String           @db.Text
+  yieldQuantity     Decimal?         @map("yield_quantity") @db.Decimal(10, 2)
+  yieldUnitId       Int?             @map("yield_unit_id")
+  prepTimeMinutes   Int?             @map("prep_time_minutes")
+  cookTimeMinutes   Int?             @map("cook_time_minutes")
+  tags              String[]         @db.Text 
+  categoryId        Int?             @map("category_id")
+  
+  // Add userId to associate recipe with a user - MAKE OPTIONAL FOR MIGRATION
+  userId            Int              @map("user_id")
+
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  category          Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  yieldUnit         UnitOfMeasure?   @relation("RecipeYieldUnit", fields: [yieldUnitId], references: [id], onDelete: SetNull)
+  recipeIngredients UnitQuantity[]   @relation("RecipeParent") 
+  usedAsSubRecipe   UnitQuantity[]   @relation("RecipeSubComponent") 
+  author            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prepTasks         PrepTask[]       @relation("RecipePrepTasks")
+
+  @@map("recipes")
+  @@index([categoryId])
+  @@index([userId])
+  @@unique([name, userId], name: "unique_recipe_name_per_user")
+}
+
+// Explicit Many-to-Many / Linking Table for Recipe Ingredients & Sub-Recipes
+model UnitQuantity {
+  id            Int      @id @default(autoincrement())
+  recipeId      Int      @map("recipe_id") // The recipe this ingredient belongs to
+  ingredientId  Int?     @map("ingredient_id") // The base ingredient (nullable)
+  subRecipeId   Int?     @map("sub_recipe_id") // The sub-recipe used as an ingredient (nullable)
+  quantity      Decimal  @db.Decimal(10, 2)
+  unitId        Int      @map("unit_id") // Unit for this specific line item quantity
+  order         Int      @default(0)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  recipe        Recipe         @relation("RecipeParent", fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredient    Ingredient?    @relation("RecipeIngredientBase", fields: [ingredientId], references: [id], onDelete: Restrict)
+  subRecipe     Recipe?        @relation("RecipeSubComponent", fields: [subRecipeId], references: [id], onDelete: Restrict)
+  unit          UnitOfMeasure  @relation("RecipeIngredientUnit", fields: [unitId], references: [id], onDelete: Restrict)
+
+  // @@unique([recipeId, ingredientId]) // Can't use if ingredientId is nullable
+  // @@unique([recipeId, subRecipeId]) // Can't use if subRecipeId is nullable
+  // Need to handle uniqueness constraint at the application or database trigger level if needed
+  // e.g., ensure you don't add the same ingredient twice to the same recipe.
+
+  @@map("recipe_ingredients")
+  @@index([recipeId])
+  @@index([ingredientId])
+  @@index([subRecipeId])
+  @@index([unitId])
+}
+
+// --- User Model ---
 enum UserRole {
   USER
   ADMIN
@@ -285,4 +194,131 @@ enum PrepTaskStatus {
   PREPPING
   READY
   COMPLETE
+}
+
+model User {
+  id          Int      @id @default(autoincrement())
+  email       String   @unique
+  name        String?
+  password    String   
+  role        UserRole   @default(USER)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relation back to Recipe (remains the same, one user can have many recipes)
+  recipes     Recipe[]
+  units              UnitOfMeasure[]      @relation("UserUnits")
+  ingredients        Ingredient[]         @relation("UserIngredients")
+  recipeCategories   Category[]           @relation("UserRecipeCategories")
+  ingredientCategories IngredientCategory[] @relation("UserIngredientCategories")
+
+  // Add new relations
+  createdIssues  Issue[]    @relation("CreatedIssues")
+  assignedIssues Issue[]    @relation("AssignedIssues")
+  comments       Comment[]
+  prepTasks      PrepTask[]   @relation("UserPrepTasks")
+
+  @@map("users")
+}
+
+model Issue {
+  id          Int           @id @default(autoincrement())
+  title       String        @db.VarChar(255)
+  description String        @db.Text
+  type        IssueType
+  status      IssueStatus   @default(OPEN)
+  priority    IssuePriority @default(MEDIUM)
+  isPublic    Boolean       @default(false) @map("is_public")
+  
+  // Metadata
+  createdById Int          @map("created_by_id")
+  assignedToId Int?        @map("assigned_to_id")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  
+  // Relations
+  createdBy   User         @relation("CreatedIssues", fields: [createdById], references: [id])
+  assignedTo  User?        @relation("AssignedIssues", fields: [assignedToId], references: [id])
+  comments    Comment[]
+  labels      IssueLabel[]
+
+  @@map("issues")
+  @@index([createdById])
+  @@index([assignedToId])
+  @@index([status])
+  @@index([type])
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String   @db.Text
+  isInternal Boolean @default(false) @map("is_internal")
+  
+  // Metadata
+  issueId   Int      @map("issue_id")
+  userId    Int      @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("comments")
+  @@index([issueId])
+  @@index([userId])
+}
+
+model Label {
+  id          Int           @id @default(autoincrement())
+  name        String        @db.VarChar(50)
+  color       String        @db.VarChar(7) // Hex color code
+  description String?       @db.Text
+  
+  // Metadata
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  
+  // Relations
+  issues      IssueLabel[]
+
+  @@map("labels")
+  @@unique([name])
+}
+
+// Junction table for Issue-Label many-to-many relationship
+model IssueLabel {
+  issueId   Int      @map("issue_id")
+  labelId   Int      @map("label_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  // Relations
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  label     Label    @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@id([issueId, labelId])
+  @@map("issue_labels")
+  @@index([issueId])
+  @@index([labelId])
+}
+
+model PrepTask {
+  id          String        @id @default(uuid())
+  title       String        @db.VarChar(255)
+  description String?       @db.Text
+  status      PrepTaskStatus @default(TO_PREP)
+  recipeId    Int?         @map("recipe_id")
+  userId      Int          @map("user_id")
+  order       Int          @default(0)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  recipe      Recipe?      @relation("RecipePrepTasks", fields: [recipeId], references: [id], onDelete: SetNull)
+  user        User         @relation("UserPrepTasks", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("prep_tasks")
+  @@index([userId])
+  @@index([recipeId])
+  @@index([status])
 }

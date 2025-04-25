@@ -13,28 +13,21 @@ import AddIcon from '@mui/icons-material/Add';
 import CircularProgress from '@mui/material/CircularProgress';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import FormControl from '@mui/material/FormControl';
-import InputLabel from '@mui/material/InputLabel';
-import Select from '@mui/material/Select';
-import MenuItem from '@mui/material/MenuItem';
 import { Recipe } from '../../types/recipe';
 import { getRecipes } from '../../services/apiService';
 import { usePrepBoardStore } from '../../stores/prepBoardStore';
-import { AddRecipeDialogProps, CreatePrepTaskInput } from '../../types/prep';
-import { useSnackbar } from '../../context/SnackbarContext';
+import { v4 as uuidv4 } from 'uuid';
 
-const AddRecipeDialog: React.FC<AddRecipeDialogProps> = ({ open, onClose, columnId: initialColumnId }) => {
+interface AddRecipeDialogProps {
+    open: boolean;
+    onClose: () => void;
+}
+
+const AddRecipeDialog: React.FC<AddRecipeDialogProps> = ({ open, onClose }) => {
     const [recipes, setRecipes] = useState<Recipe[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [selectedColumnId, setSelectedColumnId] = useState<string | undefined>(initialColumnId);
-    const { addTask, columns } = usePrepBoardStore();
-    const { showSnackbar } = useSnackbar();
-
-    // Reset selected column when dialog opens/closes or initial column changes
-    useEffect(() => {
-        setSelectedColumnId(initialColumnId);
-    }, [open, initialColumnId]);
+    const { addTask } = usePrepBoardStore();
 
     useEffect(() => {
         const fetchRecipes = async () => {
@@ -55,41 +48,19 @@ const AddRecipeDialog: React.FC<AddRecipeDialogProps> = ({ open, onClose, column
         fetchRecipes();
     }, [open]);
 
-    const handleAddRecipe = async (recipe: Recipe) => {
-        if (!selectedColumnId) {
-            showSnackbar('Please select a column first', 'error');
-            return;
-        }
+    const handleAddRecipe = (recipe: Recipe) => {
+        const newTask = {
+            id: uuidv4(),
+            recipeId: recipe.id,
+            recipeName: recipe.name,
+            description: recipe.description || '',
+            status: 'to-prep',
+            priority: 'MEDIUM' as const,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
 
-        try {
-            // Get the column to add to
-            const targetColumn = columns.find(col => col.id === selectedColumnId);
-            if (!targetColumn) {
-                showSnackbar('Selected column not found', 'error');
-                return;
-            }
-
-            // Calculate the new task order (highest current order + 1)
-            const highestOrder = targetColumn.tasks.length > 0 
-                ? Math.max(...targetColumn.tasks.map(task => task.order))
-                : -1;
-
-            // Convert recipeId to number (backend expects Int type)
-            const recipeId = recipe.id ? parseInt(recipe.id.toString(), 10) : undefined;
-
-            const newTask: CreatePrepTaskInput = {
-                title: recipe.name,
-                description: recipe.description || '',
-                columnId: selectedColumnId,
-                recipeId: recipeId
-            };
-
-            await addTask(newTask);
-            showSnackbar(`Added "${recipe.name}" to ${targetColumn.name}`, 'success');
-        } catch (err) {
-            console.error('Error adding recipe to prep board:', err);
-            showSnackbar('Failed to add recipe to prep board', 'error');
-        }
+        addTask(newTask);
     };
 
     return (
@@ -101,27 +72,6 @@ const AddRecipeDialog: React.FC<AddRecipeDialogProps> = ({ open, onClose, column
         >
             <DialogTitle>Add Recipe to Prep Board</DialogTitle>
             <DialogContent>
-                {!initialColumnId && (
-                    <FormControl fullWidth margin="normal">
-                        <InputLabel id="column-select-label">Column</InputLabel>
-                        <Select
-                            labelId="column-select-label"
-                            value={selectedColumnId || ''}
-                            label="Column"
-                            onChange={(e) => setSelectedColumnId(e.target.value)}
-                        >
-                            {columns.map((column) => (
-                                <MenuItem 
-                                    key={column.id} 
-                                    value={column.id}
-                                >
-                                    {column.name}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-                )}
-
                 {loading ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
                         <CircularProgress />
@@ -141,8 +91,6 @@ const AddRecipeDialog: React.FC<AddRecipeDialogProps> = ({ open, onClose, column
                                         edge="end"
                                         onClick={() => handleAddRecipe(recipe)}
                                         color="primary"
-                                        disabled={!selectedColumnId}
-                                        title={!selectedColumnId ? 'Please select a column first' : 'Add to prep board'}
                                     >
                                         <AddIcon />
                                     </IconButton>
