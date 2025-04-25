@@ -1,7 +1,29 @@
 # Kitchen Sync Project Scratchpad
 
 ## Background and Motivation
-Kitchen Sync is a recipe and prep management system. This document tracks ongoing development tasks, decisions, and pending items that need revisiting.
+Kitchen Sync is a comprehensive restaurant management system designed to streamline operations by unifying recipe development, kitchen prep workflows, menu creation, reservations, and order management into a single, interconnected system. The project aims to reduce redundancy, improve efficiency, enhance consistency, and provide valuable data insights for a modern kitchen.
+
+## Project Context
+### Vision and Goals
+The vision of KitchenSync is to create a centralized, dynamic, customizable, and comprehensive software suite that seamlessly integrates all core aspects of kitchen and restaurant management, from initial recipe conception to final order delivery on the line.
+
+### Core Modules
+1. **Recipe Engine (CookBook)**: A robust database and interface for creating, storing, searching, scaling, costing, and managing recipes and sub-recipes.
+2. **Prep Flow Manager (AgileChef)**: A Kanban-style workflow tool for visualizing and managing kitchen prep tasks derived from recipes and production needs.
+3. **Menu Designer (MenuBuilder)**: A tool for designing, laying out, and printing/exporting menus, pulling data directly from the Recipe Engine.
+4. **Reservation & Order System (TableFarm)**: Manages customer reservations, table management, and captures customer orders, linking them to menu items.
+5. **Kitchen Display System (ChefRail)**: Displays active orders/tickets from the Reservation & Order System in real-time for the cooking line, allowing for status updates.
+
+### Technical Architecture
+- **Frontend**: React with TypeScript, built using Vite
+- **Backend**: Node.js with Express framework
+- **Database**: PostgreSQL
+- **Deployment**: Render.com (or similar Platform-as-a-Service)
+
+### Current Development Focus
+Currently, the project is focused on two primary modules:
+1. **CookBook (Recipe Engine)**: Currently in active development and testing phase
+2. **AgileChef (Prep Flow Manager)**: The current focus of our development efforts
 
 ## Project Status Board
 - [x] Implement custom prep columns feature
@@ -13,10 +35,12 @@ Kitchen Sync is a recipe and prep management system. This document tracks ongoin
 - [x] Fix recipeId type mismatch when adding recipes to prep board
 - [x] Implement CRUD operations for prep columns
 - [x] Implement CRUD operations for prep tasks
-- [x] Implement drag-and-drop reordering for columns and tasks
+- [x] Implement drag-and-drop reordering for columns
+- [x] Implement drag-and-drop reordering for tasks
+- [x] Fix bug with vertical drag-and-drop in same column
 
 ## Current Focus
-We're currently working on implementing complete CRUD functionality for both prep columns and tasks, along with drag-and-drop reordering. This will provide users with a flexible, customizable prep board experience.
+We've successfully implemented a complete, customizable prep board system with drag-and-drop functionality for both columns and tasks. Users can now fully manage their prep workflow through an intuitive interface. We've also fixed the critical bug that was causing tasks to disappear when dragging vertically within the same column.
 
 ### Prep Column CRUD (Priority: High)
 - **What**: Implement Create, Read, Update, Delete operations for prep columns
@@ -58,8 +82,8 @@ We're currently working on implementing complete CRUD functionality for both pre
   4. Delete tasks with visual feedback
   5. View associated recipes
 
-### Drag-and-Drop Reordering (Priority: Medium)
-- **What**: Enhance drag-and-drop functionality for tasks and implement it for columns
+### Column Drag-and-Drop (Priority: Medium)
+- **What**: Implement drag-and-drop functionality for columns
 - **Why**: Provide intuitive UX for organizing prep work
 - **Status**: ✅ COMPLETED
 - **Components Updated**:
@@ -68,18 +92,70 @@ We're currently working on implementing complete CRUD functionality for both pre
      - Implemented backend sync for column order
      - Added visual feedback during drag operations
      - Added drag handle icon for better UX
-  2. Task Reordering Enhancements:
-     - Improved visual feedback during task dragging
-     - Connected to existing backend sync for task order changes
 - **Key Features**:
   1. Drag columns to reorder them horizontally
   2. Visual feedback during column drag operations
   3. Persisted column order to backend
-  4. Enhanced task dragging experience
-  5. Responsive cursor changes to indicate draggability
-  6. Compatible with touch and mouse interactions
+  4. Compatible with touch and mouse interactions
+
+### Task Drag-and-Drop (Priority: High)
+- **What**: Implement drag-and-drop functionality for tasks within and between columns
+- **Why**: Provide intuitive task management and prioritization
+- **Status**: ✅ COMPLETED
+- **Components Updated**:
+  1. PrepCard:
+     - Wrapped in Draggable component
+     - Added drag handle icon and visual indicators
+     - Enhanced styling for improved UX during dragging
+  2. PrepColumn:
+     - Updated to properly render draggable tasks
+     - Improved dropzone styling
+  3. Task Reordering Logic:
+     - Enhanced moveTask method to handle reordering efficiently
+     - Integrated with batch update API for optimized backend updates
+     - Optimistic UI updates for responsive feel
+- **Key Features**:
+  1. Drag tasks within the same column to reorder
+  2. Drag tasks between columns to move them
+  3. Visual feedback for source and destination during drag
+  4. Consistent ordering persisted to backend
+  5. Efficient batch updates for related task reordering
+
+### Vertical Drag-and-Drop Bug Fix (Priority: Critical)
+- **What**: Fix bug where tasks disappeared when vertically reordered within a column
+- **Why**: Critical usability issue prevented effective task prioritization
+- **Status**: ✅ COMPLETED
+- **Root Cause**:
+  - The `moveTask` function in prepBoardStore.ts was removing tasks from the column when reordering within the same column
+  - Task was being removed but not correctly reinserted in the same column
+  - The optimistic UI update worked differently for cross-column vs. same-column moves
+- **Solution Implemented**:
+  1. Added specific logic path for same-column reordering:
+     - Used splice for removing and inserting in a single operation for same-column moves
+     - Added sourceIndex tracking to know where the task was coming from
+     - Only removed task from source column when moving between columns
+  2. Enhanced backend reordering logic:
+     - Used different update strategies for same-column vs. cross-column moves
+     - For same-column moves, update the order of all tasks to maintain consistency
+     - For cross-column moves, only update the moved task and tasks after insertion point
+  3. Added forced refresh for same-column moves after backend update
+  4. Added comprehensive logging throughout the drag-and-drop flow
+- **Testing and Verification**:
+  - Vertical dragging now works correctly for tasks within columns
+  - Tasks remain visible and properly ordered after any drag operation
+  - Both vertical (same-column) and horizontal (cross-column) dragging works consistently
+  - Changes persist after page refresh, confirming proper backend synchronization
 
 ## Pending Tasks and Future Work
+
+### Immediate Priority: System Administration & Security
+- **What**: Implement enhanced security and user management features
+- **Why**: Ensure proper access control and system security
+- **Status**: Planning
+- **Required Features**:
+  1. Implementation of SuperAdmin role (george@seabreeze.farm)
+  2. Enhanced user role management system
+  3. Audit logging for critical operations
 
 ### Database Maintenance (Priority: Medium)
 - **What**: Apply database cleanup and maintenance scripts
@@ -94,6 +170,36 @@ We're currently working on implementing complete CRUD functionality for both pre
   3. Test scripts on backup
   4. Schedule maintenance window
   5. Apply fixes in production
+
+### Backup & Data Security Implementation (Priority: High)
+- **What**: Set up automated backup system and data security measures
+- **Why**: Protect user data and ensure business continuity
+- **Status**: Planning
+- **Required Features**:
+  1. Automated database backup system
+  2. Backup verification and integrity checks
+  3. Backup restoration testing procedures
+  4. Data export capabilities for users
+
+### Feature & Bug Tracking System (Priority: Medium)
+- **What**: Implement system for tracking and managing issues
+- **Why**: Improve development workflow and user feedback loop
+- **Status**: Planning
+- **Required Features**:
+  1. Internal admin interface for tracking and managing issues
+  2. Customer-facing feedback/issue reporting interface 
+  3. Issue prioritization and status tracking
+  4. Integration with development workflow
+
+### AgileChef (Prep Flow) Module Enhancements (Priority: Medium)
+- **What**: Add additional features to the prep flow management system
+- **Why**: Fulfill the remaining requirements for the Prep Flow Manager
+- **Status**: Planning
+- **Requirements to Address**:
+  1. **REQ-M2-03**: Allow manual creation of prep tasks (✅ COMPLETED)
+  2. **REQ-M2-04**: Allow users to move cards between columns (✅ COMPLETED)
+  3. **REQ-M2-05**: Display key recipe info (or link) on the task card (✅ COMPLETED)
+  4. **Future**: Assign tasks to users, set due dates, manage priority
 
 ### Directory Structure Cleanup (Priority: High)
 - **What**: Remove redundant directories and files
@@ -127,6 +233,32 @@ We're currently working on implementing complete CRUD functionality for both pre
   - All application code properly organized in frontend/backend
   - No redundant configurations or dependencies
   - Clean project structure with clear separation of concerns
+
+## Long-Term Roadmap (Based on Project Vision)
+1. **CookBook (Recipe Engine)**
+   - Status: Active Development / Testing
+   - Current Focus: Real-world recipe input and testing
+   - Next Steps: Bug fixes and feature enhancements based on actual usage
+
+2. **AgileChef (Prep Flow)**
+   - Status: Active Development (Current Focus)
+   - Recent Achievements: Custom columns, drag-and-drop, task management
+   - Next Steps: Integration with Recipe Engine for automated task generation
+
+3. **MenuBuilder (Menu Designer)**
+   - Status: Planning
+   - Dependencies: Stable CookBook module
+   - Key Requirements: Import recipes, arrange menu items, design/layout tools, export to printable format
+
+4. **TableFarm (Reservation & Order System)**
+   - Status: Planning
+   - Dependencies: Stable MenuBuilder module
+   - Key Requirements: Reservation management, order creation, menu integration
+
+5. **ChefRail (Kitchen Display System)**
+   - Status: Planning
+   - Dependencies: Stable TableFarm module
+   - Key Requirements: Real-time order display, status updates, timers
 
 ## Recent Decisions and Changes
 1. **Custom Columns Feature** (2024-04-20)
@@ -173,6 +305,23 @@ We're currently working on implementing complete CRUD functionality for both pre
    - Connected reordering to backend persistence
    - Enhanced dropzone visual feedback for both tasks and columns
 
+8. **Task Drag-and-Drop Implementation** (2024-04-24)
+   - Implemented proper task dragging functionality with react-beautiful-dnd
+   - Made PrepCard components draggable with visual feedback
+   - Updated moveTask logic to handle batch updates efficiently
+   - Improved error handling and recovery for failed drag operations
+   - Enhanced visual cues for task dragging states
+
+9. **Vertical Drag-and-Drop Bug Fix** (2024-04-25)
+   - Fixed critical bug where tasks would disappear when dragged vertically within a column
+   - Identified the issue in the moveTask function in prepBoardStore.ts
+   - Added special handling for same-column reordering operations
+   - Used different array manipulation logic for vertical vs. horizontal moves
+   - Added additional logging throughout the drag-and-drop flow for debugging
+   - Enhanced API request/response logging to improve traceability
+   - Verified fix works by testing various drag scenarios
+   - Released fix as v1.3.0 with tag "Fully functioning drag and drop kanban prep board"
+
 ## Lessons
 - Always check for hardcoded constants when implementing dynamic features
 - Keep maintenance scripts separate from application code
@@ -185,14 +334,24 @@ We're currently working on implementing complete CRUD functionality for both pre
 - Reusable dialog components improve maintainability and consistency
 - Adding visual cues for interactive elements improves user experience
 - When implementing drag-and-drop, consider both mouse and touch interactions
+- For complex reordering operations, use batch updates to minimize API calls
+- Implement optimistic UI updates for a responsive user experience
+- Test drag operations thoroughly across different devices and scenarios
+- Handle vertical and horizontal drag operations differently - they often require different logic
+- Add comprehensive logging during development to identify issues quickly
+- Include debug code that can be easily enabled when problems arise
+- Adding a new item to force a fresh data fetch can reveal state synchronization issues
+- Don't forget to test edge cases like dragging to empty columns or reordering single tasks
 
 ## Executor's Feedback or Assistance Requests
 - Recipe task addition to custom columns has been successfully implemented 
 - Both PrepBoard.tsx and RecipeDetail.tsx now use dynamic column selection
 - Column CRUD operations (create, read, update, delete) are now fully implemented
 - Drag-and-drop reordering for columns has been implemented
-- The application has been tested locally and functions correctly
-- Future enhancement: Consider adding batch operations for tasks (adding multiple recipes at once)
+- Drag-and-drop functionality for tasks within and between columns is now working
+- The vertical drag-and-drop bug has been fixed and verified
+- The application has been tagged as v1.3.0 for the fully functioning kanban board
+- Future enhancement: Consider adding batch operations for adding multiple recipes at once
 
 ## Key Challenges and Analysis
 - Maintaining data integrity while allowing custom columns
@@ -201,6 +360,8 @@ We're currently working on implementing complete CRUD functionality for both pre
 - Managing consistent API endpoint configurations between frontend and backend
 - Ensuring type consistency between frontend TypeScript interfaces and backend database schema
 - Implementing proper drag-and-drop behavior with visual feedback
+- Handling complex task reordering operations across multiple columns
+- Diagnosing and fixing state management issues during same-column drag operations
 
 ### Recipe Task Addition Implementation (Priority: High)
 - **What**: Implement recipe task addition to prep board columns
@@ -290,7 +451,7 @@ We're currently working on implementing complete CRUD functionality for both pre
   - Error handling is implemented for all operations
   - User feedback is provided through snackbar messages
 
-### Drag-and-Drop Reordering Implementation (Priority: Medium)
+### Column Drag-and-Drop Implementation (Priority: Medium)
 - **What**: Implement drag-and-drop functionality for columns
 - **Why**: Provide intuitive UX for organizing prep board layout
 - **Status**: ✅ COMPLETED
@@ -315,4 +476,34 @@ We're currently working on implementing complete CRUD functionality for both pre
   - Column order persists after reordering
   - Visual feedback is clear and intuitive
   - Both touch and mouse interactions are supported
+
+### Task Drag-and-Drop Implementation (Priority: High)
+- **What**: Implement task dragging functionality within and between columns
+- **Why**: Enable users to easily reorder and reorganize their tasks
+- **Status**: ✅ COMPLETED
+- **Components Updated**:
+  1. PrepCard.tsx:
+     - Wrapped in Draggable component from react-beautiful-dnd
+     - Added drag handle icon and visual feedback styles
+     - Enhanced styling for better UX during dragging
+  2. PrepColumn.tsx:
+     - Updated to properly pass index prop to PrepCard
+     - Enhanced Droppable area styling for clearer visual cues
+  3. prepBoardStore.ts:
+     - Improved moveTask method to handle batch updates
+     - Added handling for tasks being reordered within same column
+     - Optimized backend synchronization
+  4. PrepBoard.tsx:
+     - Enhanced handleDragEnd to clearly distinguish task vs column dragging
+- **Key Features**:
+  1. Drag tasks vertically within columns to prioritize
+  2. Drag tasks horizontally between columns to change status
+  3. Visual feedback during drag operations
+  4. Optimistic UI updates for responsive feel
+  5. Efficient backend synchronization
+- **Verification**:
+  - Tasks can be dragged and dropped within and between columns
+  - Task order persists after page refresh
+  - Multiple task movements are correctly synchronized
+  - Edge cases (empty columns, many tasks) are handled properly
   
