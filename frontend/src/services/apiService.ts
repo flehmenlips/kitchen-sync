@@ -1,11 +1,13 @@
 import axios from 'axios';
 import { RecipeFormData } from '../components/forms/RecipeForm';
 import { UserProfile, UserCredentials, AuthResponse } from '../types/user';
-import { Recipe, RecipeApiData } from '../types/recipe';
+import { Recipe as RecipeType, RecipeApiData } from '../types/recipe';
 
 // Get the base URL from environment variables, defaulting to localhost:3001
 // Vite exposes env variables prefixed with VITE_
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.PROD
+    ? '/api' // Use relative URL in production
+    : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api');
 
 // Create an axios instance with auth interceptor
 const apiService = axios.create({

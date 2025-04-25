@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-// In production, use the production API URL
+// In production, use relative URLs; in development, use the development API URL
 const API_URL = import.meta.env.PROD 
-    ? 'https://kitchen-sync-api.onrender.com' // Production API URL
+    ? '' // Empty string for relative URLs in production
     : (import.meta.env.VITE_API_URL || 'http://localhost:3001');
 
 export const apiClient = axios.create({
