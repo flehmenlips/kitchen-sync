@@ -11,6 +11,13 @@ import {
     MenuItem,
     ListItemIcon,
     ListItemText,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    FormControl,
+    Select,
+    InputLabel,
 } from '@mui/material';
 import {
     Add as AddIcon,
@@ -18,10 +25,27 @@ import {
     Edit as EditIcon,
     Delete as DeleteIcon,
     DragIndicator as DragIndicatorIcon,
+    Palette as PaletteIcon,
 } from '@mui/icons-material';
 import { PrepColumn as PrepColumnType, PrepTask } from '../../types/prep';
 import PrepCard from './PrepCard';
 import { usePrepBoardStore } from '../../stores/prepBoardStore';
+
+// Predefined color palette - same as in ColumnFormDialog
+const colorOptions = [
+    { name: 'Blue', value: '#1976d2' },
+    { name: 'Red', value: '#d32f2f' },
+    { name: 'Green', value: '#2e7d32' },
+    { name: 'Orange', value: '#ed6c02' },
+    { name: 'Purple', value: '#9c27b0' },
+    { name: 'Teal', value: '#009688' },
+    { name: 'Pink', value: '#e91e63' },
+    { name: 'Indigo', value: '#3f51b5' },
+    { name: 'Yellow', value: '#ffc107' },
+    { name: 'Cyan', value: '#00bcd4' },
+    { name: 'Brown', value: '#795548' },
+    { name: 'Grey', value: '#757575' }
+];
 
 interface PrepColumnProps {
     column: PrepColumnType;
@@ -43,7 +67,10 @@ const PrepColumn: React.FC<PrepColumnProps> = ({
     const [isAddingTask, setIsAddingTask] = useState(false);
     const [newTaskTitle, setNewTaskTitle] = useState('');
     const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
+    const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
+    const [selectedColor, setSelectedColor] = useState(column.color || '#1976d2');
     const addTask = usePrepBoardStore(state => state.addTask);
+    const updateColumn = usePrepBoardStore(state => state.updateColumn);
 
     const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
         setMenuAnchorEl(event.currentTarget);
@@ -61,6 +88,25 @@ const PrepColumn: React.FC<PrepColumnProps> = ({
     const handleDeleteColumn = () => {
         handleMenuClose();
         onDeleteColumn(column);
+    };
+
+    const handleOpenColorPicker = () => {
+        setSelectedColor(column.color || '#1976d2');
+        setIsColorPickerOpen(true);
+        handleMenuClose();
+    };
+
+    const handleCloseColorPicker = () => {
+        setIsColorPickerOpen(false);
+    };
+
+    const handleColorChange = async () => {
+        try {
+            await updateColumn(column.id, { color: selectedColor });
+            handleCloseColorPicker();
+        } catch (error) {
+            console.error('Failed to update column color:', error);
+        }
     };
 
     const handleAddTask = async () => {
@@ -140,6 +186,12 @@ const PrepColumn: React.FC<PrepColumnProps> = ({
                         open={Boolean(menuAnchorEl)}
                         onClose={handleMenuClose}
                     >
+                        <MenuItem onClick={handleOpenColorPicker}>
+                            <ListItemIcon>
+                                <PaletteIcon fontSize="small" sx={{ color: column.color || '#1976d2' }} />
+                            </ListItemIcon>
+                            <ListItemText>Change Color</ListItemText>
+                        </MenuItem>
                         <MenuItem onClick={handleEditColumn}>
                             <ListItemIcon>
                                 <EditIcon fontSize="small" />
@@ -155,6 +207,55 @@ const PrepColumn: React.FC<PrepColumnProps> = ({
                     </Menu>
                 </Box>
             </Box>
+
+            {/* Color Picker Dialog */}
+            <Dialog open={isColorPickerOpen} onClose={handleCloseColorPicker}>
+                <DialogTitle>Change Column Color</DialogTitle>
+                <DialogContent>
+                    <FormControl fullWidth sx={{ mt: 2 }}>
+                        <InputLabel id="column-color-select-label">Column Color</InputLabel>
+                        <Select
+                            labelId="column-color-select-label"
+                            id="column-color-select"
+                            value={selectedColor}
+                            label="Column Color"
+                            onChange={(e) => setSelectedColor(e.target.value)}
+                        >
+                            {colorOptions.map((option) => (
+                                <MenuItem key={option.value} value={option.value}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                        <Box 
+                                            sx={{ 
+                                                width: 24, 
+                                                height: 24, 
+                                                bgcolor: option.value,
+                                                borderRadius: 1,
+                                                mr: 1
+                                            }} 
+                                        />
+                                        <Typography>{option.name}</Typography>
+                                    </Box>
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseColorPicker}>Cancel</Button>
+                    <Button 
+                        onClick={handleColorChange} 
+                        variant="contained"
+                        sx={{ 
+                            bgcolor: selectedColor,
+                            '&:hover': {
+                                bgcolor: `${selectedColor}dd`
+                            }
+                        }}
+                    >
+                        Apply
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             {isAddingTask && (
                 <Box sx={{ mb: 2 }}>
