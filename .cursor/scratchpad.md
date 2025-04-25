@@ -11,18 +11,75 @@ Kitchen Sync is a recipe and prep management system. This document tracks ongoin
 - [x] Implement recipe task addition to columns
 - [x] Fix API endpoint configuration for prep tasks
 - [x] Fix recipeId type mismatch when adding recipes to prep board
+- [x] Implement CRUD operations for prep columns
+- [x] Implement CRUD operations for prep tasks
+- [x] Implement drag-and-drop reordering for columns and tasks
+
+## Current Focus
+We're currently working on implementing complete CRUD functionality for both prep columns and tasks, along with drag-and-drop reordering. This will provide users with a flexible, customizable prep board experience.
+
+### Prep Column CRUD (Priority: High)
+- **What**: Implement Create, Read, Update, Delete operations for prep columns
+- **Why**: Allow users to fully customize their prep workflow
+- **Status**: ✅ COMPLETED
+- **Components Created/Updated**:
+  1. Column Management UI:
+     - Created `ColumnFormDialog` component for adding/editing columns
+     - Created `DeleteConfirmationDialog` for column deletion
+     - Updated `PrepColumn` to add edit/delete menu
+     - Updated `PrepBoard` to integrate these components
+  2. Backend Integration:
+     - Added column management methods to prepBoardStore
+     - Connected to existing API endpoints
+     - Implemented proper error handling
+- **Key Features**:
+  1. Add new columns via the SpeedDial button
+  2. Edit column name via the column menu
+  3. Delete columns with confirmation
+  4. Visual feedback with snackbar messages
+  5. Loading indicators during operations
+
+### Prep Task CRUD (Priority: High)
+- **What**: Implement Create, Read, Update, Delete operations for prep tasks
+- **Why**: Enable users to manage tasks within columns effectively
+- **Status**: ✅ COMPLETED
+- **Components**:
+  1. Task Management UI:
+     - Basic add/delete functionality was already implemented
+     - `PrepCard` component displays tasks and allows deletion
+     - Add task UI integrated in column headers
+  2. Backend Integration:
+     - Existing integration with task API endpoints
+     - Proper error handling
+- **Key Features**:
+  1. Add tasks directly within columns
+  2. Add recipes as tasks from the recipe detail page
+  3. Add recipes as tasks via the SpeedDial button
+  4. Delete tasks with visual feedback
+  5. View associated recipes
+
+### Drag-and-Drop Reordering (Priority: Medium)
+- **What**: Enhance drag-and-drop functionality for tasks and implement it for columns
+- **Why**: Provide intuitive UX for organizing prep work
+- **Status**: ✅ COMPLETED
+- **Components Updated**:
+  1. Column Reordering:
+     - Made columns draggable using react-beautiful-dnd
+     - Implemented backend sync for column order
+     - Added visual feedback during drag operations
+     - Added drag handle icon for better UX
+  2. Task Reordering Enhancements:
+     - Improved visual feedback during task dragging
+     - Connected to existing backend sync for task order changes
+- **Key Features**:
+  1. Drag columns to reorder them horizontally
+  2. Visual feedback during column drag operations
+  3. Persisted column order to backend
+  4. Enhanced task dragging experience
+  5. Responsive cursor changes to indicate draggability
+  6. Compatible with touch and mouse interactions
 
 ## Pending Tasks and Future Work
-
-### Task Management Update (Priority: High)
-- **What**: Update `AddRecipeDialog.tsx` to work with new custom columns system
-- **Why**: Currently using old hardcoded `COLUMN_IDS.TO_PREP` constant
-- **Status**: Changes stashed with message "AddRecipeDialog changes for future task management PR"
-- **Next Steps**: 
-  1. Create new feature branch from `feature/custom-prep-columns`
-  2. Apply stashed changes
-  3. Update to use dynamic column selection
-  4. Update tests and documentation
 
 ### Database Maintenance (Priority: Medium)
 - **What**: Apply database cleanup and maintenance scripts
@@ -102,6 +159,20 @@ Kitchen Sync is a recipe and prep management system. This document tracks ongoin
    - Added explicit type conversion in components before sending data to the API
    - Prevented 500 internal server errors when adding recipes to the prep board
 
+6. **Column Management Implementation** (2024-04-24)
+   - Created reusable dialog components for column operations
+   - Implemented create, edit, and delete functionality for columns
+   - Updated PrepBoard UI with a SpeedDial for adding columns and recipes
+   - Added proper error handling and loading indicators
+   - Enhanced the user experience with feedback messages
+
+7. **Drag-and-Drop Enhancements** (2024-04-24)
+   - Implemented column drag-and-drop functionality for horizontal reordering
+   - Added visual cues for draggable elements (grab cursor, drag handle icon)
+   - Improved drag feedback with shadows and hover effects
+   - Connected reordering to backend persistence
+   - Enhanced dropzone visual feedback for both tasks and columns
+
 ## Lessons
 - Always check for hardcoded constants when implementing dynamic features
 - Keep maintenance scripts separate from application code
@@ -111,15 +182,16 @@ Kitchen Sync is a recipe and prep management system. This document tracks ongoin
 - Include info useful for debugging in the program output
 - Be aware of how path prefixes are applied in the API service configuration - avoid double prefixing
 - Ensure type consistency between frontend and backend, especially for IDs and foreign keys
+- Reusable dialog components improve maintainability and consistency
+- Adding visual cues for interactive elements improves user experience
+- When implementing drag-and-drop, consider both mouse and touch interactions
 
 ## Executor's Feedback or Assistance Requests
 - Recipe task addition to custom columns has been successfully implemented 
 - Both PrepBoard.tsx and RecipeDetail.tsx now use dynamic column selection
+- Column CRUD operations (create, read, update, delete) are now fully implemented
+- Drag-and-drop reordering for columns has been implemented
 - The application has been tested locally and functions correctly
-- Resolved API endpoint configuration issues for the prep tasks feature
-- Fixed missing columns issue by correcting API paths in prepColumnService and axios baseURL
-- Fixed type mismatch errors when adding recipes to prep board
-- Remaining task: Review database maintenance scripts before deploying to production
 - Future enhancement: Consider adding batch operations for tasks (adding multiple recipes at once)
 
 ## Key Challenges and Analysis
@@ -128,6 +200,7 @@ Kitchen Sync is a recipe and prep management system. This document tracks ongoin
 - Coordinating database maintenance without disrupting service
 - Managing consistent API endpoint configurations between frontend and backend
 - Ensuring type consistency between frontend TypeScript interfaces and backend database schema
+- Implementing proper drag-and-drop behavior with visual feedback
 
 ### Recipe Task Addition Implementation (Priority: High)
 - **What**: Implement recipe task addition to prep board columns
@@ -191,4 +264,55 @@ Kitchen Sync is a recipe and prep management system. This document tracks ongoin
 - **Verification**:
   - Adding recipes to prep board works correctly from both entry points
   - No more 500 internal server errors when adding recipes
-  - Server correctly processes the recipe reference and adds tasks to the selected column 
+  - Server correctly processes the recipe reference and adds tasks to the selected column
+
+### Column Management Implementation (Priority: High)
+- **What**: Implement CRUD operations for prep columns
+- **Why**: Allow users to customize their prep board with their own workflow
+- **Status**: ✅ COMPLETED
+- **Components Created/Modified**:
+  1. Created new components:
+     - `ColumnFormDialog.tsx` for adding/editing columns
+     - `DeleteConfirmationDialog.tsx` for confirming deletion
+  2. Updated existing components:
+     - `PrepColumn.tsx` to add edit/delete menu options
+     - `PrepBoard.tsx` to add SpeedDial and integrate dialogs
+     - `prepBoardStore.ts` to add column management methods
+- **Key Features**:
+  1. Create new columns with custom names
+  2. Edit existing column names
+  3. Delete columns with confirmation dialog
+  4. Visual feedback for all operations
+  5. Loading indicators during API requests
+- **Verification**:
+  - All column operations work correctly
+  - Column changes persist after page refresh
+  - Error handling is implemented for all operations
+  - User feedback is provided through snackbar messages
+
+### Drag-and-Drop Reordering Implementation (Priority: Medium)
+- **What**: Implement drag-and-drop functionality for columns
+- **Why**: Provide intuitive UX for organizing prep board layout
+- **Status**: ✅ COMPLETED
+- **Components Updated**:
+  1. PrepBoard.tsx:
+     - Added Droppable container for columns
+     - Wrapped columns in Draggable components
+     - Enhanced handleDragEnd to handle column reordering
+     - Added handleReorderColumns method to sync with backend
+  2. PrepColumn.tsx:
+     - Added drag handle icon and improved styling
+     - Enhanced cursor feedback during drag operations
+     - Improved visual feedback with hover styles and transitions
+- **Key Features**:
+  1. Columns can be dragged horizontally to reorder
+  2. Column order persists after page refresh
+  3. Visual feedback during drag operations (shadow, cursor changes)
+  4. Drag handle icons indicate draggability
+  5. Consistent UI between task and column dragging
+- **Verification**:
+  - Column drag-and-drop works smoothly
+  - Column order persists after reordering
+  - Visual feedback is clear and intuitive
+  - Both touch and mouse interactions are supported
+  

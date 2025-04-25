@@ -17,6 +17,7 @@ import {
     MoreVert as MoreVertIcon,
     Edit as EditIcon,
     Delete as DeleteIcon,
+    DragIndicator as DragIndicatorIcon,
 } from '@mui/icons-material';
 import { PrepColumn as PrepColumnType, PrepTask } from '../../types/prep';
 import PrepCard from './PrepCard';
@@ -85,12 +86,32 @@ const PrepColumn: React.FC<PrepColumnProps> = ({
                 display: 'flex',
                 flexDirection: 'column',
                 p: 2,
+                transition: 'background-color 0.2s ease, transform 0.1s ease',
+                '&:hover': {
+                    backgroundColor: '#f9f9f9',
+                },
             }}
         >
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6" component="div">
-                    {column.name}
-                </Typography>
+            <Box 
+                sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center', 
+                    mb: 2,
+                    borderBottom: '1px solid #eee',
+                    pb: 1,
+                    cursor: 'grab',
+                    '&:active': {
+                        cursor: 'grabbing',
+                    }
+                }}
+            >
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <DragIndicatorIcon sx={{ mr: 1, color: 'text.secondary', fontSize: '1.2rem' }} />
+                    <Typography variant="h6" component="div">
+                        {column.name}
+                    </Typography>
+                </Box>
                 <Box>
                     <IconButton
                         size="small"
@@ -172,6 +193,7 @@ const PrepColumn: React.FC<PrepColumnProps> = ({
                             transition: 'background-color 0.2s ease',
                             borderRadius: 1,
                             minHeight: 100,
+                            padding: snapshot.isDraggingOver ? '8px' : '0px',
                         }}
                     >
                         {tasks.map((task, index) => (
