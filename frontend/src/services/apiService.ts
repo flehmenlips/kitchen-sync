@@ -23,8 +23,11 @@ apiService.interceptors.request.use(
         let token = null;
         try {
             const storedUserInfo = localStorage.getItem('kitchenSyncUserInfo');
+            console.log("localStorage token retrieval for API call:", !!storedUserInfo);
             if (storedUserInfo) {
-                token = JSON.parse(storedUserInfo).token;
+                const parsedInfo = JSON.parse(storedUserInfo);
+                token = parsedInfo.token;
+                console.log("Token found:", !!token);
             }
         } catch (error) {
             console.error("Error reading token from localStorage:", error);
@@ -32,6 +35,9 @@ apiService.interceptors.request.use(
 
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
+            console.log("Authorization header set for API request");
+        } else {
+            console.warn("No authorization token available for request");
         }
         return config;
     },
@@ -189,15 +195,30 @@ export interface CreateIssueData {
 // API functions
 export const getRecipes = async (): Promise<Recipe[]> => {
   try {
+    console.log("Fetching recipes from:", `${API_BASE_URL}/recipes`);
     const response = await apiService.get('/recipes');
+    console.log("Recipes response:", response);
+    
+    // Add defensive checks for the response data
+    if (!response || !response.data) {
+      console.error('No data in recipe response:', response);
+      return [];
+    }
+    
+    // Check if data is an array before trying to map it
+    if (!Array.isArray(response.data)) {
+      console.error('Recipe data is not an array:', response.data);
+      return [];
+    }
+    
     return response.data.map((recipe: any) => ({
         ...recipe,
         recipeIngredients: recipe.recipeIngredients || []
     }));
   } catch (error) {
     console.error('Error fetching recipes:', error);
-    // Handle or throw error appropriately for UI
-    throw error;
+    // Return empty array instead of throwing to prevent UI errors
+    return [];
   }
 };
 
@@ -515,12 +536,21 @@ export const register = async (userData: UserCredentials): Promise<AuthResponse>
 
 export const login = async (credentials: UserCredentials): Promise<AuthResponse> => {
     try {
+        console.log("Login request with credentials:", { email: credentials.email, passwordProvided: !!credentials.password });
         const response = await apiService.post('/users/login', credentials);
+        console.log("Login response received:", response.status);
+        
         const { token, user } = response.data;
-        // Store the token
-        localStorage.setItem('token', token);
-        // Update default headers
-        apiService.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        // Store the token in localStorage
+        if (token) {
+            console.log("Saving token to localStorage");
+            localStorage.setItem('kitchenSyncUserInfo', JSON.stringify({ user, token }));
+            // Update default headers for future requests
+            apiService.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        } else {
+            console.error("No token received in login response");
+        }
+        
         return response.data;
     } catch (error) {
         console.error('Error during login:', error);
