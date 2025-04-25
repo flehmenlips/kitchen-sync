@@ -6,8 +6,27 @@ const BASE_URL = '/prep-columns';
 
 export const prepColumnService = {
     getColumns: async (): Promise<PrepColumn[]> => {
-        const response = await api.get(BASE_URL);
-        return response.data;
+        try {
+            const response = await api.get(BASE_URL);
+            console.log('Column response data:', response.data);
+            
+            // Ensure the response is an array
+            if (!response.data) {
+                console.warn('Empty response from columns API');
+                return [];
+            }
+            
+            // Handle case where response.data is not an array
+            if (!Array.isArray(response.data)) {
+                console.error('Column data is not an array:', response.data);
+                return [];
+            }
+            
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching columns:', error);
+            return []; // Return empty array instead of throwing
+        }
     },
 
     getColumnById: async (id: string): Promise<PrepColumn> => {

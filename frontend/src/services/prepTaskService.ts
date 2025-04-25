@@ -7,8 +7,27 @@ const BASE_URL = '/prep-tasks';
 export const prepTaskService = {
     // Get all prep tasks
     getAllTasks: async (): Promise<PrepTask[]> => {
-        const response = await api.get(BASE_URL);
-        return response.data;
+        try {
+            const response = await api.get(BASE_URL);
+            console.log('Task response data:', response.data);
+            
+            // Ensure the response is an array
+            if (!response.data) {
+                console.warn('Empty response from tasks API');
+                return [];
+            }
+            
+            // Handle case where response.data is not an array
+            if (!Array.isArray(response.data)) {
+                console.error('Task data is not an array:', response.data);
+                return [];
+            }
+            
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching tasks:', error);
+            return []; // Return empty array instead of throwing
+        }
     },
 
     getTaskById: async (id: string): Promise<PrepTask> => {
@@ -34,8 +53,27 @@ export const prepTaskService = {
     },
 
     getTasks: async (): Promise<PrepTask[]> => {
-        const response = await api.get(BASE_URL);
-        return response.data;
+        try {
+            const response = await api.get(BASE_URL);
+            console.log('Task response data:', response.data);
+            
+            // Ensure the response is an array
+            if (!response.data) {
+                console.warn('Empty response from tasks API');
+                return [];
+            }
+            
+            // Handle case where response.data is not an array
+            if (!Array.isArray(response.data)) {
+                console.error('Task data is not an array:', response.data);
+                return [];
+            }
+            
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching tasks:', error);
+            return []; // Return empty array instead of throwing
+        }
     },
 
     // Reorder tasks
