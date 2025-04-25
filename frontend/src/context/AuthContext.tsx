@@ -47,8 +47,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = useCallback(async (credentials: UserCredentials) => {
     try {
+      console.log("AuthContext: Login attempt with", credentials.email);
       const response: AuthResponse = await apiLogin(credentials);
-      // Store the complete user profile
+      console.log("AuthContext: Login response:", response);
+      
+      // Check if token exists
+      if (!response.token) {
+        console.error("AuthContext: No token in response:", response);
+        throw new Error("No authentication token received");
+      }
+      
+      // Store the complete user profile and token
       const userInfo = {
         user: {
           id: response.id,
@@ -65,9 +74,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         },
         token: response.token
       };
+      
+      // Log what we're saving to localStorage
+      console.log("AuthContext: Saving to localStorage:", JSON.stringify({
+        ...userInfo,
+        token: userInfo.token ? "[TOKEN EXISTS]" : "[TOKEN MISSING]"
+      }));
+      
       localStorage.setItem(USER_INFO_KEY, JSON.stringify(userInfo));
       setUser(userInfo.user);
+      
+      // Verify storage worked
+      const storedData = localStorage.getItem(USER_INFO_KEY);
+      if (storedData) {
+        const parsed = JSON.parse(storedData);
+        console.log("AuthContext: Verification - token exists in storage:", !!parsed.token);
+      }
     } catch (error) {
+      console.error('AuthContext: Login error:', error);
       localStorage.removeItem(USER_INFO_KEY);
       setUser(null);
       throw error;

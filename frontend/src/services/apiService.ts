@@ -26,8 +26,18 @@ apiService.interceptors.request.use(
             console.log("localStorage token retrieval for API call:", !!storedUserInfo);
             if (storedUserInfo) {
                 const parsedInfo = JSON.parse(storedUserInfo);
-                token = parsedInfo.token;
-                console.log("Token found:", !!token);
+                console.log("Parsed localStorage data structure:", Object.keys(parsedInfo).join(", "));
+                
+                // Check both possible token locations
+                if (parsedInfo.token) {
+                    token = parsedInfo.token;
+                    console.log("Token found in root object");
+                } else if (parsedInfo.user && parsedInfo.user.token) {
+                    token = parsedInfo.user.token;
+                    console.log("Token found in user object");
+                } else {
+                    console.warn("No token found in localStorage data");
+                }
             }
         } catch (error) {
             console.error("Error reading token from localStorage:", error);
@@ -560,12 +570,26 @@ export const login = async (credentials: UserCredentials): Promise<AuthResponse>
 
 export const logout = async (): Promise<void> => {
     try {
+        console.log("Logging out user, removing tokens");
         // Interceptor might add token, backend ignores it for logout
         await apiService.post('/users/logout'); 
-        localStorage.removeItem('token');
+        
+        // Remove token from localStorage - fix the key to match what we use elsewhere
+        localStorage.removeItem('kitchenSyncUserInfo');
+        localStorage.removeItem('token'); // Remove legacy token too if it exists
+        
+        // Remove the Authorization header
         delete apiService.defaults.headers.common['Authorization'];
+        
+        console.log("Logout complete, storage cleared");
     } catch (error) {
         console.error('Error during logout:', error);
+        
+        // Still clear local storage even if API call fails
+        localStorage.removeItem('kitchenSyncUserInfo');
+        localStorage.removeItem('token');
+        delete apiService.defaults.headers.common['Authorization'];
+        
         throw error;
     }
 };
