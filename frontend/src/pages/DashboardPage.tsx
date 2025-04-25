@@ -26,11 +26,32 @@ const DashboardPage: React.FC = () => {
       try {
         setStatsLoading(true);
         const data = await getDashboardStats();
-        setStats(data);
-        setStatsError(null);
+        // Add defensive check that data has the expected structure
+        if (data && typeof data === 'object') {
+          // Ensure all properties have default values if missing
+          const safeData: DashboardStats = {
+            recipes: data.recipes ?? 0,
+            ingredients: data.ingredients ?? 0,
+            units: data.units ?? 0,
+            recipeCategories: data.recipeCategories ?? 0,
+            ingredientCategories: data.ingredientCategories ?? 0
+          };
+          setStats(safeData);
+          setStatsError(null);
+        } else {
+          throw new Error('Invalid data format received from API');
+        }
       } catch (err) {
         console.error("Failed to load dashboard stats:", err);
         setStatsError("Could not load dashboard statistics.");
+        // Provide a fallback empty stats object to prevent rendering errors
+        setStats({
+          recipes: 0,
+          ingredients: 0,
+          units: 0,
+          recipeCategories: 0,
+          ingredientCategories: 0
+        });
       } finally {
         setStatsLoading(false);
       }
@@ -53,7 +74,7 @@ const DashboardPage: React.FC = () => {
              </Typography>
              {statsLoading && <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}><CircularProgress size={24} /></Box>}
              {statsError && <Alert severity="warning" sx={{ mt: 1 }}>{statsError}</Alert>}
-             {stats && !statsLoading && !statsError && (
+             {stats && !statsLoading && (
                 <Grid container spacing={2} sx={{ textAlign: 'center' }}>
                     <Grid xs={4} sm={2}><Typography variant="h5">{stats.recipes}</Typography><Typography variant="caption">Recipes</Typography></Grid>
                     <Grid xs={4} sm={2}><Typography variant="h5">{stats.ingredients}</Typography><Typography variant="caption">Ingredients</Typography></Grid>
