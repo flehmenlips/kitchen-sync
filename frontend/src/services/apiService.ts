@@ -7,15 +7,16 @@ import { Recipe, RecipeApiData } from '../types/recipe';
 // Vite exposes env variables prefixed with VITE_
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
-const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+// Create an axios instance with auth interceptor
+const apiService = axios.create({
+    baseURL: API_BASE_URL,
+    headers: {
+        'Content-Type': 'application/json',
+    },
 });
 
 // Add a request interceptor to include the token
-apiClient.interceptors.request.use(
+apiService.interceptors.request.use(
     (config) => {
         let token = null;
         try {
@@ -186,7 +187,7 @@ export interface CreateIssueData {
 // API functions
 export const getRecipes = async (): Promise<Recipe[]> => {
   try {
-    const response = await apiClient.get('/recipes');
+    const response = await apiService.get('/recipes');
     return response.data.map((recipe: any) => ({
         ...recipe,
         recipeIngredients: recipe.recipeIngredients || []
@@ -200,7 +201,7 @@ export const getRecipes = async (): Promise<Recipe[]> => {
 
 export const getRecipeById = async (id: number): Promise<Recipe> => {
     try {
-        const response = await apiClient.get(`/recipes/${id}`);
+        const response = await apiService.get(`/recipes/${id}`);
         return {
             ...response.data,
             recipeIngredients: response.data.recipeIngredients || []
@@ -214,7 +215,7 @@ export const getRecipeById = async (id: number): Promise<Recipe> => {
 export const createRecipe = async (recipeData: RecipeFormData): Promise<Recipe> => {
   try {
     // Send the raw form data (or minimally processed)
-    const response = await apiClient.post('/recipes', recipeData);
+    const response = await apiService.post('/recipes', recipeData);
     return response.data; 
   } catch (error) {
     console.error('Error creating recipe:', error);
@@ -225,7 +226,7 @@ export const createRecipe = async (recipeData: RecipeFormData): Promise<Recipe> 
 export const updateRecipe = async (id: number, recipeData: RecipeFormData): Promise<Recipe> => {
     try {
         // Send the raw form data (or minimally processed)
-        const response = await apiClient.put(`/recipes/${id}`, recipeData);
+        const response = await apiService.put(`/recipes/${id}`, recipeData);
         return response.data; 
     } catch (error) {
         console.error(`Error updating recipe ${id}:`, error);
@@ -235,7 +236,7 @@ export const updateRecipe = async (id: number, recipeData: RecipeFormData): Prom
 
 export const deleteRecipe = async (id: number): Promise<void> => {
     try {
-        await apiClient.delete(`/recipes/${id}`);
+        await apiService.delete(`/recipes/${id}`);
     } catch (error) {
         console.error(`Error deleting recipe ${id}:`, error);
         throw error;
@@ -245,7 +246,7 @@ export const deleteRecipe = async (id: number): Promise<void> => {
 // Units
 export const getUnits = async (): Promise<UnitOfMeasure[]> => {
     try {
-        const response = await apiClient.get('/units');
+        const response = await apiService.get('/units');
         return response.data;
     } catch (error) {
         console.error('Error fetching units:', error);
@@ -255,7 +256,7 @@ export const getUnits = async (): Promise<UnitOfMeasure[]> => {
 
 export const getUnitById = async (id: number): Promise<UnitOfMeasure> => {
     try {
-        const response = await apiClient.get(`/units/${id}`);
+        const response = await apiService.get(`/units/${id}`);
         return response.data;
     } catch (error) {
         console.error(`Error fetching unit ${id}:`, error);
@@ -265,7 +266,7 @@ export const getUnitById = async (id: number): Promise<UnitOfMeasure> => {
 
 export const createUnit = async (unitData: UnitFormData): Promise<UnitOfMeasure> => {
     try {
-        const response = await apiClient.post('/units', unitData);
+        const response = await apiService.post('/units', unitData);
         return response.data;
     } catch (error) {
         console.error('Error creating unit:', error);
@@ -281,7 +282,7 @@ export const updateUnit = async (id: number, unitData: UnitFormData): Promise<Un
              type: unitData.type || null,
              abbreviation: unitData.abbreviation || null,
          };
-        const response = await apiClient.put(`/units/${id}`, payload);
+        const response = await apiService.put(`/units/${id}`, payload);
         return response.data;
     } catch (error) {
         console.error(`Error updating unit ${id}:`, error);
@@ -291,7 +292,7 @@ export const updateUnit = async (id: number, unitData: UnitFormData): Promise<Un
 
 export const deleteUnit = async (id: number): Promise<void> => {
     try {
-        await apiClient.delete(`/units/${id}`);
+        await apiService.delete(`/units/${id}`);
     } catch (error) {
         console.error(`Error deleting unit ${id}:`, error);
         throw error;
@@ -301,7 +302,7 @@ export const deleteUnit = async (id: number): Promise<void> => {
 // Ingredients
 export const getIngredients = async (): Promise<Ingredient[]> => {
     try {
-        const response = await apiClient.get('/ingredients');
+        const response = await apiService.get('/ingredients');
         return response.data;
     } catch (error) {
         console.error('Error fetching ingredients:', error);
@@ -311,7 +312,7 @@ export const getIngredients = async (): Promise<Ingredient[]> => {
 
 export const getIngredientById = async (id: number): Promise<Ingredient> => {
     try {
-        const response = await apiClient.get(`/ingredients/${id}`);
+        const response = await apiService.get(`/ingredients/${id}`);
         return response.data;
     } catch (error) {
         console.error(`Error fetching ingredient ${id}:`, error);
@@ -327,7 +328,7 @@ export const createIngredient = async (ingredientData: IngredientFormData): Prom
             description: ingredientData.description || null,
             ingredientCategoryId: ingredientData.ingredientCategoryId || null
         };
-        const response = await apiClient.post('/ingredients', payload); // Send processed payload
+        const response = await apiService.post('/ingredients', payload); // Send processed payload
         return response.data;
     } catch (error) {
         console.error('Error creating ingredient:', error);
@@ -343,7 +344,7 @@ export const updateIngredient = async (id: number, ingredientData: IngredientFor
              description: ingredientData.description || null,
              ingredientCategoryId: ingredientData.ingredientCategoryId || null
          };
-        const response = await apiClient.put(`/ingredients/${id}`, payload);
+        const response = await apiService.put(`/ingredients/${id}`, payload);
         return response.data;
     } catch (error) {
         console.error(`Error updating ingredient ${id}:`, error);
@@ -353,7 +354,7 @@ export const updateIngredient = async (id: number, ingredientData: IngredientFor
 
 export const deleteIngredient = async (id: number): Promise<void> => {
     try {
-        await apiClient.delete(`/ingredients/${id}`);
+        await apiService.delete(`/ingredients/${id}`);
     } catch (error) {
         console.error(`Error deleting ingredient ${id}:`, error);
         throw error;
@@ -363,7 +364,7 @@ export const deleteIngredient = async (id: number): Promise<void> => {
 // == Categories ==
 export const getCategories = async (): Promise<Category[]> => {
     try {
-        const response = await apiClient.get('/categories');
+        const response = await apiService.get('/categories');
         return response.data;
     } catch (error) {
         console.error('Error fetching categories:', error);
@@ -373,7 +374,7 @@ export const getCategories = async (): Promise<Category[]> => {
 
 export const getCategoryById = async (id: number): Promise<Category> => {
     try {
-        const response = await apiClient.get(`/categories/${id}`);
+        const response = await apiService.get(`/categories/${id}`);
         return response.data;
     } catch (error) {
         console.error(`Error fetching category ${id}:`, error);
@@ -384,7 +385,7 @@ export const getCategoryById = async (id: number): Promise<Category> => {
 export const createCategory = async (categoryData: CategoryFormData): Promise<Category> => {
     try {
          const payload = { ...categoryData, description: categoryData.description || null };
-        const response = await apiClient.post('/categories', payload);
+        const response = await apiService.post('/categories', payload);
         return response.data;
     } catch (error) {
         console.error('Error creating category:', error);
@@ -395,7 +396,7 @@ export const createCategory = async (categoryData: CategoryFormData): Promise<Ca
 export const updateCategory = async (id: number, categoryData: CategoryFormData): Promise<Category> => {
     try {
         const payload = { ...categoryData, description: categoryData.description || null };
-        const response = await apiClient.put(`/categories/${id}`, payload);
+        const response = await apiService.put(`/categories/${id}`, payload);
         return response.data;
     } catch (error) {
         console.error(`Error updating category ${id}:`, error);
@@ -405,7 +406,7 @@ export const updateCategory = async (id: number, categoryData: CategoryFormData)
 
 export const deleteCategory = async (id: number): Promise<void> => {
     try {
-        await apiClient.delete(`/categories/${id}`);
+        await apiService.delete(`/categories/${id}`);
     } catch (error) {
         console.error(`Error deleting category ${id}:`, error);
         throw error;
@@ -415,7 +416,7 @@ export const deleteCategory = async (id: number): Promise<void> => {
 // == Ingredient Categories ==
 export const getIngredientCategories = async (): Promise<IngredientCategory[]> => {
     try {
-        const response = await apiClient.get('/ingredient-categories');
+        const response = await apiService.get('/ingredient-categories');
         return response.data;
     } catch (error) {
         console.error('Error fetching ingredient categories:', error);
@@ -426,7 +427,7 @@ export const getIngredientCategories = async (): Promise<IngredientCategory[]> =
 export const createIngredientCategory = async (categoryData: IngredientCategoryFormData): Promise<IngredientCategory> => {
     try {
         const payload = { ...categoryData, description: categoryData.description || null };
-        const response = await apiClient.post('/ingredient-categories', payload);
+        const response = await apiService.post('/ingredient-categories', payload);
         return response.data;
     } catch (error) {
         console.error('Error creating ingredient category:', error);
@@ -437,7 +438,7 @@ export const createIngredientCategory = async (categoryData: IngredientCategoryF
 export const updateIngredientCategory = async (id: number, categoryData: IngredientCategoryFormData): Promise<IngredientCategory> => {
     try {
         const payload = { ...categoryData, description: categoryData.description || null };
-        const response = await apiClient.put(`/ingredient-categories/${id}`, payload);
+        const response = await apiService.put(`/ingredient-categories/${id}`, payload);
         return response.data;
     } catch (error) {
         console.error(`Error updating ingredient category ${id}:`, error);
@@ -447,7 +448,7 @@ export const updateIngredientCategory = async (id: number, categoryData: Ingredi
 
 export const deleteIngredientCategory = async (id: number): Promise<void> => {
     try {
-        await apiClient.delete(`/ingredient-categories/${id}`);
+        await apiService.delete(`/ingredient-categories/${id}`);
     } catch (error) {
         console.error(`Error deleting ingredient category ${id}:`, error);
         throw error;
@@ -457,7 +458,7 @@ export const deleteIngredientCategory = async (id: number): Promise<void> => {
 // Optional Get By ID
 export const getIngredientCategoryById = async (id: number): Promise<IngredientCategory> => {
      try {
-        const response = await apiClient.get(`/ingredient-categories/${id}`);
+        const response = await apiService.get(`/ingredient-categories/${id}`);
         return response.data;
     } catch (error) {
         console.error(`Error fetching ingredient category ${id}:`, error);
@@ -468,7 +469,7 @@ export const getIngredientCategoryById = async (id: number): Promise<IngredientC
 // == Dashboard ==
 export const getDashboardStats = async (): Promise<DashboardStats> => {
     try {
-        const response = await apiClient.get('/dashboard/stats');
+        const response = await apiService.get('/dashboard/stats');
         return response.data;
     } catch (error) {
         console.error('Error fetching dashboard stats:', error);
@@ -479,7 +480,7 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
 // == Auth / User ==
 export const register = async (userData: UserCredentials): Promise<AuthResponse> => {
     try {
-        const response = await apiClient.post('/users/register', userData);
+        const response = await apiService.post('/users/register', userData);
         return response.data;
     } catch (error) {
         console.error('Error during registration:', error);
@@ -489,12 +490,12 @@ export const register = async (userData: UserCredentials): Promise<AuthResponse>
 
 export const login = async (credentials: UserCredentials): Promise<AuthResponse> => {
     try {
-        const response = await apiClient.post('/users/login', credentials);
+        const response = await apiService.post('/users/login', credentials);
         const { token, user } = response.data;
         // Store the token
         localStorage.setItem('token', token);
         // Update default headers
-        apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        apiService.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         return response.data;
     } catch (error) {
         console.error('Error during login:', error);
@@ -505,9 +506,9 @@ export const login = async (credentials: UserCredentials): Promise<AuthResponse>
 export const logout = async (): Promise<void> => {
     try {
         // Interceptor might add token, backend ignores it for logout
-        await apiClient.post('/users/logout'); 
+        await apiService.post('/users/logout'); 
         localStorage.removeItem('token');
-        delete apiClient.defaults.headers.common['Authorization'];
+        delete apiService.defaults.headers.common['Authorization'];
     } catch (error) {
         console.error('Error during logout:', error);
         throw error;
@@ -517,7 +518,7 @@ export const logout = async (): Promise<void> => {
 export const getProfile = async (): Promise<UserProfile> => {
     try {
         // Interceptor adds Authorization header
-        const response = await apiClient.get('/users/profile');
+        const response = await apiService.get('/users/profile');
         return response.data;
     } catch (error) {
         console.error('Error fetching profile:', error);
@@ -530,7 +531,7 @@ export const getProfile = async (): Promise<UserProfile> => {
 // Issue API functions
 export const getIssues = async (): Promise<Issue[]> => {
     try {
-        const response = await apiClient.get('/issues');
+        const response = await apiService.get('/issues');
         return response.data;
     } catch (error) {
         console.error('Error fetching issues:', error);
@@ -540,7 +541,7 @@ export const getIssues = async (): Promise<Issue[]> => {
 
 export const getIssueById = async (id: number): Promise<Issue> => {
     try {
-        const response = await apiClient.get(`/issues/${id}`);
+        const response = await apiService.get(`/issues/${id}`);
         return response.data;
     } catch (error) {
         console.error(`Error fetching issue ${id}:`, error);
@@ -550,7 +551,7 @@ export const getIssueById = async (id: number): Promise<Issue> => {
 
 export const createIssue = async (issueData: CreateIssueData): Promise<Issue> => {
     try {
-        const response = await apiClient.post('/issues', issueData);
+        const response = await apiService.post('/issues', issueData);
         return response.data;
     } catch (error) {
         console.error('Error creating issue:', error);
@@ -560,7 +561,7 @@ export const createIssue = async (issueData: CreateIssueData): Promise<Issue> =>
 
 export const updateIssue = async (id: number, issueData: Partial<CreateIssueData>): Promise<Issue> => {
     try {
-        const response = await apiClient.put(`/issues/${id}`, issueData);
+        const response = await apiService.put(`/issues/${id}`, issueData);
         return response.data;
     } catch (error) {
         console.error(`Error updating issue ${id}:`, error);
@@ -570,7 +571,7 @@ export const updateIssue = async (id: number, issueData: Partial<CreateIssueData
 
 export const deleteIssue = async (id: number): Promise<void> => {
     try {
-        await apiClient.delete(`/issues/${id}`);
+        await apiService.delete(`/issues/${id}`);
     } catch (error) {
         console.error(`Error deleting issue ${id}:`, error);
         throw error;
@@ -579,7 +580,7 @@ export const deleteIssue = async (id: number): Promise<void> => {
 
 export const parseRecipe = async (recipeText: string): Promise<any> => {
     try {
-        const response = await apiClient.post('/recipes/parse', { recipeText });
+        const response = await apiService.post('/recipes/parse', { recipeText });
         return response.data;
     } catch (error) {
         console.error('Error parsing recipe:', error);
@@ -587,4 +588,4 @@ export const parseRecipe = async (recipeText: string): Promise<any> => {
     }
 };
 
-export default apiClient; 
+export default apiService; 

@@ -11,6 +11,7 @@ import dashboardRoutes from './routes/dashboardRoutes'; // <-- Import dashboard 
 import issueRoutes from './routes/issueRoutes';
 import commentRoutes from './routes/commentRoutes';
 import prepTaskRoutes from './routes/prepTaskRoutes';
+import prepColumnRoutes from './routes/prepColumnRoutes';
 import { Request, Response, NextFunction } from 'express';
 
 // Load environment variables
@@ -37,6 +38,7 @@ app.use('/api/dashboard', dashboardRoutes); // <-- Mount dashboard routes
 app.use('/api/issues', issueRoutes);
 app.use('/api/issues/:issueId/comments', commentRoutes);
 app.use('/api/prep-tasks', prepTaskRoutes);
+app.use('/api/prep-columns', prepColumnRoutes);
 
 // Basic route for testing
 app.get('/', (req, res) => {
