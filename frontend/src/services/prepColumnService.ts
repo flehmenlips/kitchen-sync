@@ -20,8 +20,15 @@ export const prepColumnService = {
     },
 
     updateColumn: async (id: string, updates: UpdatePrepColumnInput): Promise<PrepColumn> => {
-        const response = await api.patch(`${BASE_URL}/${id}`, updates);
-        return response.data;
+        console.log(`prepColumnService.updateColumn called with id=${id}`, updates);
+        try {
+            const response = await api.put(`${BASE_URL}/${id}`, updates);
+            console.log('updateColumn API response:', response.data);
+            return response.data;
+        } catch (error) {
+            console.error('Error in prepColumnService.updateColumn:', error);
+            throw error;
+        }
     },
 
     deleteColumn: async (id: string): Promise<void> => {

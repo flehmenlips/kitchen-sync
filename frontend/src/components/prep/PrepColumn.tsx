@@ -102,7 +102,18 @@ const PrepColumn: React.FC<PrepColumnProps> = ({
 
     const handleColorChange = async () => {
         try {
+            console.log('Updating column color:', {
+                columnId: column.id,
+                currentColor: column.color,
+                newColor: selectedColor
+            });
+            
             await updateColumn(column.id, { color: selectedColor });
+            console.log('Column color updated successfully');
+            
+            // Force a re-fetch of all columns to ensure state is up to date
+            await usePrepBoardStore.getState().fetchColumns();
+            
             handleCloseColorPicker();
         } catch (error) {
             console.error('Failed to update column color:', error);

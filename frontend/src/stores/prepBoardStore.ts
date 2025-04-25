@@ -253,19 +253,27 @@ export const usePrepBoardStore = create<PrepBoardState>()((set, get) => ({
     },
 
     updateColumn: async (columnId, updates) => {
+        console.log('updateColumn called with:', { columnId, updates });
         set({ isLoading: true, error: null });
         try {
+            console.log('Calling prepColumnService.updateColumn...');
             const updatedColumn = await prepColumnService.updateColumn(columnId, updates);
+            console.log('prepColumnService.updateColumn response:', updatedColumn);
             
             // Update the column in state
-            set(state => ({
-                columns: state.columns.map(col => 
+            set(state => {
+                console.log('Updating state with new column data:', updatedColumn);
+                const updatedColumns = state.columns.map(col => 
                     col.id === columnId 
                         ? { ...col, ...updatedColumn } 
                         : col
-                ),
-                isLoading: false
-            }));
+                );
+                console.log('New columns state:', updatedColumns);
+                return {
+                    columns: updatedColumns,
+                    isLoading: false
+                };
+            });
 
             return updatedColumn;
         } catch (error) {

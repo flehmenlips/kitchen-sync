@@ -10,6 +10,16 @@ import {
 
 const router = express.Router();
 
+// Debug middleware
+router.use((req, res, next) => {
+    console.log(`[PrepColumnRoutes] ${req.method} ${req.originalUrl}`, {
+        params: req.params,
+        query: req.query,
+        body: req.body
+    });
+    next();
+});
+
 router.use(protect);
 
 router.route('/')

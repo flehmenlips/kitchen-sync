@@ -84,6 +84,12 @@ export const createPrepColumn = async (req: Request, res: Response): Promise<voi
 // @route   PUT /api/prep-columns/:id
 // @access  Private
 export const updatePrepColumn = async (req: Request, res: Response): Promise<void> => {
+    console.log('updatePrepColumn called with:', {
+        id: req.params.id,
+        body: req.body,
+        userId: req.user?.id
+    });
+    
     if (!req.user?.id) {
         res.status(401).json({ message: 'Not authorized, user not found' });
         return;
@@ -92,6 +98,8 @@ export const updatePrepColumn = async (req: Request, res: Response): Promise<voi
     try {
         const { id } = req.params;
         const { name, color } = req.body;
+        
+        console.log(`Updating column ${id} with:`, { name, color });
 
         // Check if column exists and belongs to user
         const existingColumn = await prisma.prepColumn.findUnique({
@@ -99,11 +107,13 @@ export const updatePrepColumn = async (req: Request, res: Response): Promise<voi
         });
 
         if (!existingColumn) {
+            console.log(`Column with id ${id} not found`);
             res.status(404).json({ message: 'Column not found' });
             return;
         }
 
         if (existingColumn.userId !== req.user.id) {
+            console.log(`User ${req.user.id} not authorized to update column ${id} (owned by ${existingColumn.userId})`);
             res.status(403).json({ message: 'Not authorized to update this column' });
             return;
         }
@@ -119,19 +129,24 @@ export const updatePrepColumn = async (req: Request, res: Response): Promise<voi
             });
 
             if (duplicateColumn) {
+                console.log(`Duplicate column name "${name}" found for user ${req.user.id}`);
                 res.status(400).json({ message: 'A column with this name already exists' });
                 return;
             }
         }
 
+        const updateData: any = {};
+        if (name) updateData.name = name;
+        if (color) updateData.color = color;
+        
+        console.log(`Final update data for column ${id}:`, updateData);
+
         const column = await prisma.prepColumn.update({
             where: { id },
-            data: {
-                name: name || undefined,
-                color: color || undefined
-            }
+            data: updateData
         });
 
+        console.log(`Column ${id} updated successfully:`, column);
         res.status(200).json(column);
     } catch (error) {
         console.error('Error updating prep column:', error);
