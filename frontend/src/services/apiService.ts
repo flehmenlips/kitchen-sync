@@ -549,8 +549,10 @@ export const login = async (credentials: UserCredentials): Promise<AuthResponse>
         console.log("Login request with credentials:", { email: credentials.email, passwordProvided: !!credentials.password });
         const response = await apiService.post('/users/login', credentials);
         console.log("Login response received:", response.status);
+        console.log("Raw login response data:", response.data);
+        console.log("Response data keys:", Object.keys(response.data));
         
-        const { token, user } = response.data;
+        const { token, ...user } = response.data;
         // Store the token in localStorage
         if (token) {
             console.log("Saving token to localStorage");
