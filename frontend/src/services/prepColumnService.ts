@@ -16,9 +16,21 @@ export const prepColumnService = {
                 return [];
             }
             
+            // Check if the response contains HTML (indicates a routing issue)
+            if (typeof response.data === 'string' && response.data.includes('<!doctype html>')) {
+                console.error('Received HTML instead of JSON. API routing issue detected!');
+                console.error('Please check server configuration and CORS settings');
+                // Log the first 100 characters to see what kind of HTML we're getting
+                console.error('HTML preview:', response.data.substring(0, 100) + '...');
+                return [];
+            }
+            
             // Handle case where response.data is not an array
             if (!Array.isArray(response.data)) {
-                console.error('Column data is not an array:', response.data);
+                console.error('Column data is not an array:', 
+                    typeof response.data === 'string' 
+                        ? response.data.substring(0, 50) + '...' 
+                        : response.data);
                 return [];
             }
             

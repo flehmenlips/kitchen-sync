@@ -9,12 +9,17 @@ export const api = axios.create({
         : (import.meta.env.VITE_API_URL || 'http://localhost:3001') + '/api',
     headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json', // Explicitly request JSON
     },
 });
 
 // Add a request interceptor
 api.interceptors.request.use(
     (config) => {
+        // Log environment and full URL for debugging
+        const fullUrl = (config.baseURL || '') + (config.url || '');
+        console.log(`API Request to ${fullUrl} in ${import.meta.env.PROD ? 'production' : 'development'} mode`);
+        
         // Log environment for debugging
         if (import.meta.env.DEV) {
             console.log('API running in development mode, using baseURL:', config.baseURL);
