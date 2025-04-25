@@ -1,23 +1,73 @@
+// Task related types
 export interface PrepTask {
     id: string;
-    name: string;
+    title: string;
     description?: string;
-    order: number;
-    completed: boolean;
-    dueDate?: Date;
     columnId: string;
+    recipeId?: string;
+    order: number;
+    createdAt: string;
+    updatedAt: string;
     userId: string;
-    createdAt: Date;
-    updatedAt: Date;
 }
 
+// Column related types
 export interface PrepColumn {
     id: string;
     name: string;
-    color: string;
     order: number;
-    userId: string;
     tasks: PrepTask[];
-    createdAt: Date;
-    updatedAt: Date;
+    createdAt: string;
+    updatedAt: string;
+    userId: string;
+}
+
+// Input types for creating/updating tasks
+export interface CreatePrepTaskInput {
+    title: string;
+    description?: string;
+    columnId: string;
+    recipeId?: number;
+}
+
+export interface UpdatePrepTaskInput {
+    title?: string;
+    description?: string;
+    columnId?: string;
+    recipeId?: string;
+    order?: number;
+}
+
+// Column management types
+export interface CreatePrepColumnInput {
+    name: string;
+    order?: number;
+}
+
+export interface UpdatePrepColumnInput {
+    name?: string;
+    order?: number;
+}
+
+// Recipe selection types
+export interface RecipeSelectionOption {
+    id: number;
+    name: string;
+    description?: string | null;
+}
+
+// Dialog props types
+export interface AddRecipeDialogProps {
+    open: boolean;
+    onClose: () => void;
+    columnId?: string; // Optional - if provided, adds to specific column
+}
+
+export interface ColumnSelectionDialogProps {
+    open: boolean;
+    onClose: () => void;
+    onSelect: (columnId: string) => void;
+    columns: PrepColumn[];
+    title?: string;
+    description?: string;
 } 

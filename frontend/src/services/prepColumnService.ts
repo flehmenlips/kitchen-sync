@@ -1,64 +1,35 @@
-import axios from 'axios';
-import { PrepColumn } from '../types/prep';
+import { PrepColumn, CreatePrepColumnInput, UpdatePrepColumnInput } from '../types/prep';
+import { api } from './api';
 
-// Create an axios instance with auth interceptor
-const apiClient = axios.create({
-    baseURL: '/api',
-    headers: {
-        'Content-Type': 'application/json',
+const BASE_URL = '/api/prep-columns';
+
+export const prepColumnService = {
+    getColumns: async (): Promise<PrepColumn[]> => {
+        const response = await api.get(BASE_URL);
+        return response.data;
     },
-});
 
-// Add a request interceptor to include the token
-apiClient.interceptors.request.use(
-    (config) => {
-        let token = null;
-        try {
-            const storedUserInfo = localStorage.getItem('kitchenSyncUserInfo');
-            if (storedUserInfo) {
-                token = JSON.parse(storedUserInfo).token;
-            }
-        } catch (error) {
-            console.error("Error reading token from localStorage:", error);
-        }
-
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
+    getColumnById: async (id: string): Promise<PrepColumn> => {
+        const response = await api.get(`${BASE_URL}/${id}`);
+        return response.data;
     },
-    (error) => {
-        return Promise.reject(error);
+
+    createColumn: async (column: CreatePrepColumnInput): Promise<PrepColumn> => {
+        const response = await api.post(BASE_URL, column);
+        return response.data;
+    },
+
+    updateColumn: async (id: string, updates: UpdatePrepColumnInput): Promise<PrepColumn> => {
+        const response = await api.patch(`${BASE_URL}/${id}`, updates);
+        return response.data;
+    },
+
+    deleteColumn: async (id: string): Promise<void> => {
+        await api.delete(`${BASE_URL}/${id}`);
+    },
+
+    reorderColumns: async (columnIds: string[]): Promise<PrepColumn[]> => {
+        const response = await api.put(`${BASE_URL}/reorder`, { columnIds });
+        return response.data;
     }
-);
-
-const API_URL = '/prep-columns';
-
-// Get all prep columns
-export const getPrepColumns = async (): Promise<PrepColumn[]> => {
-    const response = await apiClient.get(API_URL);
-    return response.data;
-};
-
-// Create a new prep column
-export const createPrepColumn = async (columnData: { name: string; color?: string }): Promise<PrepColumn> => {
-    const response = await apiClient.post(API_URL, columnData);
-    return response.data;
-};
-
-// Update a prep column
-export const updatePrepColumn = async (id: string, columnData: { name?: string; color?: string }): Promise<PrepColumn> => {
-    const response = await apiClient.put(`${API_URL}/${id}`, columnData);
-    return response.data;
-};
-
-// Delete a prep column
-export const deletePrepColumn = async (id: string): Promise<void> => {
-    await apiClient.delete(`${API_URL}/${id}`);
-};
-
-// Reorder prep columns
-export const reorderPrepColumns = async (columnIds: string[]): Promise<PrepColumn[]> => {
-    const response = await apiClient.put(`${API_URL}/reorder`, { columnIds });
-    return response.data;
 }; 

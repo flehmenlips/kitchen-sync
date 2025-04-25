@@ -21,6 +21,11 @@ import {
     DialogContent,
     DialogActions,
     ToggleButton,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
+    TextField,
 } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import { getRecipeById, updateRecipe, deleteRecipe } from '../services/apiService';
@@ -39,9 +44,7 @@ import { scaleRecipe } from '../utils/recipeScaling';
 import { DisplayedIngredient, ScalingIngredient, UnitType } from '../types/recipe';
 import { useSnackbar } from '../context/SnackbarContext';
 import { usePrepBoardStore } from '../stores/prepBoardStore';
-import { PrepTask } from '../components/prep/types';
 import { v4 as uuidv4 } from 'uuid';
-import { COLUMN_IDS } from '../stores/prepBoardStore';
 
 const RecipeDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -55,8 +58,11 @@ const RecipeDetail: React.FC = () => {
     const [isSaveDialogOpen, setSaveDialogOpen] = useState(false);
     const [isConciseMode, setIsConciseMode] = useState(false);
     const { showSnackbar } = useSnackbar();
-    const { addTask } = usePrepBoardStore();
+    const { addTask, columns } = usePrepBoardStore();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isPrepDialogOpen, setIsPrepDialogOpen] = useState(false);
+    const [selectedColumnId, setSelectedColumnId] = useState('');
+    const [prepNotes, setPrepNotes] = useState('');
 
     useEffect(() => {
         const loadRecipe = async () => {
@@ -139,17 +145,26 @@ const RecipeDetail: React.FC = () => {
         setScaleFactor(1);
     };
 
+    const openPrepDialog = () => {
+        setSelectedColumnId('');
+        setPrepNotes('');
+        setIsPrepDialogOpen(true);
+    };
+
     const handleAddToPrep = async () => {
-        if (!recipe) return;
+        if (!recipe || !selectedColumnId) return;
 
         try {
+            // Convert recipeId to a number
+            const recipeId = recipe.id ? parseInt(recipe.id.toString(), 10) : undefined;
+            
             await addTask({
                 title: recipe.name,
-                description: recipe.description || '',
-                status: COLUMN_IDS.TO_PREP,
-                recipeId: recipe.id,
-                order: 0
+                description: prepNotes || recipe.description || '',
+                columnId: selectedColumnId,
+                recipeId: recipeId
             });
+            setIsPrepDialogOpen(false);
             showSnackbar('Recipe added to prep board', 'success');
         } catch (err) {
             console.error('Error adding recipe to prep board:', err);
@@ -313,7 +328,7 @@ const RecipeDetail: React.FC = () => {
                     </Tooltip>
                     <Tooltip title="Add to Prep Board">
                         <IconButton
-                            onClick={handleAddToPrep}
+                            onClick={openPrepDialog}
                             color="secondary"
                         >
                             <AddIcon />
@@ -384,6 +399,53 @@ const RecipeDetail: React.FC = () => {
                     }
                 }))}
             />
+
+            {/* Add to Prep Board Dialog */}
+            <Dialog
+                open={isPrepDialogOpen}
+                onClose={() => setIsPrepDialogOpen(false)}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle>Add to Prep Board</DialogTitle>
+                <DialogContent>
+                    <FormControl fullWidth sx={{ mt: 2, mb: 2 }}>
+                        <InputLabel id="prep-column-select-label">Select Column</InputLabel>
+                        <Select
+                            labelId="prep-column-select-label"
+                            value={selectedColumnId}
+                            label="Select Column"
+                            onChange={(e) => setSelectedColumnId(e.target.value)}
+                        >
+                            {columns.map((column) => (
+                                <MenuItem key={column.id} value={column.id}>
+                                    {column.name}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                    <TextField
+                        fullWidth
+                        multiline
+                        rows={3}
+                        label="Prep Notes"
+                        placeholder="Add notes for this prep task"
+                        value={prepNotes}
+                        onChange={(e) => setPrepNotes(e.target.value)}
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setIsPrepDialogOpen(false)}>Cancel</Button>
+                    <Button
+                        onClick={handleAddToPrep}
+                        variant="contained"
+                        color="primary"
+                        disabled={!selectedColumnId}
+                    >
+                        Add to Prep Board
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             {/* Confirmation Dialog for Saving Scaled Version */}
             <Dialog open={isSaveDialogOpen} onClose={() => setSaveDialogOpen(false)}>
