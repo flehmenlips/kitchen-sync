@@ -1,86 +1,56 @@
 import { create } from 'zustand';
-import { PrepTask, PrepColumn } from '../components/prep/types';
+import { 
+    PrepTask, 
+    PrepColumn, 
+    CreatePrepTaskInput, 
+    UpdatePrepTaskInput,
+    CreatePrepColumnInput,
+    UpdatePrepColumnInput
+} from '../types/prep';
 import { prepTaskService } from '../services/prepTaskService';
+import { prepColumnService } from '../services/prepColumnService';
 
-// Define column IDs as constants to ensure consistency
-export const COLUMN_IDS = {
-    TO_PREP: 'TO_PREP',
-    PREPPING: 'PREPPING',
-    READY: 'READY',
-    COMPLETE: 'COMPLETE'
-} as const;
-
-type PrepTaskStatus = typeof COLUMN_IDS[keyof typeof COLUMN_IDS];
-
-const isValidStatus = (status: string): status is PrepTaskStatus => {
-    return Object.values(COLUMN_IDS).includes(status as PrepTaskStatus);
-};
-
-interface PrepBoardState {
-    columns: PrepColumn[];
-    isLoading: boolean;
-    error: string | null;
-    addTask: (task: Omit<PrepTask, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-    moveTask: (taskId: string, sourceColId: string, destColId: string, destinationIndex: number) => Promise<void>;
-    updateTask: (taskId: string, updates: Partial<PrepTask>) => Promise<void>;
-    removeTask: (taskId: string) => Promise<void>;
-    fetchTasks: () => Promise<void>;
+interface ColumnWithTasks extends PrepColumn {
+    tasks: PrepTask[];
 }
 
-const initialColumns: PrepColumn[] = [
-    {
-        id: COLUMN_IDS.TO_PREP,
-        title: 'To Prep',
-        tasks: []
-    },
-    {
-        id: COLUMN_IDS.PREPPING,
-        title: 'Prepping',
-        tasks: []
-    },
-    {
-        id: COLUMN_IDS.READY,
-        title: 'Ready',
-        tasks: []
-    },
-    {
-        id: COLUMN_IDS.COMPLETE,
-        title: 'Complete',
-        tasks: []
-    }
-];
+interface PrepBoardState {
+    columns: ColumnWithTasks[];
+    isLoading: boolean;
+    error: string | null;
+    fetchColumns: () => Promise<void>;
+    addTask: (task: CreatePrepTaskInput) => Promise<PrepTask>;
+    moveTask: (taskId: string, sourceColId: string, destColId: string, destinationIndex: number) => Promise<void>;
+    updateTask: (taskId: string, updates: UpdatePrepTaskInput) => Promise<PrepTask>;
+    removeTask: (taskId: string) => Promise<void>;
+    addColumn: (column: CreatePrepColumnInput) => Promise<PrepColumn>;
+    updateColumn: (columnId: string, updates: UpdatePrepColumnInput) => Promise<PrepColumn>;
+    deleteColumn: (columnId: string) => Promise<void>;
+    reorderColumns: (columnIds: string[]) => Promise<void>;
+}
 
 export const usePrepBoardStore = create<PrepBoardState>()((set, get) => ({
-    columns: initialColumns,
+    columns: [],
     isLoading: false,
     error: null,
 
-    fetchTasks: async () => {
+    fetchColumns: async () => {
         set({ isLoading: true, error: null });
         try {
-            const response = await prepTaskService.getAllTasks();
-            const tasks = Array.isArray(response) ? response : [];
-            
-            if (!Array.isArray(tasks)) {
-                throw new Error('Invalid response format: tasks is not an array');
-            }
-            
-            // Group tasks by status, ensuring each task has a valid status
-            const columns = initialColumns.map(col => ({
-                ...col,
-                tasks: tasks.filter(task => 
-                    task && 
-                    typeof task === 'object' && 
-                    'status' in task && 
-                    isValidStatus(task.status) &&
-                    task.status === col.id
-                )
+            const [columns, tasks] = await Promise.all([
+                prepColumnService.getColumns(),
+                prepTaskService.getTasks()
+            ]);
+
+            const columnsWithTasks = columns.map(column => ({
+                ...column,
+                tasks: tasks.filter(task => task.columnId === column.id)
             }));
 
-            set({ columns, isLoading: false });
+            set({ columns: columnsWithTasks, isLoading: false });
         } catch (error) {
-            console.error('Error fetching tasks:', error);
-            set({ error: 'Failed to fetch tasks', isLoading: false });
+            console.error('Error fetching columns:', error);
+            set({ error: 'Failed to fetch columns', isLoading: false });
         }
     },
 
@@ -91,25 +61,22 @@ export const usePrepBoardStore = create<PrepBoardState>()((set, get) => ({
             
             set(state => ({
                 columns: state.columns.map(col =>
-                    col.id === newTask.status
+                    col.id === task.columnId
                         ? { ...col, tasks: [...col.tasks, newTask] }
                         : col
                 ),
                 isLoading: false
             }));
+
+            return newTask;
         } catch (error) {
             console.error('Error adding task:', error);
             set({ error: 'Failed to add task', isLoading: false });
+            throw error;
         }
     },
 
     moveTask: async (taskId, sourceColId, destColId, destinationIndex) => {
-        // Validate status
-        if (!isValidStatus(destColId)) {
-            console.error('Invalid status:', destColId);
-            return;
-        }
-
         // Find the task
         const sourceColumn = get().columns.find(col => col.id === sourceColId);
         const task = sourceColumn?.tasks.find(t => t.id === taskId);
@@ -124,7 +91,7 @@ export const usePrepBoardStore = create<PrepBoardState>()((set, get) => ({
                 }
                 if (col.id === destColId) {
                     const newTasks = [...col.tasks];
-                    newTasks.splice(destinationIndex, 0, { ...task, status: destColId as PrepTaskStatus });
+                    newTasks.splice(destinationIndex, 0, { ...task, columnId: destColId });
                     return { ...col, tasks: newTasks };
                 }
                 return col;
@@ -134,13 +101,13 @@ export const usePrepBoardStore = create<PrepBoardState>()((set, get) => ({
         // Update in the backend
         try {
             await prepTaskService.updateTask(taskId, {
-                status: destColId as PrepTaskStatus,
+                columnId: destColId,
                 order: destinationIndex
             });
         } catch (error) {
             console.error('Error moving task:', error);
             // Revert the change on error
-            get().fetchTasks();
+            get().fetchColumns();
             set({ error: 'Failed to move task' });
         }
     },
@@ -155,13 +122,16 @@ export const usePrepBoardStore = create<PrepBoardState>()((set, get) => ({
                     ...col,
                     tasks: col.tasks.map(task =>
                         task.id === taskId ? updatedTask : task
-                    )
+                    ).filter(task => task.columnId === col.id)
                 })),
                 isLoading: false
             }));
+
+            return updatedTask;
         } catch (error) {
             console.error('Error updating task:', error);
             set({ error: 'Failed to update task', isLoading: false });
+            throw error;
         }
     },
 
@@ -180,6 +150,97 @@ export const usePrepBoardStore = create<PrepBoardState>()((set, get) => ({
         } catch (error) {
             console.error('Error removing task:', error);
             set({ error: 'Failed to remove task', isLoading: false });
+            throw error;
+        }
+    },
+
+    addColumn: async (column) => {
+        set({ isLoading: true, error: null });
+        try {
+            const newColumn = await prepColumnService.createColumn(column);
+            
+            // Add the new column to the state with an empty tasks array
+            set(state => ({
+                columns: [...state.columns, { ...newColumn, tasks: [] }],
+                isLoading: false
+            }));
+
+            return newColumn;
+        } catch (error) {
+            console.error('Error adding column:', error);
+            set({ error: 'Failed to add column', isLoading: false });
+            throw error;
+        }
+    },
+
+    updateColumn: async (columnId, updates) => {
+        set({ isLoading: true, error: null });
+        try {
+            const updatedColumn = await prepColumnService.updateColumn(columnId, updates);
+            
+            // Update the column in state
+            set(state => ({
+                columns: state.columns.map(col => 
+                    col.id === columnId 
+                        ? { ...col, ...updatedColumn } 
+                        : col
+                ),
+                isLoading: false
+            }));
+
+            return updatedColumn;
+        } catch (error) {
+            console.error('Error updating column:', error);
+            set({ error: 'Failed to update column', isLoading: false });
+            throw error;
+        }
+    },
+
+    deleteColumn: async (columnId) => {
+        set({ isLoading: true, error: null });
+        try {
+            await prepColumnService.deleteColumn(columnId);
+            
+            // Remove the column from state
+            set(state => ({
+                columns: state.columns.filter(col => col.id !== columnId),
+                isLoading: false
+            }));
+        } catch (error) {
+            console.error('Error deleting column:', error);
+            set({ error: 'Failed to delete column', isLoading: false });
+            throw error;
+        }
+    },
+
+    reorderColumns: async (columnIds) => {
+        set({ isLoading: true, error: null });
+        try {
+            const updatedColumns = await prepColumnService.reorderColumns(columnIds);
+            
+            // Update the columns in state with the new order
+            set(state => {
+                // Create a mapping of column id to tasks
+                const tasksMap = state.columns.reduce((acc, col) => {
+                    acc[col.id] = col.tasks;
+                    return acc;
+                }, {} as Record<string, PrepTask[]>);
+                
+                // Map the updated columns with their tasks
+                const columnsWithTasks = updatedColumns.map(col => ({
+                    ...col,
+                    tasks: tasksMap[col.id] || []
+                }));
+                
+                return {
+                    columns: columnsWithTasks,
+                    isLoading: false
+                };
+            });
+        } catch (error) {
+            console.error('Error reordering columns:', error);
+            set({ error: 'Failed to reorder columns', isLoading: false });
+            throw error;
         }
     }
 })); 

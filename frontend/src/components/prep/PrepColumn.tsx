@@ -1,84 +1,193 @@
-import React from 'react';
-import { Draggable } from 'react-beautiful-dnd';
-import { Box, Paper, Typography } from '@mui/material';
-import { PrepColumn as ColumnType } from './types';
+import React, { useState } from 'react';
+import { Droppable } from 'react-beautiful-dnd';
+import {
+    Paper,
+    Typography,
+    Box,
+    IconButton,
+    TextField,
+    Button,
+    Menu,
+    MenuItem,
+    ListItemIcon,
+    ListItemText,
+} from '@mui/material';
+import {
+    Add as AddIcon,
+    MoreVert as MoreVertIcon,
+    Edit as EditIcon,
+    Delete as DeleteIcon,
+} from '@mui/icons-material';
+import { PrepColumn as PrepColumnType, PrepTask } from '../../types/prep';
 import PrepCard from './PrepCard';
-import { COLUMN_IDS } from '../../stores/prepBoardStore';
+import { usePrepBoardStore } from '../../stores/prepBoardStore';
 
 interface PrepColumnProps {
-    column: ColumnType;
-    provided: any;
-    onDelete: (taskId: string) => void;
+    column: PrepColumnType;
+    tasks: PrepTask[];
+    onDeleteTask: (taskId: string) => void;
     onViewRecipe: (taskId: string) => void;
+    onEditColumn: (column: PrepColumnType) => void;
+    onDeleteColumn: (column: PrepColumnType) => void;
 }
 
-const getColumnColor = (columnId: string) => {
-    switch (columnId) {
-        case COLUMN_IDS.TO_PREP:
-            return 'info.main';
-        case COLUMN_IDS.PREPPING:
-            return 'warning.main';
-        case COLUMN_IDS.READY:
-            return 'success.main';
-        case COLUMN_IDS.COMPLETE:
-            return 'text.secondary';
-        default:
-            return 'primary.main';
-    }
+const PrepColumn: React.FC<PrepColumnProps> = ({
+    column,
+    tasks,
+    onDeleteTask,
+    onViewRecipe,
+    onEditColumn,
+    onDeleteColumn,
+}) => {
+    const [isAddingTask, setIsAddingTask] = useState(false);
+    const [newTaskTitle, setNewTaskTitle] = useState('');
+    const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
+    const addTask = usePrepBoardStore(state => state.addTask);
+
+    const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+        setMenuAnchorEl(event.currentTarget);
+    };
+
+    const handleMenuClose = () => {
+        setMenuAnchorEl(null);
+    };
+
+    const handleEditColumn = () => {
+        handleMenuClose();
+        onEditColumn(column);
+    };
+
+    const handleDeleteColumn = () => {
+        handleMenuClose();
+        onDeleteColumn(column);
+    };
+
+    const handleAddTask = async () => {
+        if (!newTaskTitle.trim()) return;
+
+        try {
+            await addTask({
+                title: newTaskTitle.trim(),
+                columnId: column.id,
+            });
+            setNewTaskTitle('');
+            setIsAddingTask(false);
+        } catch (error) {
+            console.error('Failed to add task:', error);
+        }
+    };
+
+    return (
+        <Paper
+            sx={{
+                width: 300,
+                minHeight: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                p: 2,
+            }}
+        >
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6" component="div">
+                    {column.name}
+                </Typography>
+                <Box>
+                    <IconButton
+                        size="small"
+                        onClick={() => setIsAddingTask(true)}
+                        sx={{ '&:hover': { color: 'primary.main' } }}
+                    >
+                        <AddIcon />
+                    </IconButton>
+                    <IconButton
+                        size="small"
+                        onClick={handleMenuOpen}
+                        sx={{ '&:hover': { color: 'primary.main' } }}
+                    >
+                        <MoreVertIcon />
+                    </IconButton>
+                    <Menu
+                        anchorEl={menuAnchorEl}
+                        open={Boolean(menuAnchorEl)}
+                        onClose={handleMenuClose}
+                    >
+                        <MenuItem onClick={handleEditColumn}>
+                            <ListItemIcon>
+                                <EditIcon fontSize="small" />
+                            </ListItemIcon>
+                            <ListItemText>Edit Column</ListItemText>
+                        </MenuItem>
+                        <MenuItem onClick={handleDeleteColumn}>
+                            <ListItemIcon>
+                                <DeleteIcon fontSize="small" color="error" />
+                            </ListItemIcon>
+                            <ListItemText>Delete Column</ListItemText>
+                        </MenuItem>
+                    </Menu>
+                </Box>
+            </Box>
+
+            {isAddingTask && (
+                <Box sx={{ mb: 2 }}>
+                    <TextField
+                        fullWidth
+                        size="small"
+                        value={newTaskTitle}
+                        onChange={(e) => setNewTaskTitle(e.target.value)}
+                        placeholder="Task title"
+                        autoFocus
+                        sx={{ mb: 1 }}
+                    />
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button
+                            variant="contained"
+                            size="small"
+                            onClick={handleAddTask}
+                            disabled={!newTaskTitle.trim()}
+                        >
+                            Add
+                        </Button>
+                        <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={() => {
+                                setIsAddingTask(false);
+                                setNewTaskTitle('');
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                    </Box>
+                </Box>
+            )}
+
+            <Droppable droppableId={column.id}>
+                {(provided, snapshot) => (
+                    <Box
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        sx={{
+                            flex: 1,
+                            backgroundColor: snapshot.isDraggingOver ? 'action.hover' : 'transparent',
+                            transition: 'background-color 0.2s ease',
+                            borderRadius: 1,
+                            minHeight: 100,
+                        }}
+                    >
+                        {tasks.map((task, index) => (
+                            <PrepCard
+                                key={task.id}
+                                task={{ ...task, order: index }}
+                                onDelete={onDeleteTask}
+                                onViewRecipe={onViewRecipe}
+                            />
+                        ))}
+                        {provided.placeholder}
+                    </Box>
+                )}
+            </Droppable>
+        </Paper>
+    );
 };
 
-export const PrepColumn: React.FC<PrepColumnProps> = ({ column, provided, onDelete, onViewRecipe }) => {
-    return (
-        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <Paper
-                sx={{
-                    p: 2,
-                    mb: 2,
-                    borderTop: 3,
-                    borderColor: getColumnColor(column.id)
-                }}
-                elevation={2}
-            >
-                <Typography variant="h6" sx={{ color: getColumnColor(column.id) }}>
-                    {column.title} ({column.tasks.length})
-                </Typography>
-            </Paper>
-
-            <Paper
-                {...provided.droppableProps}
-                ref={provided.innerRef}
-                sx={{
-                    p: 1,
-                    flexGrow: 1,
-                    minHeight: '100px',
-                    backgroundColor: 'background.default',
-                    overflowY: 'auto'
-                }}
-            >
-                {column.tasks.map((task, index) => (
-                    <Draggable
-                        key={task.id}
-                        draggableId={task.id}
-                        index={index}
-                    >
-                        {(provided, snapshot) => (
-                            <Box
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                                sx={{ mb: 1 }}
-                            >
-                                <PrepCard 
-                                    task={task} 
-                                    onDelete={onDelete}
-                                    onViewRecipe={onViewRecipe}
-                                />
-                            </Box>
-                        )}
-                    </Draggable>
-                ))}
-                {provided.placeholder}
-            </Paper>
-        </Box>
-    );
-}; 
+export default PrepColumn; 
