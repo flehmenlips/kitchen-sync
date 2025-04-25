@@ -471,11 +471,34 @@ export const getIngredientCategoryById = async (id: number): Promise<IngredientC
 // == Dashboard ==
 export const getDashboardStats = async (): Promise<DashboardStats> => {
     try {
+        console.log("Fetching dashboard stats from:", `${API_BASE_URL}/dashboard/stats`);
         const response = await apiService.get('/dashboard/stats');
-        return response.data;
+        console.log("Dashboard stats response:", response);
+        
+        // Add validation and default values for safer access
+        const data = response.data || {};
+        const safeStats: DashboardStats = {
+            recipes: typeof data.recipes === 'number' ? data.recipes : 0,
+            ingredients: typeof data.ingredients === 'number' ? data.ingredients : 0,
+            units: typeof data.units === 'number' ? data.units : 0,
+            recipeCategories: typeof data.recipeCategories === 'number' ? data.recipeCategories : 0,
+            ingredientCategories: typeof data.ingredientCategories === 'number' ? data.ingredientCategories : 0
+        };
+        
+        return safeStats;
     } catch (error) {
         console.error('Error fetching dashboard stats:', error);
-        throw error; // Re-throw for the component to handle
+        
+        // Return safe default values instead of throwing
+        const defaultStats: DashboardStats = {
+            recipes: 0,
+            ingredients: 0,
+            units: 0,
+            recipeCategories: 0,
+            ingredientCategories: 0
+        };
+        
+        return defaultStats;
     }
 };
 

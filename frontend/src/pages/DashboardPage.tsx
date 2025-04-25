@@ -26,6 +26,7 @@ const DashboardPage: React.FC = () => {
       try {
         setStatsLoading(true);
         const data = await getDashboardStats();
+        console.log("Dashboard stats data received:", data); // Debug log
         // Add defensive check that data has the expected structure
         if (data && typeof data === 'object') {
           // Ensure all properties have default values if missing
