@@ -39,7 +39,14 @@ export const prepTaskService = {
 
     // Reorder tasks
     reorderTasks: async (tasks: { id: string; order: number; columnId: string }[]): Promise<PrepTask[]> => {
-        const response = await api.put(`${BASE_URL}/reorder`, { tasks });
-        return response.data;
+        console.log('prepTaskService.reorderTasks called with:', tasks);
+        try {
+            const response = await api.put(`${BASE_URL}/reorder`, { tasks });
+            console.log('reorderTasks received response:', response.data);
+            return response.data;
+        } catch (error) {
+            console.error('reorderTasks error:', error);
+            throw error;
+        }
     }
 }; 

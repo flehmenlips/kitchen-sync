@@ -27,15 +27,27 @@ export const PrepBoard: React.FC = () => {
 
     const handleDragEnd = (result: DropResult) => {
         const { destination, source, draggableId, type } = result;
+        
+        console.log('DragEnd Debug:', { 
+            destination,
+            source,
+            draggableId,
+            type,
+            isColumnDrag: type === 'column'
+        });
 
         // Drop was cancelled or dropped outside a valid droppable
-        if (!destination) return;
+        if (!destination) {
+            console.log('No destination, drag cancelled');
+            return;
+        }
 
         // Dropped in the same position
         if (
             destination.droppableId === source.droppableId &&
             destination.index === source.index
         ) {
+            console.log('Dropped in same position, no action needed');
             return;
         }
 
@@ -45,12 +57,26 @@ export const PrepBoard: React.FC = () => {
             newColumnOrder.splice(source.index, 1);
             newColumnOrder.splice(destination.index, 0, draggableId);
             
+            console.log('Reordering columns:', {
+                oldOrder: columns.map(col => col.id),
+                newOrder: newColumnOrder
+            });
+            
             // Optimistically update UI and persist to backend
             handleReorderColumns(newColumnOrder);
             return;
         }
 
         // Handle task reordering - either within the same column or between columns
+        console.log('Moving task:', {
+            taskId: draggableId,
+            sourceColumn: source.droppableId,
+            destColumn: destination.droppableId,
+            isSameColumn: source.droppableId === destination.droppableId,
+            sourceIndex: source.index,
+            destIndex: destination.index
+        });
+        
         moveTask(
             draggableId,
             source.droppableId,
