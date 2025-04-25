@@ -127,11 +127,24 @@ const MainLayout: React.FC = () => {
 
     // Determine if current path is under a module
     const getCurrentModule = () => {
-        return KITCHEN_SYNC_MODULES.find(module => 
-            location.pathname.startsWith(module.path) ||
-            module.subItems?.some(item => location.pathname.startsWith(item.path))
-        );
+        try {
+            const currentPath = location?.pathname || '';
+            return KITCHEN_SYNC_MODULES.find(module => 
+                currentPath.startsWith(module.path) ||
+                module.subItems?.some(item => currentPath.startsWith(item.path))
+            );
+        } catch (error) {
+            console.error("Error in getCurrentModule:", error);
+            return null;
+        }
     };
+    
+    // Add logging to help debug in production
+    React.useEffect(() => {
+        console.log("Current location path:", location?.pathname);
+        console.log("Current module:", getCurrentModule());
+        console.log("User object:", user);
+    }, [location?.pathname, user]);
 
     const drawer = (
         <Box>
@@ -268,7 +281,9 @@ const MainLayout: React.FC = () => {
                             <Tooltip title="Account settings">
                                 <IconButton onClick={handleProfileClick} size="small" sx={{ ml: 2 }}>
                                     <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
-                                        {user.name?.[0]?.toUpperCase() || user.email[0]?.toUpperCase()}
+                                        {(user?.name && user.name[0]?.toUpperCase()) || 
+                                         (user?.email && user.email[0]?.toUpperCase()) || 
+                                         '?'}
                                     </Avatar>
                                 </IconButton>
                             </Tooltip>
@@ -281,10 +296,10 @@ const MainLayout: React.FC = () => {
                                 anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
                             >
                                 <MenuItem disabled sx={{ fontStyle: 'italic' }}>
-                                    {user.email}
+                                    {user?.email || ''}
                                 </MenuItem>
                                 <MenuItem disabled sx={{ color: 'text.secondary' }}>
-                                    Role: {user.role.charAt(0) + user.role.slice(1).toLowerCase()}
+                                    Role: {user?.role ? (user.role.charAt(0) + user.role.slice(1).toLowerCase()) : ''}
                                 </MenuItem>
                                 <Divider />
                                 <MenuItem component={RouterLink} to="/profile">
