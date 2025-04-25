@@ -1,7 +1,8 @@
 import { PrepTask, CreatePrepTaskInput, UpdatePrepTaskInput } from '../types/prep';
 import { api } from './api';
 
-const BASE_URL = '/api/prep-tasks';
+// Use a path relative to the api baseURL, which now already includes /api in production
+const BASE_URL = '/prep-tasks';
 
 export const prepTaskService = {
     // Get all prep tasks

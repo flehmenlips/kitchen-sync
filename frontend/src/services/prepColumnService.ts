@@ -1,7 +1,8 @@
 import { PrepColumn, CreatePrepColumnInput, UpdatePrepColumnInput } from '../types/prep';
 import { api } from './api';
 
-const BASE_URL = '/api/prep-columns';
+// Use a path relative to the api baseURL, which now already includes /api in production
+const BASE_URL = '/prep-columns';
 
 export const prepColumnService = {
     getColumns: async (): Promise<PrepColumn[]> => {

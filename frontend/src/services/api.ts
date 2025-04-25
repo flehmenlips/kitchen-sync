@@ -2,7 +2,9 @@ import axios from 'axios';
 
 // Create an axios instance with default config
 export const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001',
+    baseURL: import.meta.env.PROD 
+        ? '/api' // Use relative URL in production
+        : (import.meta.env.VITE_API_URL || 'http://localhost:3001'),
     headers: {
         'Content-Type': 'application/json',
     },
@@ -11,8 +13,26 @@ export const api = axios.create({
 // Add a request interceptor
 api.interceptors.request.use(
     (config) => {
-        // Get the token from localStorage
-        const token = localStorage.getItem('token');
+        // Log environment for debugging
+        if (import.meta.env.DEV) {
+            console.log('API running in development mode, using baseURL:', config.baseURL);
+        }
+        
+        // Get the token from localStorage - check both keys for backward compatibility
+        let token = localStorage.getItem('token');
+        if (!token) {
+            // Try to get from kitchenSyncUserInfo
+            try {
+                const userInfo = localStorage.getItem('kitchenSyncUserInfo');
+                if (userInfo) {
+                    const parsed = JSON.parse(userInfo);
+                    token = parsed.token;
+                }
+            } catch (e) {
+                console.error('Error parsing user info:', e);
+            }
+        }
+        
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
