@@ -28,8 +28,10 @@ export const PrepBoard: React.FC = () => {
     const handleDragEnd = (result: DropResult) => {
         const { destination, source, draggableId, type } = result;
 
+        // Drop was cancelled or dropped outside a valid droppable
         if (!destination) return;
 
+        // Dropped in the same position
         if (
             destination.droppableId === source.droppableId &&
             destination.index === source.index
@@ -48,7 +50,7 @@ export const PrepBoard: React.FC = () => {
             return;
         }
 
-        // Handle task reordering
+        // Handle task reordering - either within the same column or between columns
         moveTask(
             draggableId,
             source.droppableId,

@@ -77,11 +77,12 @@ export const usePrepBoardStore = create<PrepBoardState>()((set, get) => ({
     },
 
     moveTask: async (taskId, sourceColId, destColId, destinationIndex) => {
-        // Find the task
+        // Find the task and source/destination columns
         const sourceColumn = get().columns.find(col => col.id === sourceColId);
+        const destColumn = get().columns.find(col => col.id === destColId);
         const task = sourceColumn?.tasks.find(t => t.id === taskId);
         
-        if (!task) return;
+        if (!task || !sourceColumn || !destColumn) return;
 
         // Optimistically update the UI
         set(state => ({
@@ -100,10 +101,35 @@ export const usePrepBoardStore = create<PrepBoardState>()((set, get) => ({
 
         // Update in the backend
         try {
-            await prepTaskService.updateTask(taskId, {
+            // Calculate tasks that need to be reordered
+            const tasksToUpdate = [];
+            
+            // Add the moved task with its new position
+            tasksToUpdate.push({
+                id: taskId,
                 columnId: destColId,
                 order: destinationIndex
             });
+            
+            // Reorder tasks in the destination column after the insertion point
+            const updatedDestTasks = get().columns
+                .find(col => col.id === destColId)?.tasks || [];
+            
+            // Update the order of tasks that come after the inserted task
+            updatedDestTasks.forEach((t, index) => {
+                if (t.id !== taskId && index >= destinationIndex) {
+                    tasksToUpdate.push({
+                        id: t.id,
+                        columnId: destColId,
+                        order: index + 1 // Shift all subsequent tasks down by 1
+                    });
+                }
+            });
+            
+            // Use the reorderTasks API for batch updates
+            if (tasksToUpdate.length > 0) {
+                await prepTaskService.reorderTasks(tasksToUpdate);
+            }
         } catch (error) {
             console.error('Error moving task:', error);
             // Revert the change on error

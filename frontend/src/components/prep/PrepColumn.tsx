@@ -199,7 +199,8 @@ const PrepColumn: React.FC<PrepColumnProps> = ({
                         {tasks.map((task, index) => (
                             <PrepCard
                                 key={task.id}
-                                task={{ ...task, order: index }}
+                                task={task}
+                                index={index}
                                 onDelete={onDeleteTask}
                                 onViewRecipe={onViewRecipe}
                             />
