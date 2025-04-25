@@ -18,6 +18,7 @@ interface PrepCardProps {
     onViewRecipe: (taskId: string) => void;
     columnColor?: string;
     columnName?: string;
+    onClick?: () => void;
 }
 
 const PrepCard: React.FC<PrepCardProps> = ({ 
@@ -26,7 +27,8 @@ const PrepCard: React.FC<PrepCardProps> = ({
     onDelete, 
     onViewRecipe,
     columnColor = '#1976d2',
-    columnName = ''
+    columnName = '',
+    onClick
 }) => {
     return (
         <Draggable draggableId={task.id} index={index}>
@@ -44,11 +46,13 @@ const PrepCard: React.FC<PrepCardProps> = ({
                         transition: 'background-color 0.2s ease, box-shadow 0.2s ease',
                         '&:hover': {
                             backgroundColor: snapshot.isDragging ? '#f0f7ff' : '#f5f5f5',
+                            cursor: onClick ? 'pointer' : 'default',
                         },
                         position: 'relative',
                         overflow: 'visible',
                         borderLeft: `4px solid ${columnColor}`,
                     }}
+                    onClick={onClick}
                 >
                     <CardContent sx={{ pb: 1, "&:last-child": { pb: 1 } }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>

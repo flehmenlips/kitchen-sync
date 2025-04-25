@@ -54,6 +54,7 @@ interface PrepColumnProps {
     onViewRecipe: (taskId: string) => void;
     onEditColumn: (column: PrepColumnType) => void;
     onDeleteColumn: (column: PrepColumnType) => void;
+    onViewTaskDetails?: (taskId: string) => void;
 }
 
 const PrepColumn: React.FC<PrepColumnProps> = ({
@@ -63,6 +64,7 @@ const PrepColumn: React.FC<PrepColumnProps> = ({
     onViewRecipe,
     onEditColumn,
     onDeleteColumn,
+    onViewTaskDetails,
 }) => {
     const [isAddingTask, setIsAddingTask] = useState(false);
     const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -340,6 +342,7 @@ const PrepColumn: React.FC<PrepColumnProps> = ({
                                 onViewRecipe={onViewRecipe}
                                 columnColor={column.color}
                                 columnName={column.name}
+                                onClick={() => onViewTaskDetails && onViewTaskDetails(task.id)}
                             />
                         ))}
                         {provided.placeholder}

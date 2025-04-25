@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import {
   BrowserRouter as Router,
   Routes,
@@ -23,7 +23,8 @@ import ProfilePage from './pages/ProfilePage';
 
 // Recipe Components
 import RecipeList from './components/RecipeList';
-import RecipeDetail from './components/RecipeDetail';
+// Lazy load RecipeDetail
+const RecipeDetail = React.lazy(() => import('./components/RecipeDetail'));
 import CreateRecipePage from './pages/CreateRecipePage';
 import EditRecipePage from './pages/EditRecipePage';
 import RecipeImportPage from './pages/RecipeImportPage';
@@ -84,7 +85,11 @@ const App: React.FC = () => {
                     <Route path="recipes" element={<RecipeList />} />
                     <Route path="recipes/new" element={<CreateRecipePage />} />
                     <Route path="recipes/import" element={<RecipeImportPage />} />
-                    <Route path="recipes/:id" element={<RecipeDetail />} />
+                    <Route path="recipes/:id" element={
+                      <Suspense fallback={<div>Loading...</div>}>
+                        <RecipeDetail />
+                      </Suspense>
+                    } />
                     <Route path="recipes/:id/edit" element={<EditRecipePage />} />
 
                     {/* Categories */}

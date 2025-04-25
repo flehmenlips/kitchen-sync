@@ -8,7 +8,8 @@ import ViewColumnIcon from '@mui/icons-material/ViewColumn';
 import AddRecipeDialog from './AddRecipeDialog';
 import ColumnFormDialog from './ColumnFormDialog';
 import DeleteConfirmationDialog from './DeleteConfirmationDialog';
-import { PrepColumn as PrepColumnType } from '../../types/prep';
+import TaskDetailsDrawer from './TaskDetailsDrawer';
+import { PrepColumn as PrepColumnType, PrepTask } from '../../types/prep';
 import { useSnackbar } from '../../context/SnackbarContext';
 
 export const PrepBoard: React.FC = () => {
@@ -20,10 +21,38 @@ export const PrepBoard: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [speedDialOpen, setSpeedDialOpen] = useState(false);
     const { showSnackbar } = useSnackbar();
+    
+    // Task Details Drawer state
+    const [selectedTask, setSelectedTask] = useState<PrepTask | null>(null);
+    const [isTaskDrawerOpen, setIsTaskDrawerOpen] = useState(false);
+    const [selectedColumnName, setSelectedColumnName] = useState('');
+    const [selectedColumnColor, setSelectedColumnColor] = useState('#1976d2');
 
     useEffect(() => {
         fetchColumns();
     }, [fetchColumns]);
+
+    // Function to open the task details drawer
+    const handleViewTaskDetails = (taskId: string, columnId: string) => {
+        // Find the column and task
+        const column = columns.find(col => col.id === columnId);
+        if (!column) return;
+        
+        const task = column.tasks.find(t => t.id === taskId);
+        if (!task) return;
+        
+        setSelectedTask(task);
+        setSelectedColumnName(column.name);
+        setSelectedColumnColor(column.color || '#1976d2');
+        setIsTaskDrawerOpen(true);
+    };
+
+    // Function to close the task details drawer
+    const handleCloseTaskDetails = () => {
+        setIsTaskDrawerOpen(false);
+        // Optionally refetch data when drawer closes to ensure UI is up to date
+        fetchColumns();
+    };
 
     const handleDragEnd = (result: DropResult) => {
         const { destination, source, draggableId, type } = result;
@@ -212,6 +241,7 @@ export const PrepBoard: React.FC = () => {
                                             }}
                                             onEditColumn={openEditColumnDialog}
                                             onDeleteColumn={openDeleteColumnDialog}
+                                            onViewTaskDetails={(taskId) => handleViewTaskDetails(taskId, column.id)}
                                         />
                                     </Box>
                                 )}
@@ -261,6 +291,15 @@ export const PrepBoard: React.FC = () => {
                             title="Delete Column"
                             content={`Are you sure you want to delete the column "${currentColumn?.name}"? This will also delete all tasks in this column.`}
                             isLoading={isLoading}
+                        />
+
+                        {/* Task Details Drawer */}
+                        <TaskDetailsDrawer
+                            open={isTaskDrawerOpen}
+                            onClose={handleCloseTaskDetails}
+                            task={selectedTask}
+                            columnName={selectedColumnName}
+                            columnColor={selectedColumnColor}
                         />
                     </Box>
                 )}

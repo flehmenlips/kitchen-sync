@@ -38,9 +38,10 @@ Currently, the project is focused on two primary modules:
 - [x] Implement drag-and-drop reordering for columns
 - [x] Implement drag-and-drop reordering for tasks
 - [x] Fix bug with vertical drag-and-drop in same column
+- [x] Implement task details panel with comments and recipe details
 
 ## Current Focus
-We've successfully implemented a complete, customizable prep board system with drag-and-drop functionality for both columns and tasks. Users can now fully manage their prep workflow through an intuitive interface. We've also fixed the critical bug that was causing tasks to disappear when dragging vertically within the same column.
+We've successfully implemented a complete, customizable prep board system with drag-and-drop functionality for both columns and tasks. Users can now fully manage their prep workflow through an intuitive interface. We've also added a task details panel that allows users to view recipe details and add comments/notes to tasks.
 
 ### Prep Column CRUD (Priority: High)
 - **What**: Implement Create, Read, Update, Delete operations for prep columns
@@ -145,6 +146,36 @@ We've successfully implemented a complete, customizable prep board system with d
   - Tasks remain visible and properly ordered after any drag operation
   - Both vertical (same-column) and horizontal (cross-column) dragging works consistently
   - Changes persist after page refresh, confirming proper backend synchronization
+
+### Task Details Panel Implementation (Priority: Medium)
+- **What**: Implement a slide-out panel showing detailed task information
+- **Why**: Enhance the user experience by providing more context and information about tasks
+- **Status**: ✅ COMPLETED
+- **Components Created/Updated**:
+  1. Created new components:
+     - `TaskDetailsDrawer.tsx` - A slide-out drawer for task details
+  2. Updated existing components:
+     - `PrepBoard.tsx` - Added state and handlers for the task details drawer
+     - `PrepColumn.tsx` - Added prop for viewing task details
+     - `PrepCard.tsx` - Added onClick handler for opening details
+  3. Added new features:
+     - Comments/notes functionality for tasks
+     - Recipe details display including ingredients and instructions
+     - Task editing capabilities
+- **Key Features**:
+  1. View and edit task title and description
+  2. Add and view comments/notes on tasks
+  3. See recipe details when a task is linked to a recipe
+  4. Toggle sections to show/hide ingredients and instructions
+  5. Consistent styling with the column color theme
+  6. Mobile-responsive design
+- **Technical Implementations**:
+  1. Used Material-UI Drawer component for the slide-out panel
+  2. Implemented collapsible sections for better organization
+  3. Added date formatting with date-fns library
+  4. Fixed type compatibility issues between different Recipe interfaces
+  5. Added optimistic UI updates for comments
+  6. Integrated with the existing task update API
 
 ## Pending Tasks and Future Work
 
@@ -322,6 +353,21 @@ We've successfully implemented a complete, customizable prep board system with d
    - Verified fix works by testing various drag scenarios
    - Released fix as v1.3.0 with tag "Fully functioning drag and drop kanban prep board"
 
+10. **Column Color Customization** (2024-04-26)
+    - Added color customization for columns to improve visual organization
+    - Created a color picker with 12 predefined colors in the column form dialog
+    - Added column color accents to both columns and task cards for better tracking
+    - Implemented color badges/pills on task cards to maintain column context
+    - Added quick color change option directly in the column menu
+
+11. **Column Update API Fix** (2024-04-26)
+    - Fixed issue with column color updates not being applied
+    - Changed frontend API method from PATCH to PUT to match backend route configuration
+    - Added comprehensive logging throughout the update flow
+    - Improved error handling and debugging capabilities
+    - Added debug middleware for API route tracing
+    - Enhanced controller logging for better visibility into backend operations
+
 ## Lessons
 - Always check for hardcoded constants when implementing dynamic features
 - Keep maintenance scripts separate from application code
@@ -342,6 +388,9 @@ We've successfully implemented a complete, customizable prep board system with d
 - Include debug code that can be easily enabled when problems arise
 - Adding a new item to force a fresh data fetch can reveal state synchronization issues
 - Don't forget to test edge cases like dragging to empty columns or reordering single tasks
+- Match frontend HTTP methods (GET, POST, PUT, PATCH, DELETE) with backend route configurations
+- When a feature doesn't work as expected, add logging at each level (component, store, service, API) to trace the flow
+- Consider using forced refreshes after certain operations to ensure UI consistency with backend state
 
 ## Executor's Feedback or Assistance Requests
 - Recipe task addition to custom columns has been successfully implemented 
