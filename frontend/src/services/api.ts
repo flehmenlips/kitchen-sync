@@ -2,9 +2,11 @@ import axios from 'axios';
 
 // Create an axios instance with default config
 export const api = axios.create({
+    // In production, use relative '/api' path
+    // In development, use the full base URL with '/api' included
     baseURL: import.meta.env.PROD 
-        ? '/api' // Use relative URL in production
-        : (import.meta.env.VITE_API_URL || 'http://localhost:3001'),
+        ? '/api' 
+        : (import.meta.env.VITE_API_URL || 'http://localhost:3001') + '/api',
     headers: {
         'Content-Type': 'application/json',
     },
