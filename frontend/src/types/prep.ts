@@ -16,6 +16,7 @@ export interface PrepColumn {
     id: string;
     name: string;
     order: number;
+    color: string;
     tasks: PrepTask[];
     createdAt: string;
     updatedAt: string;
@@ -42,11 +43,13 @@ export interface UpdatePrepTaskInput {
 export interface CreatePrepColumnInput {
     name: string;
     order?: number;
+    color?: string;
 }
 
 export interface UpdatePrepColumnInput {
     name?: string;
     order?: number;
+    color?: string;
 }
 
 // Recipe selection types

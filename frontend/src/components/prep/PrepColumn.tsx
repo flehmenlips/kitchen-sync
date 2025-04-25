@@ -90,6 +90,7 @@ const PrepColumn: React.FC<PrepColumnProps> = ({
                 '&:hover': {
                     backgroundColor: '#f9f9f9',
                 },
+                borderTop: `4px solid ${column.color || '#1976d2'}`,
             }}
         >
             <Box 
@@ -108,7 +109,14 @@ const PrepColumn: React.FC<PrepColumnProps> = ({
             >
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <DragIndicatorIcon sx={{ mr: 1, color: 'text.secondary', fontSize: '1.2rem' }} />
-                    <Typography variant="h6" component="div">
+                    <Typography 
+                        variant="h6" 
+                        component="div"
+                        sx={{ 
+                            color: column.color || '#1976d2',
+                            fontWeight: 'bold'
+                        }}
+                    >
                         {column.name}
                     </Typography>
                 </Box>
@@ -116,14 +124,14 @@ const PrepColumn: React.FC<PrepColumnProps> = ({
                     <IconButton
                         size="small"
                         onClick={() => setIsAddingTask(true)}
-                        sx={{ '&:hover': { color: 'primary.main' } }}
+                        sx={{ '&:hover': { color: column.color || 'primary.main' } }}
                     >
                         <AddIcon />
                     </IconButton>
                     <IconButton
                         size="small"
                         onClick={handleMenuOpen}
-                        sx={{ '&:hover': { color: 'primary.main' } }}
+                        sx={{ '&:hover': { color: column.color || 'primary.main' } }}
                     >
                         <MoreVertIcon />
                     </IconButton>
@@ -165,6 +173,12 @@ const PrepColumn: React.FC<PrepColumnProps> = ({
                             size="small"
                             onClick={handleAddTask}
                             disabled={!newTaskTitle.trim()}
+                            sx={{ 
+                                bgcolor: column.color || 'primary.main',
+                                '&:hover': {
+                                    bgcolor: column.color ? `${column.color}dd` : 'primary.dark',
+                                }
+                            }}
                         >
                             Add
                         </Button>
@@ -174,6 +188,13 @@ const PrepColumn: React.FC<PrepColumnProps> = ({
                             onClick={() => {
                                 setIsAddingTask(false);
                                 setNewTaskTitle('');
+                            }}
+                            sx={{ 
+                                borderColor: column.color || 'primary.main',
+                                color: column.color || 'primary.main',
+                                '&:hover': {
+                                    borderColor: column.color ? `${column.color}dd` : 'primary.dark',
+                                }
                             }}
                         >
                             Cancel
@@ -189,7 +210,9 @@ const PrepColumn: React.FC<PrepColumnProps> = ({
                         {...provided.droppableProps}
                         sx={{
                             flex: 1,
-                            backgroundColor: snapshot.isDraggingOver ? 'action.hover' : 'transparent',
+                            backgroundColor: snapshot.isDraggingOver 
+                                ? `${column.color}11` || 'action.hover' 
+                                : 'transparent',
                             transition: 'background-color 0.2s ease',
                             borderRadius: 1,
                             minHeight: 100,
@@ -203,6 +226,8 @@ const PrepColumn: React.FC<PrepColumnProps> = ({
                                 index={index}
                                 onDelete={onDeleteTask}
                                 onViewRecipe={onViewRecipe}
+                                columnColor={column.color}
+                                columnName={column.name}
                             />
                         ))}
                         {provided.placeholder}

@@ -10,9 +10,29 @@ import {
     FormControl,
     InputLabel,
     Box,
-    Alert
+    Alert,
+    MenuItem,
+    Select,
+    Grid,
+    Typography
 } from '@mui/material';
 import { PrepColumn, CreatePrepColumnInput, UpdatePrepColumnInput } from '../../types/prep';
+
+// Predefined color palette
+const colorOptions = [
+    { name: 'Blue', value: '#1976d2' },
+    { name: 'Red', value: '#d32f2f' },
+    { name: 'Green', value: '#2e7d32' },
+    { name: 'Orange', value: '#ed6c02' },
+    { name: 'Purple', value: '#9c27b0' },
+    { name: 'Teal', value: '#009688' },
+    { name: 'Pink', value: '#e91e63' },
+    { name: 'Indigo', value: '#3f51b5' },
+    { name: 'Yellow', value: '#ffc107' },
+    { name: 'Cyan', value: '#00bcd4' },
+    { name: 'Brown', value: '#795548' },
+    { name: 'Grey', value: '#757575' }
+];
 
 interface ColumnFormDialogProps {
     open: boolean;
@@ -32,6 +52,7 @@ const ColumnFormDialog: React.FC<ColumnFormDialogProps> = ({
     error = null
 }) => {
     const [name, setName] = useState('');
+    const [color, setColor] = useState('#1976d2'); // Default blue
     const [nameError, setNameError] = useState('');
 
     useEffect(() => {
@@ -39,8 +60,10 @@ const ColumnFormDialog: React.FC<ColumnFormDialogProps> = ({
             // Initialize form with column data if in edit mode
             if (column) {
                 setName(column.name);
+                setColor(column.color || '#1976d2');
             } else {
                 setName('');
+                setColor('#1976d2');
             }
             setNameError('');
         }
@@ -56,7 +79,10 @@ const ColumnFormDialog: React.FC<ColumnFormDialogProps> = ({
         }
 
         try {
-            await onSave({ name: name.trim() });
+            await onSave({ 
+                name: name.trim(),
+                color
+            });
             onClose();
         } catch (err) {
             console.error('Error saving column:', err);
@@ -92,6 +118,34 @@ const ColumnFormDialog: React.FC<ColumnFormDialogProps> = ({
                             fullWidth
                             margin="dense"
                         />
+                    </FormControl>
+                    
+                    <FormControl fullWidth margin="normal">
+                        <InputLabel id="column-color-label">Column Color</InputLabel>
+                        <Select
+                            labelId="column-color-label"
+                            value={color}
+                            onChange={(e) => setColor(e.target.value)}
+                            label="Column Color"
+                            disabled={isLoading}
+                        >
+                            {colorOptions.map((colorOption) => (
+                                <MenuItem key={colorOption.value} value={colorOption.value}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                        <Box 
+                                            sx={{ 
+                                                width: 24, 
+                                                height: 24, 
+                                                bgcolor: colorOption.value,
+                                                borderRadius: 1,
+                                                mr: 1
+                                            }} 
+                                        />
+                                        <Typography>{colorOption.name}</Typography>
+                                    </Box>
+                                </MenuItem>
+                            ))}
+                        </Select>
                     </FormControl>
                 </DialogContent>
                 <DialogActions>
