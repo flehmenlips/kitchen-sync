@@ -4,83 +4,112 @@ import axios from 'axios';
 
 // Use a path relative to the api baseURL, which now already includes /api in production
 const BASE_URL = '/prep-columns';
-// For direct API access as a workaround
-const API_URL = 'https://kitchen-sync-api.onrender.com/api';
+// For direct API access as a workaround - Try these different options for the backend API
+const API_URL_OPTIONS = [
+    'https://kitchen-sync-api.onrender.com/api',
+    'https://kitchen-sync-api.onrender.com',
+    'https://kitchen-sync-app.onrender.com/api'
+];
 
-// Create a separate API instance for direct calls
-const directApi = axios.create({
-    baseURL: API_URL,
+// Log the environment mode
+console.log(`Running in ${import.meta.env.PROD ? 'production' : 'development'} mode`);
+console.log(`Base URL configuration: ${BASE_URL}`);
+console.log(`API URLs to try: ${JSON.stringify(API_URL_OPTIONS)}`);
+
+// Create a separate API instance for direct calls (will try multiple URLs)
+const createDirectApi = (baseURL: string) => axios.create({
+    baseURL,
     headers: {
         'Content-Type': 'application/json',
-    }
-});
-
-// Add auth token to direct API calls
-directApi.interceptors.request.use(
-    (config) => {
-        let token = null;
-        try {
-            const userInfo = localStorage.getItem('kitchenSyncUserInfo');
-            if (userInfo) {
-                const parsed = JSON.parse(userInfo);
-                token = parsed.token;
-            }
-        } catch (e) {
-            console.error('Error parsing user info:', e);
-        }
-        
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        
-        return config;
+        'Accept': 'application/json',
     },
-    (error) => Promise.reject(error)
-);
+    // Explicitly allow CORS
+    withCredentials: false,
+});
 
 export const prepColumnService = {
     getColumns: async (): Promise<PrepColumn[]> => {
         try {
-            let response;
-            // Try the regular API first
+            console.log(`Attempting to fetch prep columns using regular API: ${BASE_URL}`);
+            let finalResponse = null;
+            let finalError = null;
+            
+            // First try the regular API
             try {
-                response = await api.get(BASE_URL);
-                console.log('Column response data from regular API:', response.data);
+                const response = await api.get(BASE_URL);
+                console.log('Column response from regular API:', response);
+                
+                if (response && response.data) {
+                    // Check if the response contains HTML
+                    if (typeof response.data === 'string' && response.data.includes('<!doctype html>')) {
+                        console.warn('Regular API returned HTML instead of JSON');
+                    } else if (Array.isArray(response.data)) {
+                        console.log('Regular API returned valid array data');
+                        return response.data;
+                    }
+                }
             } catch (error) {
-                console.log('Regular API failed, trying direct API:', error);
-                // If that fails, try the direct API
-                response = await directApi.get('/prep-columns');
-                console.log('Column response data from direct API:', response.data);
+                console.warn('Regular API call failed:', error);
+                finalError = error;
             }
             
-            // Ensure the response is an array
-            if (!response.data) {
-                console.warn('Empty response from columns API');
-                return [];
+            // If we got here, the first attempt failed - try direct URLs
+            console.log('Attempting direct API calls to backend');
+            
+            for (const apiUrl of API_URL_OPTIONS) {
+                try {
+                    console.log(`Trying direct API call to: ${apiUrl}`);
+                    
+                    // Create a fresh instance for this attempt
+                    const directApi = createDirectApi(apiUrl);
+                    
+                    // Add auth token
+                    let token = null;
+                    try {
+                        const userInfo = localStorage.getItem('kitchenSyncUserInfo');
+                        if (userInfo) {
+                            const parsed = JSON.parse(userInfo);
+                            token = parsed.token;
+                            console.log('Found auth token:', !!token);
+                        } else {
+                            console.warn('No user info found in localStorage');
+                        }
+                    } catch (e) {
+                        console.error('Error parsing user info:', e);
+                    }
+                    
+                    // Make the request with auth header if token exists
+                    const requestConfig = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+                    const endpoint = `${apiUrl.endsWith('/api') ? '' : '/api'}/prep-columns`;
+                    console.log(`Making request to: ${endpoint}`);
+                    
+                    const response = await axios.get(endpoint, requestConfig);
+                    console.log(`Direct API response from ${apiUrl}:`, response);
+                    
+                    if (response && response.data) {
+                        // Check if this is HTML
+                        if (typeof response.data === 'string' && response.data.includes('<!doctype html>')) {
+                            console.warn(`${apiUrl} returned HTML instead of JSON`);
+                            continue; // Try next URL
+                        }
+                        
+                        if (Array.isArray(response.data)) {
+                            console.log(`${apiUrl} returned valid array data!`);
+                            return response.data;
+                        }
+                    }
+                } catch (error) {
+                    console.warn(`Direct API call to ${apiUrl} failed:`, error);
+                    finalError = error;
+                }
             }
             
-            // Check if the response contains HTML (indicates a routing issue)
-            if (typeof response.data === 'string' && response.data.includes('<!doctype html>')) {
-                console.error('Received HTML instead of JSON. API routing issue detected!');
-                console.error('Please check server configuration and CORS settings');
-                // Log the first 100 characters to see what kind of HTML we're getting
-                console.error('HTML preview:', response.data.substring(0, 100) + '...');
-                return [];
-            }
-            
-            // Handle case where response.data is not an array
-            if (!Array.isArray(response.data)) {
-                console.error('Column data is not an array:', 
-                    typeof response.data === 'string' 
-                        ? response.data.substring(0, 50) + '...' 
-                        : response.data);
-                return [];
-            }
-            
-            return response.data;
-        } catch (error) {
-            console.error('Error fetching columns:', error);
-            return []; // Return empty array instead of throwing
+            // If we get here, all attempts failed
+            console.error('All API attempts failed:', finalError);
+            return [];
+        } catch (finalError) {
+            console.error('Fatal error in getColumns:', finalError);
+            return [];
         }
     },
 
