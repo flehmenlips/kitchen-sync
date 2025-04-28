@@ -43,6 +43,7 @@ import {
     Ingredient
 } from '../services/apiService';
 import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
@@ -60,6 +61,9 @@ interface ParsedRecipe {
         name?: string;
         unit?: string;
         raw?: string; // Original text from parsing
+        alternatives?: string[]; // Alternative ingredients (e.g., "or clam juice")
+        parenthetical?: string; // Text in parentheses (e.g., "(~3 cups)")
+        skipDatabase?: boolean; // Flag to skip adding to database for complex ingredients
     }[];
 }
 
@@ -86,6 +90,7 @@ interface IngredientEditDialogProps {
     onClose: () => void;
     ingredient: ParsedRecipe['ingredients'][0];
     onSave: (updatedIngredient: ParsedRecipe['ingredients'][0]) => void;
+    onDelete: (ingredient: ParsedRecipe['ingredients'][0]) => void;
 }
 
 const IngredientEditDialog: React.FC<IngredientEditDialogProps> = ({
@@ -93,11 +98,17 @@ const IngredientEditDialog: React.FC<IngredientEditDialogProps> = ({
     onClose,
     ingredient,
     onSave,
+    onDelete,
 }) => {
     const [editedIngredient, setEditedIngredient] = useState({ ...ingredient });
 
     const handleSave = () => {
         onSave(editedIngredient);
+        onClose();
+    };
+
+    const handleDelete = () => {
+        onDelete(ingredient);
         onClose();
     };
 
@@ -149,6 +160,33 @@ const IngredientEditDialog: React.FC<IngredientEditDialogProps> = ({
                         fullWidth
                         size="small"
                     />
+                    
+                    {ingredient.alternatives && ingredient.alternatives.length > 0 && (
+                        <TextField
+                            label="Alternative Ingredients"
+                            value={editedIngredient.alternatives?.join(', ') || ''}
+                            onChange={(e) => setEditedIngredient({
+                                ...editedIngredient,
+                                alternatives: e.target.value.split(',').map(alt => alt.trim())
+                            })}
+                            fullWidth
+                            size="small"
+                            helperText="Comma-separated list of alternatives"
+                        />
+                    )}
+                    
+                    {ingredient.parenthetical && (
+                        <TextField
+                            label="Notes (in parentheses)"
+                            value={editedIngredient.parenthetical || ''}
+                            onChange={(e) => setEditedIngredient({
+                                ...editedIngredient,
+                                parenthetical: e.target.value
+                            })}
+                            fullWidth
+                            size="small"
+                        />
+                    )}
 
                     <FormControl fullWidth size="small">
                         <InputLabel>Type</InputLabel>
@@ -164,9 +202,38 @@ const IngredientEditDialog: React.FC<IngredientEditDialogProps> = ({
                             <MenuItem value="sub-recipe">Sub-Recipe</MenuItem>
                         </Select>
                     </FormControl>
+                    
+                    {/* Add checkbox for skipping database */}
+                    <FormControl fullWidth size="small">
+                        <Typography component="div" variant="body2" sx={{ display: 'flex', alignItems: 'center' }}>
+                            <input
+                                type="checkbox"
+                                checked={editedIngredient.skipDatabase || false}
+                                onChange={(e) => setEditedIngredient({
+                                    ...editedIngredient,
+                                    skipDatabase: e.target.checked
+                                })}
+                                id="skip-database-checkbox"
+                                style={{ marginRight: '8px' }}
+                            />
+                            <label htmlFor="skip-database-checkbox">
+                                Skip adding to ingredient database
+                            </label>
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ ml: 3 }}>
+                            Use for complex or descriptive ingredients
+                        </Typography>
+                    </FormControl>
                 </Box>
             </DialogContent>
             <DialogActions>
+                <Button 
+                    onClick={handleDelete} 
+                    color="error" 
+                    startIcon={<DeleteIcon />}
+                >
+                    Delete
+                </Button>
                 <Button onClick={onClose}>Cancel</Button>
                 <Button onClick={handleSave} variant="contained">Save</Button>
             </DialogActions>
@@ -392,6 +459,27 @@ const RecipeImportPage: React.FC = () => {
 
                         // Use the unit from the ingredient or default to "whole"
                         const unitId = await findOrCreateUnit(ing.unit || 'whole');
+                        
+                        // If skipDatabase is true, just return the ingredient as text
+                        if (ing.skipDatabase) {
+                            // For complex ingredients, we still need a valid ingredientId
+                            // We'll use a placeholder ingredient for text-only entries
+                            const textPlaceholderId = await getOrCreateTextPlaceholder();
+                            
+                            return {
+                                type: 'ingredient' as const,
+                                ingredientId: textPlaceholderId,
+                                quantity: ing.quantity || 1,
+                                unitId,
+                                order: index,
+                                // These additional properties will be used when displaying the ingredient
+                                // but won't be sent to the backend as part of the recipe creation
+                                _displayText: ing.raw || `${ing.quantity} ${ing.unit} ${ing.name}`,
+                                _skipDatabase: true
+                            };
+                        }
+                        
+                        // For normal ingredients, create or find them in the database
                         const ingredientId = await findOrCreateIngredient(ing.name);
                         
                         return {
@@ -450,6 +538,43 @@ const RecipeImportPage: React.FC = () => {
                 ingredients: updatedIngredients
             });
             setEditingIngredient(null);
+        }
+    };
+
+    const handleDeleteIngredient = (ingredientToDelete: ParsedRecipe['ingredients'][0]) => {
+        if (parsedRecipe && editingIngredient !== null) {
+            const updatedIngredients = parsedRecipe.ingredients.filter((_, index) => 
+                index !== editingIngredient.index
+            );
+            setParsedRecipe({
+                ...parsedRecipe,
+                ingredients: updatedIngredients
+            });
+            setEditingIngredient(null);
+        }
+    };
+
+    // Helper function to get or create a placeholder ingredient for text-only entries
+    const getOrCreateTextPlaceholder = async (): Promise<number> => {
+        const placeholderName = "TEXT_PLACEHOLDER";
+        
+        // Try to find an existing placeholder
+        const existingPlaceholder = ingredients.find(i => i.name === placeholderName);
+        if (existingPlaceholder) {
+            return existingPlaceholder.id;
+        }
+        
+        // Create a new placeholder
+        try {
+            const newPlaceholder = await createIngredient({
+                name: placeholderName,
+                description: "Placeholder for text-only ingredients"
+            });
+            setIngredients([...ingredients, newPlaceholder]);
+            return newPlaceholder.id;
+        } catch (err) {
+            console.error('Error creating placeholder ingredient:', err);
+            throw new Error('Failed to create ingredient placeholder');
         }
     };
 
@@ -569,7 +694,38 @@ const RecipeImportPage: React.FC = () => {
                                             }
                                         >
                                             <ListItemText
-                                                primary={`${ing.quantity} ${ing.unit} ${ing.name}`}
+                                                primary={
+                                                    <Box>
+                                                        <Typography variant="body1" component="span">
+                                                            {`${ing.quantity} ${ing.unit} ${ing.name}`}
+                                                        </Typography>
+                                                        {ing.alternatives && ing.alternatives.length > 0 && (
+                                                            <Typography variant="body2" component="span" color="text.secondary">
+                                                                {" (or "}{ing.alternatives.join(', or ')}{")"}
+                                                            </Typography>
+                                                        )}
+                                                        {ing.parenthetical && (
+                                                            <Typography variant="body2" component="span" color="text.secondary">
+                                                                {" ("}{ing.parenthetical}{")"}
+                                                            </Typography>
+                                                        )}
+                                                        {ing.skipDatabase && (
+                                                            <Typography 
+                                                                variant="caption" 
+                                                                component="span" 
+                                                                sx={{ 
+                                                                    ml: 1, 
+                                                                    backgroundColor: 'info.lighter', 
+                                                                    px: 1, 
+                                                                    py: 0.5, 
+                                                                    borderRadius: 1 
+                                                                }}
+                                                            >
+                                                                Text only
+                                                            </Typography>
+                                                        )}
+                                                    </Box>
+                                                }
                                                 secondary={ing.raw}
                                             />
                                         </ListItem>
@@ -625,6 +781,7 @@ const RecipeImportPage: React.FC = () => {
                     onClose={() => setEditingIngredient(null)}
                     ingredient={editingIngredient.ingredient}
                     onSave={handleSaveIngredient}
+                    onDelete={handleDeleteIngredient}
                 />
             )}
 

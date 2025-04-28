@@ -488,7 +488,7 @@ export const parseRecipe = async (req: Request, res: Response): Promise<void> =>
         const sections = recipeText.split(/\n\s*\n+/); // Split on one or more empty lines
         let name = "";
         let description = "";
-        let ingredients: { type: string; name: string; quantity: number; unit: string; raw: string }[] = [];
+        let ingredients: { type: string; name: string; quantity: number; unit: string; raw: string; alternatives?: string[] }[] = [];
         let instructions = "";
         let yieldQuantity = 1;
         let yieldUnit = "serving";
@@ -503,16 +503,53 @@ export const parseRecipe = async (req: Request, res: Response): Promise<void> =>
             // Remove any trailing periods
             quantityStr = quantityStr.replace(/\.$/, '');
             
+            // Convert unicode fractions to standard form
+            const fractionMap: { [key: string]: string } = {
+                '½': '1/2',
+                '⅓': '1/3',
+                '⅔': '2/3',
+                '¼': '1/4',
+                '¾': '3/4',
+                '⅕': '1/5',
+                '⅖': '2/5',
+                '⅗': '3/5',
+                '⅘': '4/5',
+                '⅙': '1/6',
+                '⅚': '5/6',
+                '⅐': '1/7',
+                '⅛': '1/8',
+                '⅜': '3/8',
+                '⅝': '5/8',
+                '⅞': '7/8',
+                '⅑': '1/9',
+                '⅒': '1/10'
+            };
+            
+            // Replace unicode fractions with their numeric equivalents
+            for (const [unicode, fraction] of Object.entries(fractionMap)) {
+                quantityStr = quantityStr.replace(new RegExp(unicode, 'g'), fraction);
+            }
+            
+            // Handle mixed numbers (e.g. "1 1/2")
+            if (/\d+\s+\d+\/\d+/.test(quantityStr)) {
+                const parts = quantityStr.split(/\s+/);
+                const wholeNumber = parseFloat(parts[0]);
+                const [num, denom] = parts[1].split('/').map(Number);
+                return wholeNumber + (num / denom);
+            }
+            
             // Handle fractions
             if (quantityStr.includes('/')) {
                 const [num, denom] = quantityStr.split('/');
                 return parseFloat(num) / parseFloat(denom);
             }
+            
             // Handle ranges (take average)
             if (quantityStr.includes('-')) {
                 const [min, max] = quantityStr.split('-').map(n => parseFloat(n));
                 return (min + max) / 2;
             }
+            
             // Handle decimal numbers
             return parseFloat(quantityStr) || 1;
         };
@@ -563,7 +600,15 @@ export const parseRecipe = async (req: Request, res: Response): Promise<void> =>
                 'portion': 'serving',
                 'portions': 'serving',
                 'batch': 'batch',
-                'batches': 'batch'
+                'batches': 'batch',
+                'clove': 'clove',
+                'cloves': 'clove',
+                'stalk': 'stalk',
+                'stalks': 'stalk',
+                'sprig': 'sprig',
+                'sprigs': 'sprig',
+                'head': 'head',
+                'heads': 'head'
             };
             return unitMap[unit.toLowerCase()] || unit.toLowerCase();
         };
@@ -573,12 +618,46 @@ export const parseRecipe = async (req: Request, res: Response): Promise<void> =>
             // Check for common ingredient patterns
             const patterns = [
                 /^\d+\.?\d*\s*[a-zA-Z]+/, // Starts with number and unit
+                /^\d+\.?\d*\s*[½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅐⅛⅜⅝⅞⅑⅒]/, // Starts with number and unicode fraction
                 /^\d+\.?\d*\s*#/, // Starts with number and #
                 /^[a-zA-Z]+\s*$/, // Just a word (like "salt")
                 /^[a-zA-Z]+\s+to\s+taste/, // "salt to taste"
-                /^[a-zA-Z]+\s+as\s+needed/ // "water as needed"
+                /^[a-zA-Z]+\s+as\s+needed/, // "water as needed"
+                /^\d+\s+\d+\/\d+/ // Mixed number fraction (e.g. "1 1/2")
             ];
             return patterns.some(pattern => pattern.test(line.trim()));
+        };
+
+        // Helper function to process text in parentheses
+        const processParenthetical = (text: string): { mainText: string, parenthetical: string | null } => {
+            const match = text.match(/^(.*?)(?:\s*\((.*?)\)\s*(.*))?$/);
+            if (match) {
+                const [_, mainStart, parenthetical, mainEnd] = match;
+                return {
+                    mainText: `${mainStart || ''} ${mainEnd || ''}`.trim(),
+                    parenthetical: parenthetical || null
+                };
+            }
+            return { mainText: text, parenthetical: null };
+        };
+
+        // Helper function to process alternative ingredients (with "or")
+        const processAlternatives = (text: string): { primaryIngredient: string, alternatives: string[] } => {
+            // Handle complex cases like "seafood stock (or clam juice, or crab stock made from shells; ~3 cups)"
+            const alternativesRegex = /\s+(?:or|OR|Or)\s+/g;
+            const parts = text.split(alternativesRegex);
+            
+            if (parts.length > 1) {
+                return {
+                    primaryIngredient: parts[0].trim(),
+                    alternatives: parts.slice(1).map(alt => alt.trim())
+                };
+            }
+            
+            return {
+                primaryIngredient: text.trim(),
+                alternatives: []
+            };
         };
 
         // Helper function to detect if a line is likely an instruction
@@ -649,26 +728,40 @@ export const parseRecipe = async (req: Request, res: Response): Promise<void> =>
                     // Try standard pattern first (quantity + unit + ingredient)
                     match = raw.match(standardPattern);
                     if (match) {
-                        const [_, quantity, unit, name] = match;
+                        const [_, quantity, unit, ingredientText] = match;
+                        
+                        // Process parentheticals and alternatives
+                        const { mainText, parenthetical } = processParenthetical(ingredientText);
+                        const { primaryIngredient, alternatives } = processAlternatives(mainText);
+                        
                         return {
                             type: "ingredient",
-                            name: name.trim(),
+                            name: primaryIngredient.trim(),
                             quantity: parseQuantity(quantity),
                             unit: normalizeUnit(unit),
-                            raw
+                            raw,
+                            alternatives: alternatives.length > 0 ? alternatives : undefined,
+                            parenthetical: parenthetical || undefined
                         };
                     }
 
                     // Try pattern without unit (quantity + ingredient)
                     match = raw.match(noUnitPattern);
                     if (match) {
-                        const [_, quantity, name] = match;
+                        const [_, quantity, ingredientText] = match;
+                        
+                        // Process parentheticals and alternatives
+                        const { mainText, parenthetical } = processParenthetical(ingredientText);
+                        const { primaryIngredient, alternatives } = processAlternatives(mainText);
+                        
                         return {
                             type: "ingredient",
-                            name: name.trim(),
+                            name: primaryIngredient.trim(),
                             quantity: parseQuantity(quantity),
                             unit: "piece", // Default unit for countable items
-                            raw
+                            raw,
+                            alternatives: alternatives.length > 0 ? alternatives : undefined,
+                            parenthetical: parenthetical || undefined
                         };
                     }
 
