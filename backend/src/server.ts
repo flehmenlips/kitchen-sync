@@ -1,6 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import path from 'path'; // Add path module
 import recipeRoutes from './routes/recipeRoutes';
 import unitRoutes from './routes/unitRoutes'; // Import unit routes
 import ingredientRoutes from './routes/ingredientRoutes'; // Import ingredient routes
@@ -26,6 +27,9 @@ app.use(cors({
 })); 
 app.use(express.json()); // Middleware to parse JSON request bodies
 app.use(express.urlencoded({ extended: true })); // Middleware to parse URL-encoded bodies
+
+// Serve static files from the public directory
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
 // Routes
 app.use('/api/users', userRoutes); // Mount user routes

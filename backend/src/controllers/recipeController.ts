@@ -1060,4 +1060,65 @@ export const parseRecipe = async (req: Request, res: Response): Promise<void> =>
         console.error('Error parsing recipe:', error);
         res.status(500).json({ message: 'Error parsing recipe' });
     }
+};
+
+// @desc    Upload a photo for a recipe
+// @route   POST /api/recipes/:id/photo
+// @access  Private
+export const uploadRecipePhoto = async (req: Request, res: Response): Promise<void> => {
+  if (!req.user?.id) {
+    res.status(401).json({ message: 'Not authorized, user ID missing' });
+    return;
+  }
+
+  try {
+    const { id } = req.params;
+    const recipeId = parseInt(id, 10);
+
+    if (isNaN(recipeId)) {
+      res.status(400).json({ message: 'Invalid recipe ID format' });
+      return;
+    }
+
+    // Check if recipe exists and belongs to user
+    const existingRecipe = await prisma.recipe.findUnique({
+      where: { id: recipeId }
+    });
+
+    if (!existingRecipe) {
+      res.status(404).json({ message: 'Recipe not found' });
+      return;
+    }
+
+    if (existingRecipe.userId !== req.user.id) {
+      res.status(403).json({ message: 'Not authorized to update this recipe' });
+      return;
+    }
+
+    // If no file was uploaded
+    if (!req.file) {
+      res.status(400).json({ message: 'Please upload an image file' });
+      return;
+    }
+
+    // Create the URL for the uploaded photo
+    const photoUrl = `/uploads/${req.file.filename}`;
+
+    // Update the recipe with the new photo URL
+    const updatedRecipe = await prisma.recipe.update({
+      where: { id: recipeId },
+      data: {
+        photoUrl: photoUrl,
+      },
+    });
+
+    res.status(200).json({
+      message: 'Recipe photo uploaded successfully',
+      photoUrl: photoUrl,
+      recipe: updatedRecipe
+    });
+  } catch (error) {
+    console.error('Error uploading recipe photo:', error);
+    res.status(500).json({ message: 'Error uploading recipe photo' });
+  }
 }; 

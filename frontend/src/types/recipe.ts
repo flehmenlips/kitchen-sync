@@ -65,6 +65,7 @@ export interface RecipeFormIngredient {
 export interface RecipeFormData {
     name: string;
     description: string;
+    photoUrl?: string;
     yieldQuantity: string;
     yieldUnitId: string;
     prepTimeMinutes: string;
@@ -87,6 +88,7 @@ export interface RecipeApiIngredient {
 export interface RecipeApiData {
     name: string;
     description: string;
+    photoUrl?: string;
     yieldQuantity?: number;
     yieldUnitId?: number;
     prepTimeMinutes?: number;
@@ -134,6 +136,7 @@ export interface Recipe {
     id: string;
     name: string;
     description?: string;
+    photoUrl?: string;
     ingredients: string[];
     instructions: string[];
     createdAt: string;

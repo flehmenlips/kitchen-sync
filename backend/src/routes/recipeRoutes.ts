@@ -6,22 +6,30 @@ import {
   updateRecipe,
   deleteRecipe,
   parseRecipe,
+  uploadRecipePhoto
 } from '../controllers/recipeController'; // Using relative path
 import { protect } from '../middleware/authMiddleware';
+import upload from '../middleware/uploadMiddleware';
 
 const router = express.Router();
 
+// Apply auth middleware to all routes
+router.use(protect);
+
 // Define routes
 router.route('/')
-  .get(protect, getRecipes)       // GET /api/recipes
-  .post(protect, createRecipe);    // POST /api/recipes
+  .get(getRecipes)       // GET /api/recipes
+  .post(createRecipe);    // POST /api/recipes
 
 router.route('/parse')
-  .post(protect, parseRecipe);     // POST /api/recipes/parse
+  .post(parseRecipe);     // POST /api/recipes/parse
 
 router.route('/:id')
-  .get(protect, getRecipeById)    // GET /api/recipes/:id
-  .put(protect, updateRecipe)     // PUT /api/recipes/:id
-  .delete(protect, deleteRecipe);  // DELETE /api/recipes/:id
+  .get(getRecipeById)    // GET /api/recipes/:id
+  .put(updateRecipe)     // PUT /api/recipes/:id
+  .delete(deleteRecipe);  // DELETE /api/recipes/:id
+
+// Route for uploading recipe photo - include multer middleware
+router.route('/:id/photo').post(upload.single('photo'), uploadRecipePhoto);
 
 export default router; 

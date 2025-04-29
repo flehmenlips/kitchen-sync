@@ -217,6 +217,21 @@ const RecipeDetailPage: React.FC = () => {
                 </Box>
             )}
 
+            {/* Display recipe photo if available */}
+            {recipe.photoUrl && !isScaled && (
+                <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center', overflow: 'hidden', borderRadius: 1 }}>
+                    <img 
+                        src={recipe.photoUrl} 
+                        alt={recipe.name} 
+                        style={{ 
+                            maxWidth: '100%', 
+                            maxHeight: '400px', 
+                            objectFit: 'cover' 
+                        }} 
+                    />
+                </Box>
+            )}
+
             {recipe.description && (
                 <>
                     <Typography variant="h6" gutterBottom>

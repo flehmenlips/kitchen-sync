@@ -43,7 +43,8 @@ import {
     createIngredient,
     getCategories,
     Category,
-    createCategory
+    createCategory,
+    uploadRecipePhoto
 } from '../../services/apiService';
 import UnitForm from './UnitForm';
 import IngredientForm, { IngredientFormShape } from './IngredientForm';
@@ -52,6 +53,7 @@ import { IngredientFormData as ApiIngredientFormData } from '../../services/apiS
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { ConfirmationDialog } from '../common/ConfirmationDialog';
+import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 
 // Define a type for the combined list items
 type IngredientOrRecipeOption = {
@@ -66,6 +68,7 @@ type IngredientOrRecipeOption = {
 export interface RecipeFormData {
     name: string;
     description: string;
+    photoUrl?: string;
     yieldQuantity: number | string;
     yieldUnitId: number | string;
     prepTimeMinutes: number | string;
@@ -196,6 +199,11 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
         onConfirm: () => void;
     } | null>(null);
 
+    const [photoFile, setPhotoFile] = useState<File | null>(null);
+    const [photoPreview, setPhotoPreview] = useState<string | null>(initialData?.photoUrl || null);
+    const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+    const [photoUploadError, setPhotoUploadError] = useState<string | null>(null);
+
     const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
         setActiveTab(newValue);
     };
@@ -266,10 +274,52 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
         loadSelectData();
     }, []); 
 
-    const handleFormSubmit = (data: RecipeFormData) => {
+    const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const files = event.target.files;
+        if (files && files.length > 0) {
+            const file = files[0];
+            setPhotoFile(file);
+
+            // Create a preview URL
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPhotoPreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleFormSubmit = async (data: RecipeFormData) => {
         console.log("[RecipeForm] Raw data before calling onSubmit prop:", data);
-        // Pass data directly - tags is already string[]
-        onSubmit(data);
+        
+        // If there's a photoUrl from the preview but it's not in the data, add it
+        if (photoPreview && !photoPreview.startsWith('http') && !photoPreview.startsWith('/uploads')) {
+            // This is a local preview, not a server URL, so don't add it to form data
+            // We'll upload the photo after creating/updating the recipe
+        } else if (photoPreview) {
+            // This is an existing server URL, include it in the form data
+            data.photoUrl = photoPreview;
+        }
+        
+        // Call the onSubmit handler with the form data
+        const savedRecipe = await onSubmit(data);
+        
+        // If we have a new photo file, upload it after saving the recipe
+        if (photoFile && savedRecipe?.id) {
+            try {
+                setIsUploadingPhoto(true);
+                setPhotoUploadError(null);
+                const response = await uploadRecipePhoto(savedRecipe.id, photoFile);
+                // Update the preview with the new URL from the server
+                setPhotoPreview(response.photoUrl);
+                console.log('Photo uploaded successfully:', response.photoUrl);
+            } catch (error) {
+                console.error('Error uploading photo:', error);
+                setPhotoUploadError('Failed to upload photo. Recipe was saved without the photo.');
+            } finally {
+                setIsUploadingPhoto(false);
+            }
+        }
     };
 
     // --- Modal Logic --- 
@@ -402,6 +452,104 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                 multiline
                 rows={2}
             />
+            <Box sx={{ mt: 2, mb: 2 }}>
+                <Typography variant="subtitle1" gutterBottom>
+                    Recipe Photo
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    {photoPreview ? (
+                        <Box 
+                            sx={{ 
+                                width: 150, 
+                                height: 150, 
+                                borderRadius: 1, 
+                                overflow: 'hidden',
+                                backgroundColor: 'grey.100',
+                                position: 'relative',
+                                '&:hover .overlay': {
+                                    opacity: 1
+                                }
+                            }}
+                        >
+                            <img 
+                                src={photoPreview} 
+                                alt="Recipe preview" 
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                            />
+                            <Box 
+                                className="overlay"
+                                sx={{ 
+                                    position: 'absolute', 
+                                    top: 0, 
+                                    left: 0, 
+                                    width: '100%', 
+                                    height: '100%', 
+                                    backgroundColor: 'rgba(0,0,0,0.4)', 
+                                    display: 'flex', 
+                                    justifyContent: 'center', 
+                                    alignItems: 'center',
+                                    opacity: 0,
+                                    transition: 'opacity 0.3s'
+                                }}
+                            >
+                                <label htmlFor="recipe-photo-input">
+                                    <Button
+                                        component="span"
+                                        variant="contained"
+                                        startIcon={<PhotoCameraIcon />}
+                                        size="small"
+                                    >
+                                        Change
+                                    </Button>
+                                </label>
+                            </Box>
+                        </Box>
+                    ) : (
+                        <Box 
+                            sx={{ 
+                                width: 150, 
+                                height: 150, 
+                                borderRadius: 1, 
+                                backgroundColor: 'grey.100',
+                                display: 'flex', 
+                                justifyContent: 'center', 
+                                alignItems: 'center',
+                                flexDirection: 'column'
+                            }}
+                        >
+                            <PhotoCameraIcon sx={{ fontSize: 40, color: 'grey.500', mb: 1 }} />
+                            <label htmlFor="recipe-photo-input">
+                                <Button
+                                    component="span"
+                                    variant="outlined"
+                                    size="small"
+                                >
+                                    Add Photo
+                                </Button>
+                            </label>
+                        </Box>
+                    )}
+                    <Box>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                            Upload a photo of your recipe to make it stand out.
+                            <br />
+                            Recommended size: 1200 x 800 pixels. Max size: 5MB.
+                        </Typography>
+                        <input
+                            id="recipe-photo-input"
+                            type="file"
+                            accept="image/*"
+                            onChange={handlePhotoChange}
+                            style={{ display: 'none' }}
+                        />
+                        {photoUploadError && (
+                            <Typography variant="body2" color="error" sx={{ mt: 1 }}>
+                                {photoUploadError}
+                            </Typography>
+                        )}
+                    </Box>
+                </Box>
+            </Box>
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                 <Controller
                     name="yieldQuantity"

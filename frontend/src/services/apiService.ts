@@ -588,4 +588,23 @@ export const parseRecipe = async (recipeText: string, forceAI?: boolean): Promis
     }
 };
 
+export const uploadRecipePhoto = async (recipeId: number, photoFile: File): Promise<{photoUrl: string}> => {
+    try {
+        const formData = new FormData();
+        formData.append('photo', photoFile);
+
+        // Don't set Content-Type header; browser will set it with boundary for multipart/form-data
+        const response = await apiService.post(`/recipes/${recipeId}/photo`, formData, {
+            headers: {
+                // Override the default Content-Type that axios sets
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+        return response.data;
+    } catch (error) {
+        console.error(`Error uploading photo for recipe ${recipeId}:`, error);
+        throw error;
+    }
+};
+
 export default apiService; 
