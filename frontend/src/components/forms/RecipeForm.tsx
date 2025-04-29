@@ -30,6 +30,8 @@ import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 import RestaurantMenuIcon from '@mui/icons-material/RestaurantMenu';
 import LocalFloristIcon from '@mui/icons-material/LocalFlorist';
 import AddIcon from '@mui/icons-material/Add';
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import {
     getUnits,
     UnitOfMeasure,
@@ -153,7 +155,7 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
         }
     });
 
-    const { fields, append, remove } = useFieldArray({
+    const { fields, append, remove, move } = useFieldArray({
         control,
         name: "ingredients"
     });
@@ -354,6 +356,20 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
         setConfirmDialogOpen(true);
     };
 
+    // Add a function to handle drag-and-drop results
+    const handleDragEnd = (result: DropResult) => {
+        // Drop outside the list or no destination
+        if (!result.destination) {
+            return;
+        }
+        
+        // If the item was dropped in a different position
+        if (result.destination.index !== result.source.index) {
+            // Use the move function from useFieldArray to reorder
+            move(result.source.index, result.destination.index);
+        }
+    };
+
     return (
         <Box component="form" onSubmit={handleSubmit(handleFormSubmit)} noValidate sx={{ mt: 1 }}>
             
@@ -551,181 +567,216 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                         {unitsError} {ingredientsError}
                     </Alert>
                 )}
-                {fields.map((item, index) => {
-                    return (
-                        <Paper key={item.id} sx={{ p: 1.5, mb: 1.5, position: 'relative' }}>
-                            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems="flex-start">
-                                <Box sx={{ flexBasis: '35%' }}>
-                                    <Controller
-                                        name={`ingredients.${index}.ingredientId`} 
-                                        control={control}
-                                        rules={{ 
-                                            validate: (value, formValues) => {
-                                                const currentItem = formValues.ingredients[index];
-                                                if (currentItem.type === 'ingredient') {
-                                                    return !!currentItem.ingredientId || 'Please select an ingredient.';
-                                                } else if (currentItem.type === 'sub-recipe') {
-                                                    return !!currentItem.subRecipeId || 'Please select a sub-recipe.';
-                                                } else {
-                                                    return 'Please select an ingredient or sub-recipe.';
-                                                }
-                                            }
-                                         }}
-                                        render={({ field, fieldState }) => {
-                                            const currentIngredientId = watch(`ingredients.${index}.ingredientId`);
-                                            const currentSubRecipeId = watch(`ingredients.${index}.subRecipeId`);
-                                            const currentType = watch(`ingredients.${index}.type`);
-                                            let currentValue: IngredientOrRecipeOption | null = null;
-                                            if (currentType === 'ingredient' && currentIngredientId) {
-                                                currentValue = combinedIngredientOptions.find(opt => opt.type === 'ingredient' && opt.id === currentIngredientId) ?? null;
-                                            } else if (currentType === 'sub-recipe' && currentSubRecipeId) {
-                                                currentValue = combinedIngredientOptions.find(opt => opt.type === 'recipe' && opt.id === currentSubRecipeId) ?? null;
-                                            }
-                                            return (
-                                                <Autocomplete
-                                                    options={combinedIngredientOptions}
-                                                    getOptionLabel={(option) => option.name || ''}
-                                                    value={currentValue || null} 
-                                                    onChange={(event, newValue) => {
-                                                        if (!newValue) {
-                                                            setValue(`ingredients.${index}.ingredientId`, '');
-                                                            setValue(`ingredients.${index}.subRecipeId`, '');
-                                                            setValue(`ingredients.${index}.type`, '');
-                                                        } else if (newValue.type === 'create-ingredient') {
-                                                            handleOpenModal('ingredient', index);
-                                                        } else if (newValue.type === 'ingredient') {
-                                                            setValue(`ingredients.${index}.ingredientId`, newValue.id);
-                                                            setValue(`ingredients.${index}.subRecipeId`, '');
-                                                            setValue(`ingredients.${index}.type`, 'ingredient');
-                                                        } else if (newValue.type === 'recipe') {
-                                                            setValue(`ingredients.${index}.subRecipeId`, newValue.id);
-                                                            setValue(`ingredients.${index}.ingredientId`, '');
-                                                            setValue(`ingredients.${index}.type`, 'sub-recipe');
-                                                        }
-                                                    }}
-                                                    isOptionEqualToValue={(option, val) => option.id === val?.id && option.type === val?.type}
-                                                    renderOption={(props, option) => (
-                                                        <Box component="li" {...props} key={`${option.type}-${option.id}`}>
-                                                            {option.type === 'ingredient' && <LocalFloristIcon fontSize="small" sx={{ mr: 1, opacity: 0.6 }} />}
-                                                            {option.type === 'recipe' && <RestaurantMenuIcon fontSize="small" sx={{ mr: 1, opacity: 0.6 }} />}
-                                                            {option.type === 'create-ingredient' && <AddIcon fontSize="small" sx={{ mr: 1 }} />}
-                                                            <Typography 
-                                                                variant="body2" 
-                                                                color={option.type === 'create-ingredient' ? 'primary' : 'inherit'}
-                                                            >
-                                                                {option.name}
-                                                            </Typography>
-                                                        </Box>
-                                                    )}
-                                                    loading={ingredientsLoading || subRecipesLoading}
-                                                    disabled={ingredientsLoading || subRecipesLoading || !!ingredientsError}
-                                                    renderInput={(params) => (
-                                                        <TextField 
-                                                            {...params} 
-                                                            label="Ingredient / Sub-Recipe" 
-                                                            size="small"
-                                                            required
-                                                            error={!!ingredientsError || !!fieldState.error}
-                                                            helperText={fieldState.error?.message || ingredientsError}
-                                                            InputProps={{ 
-                                                                ...params.InputProps,
-                                                                endAdornment: (
-                                                                    <>
-                                                                        {(ingredientsLoading || subRecipesLoading) ? <CircularProgress color="inherit" size={20} /> : null}
-                                                                        {params.InputProps.endAdornment}
-                                                                    </>
-                                                                ),
+                
+                <DragDropContext onDragEnd={handleDragEnd}>
+                    <Droppable droppableId="ingredients-list">
+                        {(provided) => (
+                            <Box
+                                ref={provided.innerRef}
+                                {...provided.droppableProps}
+                            >
+                                {fields.map((item, index) => (
+                                    <Draggable 
+                                        key={item.id} 
+                                        draggableId={item.id} 
+                                        index={index}
+                                    >
+                                        {(provided, snapshot) => (
+                                            <Paper 
+                                                ref={provided.innerRef}
+                                                {...provided.draggableProps}
+                                                sx={{ 
+                                                    p: 1.5, 
+                                                    mb: 1.5, 
+                                                    position: 'relative',
+                                                    backgroundColor: snapshot.isDragging ? 'rgba(144, 202, 249, 0.2)' : 'inherit',
+                                                    boxShadow: snapshot.isDragging ? 3 : 1
+                                                }}
+                                            >
+                                                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems="flex-start">
+                                                    {/* Drag Handle */}
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'grab' }} {...provided.dragHandleProps}>
+                                                        <DragIndicatorIcon color="action" />
+                                                    </Box>
+                                                    
+                                                    <Box sx={{ flexBasis: '35%' }}>
+                                                        <Controller
+                                                            name={`ingredients.${index}.ingredientId`} 
+                                                            control={control}
+                                                            rules={{ 
+                                                                validate: (value, formValues) => {
+                                                                    const currentItem = formValues.ingredients[index];
+                                                                    if (currentItem.type === 'ingredient') {
+                                                                        return !!currentItem.ingredientId || 'Please select an ingredient.';
+                                                                    } else if (currentItem.type === 'sub-recipe') {
+                                                                        return !!currentItem.subRecipeId || 'Please select a sub-recipe.';
+                                                                    } else {
+                                                                        return 'Please select an ingredient or sub-recipe.';
+                                                                    }
+                                                                }
+                                                            }}
+                                                            render={({ field, fieldState }) => {
+                                                                const currentIngredientId = watch(`ingredients.${index}.ingredientId`);
+                                                                const currentSubRecipeId = watch(`ingredients.${index}.subRecipeId`);
+                                                                const currentType = watch(`ingredients.${index}.type`);
+                                                                let currentValue: IngredientOrRecipeOption | null = null;
+                                                                if (currentType === 'ingredient' && currentIngredientId) {
+                                                                    currentValue = combinedIngredientOptions.find(opt => opt.type === 'ingredient' && opt.id === currentIngredientId) ?? null;
+                                                                } else if (currentType === 'sub-recipe' && currentSubRecipeId) {
+                                                                    currentValue = combinedIngredientOptions.find(opt => opt.type === 'recipe' && opt.id === currentSubRecipeId) ?? null;
+                                                                }
+                                                                return (
+                                                                    <Autocomplete
+                                                                        options={combinedIngredientOptions}
+                                                                        getOptionLabel={(option) => option.name || ''}
+                                                                        value={currentValue || null} 
+                                                                        onChange={(event, newValue) => {
+                                                                            if (!newValue) {
+                                                                                setValue(`ingredients.${index}.ingredientId`, '');
+                                                                                setValue(`ingredients.${index}.subRecipeId`, '');
+                                                                                setValue(`ingredients.${index}.type`, '');
+                                                                            } else if (newValue.type === 'create-ingredient') {
+                                                                                handleOpenModal('ingredient', index);
+                                                                            } else if (newValue.type === 'ingredient') {
+                                                                                setValue(`ingredients.${index}.ingredientId`, newValue.id);
+                                                                                setValue(`ingredients.${index}.subRecipeId`, '');
+                                                                                setValue(`ingredients.${index}.type`, 'ingredient');
+                                                                            } else if (newValue.type === 'recipe') {
+                                                                                setValue(`ingredients.${index}.subRecipeId`, newValue.id);
+                                                                                setValue(`ingredients.${index}.ingredientId`, '');
+                                                                                setValue(`ingredients.${index}.type`, 'sub-recipe');
+                                                                            }
+                                                                        }}
+                                                                        isOptionEqualToValue={(option, val) => option.id === val?.id && option.type === val?.type}
+                                                                        renderOption={(props, option) => (
+                                                                            <Box component="li" {...props} key={`${option.type}-${option.id}`}>
+                                                                                {option.type === 'ingredient' && <LocalFloristIcon fontSize="small" sx={{ mr: 1, opacity: 0.6 }} />}
+                                                                                {option.type === 'recipe' && <RestaurantMenuIcon fontSize="small" sx={{ mr: 1, opacity: 0.6 }} />}
+                                                                                {option.type === 'create-ingredient' && <AddIcon fontSize="small" sx={{ mr: 1 }} />}
+                                                                                <Typography 
+                                                                                    variant="body2" 
+                                                                                    color={option.type === 'create-ingredient' ? 'primary' : 'inherit'}
+                                                                                >
+                                                                                    {option.name}
+                                                                                </Typography>
+                                                                            </Box>
+                                                                        )}
+                                                                        loading={ingredientsLoading || subRecipesLoading}
+                                                                        disabled={ingredientsLoading || subRecipesLoading || !!ingredientsError}
+                                                                        renderInput={(params) => (
+                                                                            <TextField 
+                                                                                {...params} 
+                                                                                label="Ingredient / Sub-Recipe" 
+                                                                                size="small"
+                                                                                required
+                                                                                error={!!ingredientsError || !!fieldState.error}
+                                                                                helperText={fieldState.error?.message || ingredientsError}
+                                                                                InputProps={{ 
+                                                                                    ...params.InputProps,
+                                                                                    endAdornment: (
+                                                                                        <>
+                                                                                            {(ingredientsLoading || subRecipesLoading) ? <CircularProgress color="inherit" size={20} /> : null}
+                                                                                            {params.InputProps.endAdornment}
+                                                                                        </>
+                                                                                    ),
+                                                                                }}
+                                                                            />
+                                                                        )}
+                                                                        fullWidth
+                                                                    />
+                                                                );
                                                             }}
                                                         />
-                                                    )}
-                                                    fullWidth
-                                                />
-                                            );
-                                        }}
-                                    />
-                                </Box>
-                                <Controller
-                                    name={`ingredients.${index}.quantity`}
-                                    control={control}
-                                    rules={{ required: 'Qty required', min: { value: 0.01, message: "Qty > 0"} }}
-                                    render={({ field, fieldState }) => (
-                                        <TextField 
-                                            {...field}
-                                            label="Qty"
-                                            type="number"
-                                            required
-                                            size="small"
-                                            error={!!fieldState.error}
-                                            helperText={fieldState.error?.message}
-                                            inputProps={{ step: "any" }}
-                                            sx={{ flexBasis: '15%' }}
-                                        />
-                                    )}
-                                />
-                                <FormControl fullWidth size="small" sx={{ flexBasis: '20%' }} error={!!unitsError || unitsLoading}>
-                                    <InputLabel 
-                                        id={`ingredient-unit-label-${index}`}
-                                        sx={{ 
-                                            '&.MuiInputLabel-shrink': { 
-                                                backgroundColor: (theme) => theme.palette.background.paper,
-                                                paddingLeft: '4px',
-                                                paddingRight: '4px',
-                                            }
-                                        }}
-                                    >
-                                        Unit
-                                    </InputLabel>
-                                    <Controller
-                                        name={`ingredients.${index}.unitId`}
-                                        control={control}
-                                        rules={{ required: 'Unit required' }}
-                                        render={({ field, fieldState }) => (
-                                            <>
-                                            <Select 
-                                                labelId={`ingredient-unit-label-${index}`}
-                                                {...field}
-                                                value={field.value ?? ''}
-                                                onChange={(e) => { 
-                                                    const selectedValue = e.target.value;
-                                                    if (selectedValue === CREATE_NEW_UNIT_OPTION.id) {
-                                                        handleOpenModal('unit', index);
-                                                    } else {
-                                                        field.onChange(selectedValue);
-                                                    }
-                                                }}
-                                                error={!!fieldState.error}
-                                                disabled={unitsLoading || !!unitsError}
-                                            >
-                                                <MenuItem value="" disabled><em>Select Unit</em></MenuItem>
-                                                {units.map((unit) => (
-                                                    <MenuItem key={unit.id} value={unit.id} disabled={unit.id === -1 && !unitsLoading}>
-                                                        {unit.id === CREATE_NEW_UNIT_OPTION.id ? 
-                                                            <Typography color="primary" variant="body2">{unit.name}</Typography> :
-                                                            unit.abbreviation || unit.name
-                                                        }
-                                                    </MenuItem>
-                                                ))}
-                                            </Select>
-                                            {fieldState.error && <Typography variant="caption" display="block" color="error" sx={{ pl: 2 }}>{fieldState.error.message}</Typography>}
-                                            {unitsError && !fieldState.error && <Typography variant="caption" display="block" color="error" sx={{ pl: 2 }}>{unitsError}</Typography>}
-                                            </>
+                                                    </Box>
+                                                    <Controller
+                                                        name={`ingredients.${index}.quantity`}
+                                                        control={control}
+                                                        rules={{ required: 'Qty required', min: { value: 0.01, message: "Qty > 0"} }}
+                                                        render={({ field, fieldState }) => (
+                                                            <TextField 
+                                                                {...field}
+                                                                label="Qty"
+                                                                type="number"
+                                                                required
+                                                                size="small"
+                                                                error={!!fieldState.error}
+                                                                helperText={fieldState.error?.message}
+                                                                inputProps={{ step: "any" }}
+                                                                sx={{ flexBasis: '15%' }}
+                                                            />
+                                                        )}
+                                                    />
+                                                    <FormControl fullWidth size="small" sx={{ flexBasis: '20%' }} error={!!unitsError || unitsLoading}>
+                                                        <InputLabel 
+                                                            id={`ingredient-unit-label-${index}`}
+                                                            sx={{ 
+                                                                '&.MuiInputLabel-shrink': { 
+                                                                    backgroundColor: (theme) => theme.palette.background.paper,
+                                                                    paddingLeft: '4px',
+                                                                    paddingRight: '4px',
+                                                                }
+                                                            }}
+                                                        >
+                                                            Unit
+                                                        </InputLabel>
+                                                        <Controller
+                                                            name={`ingredients.${index}.unitId`}
+                                                            control={control}
+                                                            rules={{ required: 'Unit required' }}
+                                                            render={({ field, fieldState }) => (
+                                                                <>
+                                                                <Select 
+                                                                    labelId={`ingredient-unit-label-${index}`}
+                                                                    {...field}
+                                                                    value={field.value ?? ''}
+                                                                    onChange={(e) => { 
+                                                                        const selectedValue = e.target.value;
+                                                                        if (selectedValue === CREATE_NEW_UNIT_OPTION.id) {
+                                                                            handleOpenModal('unit', index);
+                                                                        } else {
+                                                                            field.onChange(selectedValue);
+                                                                        }
+                                                                    }}
+                                                                    error={!!fieldState.error}
+                                                                    disabled={unitsLoading || !!unitsError}
+                                                                >
+                                                                    <MenuItem value="" disabled><em>Select Unit</em></MenuItem>
+                                                                    {units.map((unit) => (
+                                                                        <MenuItem key={unit.id} value={unit.id} disabled={unit.id === -1 && !unitsLoading}>
+                                                                            {unit.id === CREATE_NEW_UNIT_OPTION.id ? 
+                                                                                <Typography color="primary" variant="body2">{unit.name}</Typography> :
+                                                                                unit.abbreviation || unit.name
+                                                                            }
+                                                                        </MenuItem>
+                                                                    ))}
+                                                                </Select>
+                                                                {fieldState.error && <Typography variant="caption" display="block" color="error" sx={{ pl: 2 }}>{fieldState.error.message}</Typography>}
+                                                                {unitsError && !fieldState.error && <Typography variant="caption" display="block" color="error" sx={{ pl: 2 }}>{unitsError}</Typography>}
+                                                                </>
+                                                            )}
+                                                        />
+                                                    </FormControl>
+                                                    <Box sx={{ flexBasis: '10%', textAlign: 'center', pt: 0.5 }}>
+                                                        <IconButton 
+                                                            onClick={() => handleRemoveIngredient(index)} 
+                                                            color="error" 
+                                                            disabled={fields.length <= 1} 
+                                                            sx={{ mt: 0.5 }}
+                                                        >
+                                                            <RemoveCircleOutlineIcon />
+                                                        </IconButton>
+                                                    </Box>
+                                                </Stack>
+                                            </Paper>
                                         )}
-                                    />
-                                </FormControl>
-                                <Box sx={{ flexBasis: '10%', textAlign: 'center', pt: 0.5 }}>
-                                    <IconButton 
-                                        onClick={() => handleRemoveIngredient(index)} 
-                                        color="error" 
-                                        disabled={fields.length <= 1} 
-                                        sx={{ mt: 0.5 }}
-                                    >
-                                        <RemoveCircleOutlineIcon />
-                                    </IconButton>
-                                </Box>
-                            </Stack>
-                        </Paper>
-                    );
-                })}
+                                    </Draggable>
+                                ))}
+                                {provided.placeholder}
+                            </Box>
+                        )}
+                    </Droppable>
+                </DragDropContext>
+                
                 <Button
                     type="button"
                     startIcon={<AddCircleOutlineIcon />}
