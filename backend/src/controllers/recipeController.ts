@@ -1149,8 +1149,8 @@ export const uploadRecipePhoto = async (req: MulterRequest, res: Response): Prom
       return;
     }
 
-    // Create the URL for the uploaded photo
-    const photoUrl = `/uploads/${req.file.filename}`;
+    // Create the URL for the uploaded photo - remove leading slash to match how Express serves static files
+    const photoUrl = `uploads/${req.file.filename}`;
 
     // Update the recipe with the new photo URL
     const updatedRecipe = await prisma.recipe.update({

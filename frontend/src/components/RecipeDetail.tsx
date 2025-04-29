@@ -351,7 +351,7 @@ const RecipeDetail: React.FC = () => {
             <Box sx={{ mb: 4, borderRadius: 2, boxShadow: 3, border: '1px solid #ddd', overflow: 'hidden' }}>
                 {recipe.photoUrl ? (
                     <img 
-                        src={recipe.photoUrl}
+                        src={recipe.photoUrl.startsWith('http') ? recipe.photoUrl : `${window.location.origin}/${recipe.photoUrl}`}
                         alt={recipe.name} 
                         style={{ 
                             width: '100%',
@@ -359,6 +359,14 @@ const RecipeDetail: React.FC = () => {
                             objectFit: 'cover',
                             display: 'block',
                         }} 
+                        onError={(e) => {
+                            console.error('Image failed to load:', recipe.photoUrl);
+                            // Try alternative URL format if first one fails
+                            const target = e.target as HTMLImageElement;
+                            if (!target.src.includes('/uploads/') && recipe.photoUrl) {
+                                target.src = `${window.location.origin}/uploads/${recipe.photoUrl.split('/').pop()}`;
+                            }
+                        }}
                     />
                 ) : (
                     <Box 

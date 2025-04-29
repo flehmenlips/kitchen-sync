@@ -29,7 +29,7 @@ app.use(express.json()); // Middleware to parse JSON request bodies
 app.use(express.urlencoded({ extended: true })); // Middleware to parse URL-encoded bodies
 
 // Serve static files from the public directory
-app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
+app.use(express.static(path.join(__dirname, '../public')));
 
 // Routes
 app.use('/api/users', userRoutes); // Mount user routes
