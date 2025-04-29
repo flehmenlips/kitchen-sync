@@ -25,7 +25,7 @@ interface ParsedRecipe {
 
 // Add interface for Request with file property
 interface MulterRequest extends Request {
-  file?: Express.Multer.File;
+  file?: any;
 }
 
 // Helper function for safe integer parsing
