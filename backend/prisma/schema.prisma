@@ -78,6 +78,7 @@ model Recipe {
   name              String         @db.VarChar(255)
   description       String?
   instructions      String
+  photoUrl          String?        @map("photo_url")
   yieldQuantity     Decimal?       @map("yield_quantity") @db.Decimal(10, 2)
   yieldUnitId       Int?           @map("yield_unit_id")
   prepTimeMinutes   Int?           @map("prep_time_minutes")
