@@ -368,6 +368,15 @@ We've successfully implemented a complete, customizable prep board system with d
     - Added debug middleware for API route tracing
     - Enhanced controller logging for better visibility into backend operations
 
+12. **Production API Endpoint Fix** (2024-04-26)
+    - Fixed critical issue with API endpoints in production environment
+    - Updated API baseURL configuration to use absolute URL instead of relative path
+    - Changed from `/api` to `https://kitchen-sync-api.onrender.com/api` in production
+    - Tagged as v1.5.0 for the stable production build
+    - Made stable-version the new main branch via hard reset
+    - Created main-backup branch to preserve previous main state
+    - Version 1.5.0 is now the official production version
+
 ## Lessons
 - Always check for hardcoded constants when implementing dynamic features
 - Keep maintenance scripts separate from application code
@@ -391,6 +400,10 @@ We've successfully implemented a complete, customizable prep board system with d
 - Match frontend HTTP methods (GET, POST, PUT, PATCH, DELETE) with backend route configurations
 - When a feature doesn't work as expected, add logging at each level (component, store, service, API) to trace the flow
 - Consider using forced refreshes after certain operations to ensure UI consistency with backend state
+- In production, use absolute URLs for API endpoints rather than relative paths to avoid routing issues
+- When deploying a React app with Vite, the development proxy doesn't exist in production, so API routes need to be handled differently
+- Create backup branches before doing major branch operations like hard resets
+- If you have two different API configuration files, ensure they use consistent URL patterns for the same environment
 
 ## Executor's Feedback or Assistance Requests
 - Recipe task addition to custom columns has been successfully implemented 
@@ -400,6 +413,9 @@ We've successfully implemented a complete, customizable prep board system with d
 - Drag-and-drop functionality for tasks within and between columns is now working
 - The vertical drag-and-drop bug has been fixed and verified
 - The application has been tagged as v1.3.0 for the fully functioning kanban board
+- Critical production API endpoint issues have been fixed and verified in production
+- Updated version to v1.5.0 for the stable production build
+- Successfully made stable-version the new main branch for future development
 - Future enhancement: Consider adding batch operations for adding multiple recipes at once
 
 ## Key Challenges and Analysis
@@ -411,6 +427,7 @@ We've successfully implemented a complete, customizable prep board system with d
 - Implementing proper drag-and-drop behavior with visual feedback
 - Handling complex task reordering operations across multiple columns
 - Diagnosing and fixing state management issues during same-column drag operations
+- Resolving production API endpoint issues where relative paths were failing in the production environment
 
 ### Recipe Task Addition Implementation (Priority: High)
 - **What**: Implement recipe task addition to prep board columns
@@ -556,3 +573,516 @@ We've successfully implemented a complete, customizable prep board system with d
   - Multiple task movements are correctly synchronized
   - Edge cases (empty columns, many tasks) are handled properly
   
+## Recipe Engine (CookBook) Improvement Plan
+
+### Current State Analysis
+
+The Recipe Engine currently has these key components:
+
+1. **Backend Infrastructure**:
+   - Recipe CRUD operations via REST API
+   - Recipe text parsing service using a rule-based approach
+   - Data model with recipes, ingredients, units, and categories
+
+2. **Frontend Components**:
+   - Recipe list and detail views
+   - Recipe form for creating/editing recipes
+   - Recipe import page with text parsing
+   - Ingredient, unit, and category management
+
+3. **Recipe Import Features**:
+   - Text-based recipe parsing
+   - Ingredient identification and structuring
+   - Unit conversion and normalization
+   - Manual editing of parsed recipes
+   - Example format provided for guidance
+
+### Improvement Areas
+
+#### 1. Enhanced Recipe Import Functionality
+
+**Current Limitations:**
+- Text-only import method
+- Rule-based parsing that may miss complex formatting
+- Limited ability to handle different recipe formats
+- No bulk import capabilities
+- No support for importing from websites or images
+
+**Proposed Improvements:**
+
+1. **Multi-Source Import Support**:
+   - URL import - allow users to paste website URLs to scrape recipes
+   - Image import - OCR for recipe images or photos
+   - File import - support for common formats (PDF, DOC, TXT)
+   - Clipboard import - enhanced parsing for clipboard data
+
+2. **Advanced AI Parsing**:
+   - Upgrade parsing algorithm to handle more complex recipe formats
+   - Better detection of preparation methods and cooking techniques
+   - Improved ingredient parsing with quantity fractions
+   - Enhanced unit conversion and normalization
+
+3. **Bulk Import Features**:
+   - Add capability to import multiple recipes in one operation
+   - Batch processing with queue system for large imports
+   - Progress tracking for bulk operations
+
+4. **Import Data Mapping**:
+   - Intelligent mapping of imported ingredients to existing database entries
+   - Suggestion system for matching similar ingredients
+   - Duplicate detection and handling
+
+#### 2. Recipe Organization & Management
+
+**Current Limitations:**
+- Basic categorization system
+- Limited search capabilities
+- No tagging hierarchy
+
+**Proposed Improvements:**
+
+1. **Enhanced Organization System**:
+   - Tag-based recipe organization with hierarchical tags
+   - Custom collections/folders for recipe grouping
+   - Favorites and recently used recipes tracking
+   - "Meal type" and "cuisine type" classification
+
+2. **Advanced Search and Filtering**:
+   - Full-text search across recipe content
+   - Filtering by ingredient, cook time, prep time, etc.
+   - Save and retrieve custom searches
+   - Smart search that understands cooking concepts
+
+#### 3. Recipe Scaling & Unit Conversion
+
+**Current Limitations:**
+- Basic scaling functionality
+- Fixed unit conversions
+
+**Proposed Improvements:**
+
+1. **Smart Recipe Scaling**:
+   - Automatic conversion between metric/imperial measurements
+   - Context-aware scaling (e.g., adjusting baking times for scaled recipes)
+   - Yield-based scaling (e.g., scale recipe to make specific servings)
+
+2. **Advanced Unit Handling**:
+   - Support for more complex unit conversions
+   - Handling of density-based conversions (volume to weight)
+   - Configurable preferred units for users
+
+#### 4. User Experience Enhancements
+
+**Current Limitations:**
+- Limited feedback during recipe operations
+- Form-based input system
+- Minimal recipe visualization
+
+**Proposed Improvements:**
+
+1. **Interactive Recipe Builder**:
+   - Drag-and-drop interface for recipe creation
+   - Real-time preview of recipe during editing
+   - Improved rich text editing for instructions
+
+2. **Enhanced Recipe Presentation**:
+   - Step-by-step instruction mode with progress tracking
+   - Print-friendly recipe layouts
+   - Mobile-optimized recipe viewing
+   - Cook mode with timer integration
+
+3. **User Feedback System**:
+   - Better progress indicators for long operations
+   - Clear success/error messaging
+   - Tutorial/onboarding for first-time users
+
+### Implementation Plan
+
+#### Phase 1: Recipe Import Enhancement (4-6 weeks)
+
+1. **Week 1-2: URL Import & Web Scraping**
+   - Implement URL parsing for popular recipe websites
+   - Create website recipe extractors for common formats
+   - Add recipe schema detection (schema.org/Recipe)
+   - Build frontend for URL import
+
+2. **Week 3-4: Advanced Text Parsing**
+   - Enhance the existing parser to handle more formats
+   - Improve ingredient quantity detection
+   - Add support for fractions and mixed numbers
+   - Add special character handling for recipe text
+   - Enhance unit mapping and conversion
+
+3. **Week 5-6: Image & File Import**
+   - Integrate OCR service for recipe images
+   - Implement PDF parsing for recipe documents
+   - Build drag-and-drop file upload interface
+   - Add preview and validation for imported content
+
+#### Phase 2: Recipe Organization & Search (3-4 weeks)
+
+1. **Week 1-2: Tag System**
+   - Implement hierarchical tag data model
+   - Create tag management UI
+   - Build tag-based filtering system
+   - Add tag suggestions based on recipe content
+
+2. **Week 3-4: Advanced Search**
+   - Implement full-text search capabilities
+   - Create advanced filter UI with multiple criteria
+   - Add saved searches functionality
+   - Integrate search with recipe list view
+
+#### Phase 3: User Experience Improvements (3-4 weeks)
+
+1. **Week 1-2: Interactive Recipe Builder**
+   - Redesign recipe form with drag-and-drop interface
+   - Add real-time preview of recipe
+   - Improve instruction editor with step-based editing
+
+2. **Week 3-4: Enhanced Recipe Presentation**
+   - Create cook mode view for recipes
+   - Add step-by-step instruction navigation
+   - Implement print-friendly formatting
+   - Add sharing options
+
+### Technical Requirements
+
+1. **API Enhancements**:
+   - New endpoints for URL parsing and scraping
+   - File upload and OCR processing endpoints
+   - Extended recipe search endpoint with filtering
+   - Bulk operation endpoints for import/export
+
+2. **Frontend Components**:
+   - URL import form with preview
+   - File upload dropzone with preview
+   - Enhanced recipe parser UI with editing tools
+   - Batch import progress tracking
+   - Tag management interface
+
+3. **External Services**:
+   - OCR service for image processing (Tesseract.js or cloud API)
+   - Web scraping library (Cheerio or similar)
+   - PDF parsing library (pdf.js or similar)
+
+4. **Data Model Updates**:
+   - Enhanced tag system with hierarchies
+   - Import source tracking
+   - User preferences for units and scaling
+
+### Testing Plan
+
+1. **Unit Tests**:
+   - Parser functionality for different formats
+   - Unit conversion accuracy
+   - Import validation logic
+
+2. **Integration Tests**:
+   - End-to-end import workflow
+   - Search and filter operations
+   - Recipe scaling accuracy
+
+3. **User Testing**:
+   - Import from various sources
+   - Organization and finding recipes
+   - Recipe editing and scaling
+
+### Success Metrics
+
+1. **User Engagement**:
+   - Increased recipe creation rate
+   - Reduction in manual recipe entry time
+   - Higher usage of import features
+
+2. **Technical Performance**:
+   - Import success rate > 95%
+   - Search response time < 500ms
+   - Successful parsing of complex recipes
+
+3. **User Satisfaction**:
+   - Positive feedback on import functionality
+   - Reduction in support requests for recipe management
+   - Increased recipe sharing
+
+## Current Focus: Recipe Import Enhancement - Phase 1
+
+Based on our improvement plan, we're starting with Phase 1: Recipe Import Enhancement, specifically focusing on URL import and web scraping capabilities.
+
+### High-level Task Breakdown
+
+#### 1. URL Import & Web Scraping Implementation (Week 1-2)
+
+1. **Research and Library Selection**
+   - Research web scraping libraries for Node.js
+   - Evaluate recipe schema parsing options
+   - Select appropriate libraries for implementation
+   - Success criteria: Selected libraries with documentation and examples ready for implementation
+
+2. **Backend API Development**
+   - Create new endpoint for URL submission
+   - Implement web scraping service with error handling
+   - Add support for common recipe websites (AllRecipes, Food Network, etc.)
+   - Implement schema.org/Recipe detection
+   - Success criteria: API endpoint accepts URLs and returns structured recipe data
+
+3. **Frontend URL Import Interface**
+   - Design URL import component with validation
+   - Implement preview functionality for scraped recipes
+   - Add error handling and loading states
+   - Success criteria: Users can paste URLs, preview results, and save to database
+
+4. **Recipe Schema Mapping**
+   - Develop mapping between scraped data and Kitchen Sync recipe model
+   - Handle variations in recipe formats across websites
+   - Implement fallback parsing for non-standard formats
+   - Success criteria: Consistent recipe structure regardless of source website
+
+5. **Testing and Refinement**
+   - Test with various recipe websites
+   - Implement automated tests for scraping service
+   - Add logging for failed scraping attempts
+   - Success criteria: >90% success rate for top 10 recipe websites
+
+### Technical Requirements
+
+1. **Backend Components**:
+   - Web scraping service (using Cheerio or similar)
+   - URL validation and sanitization
+   - Recipe schema detection (schema.org/Recipe)
+   - Rate limiting to prevent abuse
+
+2. **Frontend Components**:
+   - URL input form with validation
+   - Recipe preview component
+   - Import progress indicator
+   - Error handling with helpful messages
+
+3. **Data Models**:
+   - Update Recipe model to track import source
+   - Add import metadata fields (source URL, import date)
+
+### Project Status Board
+
+- [ ] Research and select web scraping libraries
+- [ ] Design URL import API endpoint
+- [ ] Implement backend scraping service
+- [ ] Create frontend URL import interface
+- [ ] Add recipe preview functionality
+- [ ] Implement schema mapping logic
+- [ ] Test with popular recipe websites
+- [ ] Add proper error handling and validation
+- [ ] Document usage and limitations
+- [ ] Deploy and monitor initial version
+
+### Next Steps After URL Import
+
+After implementing URL import functionality, we'll proceed with:
+
+1. **Advanced Text Parsing** (Week 3-4)
+   - Enhance existing text parser
+   - Improve ingredient quantity detection
+   - Add support for fractions and mixed numbers
+
+2. **Image & File Import** (Week 5-6)
+   - Integrate OCR for recipe images
+   - Add PDF parsing capabilities
+   - Implement file upload interface
+
+## Research: Recipe Web Scraping Libraries
+
+Based on research into available libraries for recipe web scraping, here are the recommended options for implementing URL import functionality:
+
+### 1. Recipe Schema Extraction Libraries
+
+#### Cheerio + JSON-LD Schema Processing
+**Recommendation:** Build a custom solution using Cheerio for HTML parsing and direct JSON-LD extraction.
+
+**Benefits:**
+- Cheerio is a lightweight, fast jQuery-like library for server-side HTML parsing
+- JSON-LD is the most common and reliable recipe schema format on modern recipe sites
+- Direct control over scraping logic and error handling
+- No external dependencies on potentially unmaintained libraries
+
+**Example Implementation:**
+```javascript
+import cheerio from 'cheerio';
+import axios from 'axios';
+
+async function scrapeRecipeFromUrl(url) {
+  try {
+    // Fetch the HTML content from the URL
+    const response = await axios.get(url);
+    const html = response.data;
+    
+    // Load HTML into Cheerio
+    const $ = cheerio.load(html);
+    
+    // Extract JSON-LD data
+    const jsonLdScript = $('script[type="application/ld+json"]').html();
+    
+    if (jsonLdScript) {
+      const jsonLdData = JSON.parse(jsonLdScript);
+      
+      // Handle different JSON-LD structures
+      const recipeData = Array.isArray(jsonLdData) 
+        ? jsonLdData.find(item => item['@type'] === 'Recipe')
+        : jsonLdData['@type'] === 'Recipe' 
+          ? jsonLdData 
+          : jsonLdData['@graph']?.find(item => item['@type'] === 'Recipe');
+      
+      if (recipeData) {
+        return {
+          name: recipeData.name,
+          description: recipeData.description,
+          ingredients: recipeData.recipeIngredient,
+          instructions: processInstructions(recipeData.recipeInstructions),
+          cookTime: recipeData.cookTime,
+          prepTime: recipeData.prepTime,
+          totalTime: recipeData.totalTime,
+          yield: recipeData.recipeYield,
+          image: recipeData.image,
+          url: url,
+          sourceWebsite: new URL(url).hostname
+        };
+      }
+    }
+    
+    // Fallback to other extraction methods if needed
+    // ...
+    
+    throw new Error('No recipe data found on page');
+  } catch (error) {
+    console.error('Recipe scraping error:', error);
+    throw new Error('Failed to scrape recipe: ' + error.message);
+  }
+}
+
+// Helper to process recipe instructions which may be in different formats
+function processInstructions(instructions) {
+  if (!instructions) return [];
+  
+  if (typeof instructions === 'string') return [instructions];
+  
+  if (Array.isArray(instructions)) {
+    return instructions.map(instruction => {
+      if (typeof instruction === 'string') return instruction;
+      if (instruction['@type'] === 'HowToStep') return instruction.text;
+      return instruction.text || instruction.name || '';
+    }).filter(Boolean);
+  }
+  
+  return [];
+}
+```
+
+### 2. Existing Recipe Scraper Libraries
+
+#### Option A: recipe-data-scraper
+**Description:** Node.js library specifically designed for recipe extraction from websites
+
+**Benefits:**
+- Focused solely on recipe data extraction
+- Supports microdata and JSON-LD formats
+- Active development and 15 GitHub stars
+- Clean API with Promise-based usage
+
+**Limitations:**
+- Limited website coverage compared to custom solutions
+- Possible maintenance concerns for long-term usage
+
+**Example Usage:**
+```javascript
+import recipeDataScraper from 'recipe-data-scraper';
+
+async function getRecipeFromUrl(url) {
+  try {
+    const recipe = await recipeDataScraper(url);
+    return recipe;
+  } catch (error) {
+    console.error('Recipe scraping error:', error);
+    throw new Error('Could not find recipe data');
+  }
+}
+```
+
+#### Option B: web-auto-extractor
+**Description:** Generic semantic data extractor supporting Schema.org vocabularies
+
+**Benefits:**
+- Supports multiple formats (Microdata, RDFa-lite, JSON-LD)
+- More general-purpose but can be adapted for recipes
+- Mature library with good usage documentation
+
+**Limitations:**
+- Not recipe-specific, would require additional parsing logic
+- Last published 8 years ago (potential maintenance issues)
+
+### 3. Implementation Approach
+
+#### Recommended Implementation Strategy:
+
+1. **Primary Parser:** Build a custom solution using Cheerio and axios for the most reliable extraction:
+   - Focus on JSON-LD extraction first (most common format)
+   - Add fallback support for Microdata and RDFa
+   - Implement schema.org/Recipe detection
+
+2. **Fallback Option:** Integrate recipe-data-scraper as a fallback:
+   - Try custom parser first
+   - If it fails, attempt with recipe-data-scraper
+   - Provide clear error messages for unsupported sites
+
+3. **Data Mapping Layer:**
+   - Create a standardized mapping function to convert extracted data to Kitchen Sync's recipe format
+   - Normalize units, times, and measurements during conversion
+   - Handle edge cases like missing fields
+
+4. **Error Handling and Validation:**
+   - Validate scraped data before saving
+   - Provide user feedback for partially extracted recipes
+   - Allow manual editing of imported recipes
+
+#### Technical Architecture:
+
+```
+Backend:
+- RecipeScraperService
+  |- extractRecipeFromUrl(url) - Main entry point
+  |- scrapers/
+     |- jsonLdScraper.js - Primary JSON-LD extractor
+     |- microdataScraper.js - Fallback microdata extractor
+     |- rdfaScraper.js - Fallback RDFa extractor
+     |- externalScraperAdapter.js - Adapter for recipe-data-scraper
+  |- utils/
+     |- schemaNormalizer.js - Converts schema data to Kitchen Sync format
+     |- timeParser.js - Handles ISO 8601 duration format conversion
+     |- urlValidator.js - Validates and sanitizes input URLs
+
+Frontend:
+- ImportRecipeDialog
+  |- URL input field with validation
+  |- Import progress indicator
+  |- Preview of extracted recipe data
+  |- Edit capability for corrections
+  |- Error handling UI
+```
+
+### 4. Testing Strategy
+
+1. Create a test suite with sample HTML from popular recipe websites
+2. Include edge cases (missing fields, malformed data)
+3. Compare extraction results against expected outputs
+4. Implement periodic checks against top recipe websites to ensure continued functionality
+
+### 5. Future Enhancements
+
+1. **Recipe Site Profiles:**
+   - Create site-specific extractors for popular recipe websites
+   - Handle custom formats not using standard schemas
+
+2. **Machine Learning Enhancement:**
+   - Train a model to extract recipe data from non-structured content
+   - Improve extraction accuracy for edge cases
+
+3. **Bulk Import:**
+   - Support importing multiple recipes from collection pages

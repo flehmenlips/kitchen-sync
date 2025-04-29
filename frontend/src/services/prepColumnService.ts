@@ -36,7 +36,7 @@ export const prepColumnService = {
             
             // First try the regular API
             try {
-                const response = await api.get(BASE_URL);
+        const response = await api.get(BASE_URL);
                 console.log('Column response from regular API:', response);
                 
                 if (response && response.data) {
@@ -95,7 +95,7 @@ export const prepColumnService = {
                         
                         if (Array.isArray(response.data)) {
                             console.log(`${apiUrl} returned valid array data!`);
-                            return response.data;
+        return response.data;
                         }
                     }
                 } catch (error) {

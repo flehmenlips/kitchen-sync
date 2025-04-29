@@ -578,9 +578,9 @@ export const deleteIssue = async (id: number): Promise<void> => {
     }
 };
 
-export const parseRecipe = async (recipeText: string): Promise<any> => {
+export const parseRecipe = async (recipeText: string, forceAI?: boolean): Promise<any> => {
     try {
-        const response = await apiService.post('/recipes/parse', { recipeText });
+        const response = await apiService.post('/recipes/parse', { recipeText, forceAI });
         return response.data;
     } catch (error) {
         console.error('Error parsing recipe:', error);

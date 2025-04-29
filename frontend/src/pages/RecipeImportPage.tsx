@@ -30,6 +30,8 @@ import {
     InputLabel,
     Select,
     MenuItem,
+    Switch,
+    FormControlLabel,
 } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import {
@@ -255,6 +257,7 @@ const RecipeImportPage: React.FC = () => {
     const [units, setUnits] = useState<UnitOfMeasure[]>([]);
     const [ingredients, setIngredients] = useState<Ingredient[]>([]);
     const [isLoadingData, setIsLoadingData] = useState(false);
+    const [useAI, setUseAI] = useState(true);
 
     const steps = ['Paste Recipe', 'Review & Edit', 'Import'];
 
@@ -432,7 +435,7 @@ const RecipeImportPage: React.FC = () => {
         setError(null);
 
         try {
-            const parsed = await parseRecipe(rawRecipe);
+            const parsed = await parseRecipe(rawRecipe, useAI);
             setParsedRecipe(parsed);
             setActiveStep(1);
         } catch (err) {
@@ -529,10 +532,39 @@ const RecipeImportPage: React.FC = () => {
         }
     };
 
+    const handleAddNewIngredient = () => {
+        // Create a new empty ingredient
+        const newIngredient: ParsedRecipe['ingredients'][0] = {
+            type: "ingredient",
+            quantity: 1,
+            unit: "piece",
+            unitId: "",
+            name: "",
+            raw: ""
+        };
+        
+        // Set in editing mode with a "new" index that is the length of the array
+        if (parsedRecipe) {
+            setEditingIngredient({
+                index: -1, // Special index to indicate new ingredient
+                ingredient: newIngredient
+            });
+        }
+    };
+
     const handleSaveIngredient = (updatedIngredient: ParsedRecipe['ingredients'][0]) => {
         if (parsedRecipe && editingIngredient !== null) {
             const updatedIngredients = [...parsedRecipe.ingredients];
-            updatedIngredients[editingIngredient.index] = updatedIngredient;
+            
+            // Check if this is a new ingredient or editing an existing one
+            if (editingIngredient.index === -1) {
+                // Add new ingredient
+                updatedIngredients.push(updatedIngredient);
+            } else {
+                // Update existing ingredient
+                updatedIngredients[editingIngredient.index] = updatedIngredient;
+            }
+            
             setParsedRecipe({
                 ...parsedRecipe,
                 ingredients: updatedIngredients
@@ -618,6 +650,18 @@ const RecipeImportPage: React.FC = () => {
                         onChange={(e) => setRawRecipe(e.target.value)}
                         placeholder="Paste your recipe here..."
                         sx={{ mt: 2, mb: 2 }}
+                    />
+
+                    <FormControlLabel
+                        control={
+                            <Switch
+                                checked={useAI}
+                                onChange={(e) => setUseAI(e.target.checked)}
+                                color="primary"
+                            />
+                        }
+                        label="Use AI for parsing (Claude)"
+                        sx={{ mb: 2 }}
                     />
 
                     {error && (
@@ -731,6 +775,17 @@ const RecipeImportPage: React.FC = () => {
                                         </ListItem>
                                     </React.Fragment>
                                 ))}
+                                {/* Add Ingredient Button */}
+                                <ListItem>
+                                    <Button 
+                                        fullWidth 
+                                        variant="outlined" 
+                                        onClick={handleAddNewIngredient}
+                                        sx={{ mt: 1 }}
+                                    >
+                                        + Add Ingredient
+                                    </Button>
+                                </ListItem>
                             </List>
                         </Card>
 
