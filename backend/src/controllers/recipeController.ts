@@ -123,6 +123,10 @@ export const getRecipeById = async (req: Request, res: Response): Promise<void> 
         res.status(403).json({ message: 'Not authorized to view this recipe' });
         return;
     }
+    
+    // Debug: Log the photoUrl to check if it's correctly included
+    console.log(`Recipe ${recipeId} photoUrl:`, recipe.photoUrl);
+    
     res.status(200).json(recipe);
   } catch (error) {
     console.error(error);
@@ -152,7 +156,7 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
         const {
             name, description, instructions, yieldQuantity, yieldUnitId,
             prepTimeMinutes, cookTimeMinutes, tags,
-            categoryId,
+            categoryId, photoUrl,
             ingredients
         } = req.body;
 
@@ -199,6 +203,7 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
                     cookTimeMinutes: cookTime,
                     tags: tagsArray,
                     categoryId: categoryIdNum,
+                    photoUrl,
                     userId: req.user!.id,
                 },
             });
@@ -270,7 +275,7 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
         const {
             name, description, instructions, yieldQuantity, yieldUnitId,
             prepTimeMinutes, cookTimeMinutes, tags,
-            categoryId,
+            categoryId, photoUrl,
             ingredients
         } = req.body;
 
@@ -351,6 +356,7 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
                     cookTimeMinutes: cookTime,
                     tags: tagsArray,
                     categoryId: categoryIdNum,
+                    photoUrl,
                 },
             });
 

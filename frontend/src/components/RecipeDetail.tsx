@@ -347,6 +347,37 @@ const RecipeDetail: React.FC = () => {
                 </Box>
             </Box>
 
+            {/* RECIPE PHOTO */}
+            <Box sx={{ mb: 4, borderRadius: 2, boxShadow: 3, border: '1px solid #ddd', overflow: 'hidden' }}>
+                {recipe.photoUrl ? (
+                    <img 
+                        src={recipe.photoUrl}
+                        alt={recipe.name} 
+                        style={{ 
+                            width: '100%',
+                            maxHeight: '500px',
+                            objectFit: 'cover',
+                            display: 'block',
+                        }} 
+                    />
+                ) : (
+                    <Box 
+                        sx={{ 
+                            height: '300px', 
+                            width: '100%', 
+                            bgcolor: '#f5f5f5', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                        }}
+                    >
+                        <Typography variant="body1" color="text.secondary">
+                            No photo available
+                        </Typography>
+                    </Box>
+                )}
+            </Box>
+
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
                 <Box sx={{ flex: 1, minWidth: scaledIngredients ? '45%' : '100%' }}>
                     {isConciseMode ? (

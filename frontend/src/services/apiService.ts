@@ -61,6 +61,7 @@ export interface Recipe {
   tags: string[];
   categoryId: number | null; // Added categoryId from backend
   category: Category | null; // Added OPTIONAL nested category object
+  photoUrl: string | null; // Added photoUrl field
   createdAt: string; // Assuming ISO string format from backend
   updatedAt: string;
   recipeIngredients?: RecipeIngredient[]; // Optional based on fetch endpoint
@@ -592,14 +593,54 @@ export const uploadRecipePhoto = async (recipeId: number, photoFile: File): Prom
     try {
         const formData = new FormData();
         formData.append('photo', photoFile);
+        
+        console.log(`Uploading photo for recipe ${recipeId}, file:`, photoFile.name, photoFile.size);
+        
+        // Make sure we have auth token
+        let token = null;
+        try {
+            const storedUserInfo = localStorage.getItem('kitchenSyncUserInfo');
+            if (storedUserInfo) {
+                token = JSON.parse(storedUserInfo).token;
+                console.log("Found auth token in localStorage");
+            } else {
+                console.warn("No auth token found in localStorage");
+                // Try to get token from another source
+                const tokenOnlyItem = localStorage.getItem('token');
+                if (tokenOnlyItem) {
+                    token = tokenOnlyItem;
+                    console.log("Found token from token-only localStorage item");
+                }
+            }
+        } catch (error) {
+            console.error("Error reading token from localStorage:", error);
+        }
+
+        // Create headers with Auth token
+        const headers: Record<string, string> = {
+            // Don't set Content-Type - let the browser set it with the boundary
+        };
+        
+        if (token) {
+            headers.Authorization = `Bearer ${token}`;
+        }
+        
+        console.log("Request headers:", headers);
+
+        // Create full API URL explicitly to avoid using relative URLs that might be misinterpreted
+        const uploadUrl = `${API_BASE_URL}/recipes/${recipeId}/photo`;
+        console.log("Using full upload URL:", uploadUrl);
 
         // Don't set Content-Type header; browser will set it with boundary for multipart/form-data
-        const response = await apiService.post(`/recipes/${recipeId}/photo`, formData, {
-            headers: {
-                // Override the default Content-Type that axios sets
-                'Content-Type': 'multipart/form-data'
-            }
+        // Use the axios imported directly
+        const response = await axios({
+            method: 'post',
+            url: uploadUrl,
+            data: formData,
+            headers: headers
         });
+        
+        console.log(`Photo upload response for recipe ${recipeId}:`, response.data);
         return response.data;
     } catch (error) {
         console.error(`Error uploading photo for recipe ${recipeId}:`, error);
