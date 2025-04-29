@@ -405,23 +405,66 @@ const RecipeImportPage: React.FC = () => {
         if (!ingredientName) {
             throw new Error('Ingredient name is required');
         }
-        // First try to find an exact match
-        const exactMatch = ingredients.find(i => 
-            i.name.toLowerCase() === ingredientName.toLowerCase()
-        );
-        if (exactMatch) return exactMatch.id;
-
-        // If no match, create a new ingredient
+        
         try {
+            // First try to find an exact match (case-insensitive)
+            const exactMatch = ingredients.find(i => 
+                i.name.toLowerCase() === ingredientName.toLowerCase()
+            );
+            if (exactMatch) return exactMatch.id;
+
+            // If no exact match in local state, try to query all ingredients from the backend
+            // This handles cases where the ingredient might exist in the DB but not in our local state
+            try {
+                const allIngredients = await getIngredients();
+                const backendMatch = allIngredients.find(i => 
+                    i.name.toLowerCase() === ingredientName.toLowerCase()
+                );
+                
+                if (backendMatch) {
+                    // Update local state and return the found ID
+                    if (!ingredients.some(i => i.id === backendMatch.id)) {
+                        setIngredients(prev => [...prev, backendMatch]);
+                    }
+                    return backendMatch.id;
+                }
+            } catch (queryError) {
+                console.warn('Error querying for existing ingredients:', queryError);
+                // Continue to creation attempt if query fails
+            }
+
+            // If no match, create a new ingredient
             const newIngredient = await createIngredient({
                 name: ingredientName,
                 description: null
             });
             setIngredients([...ingredients, newIngredient]);
             return newIngredient.id;
-        } catch (err) {
-            console.error('Error creating ingredient:', err);
-            throw new Error(`Failed to create ingredient: ${ingredientName}`);
+        } catch (err: any) {
+            // If we got a 409 Conflict error, the ingredient likely exists already
+            // Attempt to fetch it one more time
+            if (err.response?.status === 409) {
+                console.log(`Ingredient "${ingredientName}" already exists. Fetching it...`);
+                try {
+                    const refreshedIngredients = await getIngredients();
+                    const existingIngredient = refreshedIngredients.find(i => 
+                        i.name.toLowerCase() === ingredientName.toLowerCase()
+                    );
+                    
+                    if (existingIngredient) {
+                        // Update local state with all ingredients and return the ID
+                        setIngredients(refreshedIngredients);
+                        return existingIngredient.id;
+                    }
+                } catch (refreshError) {
+                    console.error('Error refreshing ingredients after conflict:', refreshError);
+                }
+            }
+            
+            // If all recovery attempts fail, throw a more informative error
+            console.error(`Error creating ingredient "${ingredientName}":`, err);
+            const errorMessage = err.response?.data?.message || err.message || 'Unknown error';
+            throw new Error(`Failed to process ingredient "${ingredientName}": ${errorMessage}`);
         }
     };
 
@@ -453,51 +496,75 @@ const RecipeImportPage: React.FC = () => {
 
         try {
             // Process all ingredients first
-            const processedIngredients = await Promise.all(
-                parsedRecipe.ingredients.map(async (ing, index) => {
-                    try {
-                        if (!ing.name) {
-                            throw new Error(`Missing name for ingredient at index ${index}`);
-                        }
+            const processedIngredients = [];
+            const failedIngredients = [];
+            
+            // Process ingredients sequentially instead of in parallel to avoid race conditions
+            for (const [index, ing] of parsedRecipe.ingredients.entries()) {
+                try {
+                    if (!ing.name) {
+                        throw new Error(`Missing name for ingredient at index ${index}`);
+                    }
 
-                        // Use the unit from the ingredient or default to "whole"
-                        const unitId = await findOrCreateUnit(ing.unit || 'whole');
+                    // Use the unit from the ingredient or default to "whole"
+                    const unitId = await findOrCreateUnit(ing.unit || 'whole');
+                    
+                    // If skipDatabase is true, just return the ingredient as text
+                    if (ing.skipDatabase) {
+                        // For complex ingredients, we still need a valid ingredientId
+                        // We'll use a placeholder ingredient for text-only entries
+                        const textPlaceholderId = await getOrCreateTextPlaceholder();
                         
-                        // If skipDatabase is true, just return the ingredient as text
-                        if (ing.skipDatabase) {
-                            // For complex ingredients, we still need a valid ingredientId
-                            // We'll use a placeholder ingredient for text-only entries
-                            const textPlaceholderId = await getOrCreateTextPlaceholder();
-                            
-                            return {
-                                type: 'ingredient' as const,
-                                ingredientId: textPlaceholderId,
-                                quantity: ing.quantity || 1,
-                                unitId,
-                                order: index,
-                                // These additional properties will be used when displaying the ingredient
-                                // but won't be sent to the backend as part of the recipe creation
-                                _displayText: ing.raw || `${ing.quantity} ${ing.unit} ${ing.name}`,
-                                _skipDatabase: true
-                            };
-                        }
-                        
+                        processedIngredients.push({
+                            type: 'ingredient' as const,
+                            ingredientId: textPlaceholderId,
+                            quantity: ing.quantity || 1,
+                            unitId,
+                            order: index,
+                            // These additional properties will be used when displaying the ingredient
+                            // but won't be sent to the backend as part of the recipe creation
+                            _displayText: ing.raw || `${ing.quantity} ${ing.unit} ${ing.name}`,
+                            _skipDatabase: true
+                        });
+                    } else {
                         // For normal ingredients, create or find them in the database
                         const ingredientId = await findOrCreateIngredient(ing.name);
                         
-                        return {
+                        processedIngredients.push({
                             type: 'ingredient' as const,
                             ingredientId,
                             quantity: ing.quantity || 1,
                             unitId,
                             order: index
-                        };
-                    } catch (err) {
-                        console.error(`Error processing ingredient "${ing.name}":`, err);
-                        throw new Error(`Failed to process ingredient "${ing.name}": ${err instanceof Error ? err.message : 'Unknown error'}`);
+                        });
                     }
-                })
-            );
+                } catch (err) {
+                    console.error(`Error processing ingredient "${ing.name}":`, err);
+                    failedIngredients.push({
+                        name: ing.name,
+                        error: err instanceof Error ? err.message : 'Unknown error'
+                    });
+                    
+                    // For failed ingredients, add a placeholder instead of failing the whole import
+                    if (!ing.skipDatabase) {
+                        // Mark the ingredient as skipDatabase so we use a placeholder
+                        ing.skipDatabase = true;
+                        
+                        const textPlaceholderId = await getOrCreateTextPlaceholder();
+                        const unitId = await findOrCreateUnit(ing.unit || 'whole');
+                        
+                        processedIngredients.push({
+                            type: 'ingredient' as const,
+                            ingredientId: textPlaceholderId,
+                            quantity: ing.quantity || 1,
+                            unitId,
+                            order: index,
+                            _displayText: ing.raw || `${ing.quantity} ${ing.unit} ${ing.name}`,
+                            _skipDatabase: true
+                        });
+                    }
+                }
+            }
 
             // Create the recipe with processed ingredients
             const recipe = await createRecipe({
@@ -513,7 +580,18 @@ const RecipeImportPage: React.FC = () => {
                 categoryId: 1 // Default to "Uncategorized"
             });
             
-            navigate(`/recipes/${recipe.id}`);
+            // If we had any failed ingredients, show a warning but continue with navigation
+            if (failedIngredients.length > 0) {
+                const failedNames = failedIngredients.map(f => f.name).join(', ');
+                setError(`Recipe imported, but some ingredients were problematic and added as text placeholders: ${failedNames}`);
+                
+                // Give the user a chance to see the warning before navigating
+                setTimeout(() => {
+                    navigate(`/recipes/${recipe.id}`);
+                }, 4000);
+            } else {
+                navigate(`/recipes/${recipe.id}`);
+            }
         } catch (err) {
             console.error('Import error:', err);
             setError(err instanceof Error ? err.message : 'Failed to import recipe');
