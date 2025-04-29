@@ -2,7 +2,8 @@ import { Request, Response } from 'express';
 // Using relative path now that we know alias might be tricky initially
 import prisma from '../config/db'; 
 import { Prisma, UnitType } from '@prisma/client'; // Re-import Prisma namespace
-import aiParserService, { parseRecipeWithAI, ParsedRecipe } from '../services/aiParserService';
+import aiParserService from '../services/aiParserService';
+import { parseRecipeWithAI } from '../services/aiParserService';
 
 // Define the ParsedRecipe interface
 interface ParsedRecipe {
@@ -20,6 +21,11 @@ interface ParsedRecipe {
   yieldUnit?: string;
   prepTimeMinutes?: number;
   cookTimeMinutes?: number;
+}
+
+// Add interface for Request with file property
+interface MulterRequest extends Request {
+  file?: Express.Multer.File;
 }
 
 // Helper function for safe integer parsing
@@ -881,31 +887,47 @@ export const parseRecipe = async (req: Request, res: Response): Promise<void> =>
             }
 
             // Format ingredients as objects that match the frontend's expected structure
-            const formattedIngredients = parsedRecipe.ingredients.map((ingredient: string) => {
-                // ... existing ingredient formatting code ...
-                try {
-                    // ... existing code to format ingredients ...
-                    // Use the existing code for algorithmic parsing...
-                    
-                    // Return a default ingredient if all else fails
+            const formattedIngredients = parsedRecipe.ingredients.map((ingredient) => {
+                // Check if ingredient is a string or already an object
+                if (typeof ingredient === 'string') {
+                    try {
+                        // For string ingredients (from algorithmic parser)
+                        return {
+                            type: "ingredient",
+                            quantity: 1,
+                            unit: "piece",
+                            unitId: "",
+                            name: ingredient,
+                            raw: ingredient,
+                            skipDatabase: true
+                        };
+                    } catch (error) {
+                        // Default fallback if parsing fails
+                        return {
+                            type: "ingredient",
+                            quantity: 1,
+                            unit: "piece",
+                            unitId: "",
+                            name: ingredient,
+                            raw: ingredient,
+                            skipDatabase: true
+                        };
+                    }
+                } else {
+                    // For object ingredients (already structured)
+                    const ing = ingredient as { quantity: number; unit: string; name: string; notes?: string };
+                    let rawText = `${ing.quantity} ${ing.unit} ${ing.name}`;
+                    if (ing.notes) {
+                        rawText += ` (${ing.notes})`;
+                    }
                     return {
                         type: "ingredient",
-                        quantity: 1,
-                        unit: "piece",
+                        quantity: ing.quantity,
+                        unit: ing.unit,
                         unitId: "",
-                        name: ingredient,
-                        raw: ingredient,
-                        skipDatabase: true
-                    };
-                } catch (error) {
-                    // Default fallback if parsing fails
-                    return {
-                        type: "ingredient",
-                        quantity: 1,
-                        unit: "piece",
-                        unitId: "",
-                        name: ingredient,
-                        raw: ingredient,
+                        name: ing.name,
+                        raw: rawText,
+                        notes: ing.notes,
                         skipDatabase: true
                     };
                 }
@@ -1016,26 +1038,46 @@ export const parseRecipe = async (req: Request, res: Response): Promise<void> =>
                 }
 
                 // Format ingredients as objects that match the frontend's expected structure
-                const formattedIngredients = parsedRecipe.ingredients.map((ingredient: string) => {
-                    try {
-                        // Use the existing fallback logic...
+                const formattedIngredients = parsedRecipe.ingredients.map((ingredient) => {
+                    // Check if ingredient is a string or already an object
+                    if (typeof ingredient === 'string') {
+                        try {
+                            // For string ingredients (from algorithmic parser)
+                            return {
+                                type: "ingredient",
+                                quantity: 1,
+                                unit: "piece",
+                                unitId: "",
+                                name: ingredient,
+                                raw: ingredient,
+                                skipDatabase: true
+                            };
+                        } catch (error) {
+                            return {
+                                type: "ingredient",
+                                quantity: 1,
+                                unit: "piece",
+                                unitId: "",
+                                name: ingredient,
+                                raw: ingredient,
+                                skipDatabase: true
+                            };
+                        }
+                    } else {
+                        // For object ingredients (already structured)
+                        const ing = ingredient as { quantity: number; unit: string; name: string; notes?: string };
+                        let rawText = `${ing.quantity} ${ing.unit} ${ing.name}`;
+                        if (ing.notes) {
+                            rawText += ` (${ing.notes})`;
+                        }
                         return {
                             type: "ingredient",
-                            quantity: 1,
-                            unit: "piece",
+                            quantity: ing.quantity,
+                            unit: ing.unit,
                             unitId: "",
-                            name: ingredient,
-                            raw: ingredient,
-                            skipDatabase: true
-                        };
-                    } catch (error) {
-                        return {
-                            type: "ingredient",
-                            quantity: 1,
-                            unit: "piece",
-                            unitId: "",
-                            name: ingredient,
-                            raw: ingredient,
+                            name: ing.name,
+                            raw: rawText,
+                            notes: ing.notes,
                             skipDatabase: true
                         };
                     }
@@ -1071,7 +1113,7 @@ export const parseRecipe = async (req: Request, res: Response): Promise<void> =>
 // @desc    Upload a photo for a recipe
 // @route   POST /api/recipes/:id/photo
 // @access  Private
-export const uploadRecipePhoto = async (req: Request, res: Response): Promise<void> => {
+export const uploadRecipePhoto = async (req: MulterRequest, res: Response): Promise<void> => {
   if (!req.user?.id) {
     res.status(401).json({ message: 'Not authorized, user ID missing' });
     return;

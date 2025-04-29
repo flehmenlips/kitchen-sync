@@ -11,10 +11,10 @@ if (!fs.existsSync(uploadDir)) {
 
 // Configure storage
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
+  destination: function(req: Request, file: Express.Multer.File, cb: (error: Error | null, destination: string) => void) {
     cb(null, uploadDir);
   },
-  filename: (req, file, cb) => {
+  filename: function(req: Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) {
     // Create a unique filename with timestamp and original extension
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const ext = path.extname(file.originalname);
@@ -23,7 +23,7 @@ const storage = multer.diskStorage({
 });
 
 // File filter for images
-const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+const fileFilter = function(req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) {
   // Accept only image files
   if (file.mimetype.startsWith('image/')) {
     cb(null, true);
