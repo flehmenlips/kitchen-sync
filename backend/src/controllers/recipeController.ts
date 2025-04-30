@@ -1,10 +1,23 @@
 import { Request, Response } from 'express';
-// Using relative path now that we know alias might be tricky initially
-import prisma from '../config/db'; 
-import { Prisma, UnitType } from '@prisma/client'; // Re-import Prisma namespace
-import aiParserService from '../services/aiParserService';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { v4 as uuidv4 } from 'uuid';
+import prisma from '../config/db';
 import { parseRecipeWithAI } from '../services/aiParserService';
 import cloudinaryService from '../services/cloudinaryService';
+
+// Create an asyncHandler function inline since we don't have the utility
+const asyncHandler = (fn: Function) => (req: Request, res: Response) => {
+  Promise.resolve(fn(req, res)).catch((err) => {
+    console.error('Error in async handler:', err);
+    res.status(res.statusCode === 200 ? 500 : res.statusCode);
+    res.json({
+      message: err.message || 'Something went wrong',
+      stack: process.env.NODE_ENV === 'production' ? '🥞' : err.stack
+    });
+  });
+};
 
 // Define the ParsedRecipe interface
 interface ParsedRecipe {
@@ -600,7 +613,7 @@ export const parseRecipeText = async (recipeText: string, forceAI: boolean = fal
     return foundTime ? totalMinutes : undefined;
   };
 
-  const parseQuantity = (quantityStr: string): number => {
+        const parseQuantity = (quantityStr: string): number => {
     // Handle fractions like "1/2", "1 1/2", etc.
     const wholeFractionPattern = /^(\d+)\s+(\d+)\/(\d+)$/;
     const fractionPattern = /^(\d+)\/(\d+)$/;
@@ -626,7 +639,7 @@ export const parseRecipeText = async (recipeText: string, forceAI: boolean = fal
     return parseFloat(quantityStr);
   };
 
-  const normalizeUnit = (unit: string): string => {
+        const normalizeUnit = (unit: string): string => {
     const unitMap: Record<string, string> = {
       'tablespoon': 'tbsp',
       'tablespoons': 'tbsp',
@@ -636,8 +649,8 @@ export const parseRecipeText = async (recipeText: string, forceAI: boolean = fal
       'teaspoons': 'tsp',
       'tsp': 'tsp',
       'tsps': 'tsp',
-      'cup': 'cup',
-      'cups': 'cup',
+                'cup': 'cup',
+                'cups': 'cup',
       'ounce': 'oz',
       'ounces': 'oz',
       'oz': 'oz',
@@ -659,15 +672,15 @@ export const parseRecipeText = async (recipeText: string, forceAI: boolean = fal
       'l': 'l',
       'inch': 'inch',
       'inches': 'inch',
-      'piece': 'piece',
-      'pieces': 'piece',
+                'piece': 'piece',
+                'pieces': 'piece',
     };
     
     unit = unit.toLowerCase().trim();
     return unitMap[unit] || unit;
   };
 
-  const isLikelyIngredient = (line: string): boolean => {
+        const isLikelyIngredient = (line: string): boolean => {
     // Patterns that suggest a line is an ingredient
     const ingredientPatterns = [
       /^\d+/, // Starts with a number
@@ -680,7 +693,7 @@ export const parseRecipeText = async (recipeText: string, forceAI: boolean = fal
     return ingredientPatterns.some(pattern => pattern.test(line));
   };
 
-  const isLikelyInstruction = (line: string): boolean => {
+        const isLikelyInstruction = (line: string): boolean => {
     // Patterns that suggest a line is an instruction
     const instructionPatterns = [
       /^(?:\d+\.)/, // Starts with a number and period (e.g., "1.")
@@ -953,8 +966,8 @@ export const parseRecipe = async (req: Request, res: Response): Promise<void> =>
                 instructions: formattedInstructions ? `<ol>${formattedInstructions}</ol>` : "",
                 ingredients: formattedIngredients.length > 0 ? formattedIngredients : [{ 
                     type: "ingredient", 
-                    quantity: 1, 
-                    unit: "piece", 
+                        quantity: 1,
+                        unit: "piece",
                     unitId: "", 
                     name: "No ingredients identified",
                     raw: "No ingredients identified" 
@@ -969,7 +982,7 @@ export const parseRecipe = async (req: Request, res: Response): Promise<void> =>
         } else {
             // Use the new AI-powered parser
             try {
-                const aiParsedRecipe = await aiParserService.parseRecipeWithAI(recipeText);
+                const aiParsedRecipe = await parseRecipeWithAI(recipeText);
                 
                 // Format the response for the frontend
                 const formattedInstructions = aiParsedRecipe.instructions
@@ -977,7 +990,7 @@ export const parseRecipe = async (req: Request, res: Response): Promise<void> =>
                     .join('\n');
                 
                 // Format the ingredients for the frontend, with improved handling for simple quantities
-                const formattedIngredients = aiParsedRecipe.ingredients.map(ing => {
+                const formattedIngredients = aiParsedRecipe.ingredients.map((ing: any) => {
                     // Improve display text generation
                     let rawText = '';
                     if (ing.unit === 'piece' && ing.name.match(/s$/)) {
@@ -1029,17 +1042,17 @@ export const parseRecipe = async (req: Request, res: Response): Promise<void> =>
                 
                 // ... rest of the algorithmic response formatting ...
                 // (same code as in the useAlgorithmicParser branch)
-                
-                // Format instructions with rich text
+
+        // Format instructions with rich text
                 const formattedInstructions = parsedRecipe.instructions
-                    .map((line: string) => {
-                        // If line starts with a number and period (e.g., "1.", "2.", etc.)
-                        if (/^\d+\./.test(line)) {
-                            return `<li>${line.replace(/^\d+\.\s*/, '')}</li>`;
-                        }
+            .map((line: string) => {
+                // If line starts with a number and period (e.g., "1.", "2.", etc.)
+                if (/^\d+\./.test(line)) {
+                    return `<li>${line.replace(/^\d+\.\s*/, '')}</li>`;
+                }
                         return `<li>${line}</li>`;
-                    })
-                    .join('\n');
+            })
+            .join('\n');
 
                 // If we have notes, append them to the description
                 let description = parsedRecipe.description;
@@ -1099,7 +1112,7 @@ export const parseRecipe = async (req: Request, res: Response): Promise<void> =>
                 const response = {
                     name: parsedRecipe.name,
                     description: description,
-                    instructions: formattedInstructions ? `<ol>${formattedInstructions}</ol>` : "",
+            instructions: formattedInstructions ? `<ol>${formattedInstructions}</ol>` : "",
                     ingredients: formattedIngredients.length > 0 ? formattedIngredients : [{ 
                         type: "ingredient", 
                         quantity: 1, 
@@ -1172,17 +1185,19 @@ export const uploadRecipePhoto = async (req: MulterRequest, res: Response): Prom
         console.error('Error deleting previous photo, continuing with upload:', deleteError);
       }
     }
-
+    
     // Upload to Cloudinary
     const uploadResult = await cloudinaryService.uploadImage(req.file.path);
     
     // Update the recipe with the new photo URL and public ID
     const updatedRecipe = await prisma.recipe.update({
-      where: { id: recipeId },
+      where: {
+        id: recipeId
+      },
       data: {
         photoUrl: uploadResult.url,
         photoPublicId: uploadResult.publicId
-      },
+      }
     });
 
     res.status(200).json({
@@ -1192,6 +1207,17 @@ export const uploadRecipePhoto = async (req: MulterRequest, res: Response): Prom
     });
   } catch (error) {
     console.error('Error uploading recipe photo:', error);
+    
+    // If the file exists, delete it
+    if (req.file && req.file.path) {
+      try {
+        await fs.promises.unlink(req.file.path);
+        console.log(`Deleted local file after error: ${req.file.path}`);
+      } catch (unlinkError) {
+        console.warn(`Warning: Could not delete local file ${req.file.path}`, unlinkError);
+      }
+    }
+    
     res.status(500).json({ message: 'Error uploading recipe photo' });
-  }
+    }
 }; 
