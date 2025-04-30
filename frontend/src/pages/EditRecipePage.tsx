@@ -56,7 +56,15 @@ const EditRecipePage: React.FC = () => {
       const recipeId = parseInt(id, 10);
       const updated = await updateRecipe(recipeId, formData);
       showSnackbar(`Recipe "${updated.name}" updated successfully!`, 'success');
-      navigate(`/recipes/${updated.id}`);
+      
+      // Only navigate immediately if we're not in the RecipeForm component's photo upload flow
+      // The RecipeForm will call this function twice if there's a photo:
+      // 1. First to save the recipe data
+      // 2. Then to update with the photo URL
+      // We'll let the UI flow naturally to avoid interrupting the photo upload
+      
+      // Return the updated recipe to allow photo upload to proceed
+      return updated;
     } catch (error) {
       console.error('Failed to update recipe:', error);
       let message = 'An unexpected error occurred.';
@@ -77,6 +85,7 @@ const EditRecipePage: React.FC = () => {
     return {
         name: recipeData.name,
         description: recipeData.description || '',
+        photoUrl: recipeData.photoUrl || undefined,
         yieldQuantity: recipeData.yieldQuantity?.toString() || '',
         yieldUnitId: recipeData.yieldUnit?.id || '',
         prepTimeMinutes: recipeData.prepTimeMinutes?.toString() || '',

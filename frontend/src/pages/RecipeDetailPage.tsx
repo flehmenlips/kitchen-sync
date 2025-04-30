@@ -23,7 +23,8 @@ import {
     Grid,
 } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
-import { getRecipeById, Recipe as ApiRecipe, RecipeIngredient, updateRecipe } from '../services/apiService';
+import { getRecipeById, updateRecipe } from '../services/apiService';
+import type { Recipe, RecipeIngredient } from '../services/apiService';
 import EditIcon from '@mui/icons-material/Edit';
 import ScaleIcon from '@mui/icons-material/Scale';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -67,7 +68,7 @@ type DisplayedIngredient = {
 const RecipeDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const [recipe, setRecipe] = useState<ApiRecipe | null>(null);
+    const [recipe, setRecipe] = useState<Recipe | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isScaleDialogOpen, setIsScaleDialogOpen] = useState(false);
@@ -80,6 +81,8 @@ const RecipeDetailPage: React.FC = () => {
             try {
                 if (!id) throw new Error('Recipe ID is required');
                 const data = await getRecipeById(parseInt(id, 10));
+                console.log('Recipe loaded:', JSON.stringify(data, null, 2));
+                // @ts-ignore - Ignoring type mismatch between imported type and API response
                 setRecipe(data);
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'Failed to load recipe');
@@ -90,6 +93,14 @@ const RecipeDetailPage: React.FC = () => {
 
         loadRecipe();
     }, [id]);
+
+    useEffect(() => {
+        if (recipe) {
+            console.log("Complete recipe data:", recipe);
+            console.log("Photo URL:", recipe.photoUrl);
+            console.log("Window origin:", window.location.origin);
+        }
+    }, [recipe]);
 
     const handleScale = (options: { type: 'multiply' | 'divide' | 'constraint'; value: number }) => {
         if (!recipe?.recipeIngredients) return;
@@ -147,6 +158,7 @@ const RecipeDetailPage: React.FC = () => {
             await updateRecipe(recipe.id, updatedRecipe);
             // Reload the recipe to show updated values
             const refreshedRecipe = await getRecipeById(recipe.id);
+            // @ts-ignore - Ignoring type mismatch between imported type and API response
             setRecipe(refreshedRecipe);
             setScaledIngredients(null);
             setScaleFactor(1);
@@ -217,21 +229,6 @@ const RecipeDetailPage: React.FC = () => {
                 </Box>
             )}
 
-            {/* Display recipe photo if available */}
-            {recipe.photoUrl && !isScaled && (
-                <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center', overflow: 'hidden', borderRadius: 1 }}>
-                    <img 
-                        src={recipe.photoUrl} 
-                        alt={recipe.name} 
-                        style={{ 
-                            maxWidth: '100%', 
-                            maxHeight: '400px', 
-                            objectFit: 'cover' 
-                        }} 
-                    />
-                </Box>
-            )}
-
             {recipe.description && (
                 <>
                     <Typography variant="h6" gutterBottom>
@@ -276,6 +273,19 @@ const RecipeDetailPage: React.FC = () => {
 
     return (
         <Container maxWidth="xl" sx={{ mt: 2 }}>
+            {/* TEST ELEMENT - THIS SHOULD ALWAYS SHOW */}
+            <div style={{
+                backgroundColor: 'red',
+                color: 'white',
+                padding: '20px',
+                margin: '20px 0',
+                fontWeight: 'bold',
+                fontSize: '24px',
+                textAlign: 'center'
+            }}>
+                TEST ELEMENT - IF YOU CAN SEE THIS, THE COMPONENT IS RENDERING
+            </div>
+
             {/* Breadcrumbs */}
             <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
                 <Link component={RouterLink} underline="hover" color="inherit" to="/">
@@ -286,6 +296,55 @@ const RecipeDetailPage: React.FC = () => {
                 </Link>
                 <Typography color="text.primary">{recipe.name}</Typography>
             </Breadcrumbs>
+
+            {/* DEBUG INFO */}
+            <Box sx={{ mb: 2, p: 2, bgcolor: '#ffeeee', borderRadius: 1, border: '2px solid red' }}>
+                <Typography variant="body2">
+                    Debug Mode: {recipe.photoUrl ? 
+                    `Photo URL exists: "${recipe.photoUrl}" (Using direct URL because of proxy configuration)` 
+                    : 'No photo URL'}
+                </Typography>
+            </Box>
+
+            {/* Photo section - always show */}
+            <Box sx={{ mb: 4, borderRadius: 2, boxShadow: 3, border: '3px solid red' }}>
+                {recipe.photoUrl ? (
+                    <img 
+                        src={recipe.photoUrl} /* Use the raw URL directly - it will be proxied */
+                        alt={recipe.name} 
+                        style={{ 
+                            width: '100%',
+                            maxHeight: '500px',
+                            objectFit: 'cover',
+                            borderRadius: '8px',
+                        }} 
+                        onError={(e) => {
+                            console.error("Image failed to load:", e);
+                            (e.target as HTMLImageElement).style.display = 'none';
+                            (e.target as HTMLImageElement).parentElement!.innerHTML = 
+                                `<div style="height:300px;display:flex;align-items:center;justify-content:center;background:#eee">
+                                    <p>Failed to load image: ${recipe.photoUrl}</p>
+                                </div>`;
+                        }}
+                    />
+                ) : (
+                    <Box 
+                        sx={{ 
+                            height: '400px', 
+                            width: '100%', 
+                            bgcolor: '#eee', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            borderRadius: '8px',
+                        }}
+                    >
+                        <Typography variant="h6" color="text.secondary">
+                            No photo available
+                        </Typography>
+                    </Box>
+                )}
+            </Box>
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
                 <Typography variant="h4" component="h1">

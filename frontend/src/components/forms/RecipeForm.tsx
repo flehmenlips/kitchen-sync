@@ -199,8 +199,15 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
         onConfirm: () => void;
     } | null>(null);
 
+    // Add state for photo handling
     const [photoFile, setPhotoFile] = useState<File | null>(null);
-    const [photoPreview, setPhotoPreview] = useState<string | null>(initialData?.photoUrl || null);
+    const [photoPreview, setPhotoPreview] = useState<string | null>(
+        initialData?.photoUrl ? 
+            (initialData.photoUrl.startsWith('http') ? 
+                initialData.photoUrl : 
+                `${window.location.origin}${initialData.photoUrl}`) 
+            : null
+    );
     const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
     const [photoUploadError, setPhotoUploadError] = useState<string | null>(null);
 
@@ -290,35 +297,94 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
     };
 
     const handleFormSubmit = async (data: RecipeFormData) => {
-        console.log("[RecipeForm] Raw data before calling onSubmit prop:", data);
+        console.log("========= PHOTO DEBUG START =========");
+        console.log("Initial data:", data);
+        console.log("photoFile:", photoFile);
+        console.log("photoPreview:", photoPreview);
+        console.log("initialData?.photoUrl:", initialData?.photoUrl);
         
-        // If there's a photoUrl from the preview but it's not in the data, add it
-        if (photoPreview && !photoPreview.startsWith('http') && !photoPreview.startsWith('/uploads')) {
-            // This is a local preview, not a server URL, so don't add it to form data
-            // We'll upload the photo after creating/updating the recipe
-        } else if (photoPreview) {
-            // This is an existing server URL, include it in the form data
-            data.photoUrl = photoPreview;
-        }
-        
-        // Call the onSubmit handler with the form data
-        const savedRecipe = await onSubmit(data);
-        
-        // If we have a new photo file, upload it after saving the recipe
-        if (photoFile && savedRecipe?.id) {
-            try {
-                setIsUploadingPhoto(true);
-                setPhotoUploadError(null);
-                const response = await uploadRecipePhoto(savedRecipe.id, photoFile);
-                // Update the preview with the new URL from the server
-                setPhotoPreview(response.photoUrl);
-                console.log('Photo uploaded successfully:', response.photoUrl);
-            } catch (error) {
-                console.error('Error uploading photo:', error);
-                setPhotoUploadError('Failed to upload photo. Recipe was saved without the photo.');
-            } finally {
-                setIsUploadingPhoto(false);
+        try {
+            // If there's a photoUrl from the preview but it's not in the data, add it
+            if (photoPreview) {
+                console.log("PhotoPreview exists:", photoPreview);
+                
+                // Store original path without domain for backend
+                if (photoPreview.startsWith(window.location.origin)) {
+                    // Strip the origin to get just the path
+                    data.photoUrl = photoPreview.replace(window.location.origin, '');
+                    console.log("After stripping origin, photoUrl set to:", data.photoUrl);
+                } else if (!photoPreview.startsWith('http') && !photoPreview.startsWith('/uploads')) {
+                    // This is a local preview, not a server URL, so don't add it to form data
+                    // We'll upload the photo after creating/updating the recipe
+                    console.log("Local preview detected, will upload after saving recipe");
+                } else {
+                    // This is an existing server URL, include it in the form data
+                    data.photoUrl = photoPreview;
+                    console.log("Using existing server URL as photoUrl:", data.photoUrl);
+                }
+            } else {
+                console.log("No photoPreview exists");
             }
+
+            // If we have initial data with a photoUrl, preserve it unless we're replacing it
+            if (initialData?.photoUrl && !photoFile && !data.photoUrl) {
+                data.photoUrl = initialData.photoUrl;
+                console.log("Preserving initialData.photoUrl:", data.photoUrl);
+            }
+            
+            console.log("Final data before saving:", data);
+            
+            // Call the onSubmit handler with the form data first
+            const savedRecipe = await onSubmit(data);
+            console.log("Recipe saved successfully:", savedRecipe);
+            
+            // If we have a new photo file, upload it after saving the recipe
+            if (photoFile && savedRecipe?.id) {
+                try {
+                    setIsUploadingPhoto(true);
+                    setPhotoUploadError(null);
+                    console.log("Uploading photo for recipe ID:", savedRecipe.id);
+                    console.log("Photo file:", photoFile.name, photoFile.size, photoFile.type);
+                    
+                    const response = await uploadRecipePhoto(savedRecipe.id, photoFile);
+                    console.log("Photo upload response:", response);
+                    
+                    // Update the preview with the new URL from the server
+                    if (response && response.photoUrl) {
+                        setPhotoPreview(`${window.location.origin}${response.photoUrl}`);
+                        console.log('Photo uploaded successfully:', response.photoUrl);
+                        
+                        // Update the recipe with the new photo URL
+                        const updatedRecipe = {
+                            ...data,
+                            photoUrl: response.photoUrl
+                        };
+                        console.log("Updating recipe with photo URL:", updatedRecipe);
+                        const updateResult = await onSubmit(updatedRecipe);
+                        console.log("Recipe updated with photo URL:", updateResult);
+                        
+                        // Navigate to the recipe view page after successful photo upload
+                        if (savedRecipe.id) {
+                            window.location.href = `/recipes/${savedRecipe.id}`;
+                        }
+                    } else {
+                        console.error("No photoUrl in response:", response);
+                        setPhotoUploadError('Failed to get photo URL from server response.');
+                    }
+                } catch (error) {
+                    console.error('Error uploading photo:', error);
+                    setPhotoUploadError('Failed to upload photo. Recipe was saved without the photo.');
+                } finally {
+                    setIsUploadingPhoto(false);
+                }
+            } else {
+                console.log("No new photo file to upload");
+            }
+            console.log("========= PHOTO DEBUG END =========");
+        } catch (error) {
+            console.error('Error in form submission:', error);
+            // Let the parent component handle the error
+            throw error;
         }
     };
 

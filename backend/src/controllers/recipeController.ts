@@ -4,6 +4,7 @@ import prisma from '../config/db';
 import { Prisma, UnitType } from '@prisma/client'; // Re-import Prisma namespace
 import aiParserService from '../services/aiParserService';
 import { parseRecipeWithAI } from '../services/aiParserService';
+import cloudinaryService from '../services/cloudinaryService';
 
 // Define the ParsedRecipe interface
 interface ParsedRecipe {
@@ -486,6 +487,18 @@ export const deleteRecipe = async (req: Request, res: Response): Promise<void> =
          res.status(403).json({ message: 'Not authorized to delete this recipe' });
          return;
     }
+
+    // Delete photo from Cloudinary if it exists
+    if (existingRecipe.photoPublicId) {
+      try {
+        await cloudinaryService.deleteImage(existingRecipe.photoPublicId);
+        console.log(`Deleted photo for recipe ${recipeId}: ${existingRecipe.photoPublicId}`);
+      } catch (deleteError) {
+        console.error(`Error deleting photo for recipe ${recipeId}:`, deleteError);
+        // Continue with recipe deletion even if photo deletion fails
+      }
+    }
+
     // Transaction to delete recipe and its ingredients (though cascade should handle ingredients)
     await prisma.$transaction([ 
         prisma.unitQuantity.deleteMany({ where: { recipeId: recipeId }}), 
@@ -1149,20 +1162,32 @@ export const uploadRecipePhoto = async (req: MulterRequest, res: Response): Prom
       return;
     }
 
-    // Create the URL for the uploaded photo - remove leading slash to match how Express serves static files
-    const photoUrl = `uploads/${req.file.filename}`;
+    // If this recipe already has a photo, delete the old one first
+    if (existingRecipe.photoPublicId) {
+      try {
+        await cloudinaryService.deleteImage(existingRecipe.photoPublicId);
+        console.log(`Deleted previous photo: ${existingRecipe.photoPublicId}`);
+      } catch (deleteError) {
+        // Just log the error but continue with the new upload
+        console.error('Error deleting previous photo, continuing with upload:', deleteError);
+      }
+    }
 
-    // Update the recipe with the new photo URL
+    // Upload to Cloudinary
+    const uploadResult = await cloudinaryService.uploadImage(req.file.path);
+    
+    // Update the recipe with the new photo URL and public ID
     const updatedRecipe = await prisma.recipe.update({
       where: { id: recipeId },
       data: {
-        photoUrl: photoUrl,
+        photoUrl: uploadResult.url,
+        photoPublicId: uploadResult.publicId
       },
     });
 
     res.status(200).json({
       message: 'Recipe photo uploaded successfully',
-      photoUrl: photoUrl,
+      photoUrl: uploadResult.url,
       recipe: updatedRecipe
     });
   } catch (error) {
