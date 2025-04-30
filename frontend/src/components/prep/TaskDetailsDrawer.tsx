@@ -16,7 +16,9 @@ import {
     Collapse,
     Alert,
     Paper,
-    Avatar
+    Avatar,
+    Card,
+    CardMedia
 } from '@mui/material';
 import {
     Close as CloseIcon,
@@ -54,6 +56,7 @@ interface RecipeDetails {
         ingredient?: { id: number; name: string };
         subRecipe?: { id: number; name: string };
     }[];
+    photoUrl?: string;
 }
 
 // Interface for comments
@@ -72,6 +75,26 @@ interface TaskDetailsDrawerProps {
     columnName: string;
     columnColor: string;
 }
+
+// Cloudinary transformation function for thumbnails
+const getThumbUrl = (photoUrl: string | null | undefined, size: number = 120): string | undefined => {
+    if (!photoUrl) return undefined;
+    
+    // If it's a Cloudinary URL, transform it
+    if (photoUrl.includes('res.cloudinary.com')) {
+        // Extract the base URL and transformation path
+        const parts = photoUrl.split('/upload/');
+        if (parts.length === 2) {
+            // Insert thumbnail transformation parameters
+            // w_120,h_120,c_fill: width 120px, height 120px, crop mode fill
+            // q_auto: automatic quality optimization
+            return `${parts[0]}/upload/w_${size},h_${size},c_fill,q_auto/${parts[1]}`;
+        }
+    }
+    
+    // Return original URL if not Cloudinary or can't parse
+    return photoUrl;
+};
 
 const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
     open,
@@ -425,38 +448,65 @@ const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
                             <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
                         ) : recipe ? (
                             <>
-                                <Typography variant="h6">{recipe.name}</Typography>
-                                {recipe.description && (
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                                        {recipe.description}
-                                    </Typography>
-                                )}
-                                
-                                <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
-                                    {recipe.prepTimeMinutes && (
-                                        <Chip
-                                            icon={<TimerIcon />}
-                                            label={`Prep: ${recipe.prepTimeMinutes} min`}
-                                            size="small"
-                                            variant="outlined"
-                                        />
+                                <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2, gap: 2 }}>
+                                    {recipe.photoUrl ? (
+                                        <Card sx={{ width: 120, height: 120, flexShrink: 0, borderRadius: 2, overflow: 'hidden' }}>
+                                            <CardMedia
+                                                component="img"
+                                                image={getThumbUrl(recipe.photoUrl)}
+                                                alt={recipe.name}
+                                                sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                            />
+                                        </Card>
+                                    ) : (
+                                        <Card sx={{ 
+                                            width: 120, 
+                                            height: 120, 
+                                            flexShrink: 0, 
+                                            borderRadius: 2, 
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            bgcolor: 'primary.light'
+                                        }}>
+                                            <RestaurantIcon sx={{ fontSize: 48, color: 'white' }} />
+                                        </Card>
                                     )}
-                                    {recipe.cookTimeMinutes && (
-                                        <Chip
-                                            icon={<TimerIcon />}
-                                            label={`Cook: ${recipe.cookTimeMinutes} min`}
-                                            size="small"
-                                            variant="outlined"
-                                        />
-                                    )}
-                                    {recipe.yieldQuantity && recipe.yieldUnit && (
-                                        <Chip
-                                            icon={<RestaurantIcon />}
-                                            label={`Yield: ${recipe.yieldQuantity} ${recipe.yieldUnit.name}`}
-                                            size="small"
-                                            variant="outlined"
-                                        />
-                                    )}
+                                    <Box>
+                                        <Typography variant="h6">{recipe.name}</Typography>
+                                        {recipe.description && (
+                                            <Typography variant="body2" color="text.secondary">
+                                                {recipe.description}
+                                            </Typography>
+                                        )}
+                                        
+                                        <Box sx={{ display: 'flex', gap: 2, mt: 1, flexWrap: 'wrap' }}>
+                                            {recipe.prepTimeMinutes && (
+                                                <Chip
+                                                    icon={<TimerIcon />}
+                                                    label={`Prep: ${recipe.prepTimeMinutes} min`}
+                                                    size="small"
+                                                    variant="outlined"
+                                                />
+                                            )}
+                                            {recipe.cookTimeMinutes && (
+                                                <Chip
+                                                    icon={<TimerIcon />}
+                                                    label={`Cook: ${recipe.cookTimeMinutes} min`}
+                                                    size="small"
+                                                    variant="outlined"
+                                                />
+                                            )}
+                                            {recipe.yieldQuantity && recipe.yieldUnit && (
+                                                <Chip
+                                                    icon={<RestaurantIcon />}
+                                                    label={`Yield: ${recipe.yieldQuantity} ${recipe.yieldUnit.name}`}
+                                                    size="small"
+                                                    variant="outlined"
+                                                />
+                                            )}
+                                        </Box>
+                                    </Box>
                                 </Box>
                                 
                                 {/* Ingredients */}
