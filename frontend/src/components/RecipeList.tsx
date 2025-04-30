@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import { getRecipes, Recipe } from '../services/apiService';
+import { getRecipes } from '../services/apiService';
 
 // Import MUI components
 import List from '@mui/material/List';
@@ -20,17 +20,52 @@ import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import FolderIcon from '@mui/icons-material/Folder'; // Optional icon for categories
 import ListItemIcon from '@mui/material/ListItemIcon';
+import Avatar from '@mui/material/Avatar';
+import ListItemAvatar from '@mui/material/ListItemAvatar';
+import RestaurantIcon from '@mui/icons-material/Restaurant';
+
+// Define a recipe type for this component to avoid conflicts
+interface RecipeListItem {
+  id: number;
+  name: string;
+  description?: string | null;
+  photoUrl?: string | null;
+  category?: {
+    id: number;
+    name: string;
+  } | null;
+}
 
 // Type for grouped data
 interface GroupedRecipes {
-  [categoryName: string]: Recipe[];
+  [categoryName: string]: RecipeListItem[];
 }
 
 const UNCATEGORIZED_KEY = 'Uncategorized';
 const LOCAL_STORAGE_KEY = 'kitchenSyncRecipeCategoryState'; // Define key
 
+// Cloudinary transformation function for thumbnails
+const getThumbUrl = (photoUrl: string | null | undefined): string | undefined => {
+  if (!photoUrl) return undefined;
+  
+  // If it's a Cloudinary URL, transform it
+  if (photoUrl.includes('res.cloudinary.com')) {
+    // Extract the base URL and transformation path
+    const parts = photoUrl.split('/upload/');
+    if (parts.length === 2) {
+      // Insert thumbnail transformation parameters
+      // w_80,h_80,c_fill: width 80px, height 80px, crop mode fill
+      // q_auto: automatic quality optimization
+      return `${parts[0]}/upload/w_80,h_80,c_fill,q_auto/${parts[1]}`;
+    }
+  }
+  
+  // Return original URL if not Cloudinary or can't parse
+  return photoUrl;
+};
+
 const RecipeList: React.FC = () => {
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [recipes, setRecipes] = useState<RecipeListItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   // State to track open/closed categories
@@ -50,8 +85,34 @@ const RecipeList: React.FC = () => {
     const fetchRecipes = async () => {
       try {
         setLoading(true);
-        const data = await getRecipes(); // Assuming this now includes category
-        setRecipes(data);
+        const data = await getRecipes();
+        
+        // Map the API response to our RecipeListItem type
+        const recipeItems: RecipeListItem[] = data.map(recipe => {
+          // Type safety: Handle potential missing or different structures
+          const item: RecipeListItem = {
+            id: typeof recipe.id === 'string' ? parseInt(recipe.id, 10) : recipe.id,
+            name: recipe.name,
+            description: recipe.description || null,
+            photoUrl: recipe.photoUrl || null
+          };
+          
+          // Only add category if it exists in the response
+          if ('category' in recipe && recipe.category) {
+            // Ensure category has the expected structure
+            const cat = recipe.category as any;
+            if (cat && typeof cat === 'object' && 'id' in cat && 'name' in cat) {
+              item.category = {
+                id: cat.id,
+                name: cat.name
+              };
+            }
+          }
+          
+          return item;
+        });
+        
+        setRecipes(recipeItems);
         setError(null);
 
         // Initialize state only if not loaded from storage OR if new categories appear
@@ -62,8 +123,9 @@ const RecipeList: React.FC = () => {
 
              // Ensure all current categories have an entry (defaulting to true if new)
              const allCategoryNames = new Set<string>([UNCATEGORIZED_KEY]); // Include Uncategorized
-             data.forEach(recipe => {
-                 allCategoryNames.add(recipe.category?.name || UNCATEGORIZED_KEY);
+             recipeItems.forEach(recipe => {
+                 const categoryName = recipe.category?.name || UNCATEGORIZED_KEY;
+                 allCategoryNames.add(categoryName);
              });
 
              allCategoryNames.forEach(categoryName => {
@@ -74,7 +136,7 @@ const RecipeList: React.FC = () => {
              });
              
              // If nothing was loaded and we didn't add anything, default all to true
-             if (!loadedFromStorage && !updated && data.length > 0) { // Only default if data was actually fetched
+             if (!loadedFromStorage && !updated && recipeItems.length > 0) { // Only default if data was actually fetched
                  allCategoryNames.forEach(name => newState[name] = true);
                  updated = true;
              }
@@ -189,10 +251,31 @@ const RecipeList: React.FC = () => {
                   {groupedRecipes[categoryName].map((recipe) => (
                     <ListItem key={recipe.id} disablePadding>
                       <ListItemButton component={RouterLink} to={`/recipes/${recipe.id}`}>
+                        <ListItemAvatar>
+                          {recipe.photoUrl ? (
+                            <Avatar 
+                              src={getThumbUrl(recipe.photoUrl)} 
+                              alt={recipe.name}
+                              variant="rounded"
+                              sx={{ width: 56, height: 56 }}
+                            />
+                          ) : (
+                            <Avatar 
+                              variant="rounded"
+                              sx={{ width: 56, height: 56, bgcolor: 'primary.light' }}
+                            >
+                              <RestaurantIcon />
+                            </Avatar>
+                          )}
+                        </ListItemAvatar>
                         <ListItemText
                           primary={recipe.name}
                           secondary={recipe.description || ''}
-                          secondaryTypographyProps={{ noWrap: true, sx: { display: 'block' } }} // Prevent wrap, ensure display
+                          secondaryTypographyProps={{ 
+                            noWrap: true, 
+                            sx: { display: 'block' } 
+                          }}
+                          sx={{ ml: 1 }}
                         />
                       </ListItemButton>
                     </ListItem>
