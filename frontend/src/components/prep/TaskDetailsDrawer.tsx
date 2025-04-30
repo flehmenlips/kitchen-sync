@@ -338,103 +338,9 @@ const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
 
                 <Divider sx={{ my: 2 }} />
 
-                {/* Comments Section */}
-                <List 
-                    component="nav" 
-                    sx={{ 
-                        bgcolor: 'background.paper',
-                        borderRadius: 1,
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        mb: 2
-                    }}
-                >
-                    <ListItem button onClick={() => setCommentsExpanded(!commentsExpanded)}>
-                        <ListItemIcon>
-                            <CommentIcon />
-                        </ListItemIcon>
-                        <ListItemText primary={`Comments (${comments.length})`} />
-                        {commentsExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                    </ListItem>
-                    <Collapse in={commentsExpanded} timeout="auto" unmountOnExit>
-                        <Box sx={{ p: 2 }}>
-                            {comments.length === 0 ? (
-                                <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                                    No comments yet. Add the first one!
-                                </Typography>
-                            ) : (
-                                comments.map((comment) => (
-                                    <Paper 
-                                        key={comment.id} 
-                                        elevation={0} 
-                                        sx={{ 
-                                            p: 2, 
-                                            mb: 2, 
-                                            backgroundColor: '#f5f5f5',
-                                            borderRadius: 2
-                                        }}
-                                    >
-                                        <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
-                                            <Avatar 
-                                                sx={{ 
-                                                    width: 32, 
-                                                    height: 32, 
-                                                    mr: 1,
-                                                    bgcolor: columnColor
-                                                }}
-                                            >
-                                                {comment.authorName.charAt(0)}
-                                            </Avatar>
-                                            <Box sx={{ flex: 1 }}>
-                                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                    <Typography variant="subtitle2" component="span">
-                                                        {comment.authorName}
-                                                    </Typography>
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        {formatTimeAgo(comment.createdAt)}
-                                                    </Typography>
-                                                </Box>
-                                                <Typography variant="body2" sx={{ mt: 0.5 }}>
-                                                    {comment.text}
-                                                </Typography>
-                                            </Box>
-                                        </Box>
-                                    </Paper>
-                                ))
-                            )}
-                            
-                            {/* Add comment input */}
-                            <Box sx={{ display: 'flex', mt: 2 }}>
-                                <TextField
-                                    fullWidth
-                                    size="small"
-                                    placeholder="Add a comment..."
-                                    value={newComment}
-                                    onChange={(e) => setNewComment(e.target.value)}
-                                    variant="outlined"
-                                    sx={{ mr: 1 }}
-                                />
-                                <Button 
-                                    variant="contained"
-                                    disabled={!newComment.trim()}
-                                    onClick={handleAddComment}
-                                    sx={{ 
-                                        bgcolor: columnColor,
-                                        '&:hover': {
-                                            bgcolor: `${columnColor}dd`
-                                        }
-                                    }}
-                                >
-                                    <SendIcon fontSize="small" />
-                                </Button>
-                            </Box>
-                        </Box>
-                    </Collapse>
-                </List>
-
                 {/* Recipe Details Section */}
                 {task.recipeId ? (
-                    <Box sx={{ flex: 1, overflow: 'auto' }}>
+                    <Box sx={{ mb: 3 }}>
                         <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
                             <RestaurantIcon sx={{ mr: 1 }} />
                             Recipe Details
@@ -543,7 +449,7 @@ const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
                                         </List>
                                     </Collapse>
                                     
-                                    {/* Instructions */}
+                                    {/* Instructions - Fix HTML rendering by using dangerouslySetInnerHTML */}
                                     <ListItem button onClick={() => setInstructionsOpen(!instructionsOpen)}>
                                         <ListItemIcon>
                                             <DescriptionIcon />
@@ -553,9 +459,13 @@ const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
                                     </ListItem>
                                     <Collapse in={instructionsOpen} timeout="auto" unmountOnExit>
                                         <Box sx={{ p: 2 }}>
-                                            <Typography variant="body2" whiteSpace="pre-wrap">
-                                                {recipe.instructions}
-                                            </Typography>
+                                            <Box
+                                                sx={{
+                                                    '& ol, & ul': { pl: 2, mb: 2 },
+                                                    '& li': { mb: 1 }
+                                                }}
+                                                dangerouslySetInnerHTML={{ __html: recipe.instructions }}
+                                            />
                                         </Box>
                                     </Collapse>
                                 </List>
@@ -565,11 +475,107 @@ const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
                         )}
                     </Box>
                 ) : (
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                         This task is not linked to a recipe.
                     </Typography>
                 )}
-                
+
+                <Divider sx={{ my: 2 }} />
+
+                {/* Comments Section */}
+                <List 
+                    component="nav" 
+                    sx={{ 
+                        bgcolor: 'background.paper',
+                        borderRadius: 1,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        mb: 2
+                    }}
+                >
+                    <ListItem button onClick={() => setCommentsExpanded(!commentsExpanded)}>
+                        <ListItemIcon>
+                            <CommentIcon />
+                        </ListItemIcon>
+                        <ListItemText primary={`Comments (${comments.length})`} />
+                        {commentsExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                    </ListItem>
+                    <Collapse in={commentsExpanded} timeout="auto" unmountOnExit>
+                        <Box sx={{ p: 2 }}>
+                            {comments.length === 0 ? (
+                                <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                                    No comments yet. Add the first one!
+                                </Typography>
+                            ) : (
+                                comments.map((comment) => (
+                                    <Paper 
+                                        key={comment.id} 
+                                        elevation={0} 
+                                        sx={{ 
+                                            p: 2, 
+                                            mb: 2, 
+                                            backgroundColor: '#f5f5f5',
+                                            borderRadius: 2
+                                        }}
+                                    >
+                                        <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
+                                            <Avatar 
+                                                sx={{ 
+                                                    width: 32, 
+                                                    height: 32, 
+                                                    mr: 1,
+                                                    bgcolor: columnColor
+                                                }}
+                                            >
+                                                {comment.authorName.charAt(0)}
+                                            </Avatar>
+                                            <Box sx={{ flex: 1 }}>
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                    <Typography variant="subtitle2" component="span">
+                                                        {comment.authorName}
+                                                    </Typography>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {formatTimeAgo(comment.createdAt)}
+                                                    </Typography>
+                                                </Box>
+                                                <Typography variant="body2" sx={{ mt: 0.5 }}>
+                                                    {comment.text}
+                                                </Typography>
+                                            </Box>
+                                        </Box>
+                                    </Paper>
+                                ))
+                            )}
+                            
+                            {/* Add comment input */}
+                            <Box sx={{ display: 'flex', mt: 2 }}>
+                                <TextField
+                                    fullWidth
+                                    size="small"
+                                    placeholder="Add a comment..."
+                                    value={newComment}
+                                    onChange={(e) => setNewComment(e.target.value)}
+                                    variant="outlined"
+                                    sx={{ mr: 1 }}
+                                />
+                                <Button 
+                                    variant="contained"
+                                    disabled={!newComment.trim()}
+                                    onClick={handleAddComment}
+                                    sx={{ 
+                                        bgcolor: columnColor,
+                                        '&:hover': {
+                                            bgcolor: `${columnColor}dd`
+                                        }
+                                    }}
+                                >
+                                    <SendIcon fontSize="small" />
+                                </Button>
+                            </Box>
+                        </Box>
+                    </Collapse>
+                </List>
+
                 {/* Action Buttons */}
                 {isEditing && (
                     <Box sx={{ mt: 'auto', pt: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
