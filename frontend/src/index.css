@@ -13,6 +13,27 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Menu Font Classes */
+.font-playfair {
+  font-family: 'Playfair Display', serif !important;
+}
+
+.font-roboto {
+  font-family: 'Roboto', sans-serif !important;
+}
+
+.font-lora {
+  font-family: 'Lora', serif !important;
+}
+
+.font-montserrat {
+  font-family: 'Montserrat', sans-serif !important;
+}
+
+.font-oswald {
+  font-family: 'Oswald', sans-serif !important;
+}
+
 a {
   font-weight: 500;
   color: #646cff;

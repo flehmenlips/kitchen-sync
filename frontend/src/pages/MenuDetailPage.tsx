@@ -12,6 +12,22 @@ import {
 } from '@mui/icons-material';
 import { getMenuById, Menu } from '../services/apiService';
 
+function getFontFamily(font?: string | null): string {
+  switch(font) {
+    case 'Roboto':
+      return "'Roboto', sans-serif";
+    case 'Lora':
+      return "'Lora', serif";
+    case 'Montserrat':
+      return "'Montserrat', sans-serif";
+    case 'Oswald':
+      return "'Oswald', sans-serif";
+    case 'Playfair Display':
+    default:
+      return "'Playfair Display', serif";
+  }
+}
+
 const MenuDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -342,7 +358,7 @@ const MenuDetailPage: React.FC = () => {
           mb: 4,
           backgroundColor: menu.backgroundColor || '#ffffff',
           color: menu.textColor || '#000000',
-          fontFamily: menu.font ? `${menu.font}, sans-serif` : '"Playfair Display", serif',
+          fontFamily: getFontFamily(menu.font),
           mx: 'auto',
           overflow: 'hidden',
           fontSize: menu.fontSize === 'small' ? '0.85em' : menu.fontSize === 'large' ? '1.15em' : '1em'

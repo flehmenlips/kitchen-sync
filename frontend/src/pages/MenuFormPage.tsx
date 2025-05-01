@@ -39,6 +39,23 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
+// Add this helper function for consistent font handling
+function getFontFamily(font?: string | null): string {
+  switch(font) {
+    case 'Roboto':
+      return "'Roboto', sans-serif";
+    case 'Lora':
+      return "'Lora', serif";
+    case 'Montserrat':
+      return "'Montserrat', sans-serif";
+    case 'Oswald':
+      return "'Oswald', sans-serif";
+    case 'Playfair Display':
+    default:
+      return "'Playfair Display', serif";
+  }
+}
+
 const MenuFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const isEditing = Boolean(id);
@@ -574,7 +591,7 @@ const MenuFormPage: React.FC = () => {
                       backgroundColor: menu.backgroundColor || '#ffffff',
                       color: menu.textColor || '#000000',
                       borderRadius: 1,
-                      fontFamily: menu.font || 'Playfair Display',
+                      fontFamily: getFontFamily(menu.font),
                       position: 'relative',
                       fontSize: menu.fontSize === 'small' ? '0.85em' : menu.fontSize === 'large' ? '1.15em' : '1em'
                     }}
