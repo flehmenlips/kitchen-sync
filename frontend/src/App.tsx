@@ -8,12 +8,16 @@ import {
 import './App.css';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SnackbarProvider as NotistackProvider } from 'notistack';
+import { ThemeProvider } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import { theme } from './theme'; // Import theme from a separate file
 
 // Layout and Context Providers
 import MainLayout from './components/layout/MainLayout';
 import { AuthProvider } from './context/AuthContext';
 import { SnackbarProvider } from './context/SnackbarContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
+import PublicRoute from './components/common/PublicRoute';
 
 // Pages
 import LoginPage from './pages/LoginPage';
@@ -52,6 +56,11 @@ import IssueFormPage from './pages/IssueFormPage';
 // Prep Board Component
 import { PrepBoard } from './components/prep/PrepBoard';
 
+// Menu Components
+import MenusPage from './pages/MenusPage';
+import MenuFormPage from './pages/MenuFormPage';
+import MenuDetailPage from './pages/MenuDetailPage';
+
 // Create a client
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -64,71 +73,88 @@ const queryClient = new QueryClient({
 
 const App: React.FC = () => {
   return (
-    <QueryClientProvider client={queryClient}>
-      <Router>
-        <AuthProvider>
-          <NotistackProvider maxSnack={3}>
-            <SnackbarProvider>
-              <Routes>
-                {/* Public routes */}
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/register" element={<RegisterPage />} />
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <QueryClientProvider client={queryClient}>
+        <Router>
+          <AuthProvider>
+            <NotistackProvider maxSnack={3}>
+              <SnackbarProvider>
+                <Routes>
+                  {/* Public routes */}
+                  <Route path="/login" element={
+                    <PublicRoute>
+                      <LoginPage />
+                    </PublicRoute>
+                  } />
+                  <Route path="/register" element={
+                    <PublicRoute>
+                      <RegisterPage />
+                    </PublicRoute>
+                  } />
 
-                {/* Protected routes */}
-                <Route element={<ProtectedRoute />}>
-                  <Route element={<MainLayout />}>
-                    {/* Dashboard */}
-                    <Route index element={<DashboardPage />} />
+                  {/* Protected routes */}
+                  <Route element={<ProtectedRoute />}>
+                    <Route element={<MainLayout />}>
+                      {/* Dashboard */}
+                      <Route index element={<DashboardPage />} />
 
-                    {/* CookBook Module Routes */}
-                    {/* Recipes */}
-                    <Route path="recipes" element={<RecipeList />} />
-                    <Route path="recipes/new" element={<CreateRecipePage />} />
-                    <Route path="recipes/import" element={<RecipeImportPage />} />
-                    <Route path="recipes/:id" element={
-                      <Suspense fallback={<div>Loading...</div>}>
-                        <RecipeDetail />
-                      </Suspense>
-                    } />
-                    <Route path="recipes/:id/edit" element={<EditRecipePage />} />
+                      {/* CookBook Module Routes */}
+                      {/* Recipes */}
+                      <Route path="recipes" element={<RecipeList />} />
+                      <Route path="recipes/new" element={<CreateRecipePage />} />
+                      <Route path="recipes/import" element={<RecipeImportPage />} />
+                      <Route path="recipes/:id" element={
+                        <Suspense fallback={<div>Loading...</div>}>
+                          <RecipeDetail />
+                        </Suspense>
+                      } />
+                      <Route path="recipes/:id/edit" element={<EditRecipePage />} />
 
-                    {/* Categories */}
-                    <Route path="categories" element={<CategoryListPage />} />
-                    <Route path="categories/new" element={<CreateCategoryPage />} />
-                    <Route path="categories/:id/edit" element={<EditCategoryPage />} />
+                      {/* Categories */}
+                      <Route path="categories" element={<CategoryListPage />} />
+                      <Route path="categories/new" element={<CreateCategoryPage />} />
+                      <Route path="categories/:id/edit" element={<EditCategoryPage />} />
 
-                    {/* Ingredients */}
-                    <Route path="ingredients" element={<IngredientListPage />} />
-                    <Route path="ingredients/new" element={<CreateIngredientPage />} />
-                    <Route path="ingredients/:id/edit" element={<EditIngredientPage />} />
+                      {/* Ingredients */}
+                      <Route path="ingredients" element={<IngredientListPage />} />
+                      <Route path="ingredients/new" element={<CreateIngredientPage />} />
+                      <Route path="ingredients/:id/edit" element={<EditIngredientPage />} />
 
-                    {/* Units */}
-                    <Route path="units" element={<UnitListPage />} />
-                    <Route path="units/new" element={<CreateUnitPage />} />
-                    <Route path="units/:id/edit" element={<EditUnitPage />} />
+                      {/* Units */}
+                      <Route path="units" element={<UnitListPage />} />
+                      <Route path="units/new" element={<CreateUnitPage />} />
+                      <Route path="units/:id/edit" element={<EditUnitPage />} />
 
-                    {/* AgileChef Module Routes */}
-                    <Route path="prep" element={<PrepBoard />} />
+                      {/* Menu Builder */}
+                      <Route path="menus" element={<MenusPage />} />
+                      <Route path="menus/new" element={<MenuFormPage />} />
+                      <Route path="menus/:id" element={<MenuDetailPage />} />
+                      <Route path="menus/:id/edit" element={<MenuFormPage />} />
 
-                    {/* Issue Tracker Routes */}
-                    <Route path="issues" element={<IssueListPage />} />
-                    <Route path="issues/new" element={<IssueFormPage />} />
-                    <Route path="issues/:id" element={<IssueDetailPage />} />
-                    <Route path="issues/:id/edit" element={<IssueFormPage />} />
+                      {/* AgileChef Module Routes */}
+                      <Route path="prep" element={<PrepBoard />} />
 
-                    {/* Profile Route */}
-                    <Route path="profile" element={<ProfilePage />} />
+                      {/* Issue Tracker Routes */}
+                      <Route path="issues" element={<IssueListPage />} />
+                      <Route path="issues/new" element={<IssueFormPage />} />
+                      <Route path="issues/:id" element={<IssueDetailPage />} />
+                      <Route path="issues/:id/edit" element={<IssueFormPage />} />
 
-                    {/* Redirect any unknown routes to dashboard */}
-                    <Route path="*" element={<Navigate to="/" replace />} />
+                      {/* Profile Route */}
+                      <Route path="profile" element={<ProfilePage />} />
+
+                      {/* Redirect any unknown routes to dashboard */}
+                      <Route path="*" element={<Navigate to="/" replace />} />
+                    </Route>
                   </Route>
-                </Route>
-              </Routes>
-            </SnackbarProvider>
-          </NotistackProvider>
-        </AuthProvider>
-      </Router>
-    </QueryClientProvider>
+                </Routes>
+              </SnackbarProvider>
+            </NotistackProvider>
+          </AuthProvider>
+        </Router>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 };
 

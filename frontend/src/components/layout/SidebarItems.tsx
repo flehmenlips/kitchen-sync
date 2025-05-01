@@ -14,8 +14,10 @@ import MenuBookIcon from '@mui/icons-material/MenuBook'; // For Recipes
 import ScaleIcon from '@mui/icons-material/Scale'; // For Units
 import BlenderIcon from '@mui/icons-material/Blender'; // For Ingredients
 import CategoryIcon from '@mui/icons-material/Category'; // Import Category icon
-import ClassIcon from '@mui/icons-material/Class'; // Icon for Ingredient Categories?
-// TODO: Add icons for other modules later
+import ClassIcon from '@mui/icons-material/Class'; // Icon for Ingredient Categories
+import RestaurantMenuIcon from '@mui/icons-material/RestaurantMenu'; // For Menu Builder
+import BugReportIcon from '@mui/icons-material/BugReport'; // For Issues
+import AssignmentIcon from '@mui/icons-material/Assignment'; // For Prep Board
 
 interface NavItem {
   text: string;
@@ -32,12 +34,11 @@ const mainNavItems: NavItem[] = [
   { text: 'Units', icon: <ScaleIcon />, path: '/units' },
 ];
 
-// Placeholder for other future sections
-const otherNavItems: NavItem[] = [
-    // { text: 'Prep Flow', icon: <SomeIcon />, path: '/prep' },
-    // { text: 'Menus', icon: <SomeIcon />, path: '/menus' },
-    // { text: 'Orders', icon: <SomeIcon />, path: '/orders' },
-    // { text: 'KDS', icon: <SomeIcon />, path: '/kds' },
+// Tools and modules section
+const toolsNavItems: NavItem[] = [
+  { text: 'Menu Builder', icon: <RestaurantMenuIcon />, path: '/menus' },
+  { text: 'Prep Board', icon: <AssignmentIcon />, path: '/prep' },
+  { text: 'Issue Tracker', icon: <BugReportIcon />, path: '/issues' },
 ];
 
 export const SidebarItems: React.FC = () => {
@@ -62,28 +63,25 @@ export const SidebarItems: React.FC = () => {
           </ListItem>
         ))}
       </List>
-      {/* Add Categories link here if needed, or update mainNavItems */}
-      {/* We added Categories to mainNavItems in a previous step */}
-      {/* Render other sections if they exist */}
-      {otherNavItems.length > 0 && <Divider />}
-       {otherNavItems.length > 0 && (
-          <List>
-           {otherNavItems.map((item) => (
-              <ListItem key={item.text} disablePadding>
-              <ListItemButton 
-                  component={RouterLink} 
-                  to={item.path}
-                  selected={currentPath === item.path || (item.path !== '/' && currentPath.startsWith(item.path))}
-              >
-                  <ListItemIcon>
-                  {item.icon}
-                  </ListItemIcon>
-                  <ListItemText primary={item.text} />
-              </ListItemButton>
-              </ListItem>
-          ))}
-          </List>
-      )}
+      
+      <Divider />
+      
+      <List>
+        {toolsNavItems.map((item) => (
+          <ListItem key={item.text} disablePadding>
+            <ListItemButton 
+              component={RouterLink} 
+              to={item.path}
+              selected={currentPath === item.path || (item.path !== '/' && currentPath.startsWith(item.path))}
+            >
+              <ListItemIcon>
+                {item.icon}
+              </ListItemIcon>
+              <ListItemText primary={item.text} />
+            </ListItemButton>
+          </ListItem>
+        ))}
+      </List>
     </Box>
   );
 } 
