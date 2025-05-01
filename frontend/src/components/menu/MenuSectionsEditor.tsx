@@ -51,6 +51,17 @@ const SectionDialog: React.FC<SectionDialogProps> = ({
   const [name, setName] = useState(initialData?.name || '');
   const [active, setActive] = useState(initialData?.active !== false);
 
+  // Reset form values when initialData changes or dialog opens/closes
+  useEffect(() => {
+    if (initialData) {
+      setName(initialData.name);
+      setActive(initialData.active !== false);
+    } else {
+      setName('');
+      setActive(true);
+    }
+  }, [initialData, open]);
+
   const handleSave = () => {
     if (!name.trim()) return;
     onSave({ name, active });
@@ -102,6 +113,27 @@ const ItemDialog: React.FC<ItemDialogProps> = ({
   const [loading, setLoading] = useState(false);
   const [importDescription, setImportDescription] = useState(true);
   const [useRecipeName, setUseRecipeName] = useState(false);
+
+  // Reset form values when initialData changes or dialog opens/closes
+  useEffect(() => {
+    if (initialData) {
+      setName(initialData.name);
+      setDescription(initialData.description);
+      setPrice(initialData.price);
+      setActive(initialData.active !== false);
+      setRecipeId(initialData.recipeId);
+    } else {
+      // Reset to defaults when adding a new item
+      setName('');
+      setDescription('');
+      setPrice('');
+      setActive(true);
+      setRecipeId(null);
+    }
+    // Reset import options
+    setImportDescription(true);
+    setUseRecipeName(false);
+  }, [initialData, open]);
 
   // Load recipes when dialog opens
   useEffect(() => {
