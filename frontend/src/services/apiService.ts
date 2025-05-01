@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { RecipeFormData } from '../components/forms/RecipeForm';
 import { UserProfile, UserCredentials, AuthResponse } from '../types/user';
-import { Recipe, RecipeApiData } from '../types/recipe';
+import { Recipe as RecipeType, RecipeApiData } from '../types/recipe';
 
 // Get the base URL from environment variables, defaulting to localhost:3001
 // Vite exposes env variables prefixed with VITE_
@@ -720,7 +720,7 @@ export interface MenuFormData {
 // === Menu API Functions ===
 export const getMenus = async (): Promise<Menu[]> => {
   try {
-    const response = await apiService.get('/menus');
+    const response = await apiService.get('/menus?include=sections,items');
     return response.data;
   } catch (error) {
     console.error('Error fetching menus:', error);

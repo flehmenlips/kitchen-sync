@@ -37,6 +37,9 @@ export const getMenus = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    // Check if sections and items should be included
+    const includeFull = req.query.include?.toString().includes('sections');
+
     const menus = await prisma.menu.findMany({
       where: {
         userId: req.user.id,
@@ -44,7 +47,26 @@ export const getMenus = async (req: Request, res: Response): Promise<void> => {
       },
       orderBy: {
         updatedAt: 'desc'
-      }
+      },
+      include: includeFull ? {
+        sections: {
+          orderBy: { position: 'asc' },
+          include: {
+            items: {
+              orderBy: { position: 'asc' },
+              include: {
+                recipe: {
+                  select: {
+                    id: true,
+                    name: true,
+                    photoUrl: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      } : undefined
     });
 
     res.status(200).json(menus);
