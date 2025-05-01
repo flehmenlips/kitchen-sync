@@ -232,64 +232,70 @@ const MenuDetailPage: React.FC = () => {
 
           {/* Menu sections and items */}
           {menu.sections && menu.sections.length > 0 ? (
-            menu.sections.map((section) => (
-              <Box key={section.id} sx={{ mb: 4 }}>
-                <Typography 
-                  variant="h5" 
-                  component="h3"
-                  sx={{ 
-                    color: menu.accentColor || '#333333',
-                    borderBottom: menu.showSectionDividers ? `1px solid ${menu.accentColor || '#333333'}` : 'none',
-                    pb: 1,
-                    mb: 2,
-                    fontFamily: 'inherit'
-                  }}
-                >
-                  {section.name}
-                </Typography>
-                
-                {section.items && section.items.length > 0 ? (
-                  section.items.map((item) => (
-                    <Box key={item.id} sx={{ mb: 2 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <Typography 
-                          variant="h6" 
-                          component="h4"
-                          sx={{ fontFamily: 'inherit' }}
-                        >
-                          {item.name}
-                        </Typography>
-                        <Typography 
-                          variant="h6" 
-                          component="span"
-                          sx={{ fontWeight: 'bold', fontFamily: 'inherit' }}
-                        >
-                          {item.price && (
-                            menu.showDollarSign ? 
-                            `$${menu.showDecimals ? item.price : parseFloat(item.price).toFixed(0)}` :
-                            `${menu.showDecimals ? item.price : parseFloat(item.price).toFixed(0)}`
+            // Filter out deleted and inactive sections
+            menu.sections
+              .filter(section => !section.deleted && section.active)
+              .map((section) => (
+                <Box key={section.id} sx={{ mb: 4 }}>
+                  <Typography 
+                    variant="h5" 
+                    component="h3"
+                    sx={{ 
+                      color: menu.accentColor || '#333333',
+                      borderBottom: menu.showSectionDividers ? `1px solid ${menu.accentColor || '#333333'}` : 'none',
+                      pb: 1,
+                      mb: 2,
+                      fontFamily: 'inherit'
+                    }}
+                  >
+                    {section.name}
+                  </Typography>
+                  
+                  {section.items && section.items.filter(item => !item.deleted && item.active).length > 0 ? (
+                    // Filter out deleted and inactive items
+                    section.items
+                      .filter(item => !item.deleted && item.active)
+                      .map((item) => (
+                        <Box key={item.id} sx={{ mb: 2 }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <Typography 
+                              variant="h6" 
+                              component="h4"
+                              sx={{ fontFamily: 'inherit' }}
+                            >
+                              {item.name}
+                            </Typography>
+                            <Typography 
+                              variant="h6" 
+                              component="span"
+                              sx={{ fontWeight: 'bold', fontFamily: 'inherit' }}
+                            >
+                              {item.price && (
+                                menu.showDollarSign ? 
+                                `$${menu.showDecimals ? item.price : parseFloat(item.price).toFixed(0)}` :
+                                `${menu.showDecimals ? item.price : parseFloat(item.price).toFixed(0)}`
+                              )}
+                            </Typography>
+                          </Box>
+                          {item.description && (
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                fontStyle: 'italic', 
+                                mt: 0.5,
+                                fontFamily: 'inherit'
+                              }}
+                            >
+                              {item.description}
+                            </Typography>
                           )}
-                        </Typography>
-                      </Box>
-                      {item.description && (
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            fontStyle: 'italic', 
-                            mt: 0.5,
-                            fontFamily: 'inherit'
-                          }}
-                        >
-                          {item.description}
-                        </Typography>
-                      )}
-                    </Box>
-                  ))
-                ) : (
-                  <Typography variant="body2">No items in this section</Typography>
-                )}
-              </Box>
-            ))
+                        </Box>
+                      ))
+                  ) : (
+                    <Typography variant="body2">No items in this section</Typography>
+                  )}
+                </Box>
+              ))
           ) : (
             <Box sx={{ textAlign: 'center', py: 4 }}>
               <Typography variant="h6">
