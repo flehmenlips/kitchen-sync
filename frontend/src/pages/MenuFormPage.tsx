@@ -1,12 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Box, Container, Typography, Paper, TextField, Button, CircularProgress,
   Divider, Grid, IconButton, Tabs, Tab, Alert, FormControlLabel, Switch,
-  Select, MenuItem as MuiMenuItem, InputLabel, FormControl
+  Select, MenuItem as MuiMenuItem, InputLabel, FormControl, SelectChangeEvent
 } from '@mui/material';
-import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
-import { createMenu, getMenuById, updateMenu, MenuFormData, Menu } from '../services/apiService';
+import { 
+  ArrowBack as ArrowBackIcon, 
+  CloudUpload as CloudUploadIcon,
+  Delete as DeleteIcon
+} from '@mui/icons-material';
+import { createMenu, getMenuById, updateMenu, uploadMenuLogo, MenuFormData, Menu } from '../services/apiService';
 import MenuSectionsEditor from '../components/menu/MenuSectionsEditor';
 
 interface TabPanelProps {
@@ -39,11 +43,14 @@ const MenuFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const isEditing = Boolean(id);
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
+  const [uploadingLogo, setUploadingLogo] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [tabValue, setTabValue] = useState<number>(0);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
   
   const [menu, setMenu] = useState<MenuFormData>({
     name: '',
@@ -57,6 +64,7 @@ const MenuFormPage: React.FC = () => {
     backgroundColor: '#ffffff',
     textColor: '#000000',
     accentColor: '#333333',
+    logoPath: null,
     sections: []
   });
 
@@ -67,6 +75,11 @@ const MenuFormPage: React.FC = () => {
         try {
           setLoading(true);
           const menuData = await getMenuById(parseInt(id));
+          
+          // Set logo preview if menu has a logo
+          if (menuData.logoPath) {
+            setLogoPreview(menuData.logoPath);
+          }
           
           // Convert Menu to MenuFormData format
           setMenu({
@@ -81,6 +94,7 @@ const MenuFormPage: React.FC = () => {
             backgroundColor: menuData.backgroundColor || '#ffffff',
             textColor: menuData.textColor || '#000000',
             accentColor: menuData.accentColor || '#333333',
+            logoPath: menuData.logoPath || null,
             sections: menuData.sections || []
           });
           
@@ -111,6 +125,70 @@ const MenuFormPage: React.FC = () => {
       ...prev,
       [name]: inputValue
     }));
+  };
+
+  const handleSelectChange = (e: SelectChangeEvent) => {
+    const { name, value } = e.target;
+    
+    setMenu(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || event.target.files.length === 0) {
+      return;
+    }
+    
+    const file = event.target.files[0];
+    
+    // Create a preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (e.target && e.target.result) {
+        setLogoPreview(e.target.result.toString());
+      }
+    };
+    reader.readAsDataURL(file);
+    
+    // If we're editing, upload the logo immediately
+    if (isEditing && id) {
+      try {
+        setUploadingLogo(true);
+        setError(null);
+        
+        const response = await uploadMenuLogo(parseInt(id), file);
+        
+        // Update the menu with the new logo path
+        setMenu(prev => ({
+          ...prev,
+          logoPath: response.logoUrl
+        }));
+        
+      } catch (err) {
+        console.error("Error uploading logo:", err);
+        setError("Failed to upload logo. Please try again.");
+      } finally {
+        setUploadingLogo(false);
+      }
+    } else {
+      // For new menus, we'll submit the logo after the menu is created
+      // Just keep the preview for now
+    }
+  };
+  
+  const handleRemoveLogo = () => {
+    setLogoPreview(null);
+    setMenu(prev => ({
+      ...prev,
+      logoPath: null
+    }));
+    
+    // Clear the file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -220,9 +298,311 @@ const MenuFormPage: React.FC = () => {
           </TabPanel>
 
           <TabPanel value={tabValue} index={1}>
-            <Typography variant="subtitle1" gutterBottom>
-              Layout & Style settings will be implemented in the next phase
-            </Typography>
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Typography & Layout
+                </Typography>
+                
+                {/* Logo Upload Section */}
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Menu Logo
+                  </Typography>
+                  
+                  <input
+                    ref={fileInputRef}
+                    accept="image/*"
+                    id="logo-upload"
+                    type="file"
+                    style={{ display: 'none' }}
+                    onChange={handleLogoUpload}
+                  />
+                  
+                  <Box sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    p: 2,
+                    border: '1px dashed #ccc',
+                    borderRadius: 1,
+                    mb: 2,
+                    minHeight: 150,
+                    position: 'relative'
+                  }}>
+                    {uploadingLogo && (
+                      <Box sx={{ 
+                        position: 'absolute', 
+                        top: 0, 
+                        left: 0, 
+                        width: '100%', 
+                        height: '100%', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        backgroundColor: 'rgba(255,255,255,0.7)',
+                        zIndex: 10
+                      }}>
+                        <CircularProgress />
+                      </Box>
+                    )}
+                    
+                    {logoPreview ? (
+                      <>
+                        <img 
+                          src={logoPreview} 
+                          alt="Menu Logo Preview" 
+                          style={{ 
+                            maxWidth: '100%', 
+                            maxHeight: 120, 
+                            objectFit: 'contain'
+                          }} 
+                        />
+                        <IconButton 
+                          color="error" 
+                          onClick={handleRemoveLogo}
+                          sx={{ mt: 1 }}
+                          disabled={uploadingLogo}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </>
+                    ) : (
+                      <Box sx={{ textAlign: 'center' }}>
+                        <CloudUploadIcon sx={{ fontSize: 40, color: 'text.secondary', mb: 1 }} />
+                        <Typography variant="body2" color="text.secondary">
+                          Upload your restaurant logo
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                    <Button
+                      variant="outlined"
+                      component="label"
+                      htmlFor="logo-upload"
+                      startIcon={<CloudUploadIcon />}
+                      disabled={uploadingLogo}
+                    >
+                      {logoPreview ? 'Change Logo' : 'Upload Logo'}
+                    </Button>
+                  </Box>
+                </Box>
+
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                  <InputLabel id="font-select-label">Font</InputLabel>
+                  <Select
+                    labelId="font-select-label"
+                    name="font"
+                    value={menu.font || 'Playfair Display'}
+                    onChange={handleSelectChange}
+                    label="Font"
+                  >
+                    <MuiMenuItem value="Playfair Display">Playfair Display (Elegant)</MuiMenuItem>
+                    <MuiMenuItem value="Roboto">Roboto (Modern)</MuiMenuItem>
+                    <MuiMenuItem value="Lora">Lora (Classic)</MuiMenuItem>
+                    <MuiMenuItem value="Montserrat">Montserrat (Contemporary)</MuiMenuItem>
+                    <MuiMenuItem value="Oswald">Oswald (Bold)</MuiMenuItem>
+                  </Select>
+                </FormControl>
+                
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                  <InputLabel id="layout-select-label">Layout</InputLabel>
+                  <Select
+                    labelId="layout-select-label"
+                    name="layout"
+                    value={menu.layout || 'single'}
+                    onChange={handleSelectChange}
+                    label="Layout"
+                  >
+                    <MuiMenuItem value="single">Single Column</MuiMenuItem>
+                    <MuiMenuItem value="double">Two Columns</MuiMenuItem>
+                    <MuiMenuItem value="grid">Grid Layout</MuiMenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Color Scheme
+                </Typography>
+                <Box sx={{ mb: 2 }}>
+                  <InputLabel htmlFor="background-color">Background Color</InputLabel>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                    <Box 
+                      sx={{ 
+                        width: 40, 
+                        height: 40, 
+                        backgroundColor: menu.backgroundColor || '#ffffff',
+                        border: '1px solid #ccc',
+                        borderRadius: 1,
+                        mr: 2
+                      }} 
+                    />
+                    <TextField
+                      id="background-color"
+                      name="backgroundColor"
+                      value={menu.backgroundColor || '#ffffff'}
+                      onChange={handleInputChange}
+                      size="small"
+                      sx={{ width: 120 }}
+                    />
+                  </Box>
+                </Box>
+                
+                <Box sx={{ mb: 2 }}>
+                  <InputLabel htmlFor="text-color">Text Color</InputLabel>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                    <Box 
+                      sx={{ 
+                        width: 40, 
+                        height: 40, 
+                        backgroundColor: menu.textColor || '#000000',
+                        border: '1px solid #ccc',
+                        borderRadius: 1,
+                        mr: 2
+                      }} 
+                    />
+                    <TextField
+                      id="text-color"
+                      name="textColor"
+                      value={menu.textColor || '#000000'}
+                      onChange={handleInputChange}
+                      size="small"
+                      sx={{ width: 120 }}
+                    />
+                  </Box>
+                </Box>
+                
+                <Box sx={{ mb: 2 }}>
+                  <InputLabel htmlFor="accent-color">Accent Color</InputLabel>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                    <Box 
+                      sx={{ 
+                        width: 40, 
+                        height: 40, 
+                        backgroundColor: menu.accentColor || '#333333',
+                        border: '1px solid #ccc',
+                        borderRadius: 1,
+                        mr: 2
+                      }} 
+                    />
+                    <TextField
+                      id="accent-color"
+                      name="accentColor"
+                      value={menu.accentColor || '#333333'}
+                      onChange={handleInputChange}
+                      size="small"
+                      sx={{ width: 120 }}
+                    />
+                  </Box>
+                </Box>
+              </Grid>
+              
+              <Grid item xs={12}>
+                <Divider sx={{ my: 2 }} />
+                <Typography variant="subtitle1" gutterBottom>
+                  Display Options
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={4}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={menu.showDollarSign !== false}
+                          onChange={handleInputChange}
+                          name="showDollarSign"
+                        />
+                      }
+                      label="Show Dollar Sign ($)"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={menu.showDecimals !== false}
+                          onChange={handleInputChange}
+                          name="showDecimals"
+                        />
+                      }
+                      label="Show Decimal Places"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={menu.showSectionDividers !== false}
+                          onChange={handleInputChange}
+                          name="showSectionDividers"
+                        />
+                      }
+                      label="Show Section Dividers"
+                    />
+                  </Grid>
+                </Grid>
+              </Grid>
+              
+              <Grid item xs={12}>
+                <Box sx={{ mt: 3, p: 2, border: '1px dashed #ccc', borderRadius: 1 }}>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Preview
+                  </Typography>
+                  <Box 
+                    sx={{ 
+                      p: 3, 
+                      backgroundColor: menu.backgroundColor || '#ffffff',
+                      color: menu.textColor || '#000000',
+                      borderRadius: 1,
+                      fontFamily: menu.font || 'Playfair Display',
+                      position: 'relative'
+                    }}
+                  >
+                    <Typography 
+                      variant="h4" 
+                      sx={{ 
+                        textAlign: 'center',
+                        mb: 1 
+                      }}
+                    >
+                      {menu.title || 'Sample Menu'}
+                    </Typography>
+                    {menu.subtitle && (
+                      <Typography 
+                        variant="subtitle1" 
+                        sx={{ 
+                          textAlign: 'center',
+                          mb: 2,
+                          fontStyle: 'italic'
+                        }}
+                      >
+                        {menu.subtitle}
+                      </Typography>
+                    )}
+                    {menu.showSectionDividers && <Divider sx={{ mb: 2, borderColor: menu.accentColor || '#333333' }} />}
+                    <Typography variant="h6" sx={{ color: menu.accentColor || '#333333' }}>
+                      Sample Section
+                    </Typography>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', my: 1 }}>
+                      <Box>
+                        <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                          Sample Item
+                        </Typography>
+                        <Typography variant="body2">
+                          Description of the item goes here
+                        </Typography>
+                      </Box>
+                      <Typography variant="body1">
+                        {menu.showDollarSign ? '$' : ''}{menu.showDecimals ? '12.95' : '13'}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Box>
+              </Grid>
+            </Grid>
           </TabPanel>
 
           <TabPanel value={tabValue} index={2}>

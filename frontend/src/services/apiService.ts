@@ -707,6 +707,7 @@ export interface MenuFormData {
   showDollarSign?: boolean;
   showDecimals?: boolean;
   showSectionDividers?: boolean;
+  logoPath?: string | null;
   logoPosition?: string;
   logoSize?: string;
   logoOffset?: string;

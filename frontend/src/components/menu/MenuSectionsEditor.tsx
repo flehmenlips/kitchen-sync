@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Box, Typography, Button, Accordion, AccordionSummary, AccordionDetails, 
   TextField, IconButton, List, ListItem, Divider, Dialog, DialogTitle,
-  DialogContent, DialogActions, FormControlLabel, Switch
+  DialogContent, DialogActions, FormControlLabel, Switch, Autocomplete,
+  CircularProgress, Tooltip
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -10,9 +11,18 @@ import {
   DragIndicator as DragIndicatorIcon,
   ExpandMore as ExpandMoreIcon,
   Edit as EditIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  RestaurantMenu as RecipeIcon
 } from '@mui/icons-material';
-import { MenuSection, MenuItem } from '../../services/apiService';
+import { MenuSection, MenuItem, getRecipes } from '../../services/apiService';
+
+// Local interface to avoid type conflicts
+interface MenuRecipe {
+  id: number;
+  name: string;
+  description?: string | null;
+  photoUrl?: string | null;
+}
 
 interface MenuSectionsEditorProps {
   sections: MenuSection[];
@@ -30,8 +40,8 @@ interface SectionDialogProps {
 interface ItemDialogProps {
   open: boolean;
   onClose: () => void;
-  onSave: (itemData: { name: string; description: string; price: string; active: boolean }) => void;
-  initialData?: { name: string; description: string; price: string; active: boolean };
+  onSave: (itemData: { name: string; description: string; price: string; active: boolean; recipeId: number | null }) => void;
+  initialData?: { name: string; description: string; price: string; active: boolean; recipeId: number | null };
   title: string;
 }
 
@@ -87,12 +97,60 @@ const ItemDialog: React.FC<ItemDialogProps> = ({
   const [description, setDescription] = useState(initialData?.description || '');
   const [price, setPrice] = useState(initialData?.price || '');
   const [active, setActive] = useState(initialData?.active !== false);
+  const [recipeId, setRecipeId] = useState<number | null>(initialData?.recipeId || null);
+  const [recipes, setRecipes] = useState<MenuRecipe[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [importDescription, setImportDescription] = useState(true);
+  const [useRecipeName, setUseRecipeName] = useState(false);
+
+  // Load recipes when dialog opens
+  useEffect(() => {
+    if (open) {
+      const fetchRecipes = async () => {
+        try {
+          setLoading(true);
+          const data = await getRecipes();
+          
+          // Convert to our local MenuRecipe interface
+          const mappedRecipes: MenuRecipe[] = data.map(recipe => ({
+            id: typeof recipe.id === 'string' ? parseInt(recipe.id, 10) : recipe.id,
+            name: recipe.name,
+            description: recipe.description,
+            photoUrl: recipe.photoUrl
+          }));
+          
+          setRecipes(mappedRecipes);
+        } catch (error) {
+          console.error('Error fetching recipes:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      fetchRecipes();
+    }
+  }, [open]);
 
   const handleSave = () => {
     if (!name.trim()) return;
-    onSave({ name, description, price, active });
+    onSave({ name, description, price, active, recipeId });
     onClose();
   };
+
+  // Find selected recipe object based on recipeId
+  const selectedRecipe = recipes.find(recipe => recipe.id === recipeId) || null;
+
+  // Update name and description when a recipe is selected and import options are checked
+  useEffect(() => {
+    if (selectedRecipe) {
+      if (useRecipeName) {
+        setName(selectedRecipe.name);
+      }
+      if (importDescription && selectedRecipe.description) {
+        setDescription(selectedRecipe.description);
+      }
+    }
+  }, [selectedRecipe, useRecipeName, importDescription]);
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -124,6 +182,66 @@ const ItemDialog: React.FC<ItemDialogProps> = ({
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
+        
+        <Box sx={{ mt: 2, mb: 1 }}>
+          <Typography variant="subtitle2" gutterBottom>
+            Link to Recipe (Optional)
+          </Typography>
+          <Autocomplete
+            id="recipe-selector"
+            options={recipes}
+            value={selectedRecipe}
+            loading={loading}
+            getOptionLabel={(option) => option.name}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Select Recipe"
+                margin="dense"
+                fullWidth
+                InputProps={{
+                  ...params.InputProps,
+                  endAdornment: (
+                    <>
+                      {loading ? <CircularProgress color="inherit" size={20} /> : null}
+                      {params.InputProps.endAdornment}
+                    </>
+                  ),
+                }}
+              />
+            )}
+            onChange={(event, newValue) => {
+              setRecipeId(newValue ? newValue.id : null);
+            }}
+          />
+        </Box>
+        
+        {selectedRecipe && (
+          <Box sx={{ mt: 2, mb: 1, p: 2, bgcolor: 'background.paper', border: '1px solid #eee', borderRadius: 1 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Recipe Import Options
+            </Typography>
+            <FormControlLabel
+              control={
+                <Switch 
+                  checked={useRecipeName} 
+                  onChange={(e) => setUseRecipeName(e.target.checked)} 
+                />
+              }
+              label="Use Recipe Name For Menu Item"
+            />
+            <FormControlLabel
+              control={
+                <Switch 
+                  checked={importDescription} 
+                  onChange={(e) => setImportDescription(e.target.checked)} 
+                />
+              }
+              label="Import Recipe Description"
+            />
+          </Box>
+        )}
+        
         <FormControlLabel
           control={
             <Switch 
@@ -240,6 +358,7 @@ const MenuSectionsEditor: React.FC<MenuSectionsEditorProps> = ({ sections, onCha
     description: string; 
     price: string;
     active: boolean;
+    recipeId: number | null;
   }) => {
     if (currentSectionIndex === null) return;
     
@@ -254,7 +373,8 @@ const MenuSectionsEditor: React.FC<MenuSectionsEditorProps> = ({ sections, onCha
         name: itemData.name,
         description: itemData.description,
         price: itemData.price,
-        active: itemData.active
+        active: itemData.active,
+        recipeId: itemData.recipeId
       };
     } else {
       // Add new item
@@ -263,7 +383,8 @@ const MenuSectionsEditor: React.FC<MenuSectionsEditorProps> = ({ sections, onCha
         description: itemData.description,
         price: itemData.price,
         active: itemData.active,
-        position: items.length
+        position: items.length,
+        recipeId: itemData.recipeId
       };
       items.push(newItem);
     }
@@ -410,6 +531,15 @@ const MenuSectionsEditor: React.FC<MenuSectionsEditorProps> = ({ sections, onCha
                               {item.price && (
                                 <Typography sx={{ mr: 2 }}>${item.price}</Typography>
                               )}
+                              {item.recipeId && (
+                                <Tooltip title="Linked to Recipe">
+                                  <RecipeIcon 
+                                    fontSize="small" 
+                                    color="primary" 
+                                    sx={{ mr: 2 }}
+                                  />
+                                </Tooltip>
+                              )}
                               <IconButton 
                                 size="small" 
                                 onClick={() => handleEditItem(sectionIndex, actualItemIndex)}
@@ -462,7 +592,8 @@ const MenuSectionsEditor: React.FC<MenuSectionsEditorProps> = ({ sections, onCha
             name: sections[currentSectionIndex].items[currentItemIndex].name,
             description: sections[currentSectionIndex].items[currentItemIndex].description || '',
             price: sections[currentSectionIndex].items[currentItemIndex].price || '',
-            active: sections[currentSectionIndex].items[currentItemIndex].active !== false
+            active: sections[currentSectionIndex].items[currentItemIndex].active !== false,
+            recipeId: sections[currentSectionIndex].items[currentItemIndex].recipeId || null
           } : undefined
         }
         title={editMode ? "Edit Item" : "Add Item"}
