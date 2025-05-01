@@ -79,8 +79,7 @@ const KITCHEN_SYNC_MODULES = [
         name: 'MenuBuilder',
         icon: <RestaurantMenuIcon />,
         description: 'Menu Design & Management',
-        path: '/menus',
-        comingSoon: true
+        path: '/menus'
     },
     {
         id: 'tablefarm',
