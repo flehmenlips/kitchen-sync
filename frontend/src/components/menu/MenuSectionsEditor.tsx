@@ -3,7 +3,7 @@ import {
   Box, Typography, Button, Accordion, AccordionSummary, AccordionDetails, 
   TextField, IconButton, List, ListItem, Divider, Dialog, DialogTitle,
   DialogContent, DialogActions, FormControlLabel, Switch, Autocomplete,
-  CircularProgress, Tooltip
+  CircularProgress, Tooltip, Paper
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -14,6 +14,7 @@ import {
   Close as CloseIcon,
   RestaurantMenu as RecipeIcon
 } from '@mui/icons-material';
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { MenuSection, MenuItem, getRecipes } from '../../services/apiService';
 
 // Local interface to avoid type conflicts
@@ -426,6 +427,62 @@ const MenuSectionsEditor: React.FC<MenuSectionsEditorProps> = ({ sections, onCha
     onChange(newSections);
   };
 
+  // Handle drag and drop for sections
+  const handleDragEnd = (result: DropResult) => {
+    const { destination, source, type } = result;
+
+    // If there's no destination or the item is dropped in the same place
+    if (!destination || 
+        (destination.droppableId === source.droppableId && 
+         destination.index === source.index)) {
+      return;
+    }
+
+    if (type === 'section') {
+      // We're moving a section
+      const newSections = [...sections.filter(section => !section.deleted)];
+      const [removed] = newSections.splice(source.index, 1);
+      newSections.splice(destination.index, 0, removed);
+      
+      // Update positions
+      const updatedSections = newSections.map((section, index) => ({
+        ...section,
+        position: index
+      }));
+      
+      // Combine with deleted sections which should remain at the end
+      const deletedSections = sections.filter(section => section.deleted);
+      onChange([...updatedSections, ...deletedSections]);
+    } else if (type === 'item') {
+      // We're moving an item within a section
+      const sourceSectionId = source.droppableId;
+      const destSectionId = destination.droppableId;
+      
+      const sectionIndex = parseInt(sourceSectionId.replace('section-', ''));
+      const newSections = [...sections];
+      
+      const section = {...newSections[sectionIndex]};
+      const visibleItems = section.items.filter(item => !item.deleted);
+      
+      // Move the item
+      const [removed] = visibleItems.splice(source.index, 1);
+      visibleItems.splice(destination.index, 0, removed);
+      
+      // Update positions
+      const updatedItems = visibleItems.map((item, index) => ({
+        ...item,
+        position: index
+      }));
+      
+      // Combine with deleted items which should remain at the end
+      const deletedItems = section.items.filter(item => item.deleted);
+      section.items = [...updatedItems, ...deletedItems];
+      
+      newSections[sectionIndex] = section;
+      onChange(newSections);
+    }
+  };
+
   // Filter out deleted sections
   const visibleSections = sections.filter(section => !section.deleted);
 
@@ -448,156 +505,235 @@ const MenuSectionsEditor: React.FC<MenuSectionsEditorProps> = ({ sections, onCha
           No sections added yet. Click "Add Section" to create your first menu section.
         </Typography>
       ) : (
-        visibleSections.map((section, sectionIndex) => (
-          <Accordion 
-            key={section.id || `new-section-${sectionIndex}`}
-            expanded={expandedSection === `section-${sectionIndex}`}
-            onChange={handleSectionChange(`section-${sectionIndex}`)}
-            sx={{ mb: 2 }}
-          >
-            <AccordionSummary
-              expandIcon={<ExpandMoreIcon />}
-              aria-controls={`section-${sectionIndex}-content`}
-              id={`section-${sectionIndex}-header`}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                <DragIndicatorIcon sx={{ mr: 1, color: 'text.secondary' }} />
-                <Typography sx={{ flexGrow: 1 }}>{section.name}</Typography>
-                <Box sx={{ display: 'flex', ml: 1 }}>
-                  {!section.active && (
-                    <Typography 
-                      variant="caption" 
-                      sx={{ 
-                        mr: 2, 
-                        color: 'text.secondary',
-                        alignSelf: 'center' 
-                      }}
-                    >
-                      (Inactive)
-                    </Typography>
-                  )}
-                  <IconButton 
-                    size="small" 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleEditSection(sectionIndex);
-                    }}
-                    sx={{ mr: 1 }}
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <Droppable droppableId="menu-sections" type="section">
+            {(provided) => (
+              <Box
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+              >
+                {visibleSections.map((section, sectionIndex) => (
+                  <Draggable 
+                    key={section.id ? `section-${section.id}` : `new-section-${sectionIndex}`}
+                    draggableId={section.id ? `section-${section.id}` : `new-section-${sectionIndex}`}
+                    index={sectionIndex}
                   >
-                    <EditIcon fontSize="small" />
-                  </IconButton>
-                  <IconButton 
-                    size="small" 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteSection(sectionIndex);
-                    }}
-                    color="error"
-                  >
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
-                </Box>
-              </Box>
-            </AccordionSummary>
-            <AccordionDetails>
-              <Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Typography variant="subtitle1">Items</Typography>
-                  <Button 
-                    size="small" 
-                    startIcon={<AddIcon />}
-                    onClick={() => handleAddItem(sectionIndex)}
-                  >
-                    Add Item
-                  </Button>
-                </Box>
-                
-                {/* Filter out deleted items */}
-                {section.items.filter(item => !item.deleted).length === 0 ? (
-                  <Typography variant="body2" sx={{ textAlign: 'center', py: 2 }}>
-                    No items in this section. Click "Add Item" to add menu items.
-                  </Typography>
-                ) : (
-                  <List sx={{ width: '100%' }}>
-                    {section.items.filter(item => !item.deleted).map((item, itemIndex) => {
-                      // Find the actual index in the original array for editing/deleting
-                      const actualItemIndex = section.items.findIndex(i => 
-                        item.id ? i.id === item.id : i === item
-                      );
-                      
-                      return (
-                        <React.Fragment key={item.id || `new-item-${itemIndex}`}>
-                          <ListItem
-                            sx={{
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              py: 1,
-                              borderRadius: 1,
-                              '&:hover': {
-                                backgroundColor: 'rgba(0, 0, 0, 0.04)'
-                              }
-                            }}
+                    {(provided, snapshot) => (
+                      <Paper
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        elevation={snapshot.isDragging ? 3 : 0}
+                        sx={{ 
+                          mb: 2,
+                          borderRadius: 1,
+                          transition: 'all 0.3s',
+                          transform: snapshot.isDragging ? 'scale(1.01)' : 'none'
+                        }}
+                      >
+                        <Accordion 
+                          expanded={expandedSection === `section-${sectionIndex}`}
+                          onChange={handleSectionChange(`section-${sectionIndex}`)}
+                          sx={{ 
+                            boxShadow: 'none',
+                            '&:before': {
+                              display: 'none'
+                            }
+                          }}
+                        >
+                          <AccordionSummary
+                            expandIcon={<ExpandMoreIcon />}
+                            aria-controls={`section-${sectionIndex}-content`}
+                            id={`section-${sectionIndex}-header`}
                           >
-                            <Box sx={{ display: 'flex', alignItems: 'flex-start', flexGrow: 1 }}>
-                              <DragIndicatorIcon sx={{ mt: 0.5, mr: 1, color: 'text.secondary' }} />
-                              <Box>
-                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                  <Typography variant="subtitle2">{item.name}</Typography>
-                                  {!item.active && (
-                                    <Typography 
-                                      variant="caption" 
-                                      sx={{ ml: 1, color: 'text.secondary' }}
-                                    >
-                                      (Inactive)
-                                    </Typography>
-                                  )}
-                                </Box>
-                                {item.description && (
-                                  <Typography variant="body2" color="text.secondary">
-                                    {item.description}
+                            <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                              <Box 
+                                {...provided.dragHandleProps} 
+                                sx={{ 
+                                  display: 'flex', 
+                                  alignItems: 'center',
+                                  cursor: 'grab'
+                                }}
+                              >
+                                <DragIndicatorIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                              </Box>
+                              <Typography sx={{ flexGrow: 1 }}>{section.name}</Typography>
+                              <Box sx={{ display: 'flex', ml: 1 }}>
+                                {!section.active && (
+                                  <Typography 
+                                    variant="caption" 
+                                    sx={{ 
+                                      mr: 2, 
+                                      color: 'text.secondary',
+                                      alignSelf: 'center' 
+                                    }}
+                                  >
+                                    (Inactive)
                                   </Typography>
                                 )}
+                                <IconButton 
+                                  size="small" 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditSection(sectionIndex);
+                                  }}
+                                  sx={{ mr: 1 }}
+                                >
+                                  <EditIcon fontSize="small" />
+                                </IconButton>
+                                <IconButton 
+                                  size="small" 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteSection(sectionIndex);
+                                  }}
+                                  color="error"
+                                >
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
                               </Box>
                             </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', ml: 2 }}>
-                              {item.price && (
-                                <Typography sx={{ mr: 2 }}>${item.price}</Typography>
+                          </AccordionSummary>
+                          <AccordionDetails>
+                            <Box>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                <Typography variant="subtitle1">Items</Typography>
+                                <Button 
+                                  size="small" 
+                                  startIcon={<AddIcon />}
+                                  onClick={() => handleAddItem(sectionIndex)}
+                                >
+                                  Add Item
+                                </Button>
+                              </Box>
+                              
+                              {/* Filter out deleted items */}
+                              {section.items.filter(item => !item.deleted).length === 0 ? (
+                                <Typography variant="body2" sx={{ textAlign: 'center', py: 2 }}>
+                                  No items in this section. Click "Add Item" to add menu items.
+                                </Typography>
+                              ) : (
+                                <Droppable 
+                                  droppableId={`section-${sectionIndex}`} 
+                                  type="item"
+                                >
+                                  {(provided) => (
+                                    <List 
+                                      ref={provided.innerRef}
+                                      {...provided.droppableProps}
+                                      sx={{ width: '100%' }}
+                                    >
+                                      {section.items
+                                        .filter(item => !item.deleted)
+                                        .map((item, itemIndex) => {
+                                        // Find the actual index in the original array for editing/deleting
+                                        const actualItemIndex = section.items.findIndex(i => 
+                                          item.id ? i.id === item.id : i === item
+                                        );
+                                        
+                                        return (
+                                          <Draggable
+                                            key={item.id ? `item-${item.id}` : `new-item-${itemIndex}`}
+                                            draggableId={item.id ? `item-${item.id}` : `new-item-${itemIndex}`}
+                                            index={itemIndex}
+                                          >
+                                            {(provided, snapshot) => (
+                                              <React.Fragment>
+                                                <ListItem
+                                                  ref={provided.innerRef}
+                                                  {...provided.draggableProps}
+                                                  sx={{
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    py: 1,
+                                                    borderRadius: 1,
+                                                    backgroundColor: snapshot.isDragging ? 'rgba(0, 0, 0, 0.07)' : 'transparent',
+                                                    '&:hover': {
+                                                      backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                                                    }
+                                                  }}
+                                                >
+                                                  <Box sx={{ display: 'flex', alignItems: 'flex-start', flexGrow: 1 }}>
+                                                    <Box 
+                                                      {...provided.dragHandleProps}
+                                                      sx={{ 
+                                                        cursor: 'grab', 
+                                                        display: 'flex', 
+                                                        alignItems: 'center' 
+                                                      }}
+                                                    >
+                                                      <DragIndicatorIcon sx={{ mt: 0.5, mr: 1, color: 'text.secondary' }} />
+                                                    </Box>
+                                                    <Box>
+                                                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                        <Typography variant="subtitle2">{item.name}</Typography>
+                                                        {!item.active && (
+                                                          <Typography 
+                                                            variant="caption" 
+                                                            sx={{ ml: 1, color: 'text.secondary' }}
+                                                          >
+                                                            (Inactive)
+                                                          </Typography>
+                                                        )}
+                                                      </Box>
+                                                      {item.description && (
+                                                        <Typography variant="body2" color="text.secondary">
+                                                          {item.description}
+                                                        </Typography>
+                                                      )}
+                                                    </Box>
+                                                  </Box>
+                                                  <Box sx={{ display: 'flex', alignItems: 'center', ml: 2 }}>
+                                                    {item.price && (
+                                                      <Typography sx={{ mr: 2 }}>${item.price}</Typography>
+                                                    )}
+                                                    {item.recipeId && (
+                                                      <Tooltip title="Linked to Recipe">
+                                                        <RecipeIcon 
+                                                          fontSize="small" 
+                                                          color="primary" 
+                                                          sx={{ mr: 2 }}
+                                                        />
+                                                      </Tooltip>
+                                                    )}
+                                                    <IconButton 
+                                                      size="small" 
+                                                      onClick={() => handleEditItem(sectionIndex, actualItemIndex)}
+                                                      sx={{ mr: 1 }}
+                                                    >
+                                                      <EditIcon fontSize="small" />
+                                                    </IconButton>
+                                                    <IconButton 
+                                                      size="small" 
+                                                      onClick={() => handleDeleteItem(sectionIndex, actualItemIndex)}
+                                                      color="error"
+                                                    >
+                                                      <DeleteIcon fontSize="small" />
+                                                    </IconButton>
+                                                  </Box>
+                                                </ListItem>
+                                                <Divider component="li" />
+                                              </React.Fragment>
+                                            )}
+                                          </Draggable>
+                                        );
+                                      })}
+                                      {provided.placeholder}
+                                    </List>
+                                  )}
+                                </Droppable>
                               )}
-                              {item.recipeId && (
-                                <Tooltip title="Linked to Recipe">
-                                  <RecipeIcon 
-                                    fontSize="small" 
-                                    color="primary" 
-                                    sx={{ mr: 2 }}
-                                  />
-                                </Tooltip>
-                              )}
-                              <IconButton 
-                                size="small" 
-                                onClick={() => handleEditItem(sectionIndex, actualItemIndex)}
-                                sx={{ mr: 1 }}
-                              >
-                                <EditIcon fontSize="small" />
-                              </IconButton>
-                              <IconButton 
-                                size="small" 
-                                onClick={() => handleDeleteItem(sectionIndex, actualItemIndex)}
-                                color="error"
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
                             </Box>
-                          </ListItem>
-                          <Divider component="li" />
-                        </React.Fragment>
-                      );
-                    })}
-                  </List>
-                )}
+                          </AccordionDetails>
+                        </Accordion>
+                      </Paper>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
               </Box>
-            </AccordionDetails>
-          </Accordion>
-        ))
+            )}
+          </Droppable>
+        </DragDropContext>
       )}
 
       {/* Section Dialog */}
