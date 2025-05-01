@@ -57,6 +57,7 @@ const MenuFormPage: React.FC = () => {
     title: '',
     subtitle: '',
     font: 'Playfair Display',
+    fontSize: 'normal',
     layout: 'single',
     showDollarSign: true,
     showDecimals: true,
@@ -87,6 +88,7 @@ const MenuFormPage: React.FC = () => {
             title: menuData.title || '',
             subtitle: menuData.subtitle || '',
             font: menuData.font || 'Playfair Display',
+            fontSize: menuData.fontSize || 'normal',
             layout: menuData.layout || 'single',
             showDollarSign: menuData.showDollarSign,
             showDecimals: menuData.showDecimals,
@@ -409,6 +411,21 @@ const MenuFormPage: React.FC = () => {
                 </FormControl>
                 
                 <FormControl fullWidth sx={{ mb: 2 }}>
+                  <InputLabel id="font-size-select-label">Font Size</InputLabel>
+                  <Select
+                    labelId="font-size-select-label"
+                    name="fontSize"
+                    value={menu.fontSize || 'normal'}
+                    onChange={handleSelectChange}
+                    label="Font Size"
+                  >
+                    <MuiMenuItem value="small">Small (Compact)</MuiMenuItem>
+                    <MuiMenuItem value="normal">Normal</MuiMenuItem>
+                    <MuiMenuItem value="large">Large</MuiMenuItem>
+                  </Select>
+                </FormControl>
+                
+                <FormControl fullWidth sx={{ mb: 2 }}>
                   <InputLabel id="layout-select-label">Layout</InputLabel>
                   <Select
                     labelId="layout-select-label"
@@ -558,14 +575,16 @@ const MenuFormPage: React.FC = () => {
                       color: menu.textColor || '#000000',
                       borderRadius: 1,
                       fontFamily: menu.font || 'Playfair Display',
-                      position: 'relative'
+                      position: 'relative',
+                      fontSize: menu.fontSize === 'small' ? '0.85em' : menu.fontSize === 'large' ? '1.15em' : '1em'
                     }}
                   >
                     <Typography 
                       variant="h4" 
                       sx={{ 
                         textAlign: 'center',
-                        mb: 1 
+                        mb: 1,
+                        fontSize: menu.fontSize === 'small' ? '1.8rem' : menu.fontSize === 'large' ? '2.5rem' : '2.2rem'
                       }}
                     >
                       {menu.title || 'Sample Menu'}
@@ -576,26 +595,38 @@ const MenuFormPage: React.FC = () => {
                         sx={{ 
                           textAlign: 'center',
                           mb: 2,
-                          fontStyle: 'italic'
+                          fontStyle: 'italic',
+                          fontSize: menu.fontSize === 'small' ? '0.9rem' : menu.fontSize === 'large' ? '1.2rem' : '1rem'
                         }}
                       >
                         {menu.subtitle}
                       </Typography>
                     )}
                     {menu.showSectionDividers && <Divider sx={{ mb: 2, borderColor: menu.accentColor || '#333333' }} />}
-                    <Typography variant="h6" sx={{ color: menu.accentColor || '#333333' }}>
+                    <Typography variant="h6" sx={{ 
+                      color: menu.accentColor || '#333333',
+                      fontSize: menu.fontSize === 'small' ? '1.1rem' : menu.fontSize === 'large' ? '1.5rem' : '1.25rem'
+                    }}>
                       Sample Section
                     </Typography>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', my: 1 }}>
                       <Box>
-                        <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                        <Typography variant="body1" sx={{ 
+                          fontWeight: 'bold',
+                          fontSize: menu.fontSize === 'small' ? '0.9rem' : menu.fontSize === 'large' ? '1.2rem' : '1rem'
+                        }}>
                           Sample Item
                         </Typography>
-                        <Typography variant="body2">
+                        <Typography variant="body2" sx={{
+                          fontSize: menu.fontSize === 'small' ? '0.8rem' : menu.fontSize === 'large' ? '1.1rem' : '0.9rem'
+                        }}>
                           Description of the item goes here
                         </Typography>
                       </Box>
-                      <Typography variant="body1">
+                      <Typography variant="body1" sx={{
+                        fontWeight: 'bold',
+                        fontSize: menu.fontSize === 'small' ? '0.9rem' : menu.fontSize === 'large' ? '1.2rem' : '1rem'
+                      }}>
                         {menu.showDollarSign ? '$' : ''}{menu.showDecimals ? '12.95' : '13'}
                       </Typography>
                     </Box>

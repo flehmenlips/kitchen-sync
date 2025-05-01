@@ -681,6 +681,7 @@ export interface Menu {
   title?: string | null;
   subtitle?: string | null;
   font?: string | null;
+  fontSize?: string | null;
   layout?: string | null;
   showDollarSign: boolean;
   showDecimals: boolean;
@@ -703,6 +704,7 @@ export interface MenuFormData {
   title?: string;
   subtitle?: string;
   font?: string;
+  fontSize?: string;
   layout?: string;
   showDollarSign?: boolean;
   showDecimals?: boolean;

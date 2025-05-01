@@ -59,10 +59,35 @@ const MenuDetailPage: React.FC = () => {
         const isDoubleColumn = menu?.layout === 'double';
         const isGridLayout = menu?.layout === 'grid';
         
+        // Get the correct font family CSS
+        let fontFamily = "'Playfair Display', serif";
+        
+        switch(menu?.font) {
+          case 'Roboto':
+            fontFamily = "'Roboto', sans-serif";
+            break;
+          case 'Lora':
+            fontFamily = "'Lora', serif";
+            break;
+          case 'Montserrat':
+            fontFamily = "'Montserrat', sans-serif";
+            break;
+          case 'Oswald':
+            fontFamily = "'Oswald', sans-serif";
+            break;
+          default:
+            fontFamily = "'Playfair Display', serif";
+        }
+        
+        // Get the font size class based on menu setting
+        const fontSizeClass = menu?.fontSize || 'normal';
+        
         printWindow.document.write(`
           <html>
             <head>
               <title>${menu?.name || 'Menu'}</title>
+              <link rel="preconnect" href="https://fonts.googleapis.com">
+              <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
               <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Roboto:wght@300;400;500;700&family=Lora:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@300;400;500;700&family=Oswald:wght@300;400;500;700&display=swap" rel="stylesheet">
               <style>
                 @media print {
@@ -73,7 +98,7 @@ const MenuDetailPage: React.FC = () => {
                 }
                 
                 body {
-                  font-family: ${menu?.font || 'Playfair Display'}, serif;
+                  font-family: ${fontFamily};
                   color: ${menu?.textColor || '#000000'};
                   background-color: ${menu?.backgroundColor || '#ffffff'};
                   margin: 0;
@@ -100,15 +125,17 @@ const MenuDetailPage: React.FC = () => {
                 
                 .menu-title {
                   color: ${menu?.accentColor || '#333333'};
-                  font-size: 24px;
+                  font-size: ${fontSizeClass === 'small' ? '22px' : fontSizeClass === 'large' ? '28px' : '24px'};
                   margin: 0 0 5px;
                   font-weight: bold;
+                  font-family: ${fontFamily};
                 }
                 
                 .menu-subtitle {
-                  font-size: 16px;
+                  font-size: ${fontSizeClass === 'small' ? '14px' : fontSizeClass === 'large' ? '18px' : '16px'};
                   margin: 0;
                   font-style: italic;
+                  font-family: ${fontFamily};
                 }
                 
                 .menu-content {
@@ -127,11 +154,12 @@ const MenuDetailPage: React.FC = () => {
                 
                 .section-title {
                   color: ${menu?.accentColor || '#333333'};
-                  font-size: 18px;
+                  font-size: ${fontSizeClass === 'small' ? '16px' : fontSizeClass === 'large' ? '22px' : '18px'};
                   border-bottom: ${menu?.showSectionDividers ? `1px solid ${menu?.accentColor || '#333333'}` : 'none'};
                   padding-bottom: 5px;
                   margin-bottom: 15px;
                   font-weight: bold;
+                  font-family: ${fontFamily};
                 }
                 
                 .menu-item {
@@ -147,22 +175,25 @@ const MenuDetailPage: React.FC = () => {
                 
                 .item-name {
                   font-weight: bold;
-                  font-size: 16px;
+                  font-size: ${fontSizeClass === 'small' ? '14px' : fontSizeClass === 'large' ? '18px' : '16px'};
                   margin: 0;
+                  font-family: ${fontFamily};
                 }
                 
                 .item-price {
                   font-weight: bold;
-                  font-size: 16px;
+                  font-size: ${fontSizeClass === 'small' ? '14px' : fontSizeClass === 'large' ? '18px' : '16px'};
                   margin: 0;
                   text-align: right;
                   min-width: 60px;
+                  font-family: ${fontFamily};
                 }
                 
                 .item-description {
                   font-style: italic;
-                  font-size: 14px;
+                  font-size: ${fontSizeClass === 'small' ? '12px' : fontSizeClass === 'large' ? '16px' : '14px'};
                   margin: 4px 0 0;
+                  font-family: ${fontFamily};
                 }
                 
                 ${isGridLayout ? `
@@ -177,20 +208,9 @@ const MenuDetailPage: React.FC = () => {
                     page-break-inside: avoid;
                   }
                 ` : ''}
-                
-                /* Font size adjustments */
-                .small-text .item-name { font-size: 14px; }
-                .small-text .item-price { font-size: 14px; }
-                .small-text .item-description { font-size: 12px; }
-                .small-text .section-title { font-size: 16px; }
-                
-                .large-text .item-name { font-size: 18px; }
-                .large-text .item-price { font-size: 18px; }
-                .large-text .item-description { font-size: 16px; }
-                .large-text .section-title { font-size: 22px; }
               </style>
             </head>
-            <body class="normal-text">
+            <body class="${fontSizeClass}-text">
               <div class="menu-container">
                 <div class="menu-header">
                   ${menu?.logoPath ? `<img src="${menu.logoPath}" alt="Menu logo" class="menu-logo" />` : ''}
@@ -278,6 +298,9 @@ const MenuDetailPage: React.FC = () => {
   const isDoubleColumn = menu.layout === 'double';
   const isGridLayout = menu.layout === 'grid';
 
+  // Font size class based on menu setting
+  const fontSizeClass = menu.fontSize || 'normal';
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 6 }}>
       {/* Header with controls */}
@@ -319,9 +342,10 @@ const MenuDetailPage: React.FC = () => {
           mb: 4,
           backgroundColor: menu.backgroundColor || '#ffffff',
           color: menu.textColor || '#000000',
-          fontFamily: `${menu.font || 'Playfair Display'}, serif`,
+          fontFamily: menu.font ? `${menu.font}, sans-serif` : '"Playfair Display", serif',
           mx: 'auto',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          fontSize: menu.fontSize === 'small' ? '0.85em' : menu.fontSize === 'large' ? '1.15em' : '1em'
         }}
         ref={menuRef}
       >
@@ -346,7 +370,8 @@ const MenuDetailPage: React.FC = () => {
               component="h2" 
               sx={{ 
                 color: menu.accentColor || '#333333',
-                fontFamily: 'inherit'
+                fontFamily: 'inherit',
+                fontSize: menu.fontSize === 'small' ? '1.8rem' : menu.fontSize === 'large' ? '2.5rem' : '2.2rem'
               }}
             >
               {menu.title || menu.name}
@@ -355,7 +380,11 @@ const MenuDetailPage: React.FC = () => {
               <Typography 
                 variant="h6" 
                 component="p"
-                sx={{ mt: 1, fontFamily: 'inherit' }}
+                sx={{ 
+                  mt: 1, 
+                  fontFamily: 'inherit',
+                  fontSize: menu.fontSize === 'small' ? '0.9rem' : menu.fontSize === 'large' ? '1.2rem' : '1rem'
+                }}
               >
                 {menu.subtitle}
               </Typography>
@@ -378,7 +407,8 @@ const MenuDetailPage: React.FC = () => {
                           borderBottom: menu.showSectionDividers ? `1px solid ${menu.accentColor || '#333333'}` : 'none',
                           pb: 1,
                           mb: 2,
-                          fontFamily: 'inherit'
+                          fontFamily: 'inherit',
+                          fontSize: menu.fontSize === 'small' ? '1.1rem' : menu.fontSize === 'large' ? '1.5rem' : '1.25rem'
                         }}
                       >
                         {section.name}
@@ -394,14 +424,21 @@ const MenuDetailPage: React.FC = () => {
                                 <Typography 
                                   variant="h6" 
                                   component="h4"
-                                  sx={{ fontFamily: 'inherit' }}
+                                  sx={{ 
+                                    fontFamily: 'inherit',
+                                    fontSize: menu.fontSize === 'small' ? '0.9rem' : menu.fontSize === 'large' ? '1.2rem' : '1rem'
+                                  }}
                                 >
                                   {item.name}
                                 </Typography>
                                 <Typography 
                                   variant="h6" 
                                   component="span"
-                                  sx={{ fontWeight: 'bold', fontFamily: 'inherit' }}
+                                  sx={{ 
+                                    fontWeight: 'bold', 
+                                    fontFamily: 'inherit',
+                                    fontSize: menu.fontSize === 'small' ? '0.9rem' : menu.fontSize === 'large' ? '1.2rem' : '1rem'
+                                  }}
                                 >
                                   {item.price && (
                                     menu.showDollarSign ? 
@@ -416,7 +453,8 @@ const MenuDetailPage: React.FC = () => {
                                   sx={{ 
                                     fontStyle: 'italic', 
                                     mt: 0.5,
-                                    fontFamily: 'inherit'
+                                    fontFamily: 'inherit',
+                                    fontSize: menu.fontSize === 'small' ? '0.8rem' : menu.fontSize === 'large' ? '1.1rem' : '0.9rem'
                                   }}
                                 >
                                   {item.description}
@@ -458,7 +496,8 @@ const MenuDetailPage: React.FC = () => {
                         borderBottom: menu.showSectionDividers ? `1px solid ${menu.accentColor || '#333333'}` : 'none',
                         pb: 1,
                         mb: 2,
-                        fontFamily: 'inherit'
+                        fontFamily: 'inherit',
+                        fontSize: menu.fontSize === 'small' ? '1.1rem' : menu.fontSize === 'large' ? '1.5rem' : '1.25rem'
                       }}
                     >
                       {section.name}
@@ -481,14 +520,21 @@ const MenuDetailPage: React.FC = () => {
                               <Typography 
                                 variant="h6" 
                                 component="h4"
-                                sx={{ fontFamily: 'inherit' }}
+                                sx={{ 
+                                  fontFamily: 'inherit',
+                                  fontSize: menu.fontSize === 'small' ? '0.9rem' : menu.fontSize === 'large' ? '1.2rem' : '1rem'
+                                }}
                               >
                                 {item.name}
                               </Typography>
                               <Typography 
                                 variant="h6" 
                                 component="span"
-                                sx={{ fontWeight: 'bold', fontFamily: 'inherit' }}
+                                sx={{ 
+                                  fontWeight: 'bold', 
+                                  fontFamily: 'inherit',
+                                  fontSize: menu.fontSize === 'small' ? '0.9rem' : menu.fontSize === 'large' ? '1.2rem' : '1rem'
+                                }}
                               >
                                 {item.price && (
                                   menu.showDollarSign ? 
@@ -503,7 +549,8 @@ const MenuDetailPage: React.FC = () => {
                                 sx={{ 
                                   fontStyle: 'italic', 
                                   mt: 0.5,
-                                  fontFamily: 'inherit'
+                                  fontFamily: 'inherit',
+                                  fontSize: menu.fontSize === 'small' ? '0.8rem' : menu.fontSize === 'large' ? '1.1rem' : '0.9rem'
                                 }}
                               >
                                 {item.description}
@@ -529,7 +576,8 @@ const MenuDetailPage: React.FC = () => {
                       borderBottom: menu.showSectionDividers ? `1px solid ${menu.accentColor || '#333333'}` : 'none',
                       pb: 1,
                       mb: 2,
-                      fontFamily: 'inherit'
+                      fontFamily: 'inherit',
+                      fontSize: menu.fontSize === 'small' ? '1.1rem' : menu.fontSize === 'large' ? '1.5rem' : '1.25rem'
                     }}
                   >
                     {section.name}
@@ -545,14 +593,21 @@ const MenuDetailPage: React.FC = () => {
                             <Typography 
                               variant="h6" 
                               component="h4"
-                              sx={{ fontFamily: 'inherit' }}
+                              sx={{ 
+                                fontFamily: 'inherit',
+                                fontSize: menu.fontSize === 'small' ? '0.9rem' : menu.fontSize === 'large' ? '1.2rem' : '1rem'
+                              }}
                             >
                               {item.name}
                             </Typography>
                             <Typography 
                               variant="h6" 
                               component="span"
-                              sx={{ fontWeight: 'bold', fontFamily: 'inherit' }}
+                              sx={{ 
+                                fontWeight: 'bold', 
+                                fontFamily: 'inherit',
+                                fontSize: menu.fontSize === 'small' ? '0.9rem' : menu.fontSize === 'large' ? '1.2rem' : '1rem'
+                              }}
                             >
                               {item.price && (
                                 menu.showDollarSign ? 
@@ -567,7 +622,8 @@ const MenuDetailPage: React.FC = () => {
                               sx={{ 
                                 fontStyle: 'italic', 
                                 mt: 0.5,
-                                fontFamily: 'inherit'
+                                fontFamily: 'inherit',
+                                fontSize: menu.fontSize === 'small' ? '0.8rem' : menu.fontSize === 'large' ? '1.1rem' : '0.9rem'
                               }}
                             >
                               {item.description}
