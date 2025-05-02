@@ -16,6 +16,7 @@ import {
 } from '@mui/icons-material';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { MenuSection, MenuItem, getRecipes } from '../../services/apiService';
+import { menuFonts } from '../../theme';
 
 // Local interface to avoid type conflicts
 interface MenuRecipe {
@@ -44,6 +45,11 @@ interface ItemDialogProps {
   onSave: (itemData: { name: string; description: string; price: string; active: boolean; recipeId: number | null }) => void;
   initialData?: { name: string; description: string; price: string; active: boolean; recipeId: number | null };
   title: string;
+}
+
+// Add helper function for consistent font handling
+function getFontFamily(font?: string | null): string {
+  return menuFonts[font as keyof typeof menuFonts] || menuFonts['Playfair Display'];
 }
 
 const SectionDialog: React.FC<SectionDialogProps> = ({ 

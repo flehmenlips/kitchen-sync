@@ -11,21 +11,10 @@ import {
   Download as DownloadIcon
 } from '@mui/icons-material';
 import { getMenuById, Menu } from '../services/apiService';
+import { menuFonts } from '../theme';
 
 function getFontFamily(font?: string | null): string {
-  switch(font) {
-    case 'Roboto':
-      return "'Roboto', sans-serif";
-    case 'Lora':
-      return "'Lora', serif";
-    case 'Montserrat':
-      return "'Montserrat', sans-serif";
-    case 'Oswald':
-      return "'Oswald', sans-serif";
-    case 'Playfair Display':
-    default:
-      return "'Playfair Display', serif";
-  }
+  return menuFonts[font as keyof typeof menuFonts] || menuFonts['Playfair Display'];
 }
 
 const MenuDetailPage: React.FC = () => {

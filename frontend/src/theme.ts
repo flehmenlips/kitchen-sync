@@ -1,5 +1,14 @@
 import { createTheme } from '@mui/material/styles';
 
+// Define available menu fonts
+export const menuFonts = {
+  'Playfair Display': "'Playfair Display', serif",
+  'Roboto': "'Roboto', sans-serif",
+  'Lora': "'Lora', serif",
+  'Montserrat': "'Montserrat', sans-serif",
+  'Oswald': "'Oswald', sans-serif"
+};
+
 // Create a theme instance
 export const theme = createTheme({
   palette: {
@@ -57,5 +66,34 @@ export const theme = createTheme({
       '"Segoe UI Emoji"',
       '"Segoe UI Symbol"',
     ].join(','),
+  },
+  components: {
+    MuiCssBaseline: {
+      styleOverrides: `
+        /* Menu Font Import */
+        @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@300;400;500;700&family=Oswald:wght@300;400;500;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Roboto:wght@300;400;500;700&display=swap');
+        
+        /* Menu Font Classes */
+        .font-playfair {
+          font-family: 'Playfair Display', serif !important;
+        }
+        
+        .font-roboto {
+          font-family: 'Roboto', sans-serif !important;
+        }
+        
+        .font-lora {
+          font-family: 'Lora', serif !important;
+        }
+        
+        .font-montserrat {
+          font-family: 'Montserrat', sans-serif !important;
+        }
+        
+        .font-oswald {
+          font-family: 'Oswald', sans-serif !important;
+        }
+      `,
+    },
   },
 }); 
