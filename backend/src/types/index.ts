@@ -1,19 +1,11 @@
 import { Request } from 'express';
-import { PrismaClient } from '@prisma/client';
 
 // Extended Express Request interface with Multer file
 export interface MulterRequest extends Request {
-  file?: Express.Multer.File;
+  file?: any; // Using any to avoid type conflicts with Express.Multer
   files?: {
-    [fieldname: string]: Express.Multer.File[];
-  } | Express.Multer.File[];
+    [fieldname: string]: any[];
+  } | any[];
 }
 
-// Declare module to extend PrismaClient types, allowing access to our custom models
-declare module '@prisma/client' {
-  interface PrismaClient {
-    menu: any;
-    menuSection: any;
-    menuItem: any;
-  }
-} 
+// We've removed the conflicting PrismaClient extension 

@@ -14,13 +14,14 @@ cloudinary.config({
 /**
  * Uploads a file to Cloudinary
  * @param filePath Local path to the file to upload
+ * @param folder Optional folder name to organize uploads (default: 'recipe-photos')
  * @returns Promise with the upload result
  */
-export const uploadImage = async (filePath: string): Promise<{url: string, publicId: string}> => {
+export const uploadImage = async (filePath: string, folder: string = 'recipe-photos'): Promise<{url: string, publicId: string}> => {
   try {
     // Upload the image
     const result = await cloudinary.uploader.upload(filePath, {
-      folder: 'recipe-photos',
+      folder: folder,
       resource_type: 'image'
     });
     
