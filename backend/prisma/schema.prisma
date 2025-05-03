@@ -89,6 +89,7 @@ model Recipe {
   userId            Int            @map("user_id")
   photoUrl          String?        @map("photo_url")
   photoPublicId     String?        @map("photo_public_id")
+  menuItems         MenuItem[]     @relation("RecipeMenuItems")
   prepTasks         PrepTask[]     @relation("RecipePrepTasks")
   recipeIngredients UnitQuantity[] @relation("RecipeParent")
   usedAsSubRecipe   UnitQuantity[] @relation("RecipeSubComponent")
@@ -154,6 +155,7 @@ model User {
   ingredients          Ingredient[]         @relation("UserIngredients")
   assignedIssues       Issue[]              @relation("AssignedIssues")
   createdIssues        Issue[]              @relation("CreatedIssues")
+  menus                Menu[]               @relation("UserMenus")
   prepColumns          PrepColumn[]         @relation("UserPrepColumns")
   prepTasks            PrepTask[]           @relation("UserPrepTasks")
   recipes              Recipe[]
@@ -246,6 +248,66 @@ model PrepTask {
   @@index([columnId])
   @@index([order])
   @@map("prep_tasks")
+}
+
+model Menu {
+  id                  Int           @id @default(autoincrement())
+  name                String        @db.VarChar(255)
+  title               String?
+  subtitle            String?
+  font                String?       @default("Playfair Display")
+  layout              String?       @default("single")
+  showDollarSign      Boolean       @default(true) @map("show_dollar_sign")
+  showDecimals        Boolean       @default(true) @map("show_decimals")
+  showSectionDividers Boolean       @default(true) @map("show_section_dividers")
+  logoPath            String?       @map("logo_path")
+  logoPosition        String?       @default("top") @map("logo_position")
+  logoSize            String?       @default("200") @map("logo_size")
+  logoOffset          String?       @default("0") @map("logo_offset")
+  backgroundColor     String?       @default("#ffffff") @map("background_color")
+  textColor           String?       @default("#000000") @map("text_color")
+  accentColor         String?       @default("#333333") @map("accent_color")
+  isArchived          Boolean       @default(false) @map("is_archived")
+  createdAt           DateTime      @default(now()) @map("created_at")
+  updatedAt           DateTime      @updatedAt @map("updated_at")
+  userId              Int           @map("user_id")
+  sections            MenuSection[]
+  author              User          @relation("UserMenus", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("menus")
+}
+
+model MenuSection {
+  id       Int        @id @default(autoincrement())
+  name     String     @db.VarChar(255)
+  position Int        @default(0)
+  active   Boolean    @default(true)
+  menuId   Int        @map("menu_id")
+  items    MenuItem[]
+  menu     Menu       @relation(fields: [menuId], references: [id], onDelete: Cascade)
+
+  @@index([menuId])
+  @@index([position])
+  @@map("menu_sections")
+}
+
+model MenuItem {
+  id          Int         @id @default(autoincrement())
+  name        String      @db.VarChar(255)
+  description String?
+  price       String?
+  position    Int         @default(0)
+  active      Boolean     @default(true)
+  recipeId    Int?        @map("recipe_id")
+  sectionId   Int         @map("section_id")
+  recipe      Recipe?     @relation("RecipeMenuItems", fields: [recipeId], references: [id])
+  section     MenuSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@index([sectionId])
+  @@index([recipeId])
+  @@index([position])
+  @@map("menu_items")
 }
 
 enum UnitType {

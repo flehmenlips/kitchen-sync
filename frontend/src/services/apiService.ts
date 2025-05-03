@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { RecipeFormData } from '../components/forms/RecipeForm';
 import { UserProfile, UserCredentials, AuthResponse } from '../types/user';
-import { Recipe, RecipeApiData } from '../types/recipe';
+import { Recipe as RecipeType, RecipeApiData } from '../types/recipe';
 
 // Get the base URL from environment variables, defaulting to localhost:3001
 // Vite exposes env variables prefixed with VITE_
@@ -646,6 +646,165 @@ export const uploadRecipePhoto = async (recipeId: number, photoFile: File): Prom
         console.error(`Error uploading photo for recipe ${recipeId}:`, error);
         throw error;
     }
+};
+
+// Add Menu-related interfaces after other interfaces
+// --- Menu Types ---
+export interface MenuItem {
+  id?: number;
+  name: string;
+  description?: string | null;
+  price?: string | null;
+  position?: number;
+  active?: boolean;
+  recipeId?: number | null;
+  recipe?: {
+    id: number;
+    name: string;
+    photoUrl?: string | null;
+  } | null;
+  deleted?: boolean;
+}
+
+export interface MenuSection {
+  id?: number;
+  name: string;
+  position?: number;
+  active?: boolean;
+  items: MenuItem[];
+  deleted?: boolean;
+}
+
+export interface Menu {
+  id: number;
+  name: string;
+  title?: string | null;
+  subtitle?: string | null;
+  font?: string | null;
+  fontSize?: string | null;
+  layout?: string | null;
+  showDollarSign: boolean;
+  showDecimals: boolean;
+  showSectionDividers: boolean;
+  logoPath?: string | null;
+  logoPosition?: string | null;
+  logoSize?: string | null;
+  logoOffset?: string | null;
+  backgroundColor?: string | null;
+  textColor?: string | null;
+  accentColor?: string | null;
+  isArchived: boolean;
+  createdAt: string;
+  updatedAt: string;
+  sections?: MenuSection[];
+}
+
+export interface MenuFormData {
+  name: string;
+  title?: string;
+  subtitle?: string;
+  font?: string;
+  fontSize?: string;
+  layout?: string;
+  showDollarSign?: boolean;
+  showDecimals?: boolean;
+  showSectionDividers?: boolean;
+  logoPath?: string | null;
+  logoPosition?: string;
+  logoSize?: string;
+  logoOffset?: string;
+  backgroundColor?: string;
+  textColor?: string;
+  accentColor?: string;
+  sections?: MenuSection[];
+}
+
+// === Menu API Functions ===
+export const getMenus = async (): Promise<Menu[]> => {
+  try {
+    const response = await apiService.get('/menus?include=sections,items');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching menus:', error);
+    throw error;
+  }
+};
+
+export const getMenuById = async (id: number): Promise<Menu> => {
+  try {
+    const response = await apiService.get(`/menus/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching menu ${id}:`, error);
+    throw error;
+  }
+};
+
+export const createMenu = async (menuData: MenuFormData): Promise<Menu> => {
+  try {
+    const response = await apiService.post('/menus', menuData);
+    return response.data;
+  } catch (error) {
+    console.error('Error creating menu:', error);
+    throw error;
+  }
+};
+
+export const updateMenu = async (id: number, menuData: Partial<MenuFormData>): Promise<Menu> => {
+  try {
+    const response = await apiService.put(`/menus/${id}`, menuData);
+    return response.data;
+  } catch (error) {
+    console.error(`Error updating menu ${id}:`, error);
+    throw error;
+  }
+};
+
+export const deleteMenu = async (id: number): Promise<void> => {
+  try {
+    await apiService.delete(`/menus/${id}`);
+  } catch (error) {
+    console.error(`Error deleting menu ${id}:`, error);
+    throw error;
+  }
+};
+
+export const archiveMenu = async (id: number): Promise<Menu> => {
+  try {
+    const response = await apiService.put(`/menus/${id}/archive`, {});
+    return response.data;
+  } catch (error) {
+    console.error(`Error archiving menu ${id}:`, error);
+    throw error;
+  }
+};
+
+export const duplicateMenu = async (id: number): Promise<Menu> => {
+  try {
+    const response = await apiService.post(`/menus/${id}/duplicate`, {});
+    return response.data;
+  } catch (error) {
+    console.error(`Error duplicating menu ${id}:`, error);
+    throw error;
+  }
+};
+
+export const uploadMenuLogo = async (menuId: number, logoFile: File): Promise<{logoUrl: string, menu: Menu}> => {
+  try {
+    const formData = new FormData();
+    formData.append('logo', logoFile);
+    
+    const response = await apiService.post(`/menus/${menuId}/logo`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error(`Error uploading menu logo for menu ${menuId}:`, error);
+    throw error;
+  }
 };
 
 export default apiService; 

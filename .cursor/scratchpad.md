@@ -39,6 +39,8 @@ Currently, the project is focused on two primary modules:
 - [x] Implement drag-and-drop reordering for tasks
 - [x] Fix bug with vertical drag-and-drop in same column
 - [x] Implement task details panel with comments and recipe details
+- [x] Implement recipe photo upload capability
+- [x] Add photo display to recipe detail pages
 
 ## Current Focus
 We've successfully implemented a complete, customizable prep board system with drag-and-drop functionality for both columns and tasks. Users can now fully manage their prep workflow through an intuitive interface. We've also added a task details panel that allows users to view recipe details and add comments/notes to tasks.
@@ -376,6 +378,53 @@ We've successfully implemented a complete, customizable prep board system with d
     - Made stable-version the new main branch via hard reset
     - Created main-backup branch to preserve previous main state
     - Version 1.5.0 is now the official production version
+
+13. **Recipe Photo Upload and Display Feature** (2024-04-30)
+    - Added photo upload capability to recipe form
+    - Created dedicated photo upload endpoint on the backend
+    - Implemented file storage mechanism on the server
+    - Added Multer middleware for handling multipart form data
+    - Created proper photoUrl handling in the database
+    - Fixed API URL construction for photo upload to work with the development proxy
+    - Enhanced recipe detail view to prominently display recipe photos
+    - Added fallback for recipes without photos
+    - Fixed a bug where the wrong component file was being edited - photo display was added to the correct component
+    - Tagged as v2.3.0 for this feature release
+
+14. **Cloudinary Integration for Recipe Photos** (2024-05-07)
+    - Integrated Cloudinary cloud service for recipe photo storage
+    - Added photoPublicId field to Recipe model for proper photo management
+    - Created database migration to add the photo_public_id column
+    - Updated recipe controller to handle photo uploads to Cloudinary
+    - Implemented automatic deletion of old photos when replaced
+    - Enhanced error handling for photo uploads
+    - Updated photo URL handling to use Cloudinary URLs
+    - Fixed prisma import issue that broke the Recipes module
+    - Added UUID dependency for file handling
+    - Tagged as v2.5.0 for the Cloudinary integration release
+    - Successfully deployed to production environment
+
+15. **Recipe Thumbnail Implementation** (2024-05-09)
+    - Added thumbnails to the recipe list view using Cloudinary image transformations
+    - Implemented a utility function to generate optimized thumbnail URLs
+    - Added fallback avatar with recipe icon for recipes without photos
+    - Created responsive design with properly sized thumbnails
+    - Improved user experience with visual cues for recipe recognition
+    - Enhanced type safety with custom type definitions for recipe list items
+    - Optimized image loading with Cloudinary's automatic quality settings
+    - Improved recipe list visuals with a more engaging grid-like display
+    - Added thumbnails to task details drawer in the prep board for recipe tasks
+    - Used consistent styling between recipe list and prep board thumbnails
+
+16. **Task Details Drawer Improvements** (2024-05-10)
+    - Reorganized drawer sections to improve information hierarchy
+    - Moved recipe details section directly under task description for better context
+    - Fixed HTML rendering in recipe instructions
+    - Added styles to properly format ordered and unordered lists in instructions
+    - Improved spacing and margins for better readability
+    - Enhanced the recipe details card layout
+    - Added proper HTML sanitization with dangerouslySetInnerHTML
+    - Improved visual consistency between drawer sections
 
 ## Lessons
 - Always check for hardcoded constants when implementing dynamic features
@@ -1086,3 +1135,53 @@ Frontend:
 
 3. **Bulk Import:**
    - Support importing multiple recipes from collection pages
+
+## Menu Builder Module Implementation
+
+### Background and Motivation
+The Menu Builder module enables restaurant owners to create, edit, and print professional-looking menus using their existing recipes. This reduces the need to recreate menu items and sections every time the menu is modified.
+
+### Key Features Implemented
+1. **Database Schema**: Added models for Menu, MenuSection, and MenuItem with appropriate relations to existing Recipe model
+2. **Backend API**: Created RESTful endpoints for CRUD operations on menus, sections, and items
+3. **Frontend Components**: Developed UI for viewing, creating, editing, and deleting menus
+4. **Printing Support**: Designed the module with printing functionality in mind
+
+### Progress Status
+- [x] Database schema design and migration SQL creation
+- [x] Backend API controllers and routes
+- [x] Frontend API service methods
+- [x] Frontend menu listing page
+- [x] Menu creation/edit form
+- [x] Menu sections and items editor component
+- [x] Menu detail/preview page with print functionality
+- [ ] Recipe selection for menu items (to be implemented)
+- [ ] Style customization in the menu editor (to be implemented)
+- [ ] Menu PDF export (to be implemented)
+
+### Current Status / Progress Tracking
+We've implemented the core functionality of the Menu Builder module. Users can now:
+1. View a list of their menus
+2. Create new menus with basic information
+3. Edit existing menus
+4. Add, edit, and delete menu sections
+5. Add, edit, and delete menu items within sections
+6. Preview menus with formatting based on their settings
+7. Print menus directly from the browser
+
+The UI follows a consistent design with the rest of the application and provides a smooth user experience with proper loading states, error handling, and navigation.
+
+Next steps include:
+1. Enhancing the menu editor with style customization options
+2. Adding a recipe picker to select from existing recipes when creating menu items
+3. Implementing PDF export functionality for sharing and offline use
+4. Adding logo upload capabilities
+5. Improving the print layout with more customization options
+
+### Lessons
+- Used FormData for logo uploads to handle file data
+- Implemented soft deletion through archiving to preserve menu history
+- Created relationships between recipes and menu items to reuse recipe data
+- Designed the interface with a tab-based form for better organization of complex data
+- Used accordions for an intuitive section/item management interface
+- Implemented custom print functionality using window.open() and styled HTML

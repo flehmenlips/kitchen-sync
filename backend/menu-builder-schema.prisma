@@ -1,0 +1,61 @@
+// Menu Builder Models
+
+model Menu {
+  id           Int           @id @default(autoincrement())
+  name         String        @db.VarChar(255)
+  title        String?
+  subtitle     String?
+  font         String?       @default("Playfair Display")
+  layout       String?       @default("single")
+  showDollarSign Boolean     @default(true) @map("show_dollar_sign")
+  showDecimals Boolean       @default(true) @map("show_decimals")
+  showSectionDividers Boolean @default(true) @map("show_section_dividers")
+  logoPath     String?       @map("logo_path")
+  logoPosition String?       @default("top") @map("logo_position")
+  logoSize     String?       @default("200") @map("logo_size")
+  logoOffset   String?       @default("0") @map("logo_offset")
+  backgroundColor String?    @default("#ffffff") @map("background_color")
+  textColor    String?       @default("#000000") @map("text_color")
+  accentColor  String?       @default("#333333") @map("accent_color")
+  isArchived   Boolean       @default(false) @map("is_archived")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  userId       Int           @map("user_id")
+  author       User          @relation("UserMenus", fields: [userId], references: [id], onDelete: Cascade)
+  sections     MenuSection[]
+
+  @@index([userId])
+  @@map("menus")
+}
+
+model MenuSection {
+  id          Int        @id @default(autoincrement())
+  name        String     @db.VarChar(255)
+  position    Int        @default(0)
+  active      Boolean    @default(true)
+  menuId      Int        @map("menu_id")
+  menu        Menu       @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  items       MenuItem[]
+
+  @@index([menuId])
+  @@index([position])
+  @@map("menu_sections")
+}
+
+model MenuItem {
+  id           Int         @id @default(autoincrement())
+  name         String      @db.VarChar(255)
+  description  String?
+  price        String?
+  position     Int         @default(0)
+  active       Boolean     @default(true)
+  recipeId     Int?        @map("recipe_id")
+  sectionId    Int         @map("section_id")
+  section      MenuSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  recipe       Recipe?     @relation("RecipeMenuItems", fields: [recipeId], references: [id])
+
+  @@index([sectionId])
+  @@index([recipeId])
+  @@index([position])
+  @@map("menu_items")
+} 
