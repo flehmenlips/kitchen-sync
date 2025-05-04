@@ -40,9 +40,24 @@ const DashboardPage: React.FC = () => {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 2 }}>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Welcome back{user?.name ? `, ${user.name}` : ''}!
-      </Typography>
+      {/* Welcome Card that stands out more */}
+      <Paper 
+        elevation={3} 
+        sx={{ 
+          p: 3, 
+          mb: 3, 
+          backgroundImage: 'linear-gradient(to right, #f8f9fa, #e9ecef)',
+          borderLeft: '5px solid',
+          borderColor: 'primary.main'
+        }}
+      >
+        <Typography variant="h4" component="h1" sx={{ fontWeight: 600 }}>
+          Welcome back{user?.name ? `, ${user.name}` : ''}!
+        </Typography>
+        <Typography variant="subtitle1" sx={{ mt: 1 }}>
+          What would you like to prepare today?
+        </Typography>
+      </Paper>
 
       <Grid container spacing={3}>
         {/* Stats Card - Placed before Quick Actions */}

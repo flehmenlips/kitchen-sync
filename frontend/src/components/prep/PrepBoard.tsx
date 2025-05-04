@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, SpeedDial, SpeedDialAction, SpeedDialIcon } from '@mui/material';
+import { Box, SpeedDial, SpeedDialAction, SpeedDialIcon, Typography, Paper, Alert } from '@mui/material';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import PrepColumn from './PrepColumn';
 import { usePrepBoardStore } from '../../stores/prepBoardStore';
@@ -215,6 +215,28 @@ export const PrepBoard: React.FC = () => {
                             position: 'relative'
                         }}
                     >
+                        {columns.length === 0 && (
+                            <Paper elevation={3} sx={{ 
+                                p: 3, 
+                                maxWidth: 600, 
+                                mx: 'auto', 
+                                my: 4, 
+                                textAlign: 'center',
+                                background: 'rgba(255, 255, 255, 0.9)'
+                            }}>
+                                <Typography variant="h5" gutterBottom>
+                                    Welcome to the Prep Board!
+                                </Typography>
+                                <Alert severity="info" sx={{ mb: 2 }}>
+                                    No columns found. Click the <strong>plus button</strong> in the lower right corner to add a new column or recipe to your prep board.
+                                </Alert>
+                                <Typography variant="body1">
+                                    The prep board helps you organize your kitchen tasks and recipes into customizable columns. 
+                                    Start by creating a column such as "To Prep," "In Progress," or "Completed."
+                                </Typography>
+                            </Paper>
+                        )}
+                        
                         {columns.map((column, index) => (
                             <Draggable key={column.id} draggableId={column.id} index={index}>
                                 {(provided, snapshot) => (
