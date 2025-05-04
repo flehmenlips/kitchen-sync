@@ -86,11 +86,23 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
         });
 
         if (user && (await bcrypt.compare(password, user.password))) {
+            // Ensure user has a role, use default if not set
+            const userRole = user.role || 'USER';
+            
+            // If the user doesn't have a role in the database, update it
+            if (!user.role) {
+                await prisma.user.update({
+                    where: { id: user.id },
+                    data: { role: 'USER' }
+                });
+                console.log(`Updated user ${user.id} with default role USER`);
+            }
+            
             const token = jwt.sign(
                 { 
                     userId: user.id,
                     email: user.email,
-                    role: user.role 
+                    role: userRole 
                 },
                 process.env.JWT_SECRET || 'your-secret-key',
                 { expiresIn: '30d' }
@@ -100,7 +112,7 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
                 id: user.id,
                 name: user.name,
                 email: user.email,
-                role: user.role,
+                role: userRole,
                 token: token,
             });
         } else {
