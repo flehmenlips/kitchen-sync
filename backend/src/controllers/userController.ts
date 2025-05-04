@@ -30,21 +30,23 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Create user
+        // Create user with default role
         const user = await prisma.user.create({
             data: {
                 name,
                 email,
                 password: hashedPassword,
+                role: 'USER' // Add default role
             },
         });
 
         if (user) {
-            const token = generateToken(user.id);
+            const token = generateToken(user.id, user.role);
             res.status(201).json({
                 id: user.id,
                 name: user.name,
                 email: user.email,
+                role: user.role, // Include role in response
                 token: token,
             });
         } else {
