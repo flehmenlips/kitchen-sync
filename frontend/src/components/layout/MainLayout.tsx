@@ -283,7 +283,7 @@ const MainLayout: React.FC = () => {
                                     {user.email}
                                 </MenuItem>
                                 <MenuItem disabled sx={{ color: 'text.secondary' }}>
-                                    Role: {user.role.charAt(0) + user.role.slice(1).toLowerCase()}
+                                    Role: {user.role?.charAt(0) + user.role?.slice(1).toLowerCase() || 'User'}
                                 </MenuItem>
                                 <Divider />
                                 <MenuItem component={RouterLink} to="/profile">

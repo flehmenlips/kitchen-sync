@@ -171,7 +171,7 @@ const ProfilePage: React.FC = () => {
                         Account Information
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                        Role: {user?.role.charAt(0) + user?.role.slice(1).toLowerCase()}
+                        Role: {user?.role?.charAt(0) + user?.role?.slice(1).toLowerCase() || 'User'}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                         Member since: {new Date(user?.createdAt || '').toLocaleDateString()}
