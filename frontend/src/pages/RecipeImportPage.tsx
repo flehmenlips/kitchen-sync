@@ -331,23 +331,32 @@ const RecipeImportPage: React.FC = () => {
         }
 
         // Map of common units to their types
-        const unitTypeMap: { [key: string]: 'WEIGHT' | 'VOLUME' | 'COUNT' | 'LENGTH' | 'TEMPERATURE' } = {
+        const unitTypeMap: { [key: string]: 'WEIGHT' | 'VOLUME' | 'COUNT' | 'LENGTH' | 'TEMPERATURE' | 'OTHER' } = {
             'tablespoon': 'VOLUME',
+            'tbsp': 'VOLUME',
             'teaspoon': 'VOLUME',
+            'tsp': 'VOLUME',
             'cup': 'VOLUME',
             'milliliter': 'VOLUME',
+            'ml': 'VOLUME',
             'liter': 'VOLUME',
             'pound': 'WEIGHT',
+            'lb': 'WEIGHT',
             'ounce': 'WEIGHT',
+            'oz': 'WEIGHT',
             'gram': 'WEIGHT',
+            'g': 'WEIGHT',
             'kilogram': 'WEIGHT',
+            'kg': 'WEIGHT',
             'piece': 'COUNT',
             'whole': 'COUNT',
+            'clove': 'COUNT',
             'count': 'COUNT',
             'inch': 'LENGTH',
-            'centimeter': 'LENGTH',
-            'fahrenheit': 'TEMPERATURE',
-            'celsius': 'TEMPERATURE'
+            'cm': 'LENGTH',
+            'pinch': 'OTHER',
+            'dash': 'OTHER',
+            'to taste': 'OTHER',
         };
 
         // If the unit is "whole", try to find or create a default unit for countable items
@@ -366,7 +375,7 @@ const RecipeImportPage: React.FC = () => {
                     abbreviation: 'pc',
                     type: 'COUNT'
                 });
-                setUnits([...units, newUnit]);
+                setUnits(prev => [...prev, newUnit]);
                 return newUnit.id;
             } catch (err) {
                 console.error('Error creating default unit:', err);
@@ -374,25 +383,55 @@ const RecipeImportPage: React.FC = () => {
             }
         }
 
-        // First try to find an exact match
+        // First try to find an exact match (case-insensitive)
         const exactMatch = units.find(u => 
             u.name.toLowerCase() === unitName.toLowerCase() || 
             u.abbreviation?.toLowerCase() === unitName.toLowerCase()
         );
         if (exactMatch) return exactMatch.id;
 
-        // Normalize the unit name for type lookup
-        const normalizedUnit = normalizeUnit(unitName);
-        const unitType = unitTypeMap[normalizedUnit] || 'COUNT'; // Default to COUNT if unknown
+        // Try to find a similar match if no exact match is found
+        const similarMatch = units.find(u => 
+            unitName.toLowerCase().includes(u.name.toLowerCase()) || 
+            u.name.toLowerCase().includes(unitName.toLowerCase()) ||
+            (u.abbreviation && 
+                (unitName.toLowerCase().includes(u.abbreviation.toLowerCase()) || 
+                u.abbreviation.toLowerCase().includes(unitName.toLowerCase())))
+        );
+        if (similarMatch) return similarMatch.id;
+
+        // Determine unit type based on the name
+        let unitType: 'WEIGHT' | 'VOLUME' | 'COUNT' | 'LENGTH' | 'TEMPERATURE' | 'OTHER' = 'OTHER';
+        
+        // Try to find the type based on exact unit name
+        const lowerUnitName = unitName.toLowerCase();
+        if (unitTypeMap[lowerUnitName]) {
+            unitType = unitTypeMap[lowerUnitName];
+        } else {
+            // Or try to infer from unit name parts
+            if (lowerUnitName.includes('cup') || lowerUnitName.includes('spoon') || 
+                lowerUnitName.includes('liter') || lowerUnitName.includes('gal') || 
+                lowerUnitName.includes('quart') || lowerUnitName.includes('pint')) {
+                unitType = 'VOLUME';
+            } else if (lowerUnitName.includes('gram') || lowerUnitName.includes('pound') || 
+                    lowerUnitName.includes('ounce') || lowerUnitName.includes('lb') || 
+                    lowerUnitName.includes('oz') || lowerUnitName.includes('kg')) {
+                unitType = 'WEIGHT';
+            } else if (lowerUnitName.includes('piece') || lowerUnitName.includes('count') || 
+                    lowerUnitName.includes('whole') || lowerUnitName.includes('slice') || 
+                    lowerUnitName.includes('clove')) {
+                unitType = 'COUNT';
+            }
+        }
 
         // If no match, create a new unit
         try {
             const newUnit = await createUnit({
                 name: unitName,
-                abbreviation: unitName.length <= 5 ? unitName : null,
+                abbreviation: unitName.length <= 5 ? unitName : undefined,
                 type: unitType
             });
-            setUnits([...units, newUnit]);
+            setUnits(prev => [...prev, newUnit]);
             return newUnit.id;
         } catch (err) {
             console.error('Error creating unit:', err);
@@ -407,27 +446,67 @@ const RecipeImportPage: React.FC = () => {
         }
         
         try {
+            // Normalize the ingredient name (lowercase, trim excess spaces)
+            const normalizedName = ingredientName.toLowerCase().trim();
+            
             // First try to find an exact match (case-insensitive)
             const exactMatch = ingredients.find(i => 
-                i.name.toLowerCase() === ingredientName.toLowerCase()
+                i.name.toLowerCase() === normalizedName
             );
             if (exactMatch) return exactMatch.id;
+
+            // Try to find a similar match
+            const similarMatch = ingredients.find(i => {
+                const iName = i.name.toLowerCase();
+                return (
+                    // Check if names are very similar (one is contained in the other)
+                    (normalizedName.includes(iName) && iName.length > 3) || 
+                    (iName.includes(normalizedName) && normalizedName.length > 3) ||
+                    // Check for plural forms
+                    (normalizedName.endsWith('s') && iName === normalizedName.slice(0, -1)) ||
+                    (iName.endsWith('s') && normalizedName === iName.slice(0, -1))
+                );
+            });
+            if (similarMatch) return similarMatch.id;
 
             // If no exact match in local state, try to query all ingredients from the backend
             // This handles cases where the ingredient might exist in the DB but not in our local state
             try {
                 const allIngredients = await getIngredients();
-                const backendMatch = allIngredients.find(i => 
-                    i.name.toLowerCase() === ingredientName.toLowerCase()
+                
+                // First try exact match
+                const backendExactMatch = allIngredients.find(i => 
+                    i.name.toLowerCase() === normalizedName
                 );
                 
-                if (backendMatch) {
+                if (backendExactMatch) {
                     // Update local state and return the found ID
-                    if (!ingredients.some(i => i.id === backendMatch.id)) {
-                        setIngredients(prev => [...prev, backendMatch]);
+                    if (!ingredients.some(i => i.id === backendExactMatch.id)) {
+                        setIngredients(prev => [...prev, backendExactMatch]);
                     }
-                    return backendMatch.id;
+                    return backendExactMatch.id;
                 }
+                
+                // Then try similar match
+                const backendSimilarMatch = allIngredients.find(i => {
+                    const iName = i.name.toLowerCase();
+                    return (
+                        (normalizedName.includes(iName) && iName.length > 3) || 
+                        (iName.includes(normalizedName) && normalizedName.length > 3) ||
+                        (normalizedName.endsWith('s') && iName === normalizedName.slice(0, -1)) ||
+                        (iName.endsWith('s') && normalizedName === iName.slice(0, -1))
+                    );
+                });
+                
+                if (backendSimilarMatch) {
+                    if (!ingredients.some(i => i.id === backendSimilarMatch.id)) {
+                        setIngredients(prev => [...prev, backendSimilarMatch]);
+                    }
+                    return backendSimilarMatch.id;
+                }
+                
+                // Update our local state with all ingredients for future searches
+                setIngredients(allIngredients);
             } catch (queryError) {
                 console.warn('Error querying for existing ingredients:', queryError);
                 // Continue to creation attempt if query fails
@@ -435,10 +514,10 @@ const RecipeImportPage: React.FC = () => {
 
             // If no match, create a new ingredient
             const newIngredient = await createIngredient({
-                name: ingredientName,
+                name: ingredientName, // Use original casing
                 description: null
             });
-            setIngredients([...ingredients, newIngredient]);
+            setIngredients(prev => [...prev, newIngredient]);
             return newIngredient.id;
         } catch (err: any) {
             // If we got a 409 Conflict error, the ingredient likely exists already
@@ -498,6 +577,12 @@ const RecipeImportPage: React.FC = () => {
             // Process all ingredients first
             const processedIngredients = [];
             const failedIngredients = [];
+            const successfulIngredients = []; // Track successful ingredients for reporting
+            
+            // Set up a progress message for status updates
+            const setProgressError = (message: string) => {
+                setError(`${message} - continuing with other ingredients...`);
+            };
             
             // Process ingredients sequentially instead of in parallel to avoid race conditions
             for (const [index, ing] of parsedRecipe.ingredients.entries()) {
@@ -507,7 +592,23 @@ const RecipeImportPage: React.FC = () => {
                     }
 
                     // Use the unit from the ingredient or default to "whole"
-                    const unitId = await findOrCreateUnit(ing.unit || 'whole');
+                    let unitId: number;
+                    try {
+                        unitId = await findOrCreateUnit(ing.unit || 'whole');
+                        // Add to successful logs
+                        if (ing.unit && !units.some(u => u.name === ing.unit)) {
+                            successfulIngredients.push(`Created unit: ${ing.unit}`);
+                        }
+                    } catch (unitError) {
+                        console.error(`Error processing unit "${ing.unit}":`, unitError);
+                        setProgressError(`Error with unit "${ing.unit}": ${unitError instanceof Error ? unitError.message : 'Unknown error'}`);
+                        // Use a default "count" unit if unit creation fails
+                        const defaultUnit = units.find(u => u.name === 'piece' || u.name === 'whole' || u.name === 'count');
+                        if (!defaultUnit) {
+                            throw new Error(`Failed to process unit "${ing.unit}" and no default unit available`);
+                        }
+                        unitId = defaultUnit.id;
+                    }
                     
                     // If skipDatabase is true, just return the ingredient as text
                     if (ing.skipDatabase) {
@@ -523,20 +624,49 @@ const RecipeImportPage: React.FC = () => {
                             order: index,
                             // These additional properties will be used when displaying the ingredient
                             // but won't be sent to the backend as part of the recipe creation
-                            _displayText: ing.raw || `${ing.quantity} ${ing.unit} ${ing.name}`,
+                            _displayText: ing.raw || `${ing.quantity} ${ing.unit} ${ing.name || 'Unknown ingredient'}`,
                             _skipDatabase: true
                         });
+                        successfulIngredients.push(`Added text placeholder: ${ing.name || 'Unknown ingredient'}`);
                     } else {
                         // For normal ingredients, create or find them in the database
-                        const ingredientId = await findOrCreateIngredient(ing.name);
-                        
-                        processedIngredients.push({
-                            type: 'ingredient' as const,
-                            ingredientId,
-                            quantity: ing.quantity || 1,
-                            unitId,
-                            order: index
-                        });
+                        try {
+                            const ingredientId = await findOrCreateIngredient(ing.name);
+                            
+                            // Add to successful logs if we created a new ingredient
+                            if (!ingredients.some(i => i.name.toLowerCase() === ing.name.toLowerCase())) {
+                                successfulIngredients.push(`Created ingredient: ${ing.name}`);
+                            }
+                            
+                            processedIngredients.push({
+                                type: 'ingredient' as const,
+                                ingredientId,
+                                quantity: ing.quantity || 1,
+                                unitId,
+                                order: index
+                            });
+                        } catch (ingredientError) {
+                            console.error(`Error processing ingredient "${ing.name}":`, ingredientError);
+                            setProgressError(`Error with ingredient "${ing.name}": ${ingredientError instanceof Error ? ingredientError.message : 'Unknown error'}`);
+                            failedIngredients.push({
+                                name: ing.name,
+                                error: ingredientError instanceof Error ? ingredientError.message : 'Unknown error'
+                            });
+                            
+                            // For failed ingredients, create a text placeholder instead
+                            const textPlaceholderId = await getOrCreateTextPlaceholder();
+                            
+                            processedIngredients.push({
+                                type: 'ingredient' as const,
+                                ingredientId: textPlaceholderId,
+                                quantity: ing.quantity || 1,
+                                unitId,
+                                order: index,
+                                _displayText: ing.raw || `${ing.quantity} ${ing.unit} ${ing.name || 'Unknown ingredient'}`,
+                                _skipDatabase: true
+                            });
+                            successfulIngredients.push(`Added as text: ${ing.name || 'Unknown ingredient'} (after failed creation)`);
+                        }
                     }
                 } catch (err) {
                     console.error(`Error processing ingredient "${ing.name}":`, err);
@@ -550,18 +680,35 @@ const RecipeImportPage: React.FC = () => {
                         // Mark the ingredient as skipDatabase so we use a placeholder
                         ing.skipDatabase = true;
                         
-                        const textPlaceholderId = await getOrCreateTextPlaceholder();
-                        const unitId = await findOrCreateUnit(ing.unit || 'whole');
-                        
-                        processedIngredients.push({
-                            type: 'ingredient' as const,
-                            ingredientId: textPlaceholderId,
-                            quantity: ing.quantity || 1,
-                            unitId,
-                            order: index,
-                            _displayText: ing.raw || `${ing.quantity} ${ing.unit} ${ing.name}`,
-                            _skipDatabase: true
-                        });
+                        try {
+                            const textPlaceholderId = await getOrCreateTextPlaceholder();
+                            
+                            // Get unitId - use default if necessary
+                            let unitId: number;
+                            try {
+                                unitId = await findOrCreateUnit(ing.unit || 'whole');
+                            } catch (unitError) {
+                                const defaultUnit = units.find(u => u.name === 'piece' || u.name === 'whole' || u.name === 'count');
+                                if (!defaultUnit) {
+                                    throw new Error('No default unit available');
+                                }
+                                unitId = defaultUnit.id;
+                            }
+                            
+                            processedIngredients.push({
+                                type: 'ingredient' as const,
+                                ingredientId: textPlaceholderId,
+                                quantity: ing.quantity || 1,
+                                unitId,
+                                order: index,
+                                _displayText: ing.raw || `${ing.quantity} ${ing.unit} ${ing.name || 'Unknown ingredient'}`,
+                                _skipDatabase: true
+                            });
+                            successfulIngredients.push(`Added as text: ${ing.name || 'Unknown ingredient'} (after error)`);
+                        } catch (placeholderError) {
+                            console.error(`Failed to create placeholder for "${ing.name}":`, placeholderError);
+                            // If even the placeholder fails, we just skip this ingredient
+                        }
                     }
                 }
             }
@@ -580,16 +727,33 @@ const RecipeImportPage: React.FC = () => {
                 categoryId: 1 // Default to "Uncategorized"
             });
             
+            // Prepare success message with details about what was created
+            let successMessage = `Recipe "${parsedRecipe.name}" imported successfully!`;
+            
+            if (successfulIngredients.length > 0) {
+                // Limit to 5 items to avoid overwhelming message
+                const limitedList = successfulIngredients.slice(0, 5);
+                const remainingCount = successfulIngredients.length - 5;
+                
+                successMessage += ' Created: ' + limitedList.join(', ');
+                if (remainingCount > 0) {
+                    successMessage += ` and ${remainingCount} more`;
+                }
+            }
+            
             // If we had any failed ingredients, show a warning but continue with navigation
             if (failedIngredients.length > 0) {
                 const failedNames = failedIngredients.map(f => f.name).join(', ');
-                setError(`Recipe imported, but some ingredients were problematic and added as text placeholders: ${failedNames}`);
+                setError(`Recipe imported successfully, but ${failedIngredients.length} ingredient(s) were problematic and added as text placeholders: ${failedNames}`);
                 
                 // Give the user a chance to see the warning before navigating
                 setTimeout(() => {
                     navigate(`/recipes/${recipe.id}`);
                 }, 4000);
             } else {
+                // Show success message using a snackbar or similar component
+                setError(null);
+                alert(successMessage);
                 navigate(`/recipes/${recipe.id}`);
             }
         } catch (err) {
