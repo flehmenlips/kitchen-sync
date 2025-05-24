@@ -86,6 +86,8 @@ const EditRecipePage: React.FC = () => {
         name: recipeData.name,
         description: recipeData.description || '',
         photoUrl: recipeData.photoUrl || undefined,
+        menuTitle: recipeData.menuTitle || '',
+        menuDescription: recipeData.menuDescription || '',
         yieldQuantity: recipeData.yieldQuantity?.toString() || '',
         yieldUnitId: recipeData.yieldUnit?.id || '',
         prepTimeMinutes: recipeData.prepTimeMinutes?.toString() || '',
