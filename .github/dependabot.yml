@@ -1,0 +1,30 @@
+# Dependabot configuration to enable security updates
+version: 2
+updates:
+  # Enable security updates for npm dependencies in frontend
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+    # Enable grouped security updates
+    groups:
+      frontend-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+    # Allow up to 10 open pull requests for security updates
+    open-pull-requests-limit: 10
+
+  # Enable security updates for npm dependencies in backend
+  - package-ecosystem: "npm"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+    # Enable grouped security updates
+    groups:
+      backend-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+    # Allow up to 10 open pull requests for security updates
+    open-pull-requests-limit: 10 
