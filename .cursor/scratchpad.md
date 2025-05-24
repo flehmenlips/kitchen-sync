@@ -41,284 +41,154 @@ Currently, the project is focused on two primary modules:
 - [x] Implement task details panel with comments and recipe details
 - [x] Implement recipe photo upload capability
 - [x] Add photo display to recipe detail pages
-- [ ] Implement Menu Title/Description fields for recipes
+- [x] Implement Menu Title/Description fields for recipes
+- [ ] Implement Recipe URL Import feature
+- [ ] Add user authentication improvements
+- [ ] Implement backup and data export features
 
 ## Current Focus
-We've successfully implemented a complete, customizable prep board system with drag-and-drop functionality for both columns and tasks. Users can now fully manage their prep workflow through an intuitive interface. We've also added a task details panel that allows users to view recipe details and add comments/notes to tasks.
+We've successfully implemented the Menu Title/Description fields feature that allows recipes to have separate kitchen-focused and customer-facing content. This provides seamless integration between the CookBook and MenuBuilder modules.
 
-### Menu Title/Description Fields for CookBook-MenuBuilder Integration (Priority: High)
-- **What**: Add optional menuTitle and menuDescription fields to recipes for menu-specific presentation
-- **Why**: Recipe names/descriptions are kitchen-focused while menus need customer-facing content
-- **Status**: IN PROGRESS
-- **Task Breakdown**:
-  1. Database Schema Update:
-     - [x] Add menuTitle and menuDescription fields to Recipe model in Prisma
-     - [x] Create and run database migration
-     - [x] Update DTOs and interfaces
-  2. Backend Updates:
-     - [x] Update recipe controller to handle new fields
-     - [x] Update recipe service to include new fields
-     - [x] Ensure backward compatibility
-  3. Frontend Recipe Form Updates:
-     - [x] Add Menu Title and Menu Description fields to recipe form
-     - [x] Update recipe edit functionality
-     - [x] Add visual separation/section for menu-specific fields
-  4. MenuBuilder Integration:
-     - [x] Update MenuSectionsEditor to use menu fields when available
-     - [x] Modify toggles to prefer menu fields over standard fields
-     - [x] Add fallback logic for recipes without menu fields
-  5. Testing:
-     - [ ] Test recipe creation with menu fields
-     - [ ] Test MenuBuilder import with and without menu fields
-     - [ ] Verify backward compatibility
+### Next Strategic Steps - Planning Phase
+Based on our project roadmap and current state, here are the recommended next strategic steps:
 
-### Prep Column CRUD (Priority: High)
-- **What**: Implement Create, Read, Update, Delete operations for prep columns
-- **Why**: Allow users to fully customize their prep workflow
-- **Status**: ✅ COMPLETED
-- **Components Created/Updated**:
-  1. Column Management UI:
-     - Created `ColumnFormDialog` component for adding/editing columns
-     - Created `DeleteConfirmationDialog` for column deletion
-     - Updated `PrepColumn` to add edit/delete menu
-     - Updated `PrepBoard` to integrate these components
-  2. Backend Integration:
-     - Added column management methods to prepBoardStore
-     - Connected to existing API endpoints
-     - Implemented proper error handling
-- **Key Features**:
-  1. Add new columns via the SpeedDial button
-  2. Edit column name via the column menu
-  3. Delete columns with confirmation
-  4. Visual feedback with snackbar messages
-  5. Loading indicators during operations
+1. **Recipe Import Enhancement (Phase 1 - URL Import)**
+   - Implement web scraping for popular recipe websites
+   - Add URL validation and preview functionality
+   - Create mapping between scraped data and our recipe model
+   - This will significantly improve user onboarding and recipe creation
 
-### Prep Task CRUD (Priority: High)
-- **What**: Implement Create, Read, Update, Delete operations for prep tasks
-- **Why**: Enable users to manage tasks within columns effectively
-- **Status**: ✅ COMPLETED
-- **Components**:
-  1. Task Management UI:
-     - Basic add/delete functionality was already implemented
-     - `PrepCard` component displays tasks and allows deletion
-     - Add task UI integrated in column headers
-  2. Backend Integration:
-     - Existing integration with task API endpoints
-     - Proper error handling
-- **Key Features**:
-  1. Add tasks directly within columns
-  2. Add recipes as tasks from the recipe detail page
-  3. Add recipes as tasks via the SpeedDial button
-  4. Delete tasks with visual feedback
-  5. View associated recipes
+2. **Security & User Management Enhancements**
+   - Implement proper role-based access control
+   - Add team/organization support for restaurant use
+   - Enhance authentication with features like password reset
+   - Add audit logging for critical operations
 
-### Column Drag-and-Drop (Priority: Medium)
-- **What**: Implement drag-and-drop functionality for columns
-- **Why**: Provide intuitive UX for organizing prep work
-- **Status**: ✅ COMPLETED
-- **Components Updated**:
-  1. Column Reordering:
-     - Made columns draggable using react-beautiful-dnd
-     - Implemented backend sync for column order
-     - Added visual feedback during drag operations
-     - Added drag handle icon for better UX
-- **Key Features**:
-  1. Drag columns to reorder them horizontally
-  2. Visual feedback during column drag operations
-  3. Persisted column order to backend
-  4. Compatible with touch and mouse interactions
+3. **Data Management & Backup**
+   - Implement automated backup system
+   - Add recipe export/import functionality (JSON, CSV)
+   - Create data migration tools for bulk operations
+   - Add version history for recipes
 
-### Task Drag-and-Drop (Priority: High)
-- **What**: Implement drag-and-drop functionality for tasks within and between columns
-- **Why**: Provide intuitive task management and prioritization
-- **Status**: ✅ COMPLETED
-- **Components Updated**:
-  1. PrepCard:
-     - Wrapped in Draggable component
-     - Added drag handle icon and visual indicators
-     - Enhanced styling for improved UX during dragging
-  2. PrepColumn:
-     - Updated to properly render draggable tasks
-     - Improved dropzone styling
-  3. Task Reordering Logic:
-     - Enhanced moveTask method to handle reordering efficiently
-     - Integrated with batch update API for optimized backend updates
-     - Optimistic UI updates for responsive feel
-- **Key Features**:
-  1. Drag tasks within the same column to reorder
-  2. Drag tasks between columns to move them
-  3. Visual feedback for source and destination during drag
-  4. Consistent ordering persisted to backend
-  5. Efficient batch updates for related task reordering
+4. **MenuBuilder Module Enhancements**
+   - Add PDF export functionality
+   - Implement menu templates and themes
+   - Add pricing calculation tools
+   - Support for multiple menu versions (lunch, dinner, seasonal)
 
-### Vertical Drag-and-Drop Bug Fix (Priority: Critical)
-- **What**: Fix bug where tasks disappeared when vertically reordered within a column
-- **Why**: Critical usability issue prevented effective task prioritization
-- **Status**: ✅ COMPLETED
-- **Root Cause**:
-  - The `moveTask` function in prepBoardStore.ts was removing tasks from the column when reordering within the same column
-  - Task was being removed but not correctly reinserted in the same column
-  - The optimistic UI update worked differently for cross-column vs. same-column moves
-- **Solution Implemented**:
-  1. Added specific logic path for same-column reordering:
-     - Used splice for removing and inserting in a single operation for same-column moves
-     - Added sourceIndex tracking to know where the task was coming from
-     - Only removed task from source column when moving between columns
-  2. Enhanced backend reordering logic:
-     - Used different update strategies for same-column vs. cross-column moves
-     - For same-column moves, update the order of all tasks to maintain consistency
-     - For cross-column moves, only update the moved task and tasks after insertion point
-  3. Added forced refresh for same-column moves after backend update
-  4. Added comprehensive logging throughout the drag-and-drop flow
-- **Testing and Verification**:
-  - Vertical dragging now works correctly for tasks within columns
-  - Tasks remain visible and properly ordered after any drag operation
-  - Both vertical (same-column) and horizontal (cross-column) dragging works consistently
-  - Changes persist after page refresh, confirming proper backend synchronization
+5. **Performance & Scalability**
+   - Implement caching for frequently accessed data
+   - Add pagination for large recipe lists
+   - Optimize image loading and storage
+   - Consider implementing a CDN for assets
 
-### Task Details Panel Implementation (Priority: Medium)
-- **What**: Implement a slide-out panel showing detailed task information
-- **Why**: Enhance the user experience by providing more context and information about tasks
-- **Status**: ✅ COMPLETED
-- **Components Created/Updated**:
-  1. Created new components:
-     - `TaskDetailsDrawer.tsx` - A slide-out drawer for task details
-  2. Updated existing components:
-     - `PrepBoard.tsx` - Added state and handlers for the task details drawer
-     - `PrepColumn.tsx` - Added prop for viewing task details
-     - `PrepCard.tsx` - Added onClick handler for opening details
-  3. Added new features:
-     - Comments/notes functionality for tasks
-     - Recipe details display including ingredients and instructions
-     - Task editing capabilities
-- **Key Features**:
-  1. View and edit task title and description
-  2. Add and view comments/notes on tasks
-  3. See recipe details when a task is linked to a recipe
-  4. Toggle sections to show/hide ingredients and instructions
-  5. Consistent styling with the column color theme
-  6. Mobile-responsive design
-- **Technical Implementations**:
-  1. Used Material-UI Drawer component for the slide-out panel
-  2. Implemented collapsible sections for better organization
-  3. Added date formatting with date-fns library
-  4. Fixed type compatibility issues between different Recipe interfaces
-  5. Added optimistic UI updates for comments
-  6. Integrated with the existing task update API
+## TableFarm & ChefRail Implementation Plan
 
-## Pending Tasks and Future Work
+### Phase 1: TableFarm (Reservation & Order System) - Week 1-3
 
-### Immediate Priority: System Administration & Security
-- **What**: Implement enhanced security and user management features
-- **Why**: Ensure proper access control and system security
-- **Status**: Planning
-- **Required Features**:
-  1. Implementation of SuperAdmin role (george@seabreeze.farm)
-  2. Enhanced user role management system
-  3. Audit logging for critical operations
+#### Database Schema Design
+1. **Reservations Table**
+   - id, customerName, customerPhone, customerEmail
+   - partySize, reservationDate, reservationTime
+   - status (confirmed, cancelled, completed, no-show)
+   - notes, createdAt, updatedAt, userId
+   
+2. **Tables Table** (future enhancement)
+   - id, tableNumber, capacity, status
+   - section, notes
+   
+3. **Orders Table**
+   - id, orderNumber, reservationId (optional)
+   - tableId (future), customerName
+   - status (new, in-progress, ready, completed, cancelled)
+   - orderType (dine-in, takeout, delivery)
+   - notes, createdAt, updatedAt, userId
+   
+4. **OrderItems Table**
+   - id, orderId, menuItemId
+   - quantity, price, modifiers (JSON)
+   - status (pending, preparing, ready, served)
+   - notes, createdAt, updatedAt
 
-### Database Maintenance (Priority: Medium)
-- **What**: Apply database cleanup and maintenance scripts
-- **Why**: Need to fix duplicate recipes and data integrity issues
-- **Status**: Scripts committed to `chore/db-maintenance-scripts` branch
-- **Location**: 
-  - `backend/src/scripts/checkRecipes.ts`
-  - `backend/src/scripts/fixRecipes.ts`
-- **Next Steps**:
-  1. Review script functionality in development environment
-  2. Create backup of production database
-  3. Test scripts on backup
-  4. Schedule maintenance window
-  5. Apply fixes in production
+#### Backend Implementation Tasks
+1. [x] Create Prisma schema for reservations and orders
+2. [x] Implement reservation CRUD endpoints
+3. [x] Implement order management endpoints
+4. [ ] Create WebSocket service for real-time updates
+5. [ ] Add order status workflow logic
+6. [ ] Implement order-to-kitchen communication
 
-### Backup & Data Security Implementation (Priority: High)
-- **What**: Set up automated backup system and data security measures
-- **Why**: Protect user data and ensure business continuity
-- **Status**: Planning
-- **Required Features**:
-  1. Automated database backup system
-  2. Backup verification and integrity checks
-  3. Backup restoration testing procedures
-  4. Data export capabilities for users
+#### Frontend Implementation Tasks
+1. [ ] Create reservation calendar view
+2. [ ] Build reservation form and list
+3. [ ] Create order entry interface
+4. [ ] Implement menu item selection from MenuBuilder data
+5. [ ] Add order modification capabilities
+6. [ ] Build order status tracking view
 
-### Feature & Bug Tracking System (Priority: Medium)
-- **What**: Implement system for tracking and managing issues
-- **Why**: Improve development workflow and user feedback loop
-- **Status**: Planning
-- **Required Features**:
-  1. Internal admin interface for tracking and managing issues
-  2. Customer-facing feedback/issue reporting interface 
-  3. Issue prioritization and status tracking
-  4. Integration with development workflow
+### Phase 2: ChefRail (Kitchen Display System) - Week 4-6
 
-### AgileChef (Prep Flow) Module Enhancements (Priority: Medium)
-- **What**: Add additional features to the prep flow management system
-- **Why**: Fulfill the remaining requirements for the Prep Flow Manager
-- **Status**: Planning
-- **Requirements to Address**:
-  1. **REQ-M2-03**: Allow manual creation of prep tasks (✅ COMPLETED)
-  2. **REQ-M2-04**: Allow users to move cards between columns (✅ COMPLETED)
-  3. **REQ-M2-05**: Display key recipe info (or link) on the task card (✅ COMPLETED)
-  4. **Future**: Assign tasks to users, set due dates, manage priority
+#### Backend Implementation Tasks
+1. [ ] Create ticket management service
+2. [ ] Implement WebSocket endpoints for real-time updates
+3. [ ] Add timer functionality for tickets
+4. [ ] Create station assignment logic (future)
+5. [ ] Implement ticket status transitions
+6. [ ] Add ticket history and analytics
 
-### Directory Structure Cleanup (Priority: High)
-- **What**: Remove redundant directories and files
-- **Why**: Project had duplicate code and configurations in multiple locations
-- **Status**: ✅ COMPLETED
-- **Actions Taken**:
-  1. Nested backend directory:
-     - Removed redundant `backend/backend/prisma/migrations`
-     - Verified all migrations in main `prisma/migrations`
-     - Database schema is up to date
-  2. Root src directory:
-     - Removed outdated versions of backend code
-     - All functionality exists in `backend/src` with improvements
-  3. Root configuration files:
-     - Removed `tsconfig.json` that referenced old `src` directory
-     - Removed `package.json` and `package-lock.json`
-     - Removed redundant root `node_modules`
-- **Final Structure**:
-  ```
-  kitchen-sync/
-  ├── frontend/          # React frontend
-  ├── backend/           # Express backend
-  ├── docs/             # Project documentation
-  │   ├── requirements.md
-  │   └── architecture.md
-  ├── .cursor/          # IDE/development tools
-  ├── .gitignore
-  └── README.md
-  ```
-- **Verification**:
-  - All application code properly organized in frontend/backend
-  - No redundant configurations or dependencies
-  - Clean project structure with clear separation of concerns
+#### Frontend Implementation Tasks
+1. [ ] Create kitchen display dashboard
+2. [ ] Implement real-time ticket cards
+3. [ ] Add drag-and-drop for status updates
+4. [ ] Build timer displays with alerts
+5. [ ] Create ticket detail modal
+6. [ ] Add sound notifications for new orders
+7. [ ] Implement filter and sort options
 
-## Long-Term Roadmap (Based on Project Vision)
-1. **CookBook (Recipe Engine)**
-   - Status: Active Development / Testing
-   - Current Focus: Real-world recipe input and testing
-   - Next Steps: Bug fixes and feature enhancements based on actual usage
+### Integration Points
+1. **MenuBuilder → TableFarm**
+   - TableFarm reads active menus and items
+   - Prices and descriptions pulled from MenuBuilder
+   
+2. **TableFarm → ChefRail**
+   - Orders sent via WebSocket on creation
+   - Status updates flow bidirectionally
+   
+3. **CookBook → ChefRail**
+   - Recipe details available for reference
+   - Prep instructions linked to tickets
 
-2. **AgileChef (Prep Flow)**
-   - Status: Active Development (Current Focus)
-   - Recent Achievements: Custom columns, drag-and-drop, task management
-   - Next Steps: Integration with Recipe Engine for automated task generation
+### Technical Considerations
+1. **Real-time Communication**
+   - Use Socket.io for WebSocket implementation
+   - Implement reconnection logic
+   - Handle offline scenarios gracefully
+   
+2. **Performance**
+   - Optimize for tablet/touch interfaces
+   - Minimize re-renders for real-time updates
+   - Implement efficient data caching
+   
+3. **User Experience**
+   - Large, touch-friendly buttons for kitchen environment
+   - High contrast, readable displays
+   - Audio/visual alerts for urgent items
 
-3. **MenuBuilder (Menu Designer)**
-   - Status: Planning
-   - Dependencies: Stable CookBook module
-   - Key Requirements: Import recipes, arrange menu items, design/layout tools, export to printable format
+### MVP Features for Initial Release
 
-4. **TableFarm (Reservation & Order System)**
-   - Status: Planning
-   - Dependencies: Stable MenuBuilder module
-   - Key Requirements: Reservation management, order creation, menu integration
+#### TableFarm MVP
+- Basic reservation CRUD
+- Simple order creation
+- Menu item selection
+- Order status tracking
+- Send orders to kitchen
 
-5. **ChefRail (Kitchen Display System)**
-   - Status: Planning
-   - Dependencies: Stable TableFarm module
-   - Key Requirements: Real-time order display, status updates, timers
+#### ChefRail MVP
+- Display incoming orders
+- Update order status
+- Basic timers
+- Simple filtering
+- Clear completed orders
 
 ## Recent Decisions and Changes
 1. **Custom Columns Feature** (2024-04-20)
@@ -453,6 +323,18 @@ We've successfully implemented a complete, customizable prep board system with d
     - Added proper HTML sanitization with dangerouslySetInnerHTML
     - Improved visual consistency between drawer sections
 
+17. **Menu Title/Description Fields Implementation** (2024-12-20)
+    - Added optional menuTitle and menuDescription fields to Recipe model
+    - Created database migration with manual SQL execution due to permission constraints
+    - Updated backend controllers to handle new fields with backward compatibility
+    - Added "Menu Display Options" section to recipe form with clear visual separation
+    - Enhanced MenuBuilder to automatically use menu fields when available
+    - Implemented intelligent fallback logic (menuTitle → name, menuDescription → description)
+    - Added tooltips showing which fields will be used during menu import
+    - Added visual indicator (sparkle emoji) when recipes have menu-specific fields
+    - Maintained full backward compatibility for existing recipes without menu fields
+    - Fixed persistence issue where menu fields were cleared on edit (missing from transformRecipeToFormData)
+
 ## Lessons
 - Always check for hardcoded constants when implementing dynamic features
 - Keep maintenance scripts separate from application code
@@ -493,6 +375,9 @@ We've successfully implemented a complete, customizable prep board system with d
 - Updated version to v1.5.0 for the stable production build
 - Successfully made stable-version the new main branch for future development
 - Future enhancement: Consider adding batch operations for adding multiple recipes at once
+- Menu Title/Description fields feature has been successfully implemented with full backward compatibility
+- The feature provides seamless integration between CookBook and MenuBuilder modules
+- Manual testing is recommended to verify the UI flow and data persistence
 
 ## Key Challenges and Analysis
 - Maintaining data integrity while allowing custom columns
@@ -1212,3 +1097,60 @@ Next steps include:
 - Designed the interface with a tab-based form for better organization of complex data
 - Used accordions for an intuitive section/item management interface
 - Implemented custom print functionality using window.open() and styled HTML
+
+## Pending Tasks and Future Work
+
+### Immediate Priority: System Administration & Security
+- **What**: Implement enhanced security and user management features
+- **Why**: Ensure proper access control and system security
+- **Status**: Planning
+- **Required Features**:
+  1. Implementation of SuperAdmin role (george@seabreeze.farm)
+  2. Enhanced user role management system
+  3. Audit logging for critical operations
+
+### Database Maintenance (Priority: Medium)
+- **What**: Apply database cleanup and maintenance scripts
+- **Why**: Need to fix duplicate recipes and data integrity issues
+- **Status**: Scripts committed to `chore/db-maintenance-scripts` branch
+- **Location**: 
+  - `backend/src/scripts/checkRecipes.ts`
+  - `backend/src/scripts/fixRecipes.ts`
+- **Next Steps**:
+  1. Review script functionality in development environment
+  2. Create backup of production database
+  3. Test scripts on backup
+  4. Schedule maintenance window
+  5. Apply fixes in production
+
+### Backup & Data Security Implementation (Priority: High)
+- **What**: Set up automated backup system and data security measures
+- **Why**: Protect user data and ensure business continuity
+- **Status**: Planning
+- **Required Features**:
+  1. Automated database backup system
+  2. Backup verification and integrity checks
+  3. Backup restoration testing procedures
+  4. Data export capabilities for users
+
+### Feature & Bug Tracking System (Priority: Medium)
+- **What**: Implement system for tracking and managing issues
+- **Why**: Improve development workflow and user feedback loop
+- **Status**: Planning
+- **Required Features**:
+  1. Internal admin interface for tracking and managing issues
+  2. Customer-facing feedback/issue reporting interface 
+  3. Issue prioritization and status tracking
+  4. Integration with development workflow
+
+### AgileChef (Prep Flow) Module Enhancements (Priority: Medium)
+- **What**: Add additional features to the prep flow management system
+- **Why**: Fulfill the remaining requirements for the Prep Flow Manager
+- **Status**: Planning
+- **Requirements to Address**:
+  1. **REQ-M2-03**: Allow manual creation of prep tasks (✅ COMPLETED)
+  2. **REQ-M2-04**: Allow users to move cards between columns (✅ COMPLETED)
+  3. **REQ-M2-05**: Display key recipe info (or link) on the task card (✅ COMPLETED)
+  4. **Future**: Assign tasks to users, set due dates, manage priority
+
+## Long-Term Roadmap (Based on Project Vision)

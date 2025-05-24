@@ -162,6 +162,8 @@ model User {
   prepTasks            PrepTask[]           @relation("UserPrepTasks")
   recipes              Recipe[]
   units                UnitOfMeasure[]      @relation("UserUnits")
+  reservations         Reservation[]        @relation("UserReservations")
+  orders               Order[]              @relation("UserOrders")
 
   @@map("users")
 }
@@ -314,6 +316,7 @@ model MenuItem {
   active      Boolean     @default(true)
   recipeId    Int?        @map("recipe_id")
   sectionId   Int         @map("section_id")
+  orderItems  OrderItem[] @relation("MenuItemOrderItems")
   recipe      Recipe?     @relation("RecipeMenuItems", fields: [recipeId], references: [id])
   section     MenuSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
 
@@ -321,6 +324,71 @@ model MenuItem {
   @@index([recipeId])
   @@index([position])
   @@map("menu_items")
+}
+
+model Reservation {
+  id               Int                @id @default(autoincrement())
+  customerName     String             @db.VarChar(255) @map("customer_name")
+  customerPhone    String?            @db.VarChar(50) @map("customer_phone")
+  customerEmail    String?            @db.VarChar(255) @map("customer_email")
+  partySize        Int                @map("party_size")
+  reservationDate  DateTime           @map("reservation_date")
+  reservationTime  String             @db.VarChar(10) @map("reservation_time")
+  status           ReservationStatus  @default(CONFIRMED)
+  notes            String?
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+  userId           Int                @map("user_id")
+  user             User               @relation("UserReservations", fields: [userId], references: [id], onDelete: Cascade)
+  orders           Order[]            @relation("ReservationOrders")
+
+  @@index([userId])
+  @@index([reservationDate])
+  @@index([status])
+  @@map("reservations")
+}
+
+model Order {
+  id             Int         @id @default(autoincrement())
+  orderNumber    String      @unique @db.VarChar(50) @map("order_number")
+  reservationId  Int?        @map("reservation_id")
+  customerName   String?     @db.VarChar(255) @map("customer_name")
+  status         OrderStatus @default(NEW)
+  orderType      OrderType   @default(DINE_IN) @map("order_type")
+  notes          String?
+  totalAmount    Decimal?    @db.Decimal(10, 2) @map("total_amount")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+  userId         Int         @map("user_id")
+  user           User        @relation("UserOrders", fields: [userId], references: [id], onDelete: Cascade)
+  reservation    Reservation? @relation("ReservationOrders", fields: [reservationId], references: [id])
+  orderItems     OrderItem[] @relation("OrderOrderItems")
+
+  @@index([userId])
+  @@index([reservationId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id          Int            @id @default(autoincrement())
+  orderId     Int            @map("order_id")
+  menuItemId  Int            @map("menu_item_id")
+  quantity    Int            @default(1)
+  price       Decimal        @db.Decimal(10, 2)
+  modifiers   Json?          @db.Json
+  status      OrderItemStatus @default(PENDING)
+  notes       String?
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+  order       Order          @relation("OrderOrderItems", fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem    MenuItem       @relation("MenuItemOrderItems", fields: [menuItemId], references: [id])
+
+  @@index([orderId])
+  @@index([menuItemId])
+  @@index([status])
+  @@map("order_items")
 }
 
 enum UnitType {
@@ -362,4 +430,33 @@ enum PrepTaskStatus {
   PREPPING
   READY
   COMPLETE
+}
+
+enum ReservationStatus {
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+enum OrderStatus {
+  NEW
+  IN_PROGRESS
+  READY
+  COMPLETED
+  CANCELLED
+}
+
+enum OrderType {
+  DINE_IN
+  TAKEOUT
+  DELIVERY
+}
+
+enum OrderItemStatus {
+  PENDING
+  PREPARING
+  READY
+  SERVED
+  CANCELLED
 }

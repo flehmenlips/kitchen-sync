@@ -14,6 +14,8 @@ import commentRoutes from './routes/commentRoutes';
 import prepTaskRoutes from './routes/prepTaskRoutes';
 import prepColumnRoutes from './routes/prepColumnRoutes';
 import menuRoutes from './routes/menuRoutes'; // Import menu routes
+import reservationRoutes from './routes/reservationRoutes'; // Import reservation routes
+import orderRoutes from './routes/orderRoutes'; // Import order routes
 import { Request, Response, NextFunction } from 'express';
 
 // Load environment variables
@@ -45,6 +47,8 @@ app.use('/api/issues/:issueId/comments', commentRoutes);
 app.use('/api/prep-tasks', prepTaskRoutes);
 app.use('/api/prep-columns', prepColumnRoutes);
 app.use('/api/menus', menuRoutes); // Mount menu routes
+app.use('/api/reservations', reservationRoutes); // Mount reservation routes
+app.use('/api/orders', orderRoutes); // Mount order routes
 
 // Basic route for testing
 app.get('/', (req, res) => {
