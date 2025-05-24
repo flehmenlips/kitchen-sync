@@ -1,117 +1,206 @@
-# KitchenSync
+# KitchenSync - Restaurant Management Platform
+> Version 2.10.0
 
-## 1. Project Description
+A comprehensive restaurant management system that streamlines kitchen operations, menu management, and customer interactions.
 
-### 1.1. Vision
-To create a centralized, dynamic, customizable, and comprehensive software suite that seamlessly integrates all core aspects of kitchen and restaurant management, from initial recipe conception to final order delivery on the line.
+## 🚀 Latest Release (v2.10.0)
 
-### 1.2. Goal
-To streamline restaurant operations by unifying recipe development, kitchen prep workflows, menu creation, reservations, and order management into a single, interconnected system. This system aims to reduce redundancy, improve efficiency, enhance consistency, and provide valuable data insights for a modern kitchen.
+### Major Features Added:
+- **Content Management System**: Dynamic content blocks for customer-facing website
+- **Restaurant Branding & Settings**: Complete customization of website appearance
+- **Theme Customization**: Custom colors, fonts, and branding options
+- **Cloudinary Integration**: Professional image management and optimization
+- **Customer Portal**: Fully functional customer-facing website with reservations
 
-### 1.3. Core Modules:
+## 🏗️ Architecture
 
-*   **Recipe Engine (CookBook):** A robust database and interface for creating, storing, searching, scaling, costing (future goal), and managing recipes and sub-recipes.
-*   **Prep Flow Manager (AgileChef Integration):** A Kanban-style workflow tool visualizing and managing kitchen prep tasks derived from recipes and production needs.
-*   **Menu Designer (MenuBuilder Integration):** A tool for designing, laying out, and printing/exporting menus, pulling data directly from the Recipe Engine.
-*   **Reservation & Order System (TableFarm Integration):** Manages customer reservations, potentially table management, and captures customer orders, linking them to menu items.
-*   **Kitchen Display System (ChefRail):** Displays active orders/tickets from the Reservation & Order System in real-time for the cooking line, allowing for status updates.
+KitchenSync is built as a modular platform with five integrated modules:
 
-### 1.4. Key Principles:
+### 1. **CookBook** (Recipe Management System)
+- Create, store, and manage recipes with ingredients and instructions
+- Categorize recipes for easy organization
+- Calculate recipe yields and scaling
+- Track prep and cook times
+- Photo upload support via Cloudinary
 
-*   **Data Flow:** Information should flow logically between modules (e.g., a recipe created in the Recipe Engine can be used to generate prep tasks in AgileChef and appear as an item in MenuBuilder).
-*   **Modularity:** Design components to be relatively independent but communicate via well-defined APIs, allowing for easier development, maintenance, and potential future swapping of components.
-*   **Customizability:** Allow users (initially me) to tailor aspects of the system to specific workflows or restaurant needs.
-*   **Centralization:** A core database or set of interconnected databases should serve as the single source of truth for recipes, menu items, ingredients, etc.
+### 2. **AgileChef** (Kitchen Prep Management)
+- Kanban-style prep task management
+- Drag-and-drop task organization
+- Real-time kitchen workflow tracking
+- Customizable prep columns
 
-## 2. High-Level Flow Chart (Conceptual Data Flow)
+### 3. **MenuBuilder** (Menu Design & Management)
+- Create multiple menus (lunch, dinner, seasonal)
+- Drag-and-drop menu item ordering
+- Link recipes directly to menu items
+- Rich text formatting and styling options
+- Real-time menu preview
+- PDF export functionality
 
+### 4. **TableFarm** (Front-of-House Operations)
+- Reservation calendar system
+- Order entry and management
+- Table management
+- Customer database
+
+### 5. **ChefRail** (Kitchen Display System)
+- Real-time order display (Coming Soon)
+- Kitchen communication
+- Order tracking and timing
+
+## 🌟 New Features in v2.10.0
+
+### Content Management System
+- Create and manage dynamic content blocks
+- Multiple block types: Text, HTML, Image, Video, CTA, Hero, Features
+- Drag-and-drop reordering
+- Page-specific content organization
+- Active/inactive status management
+
+### Restaurant Settings & Branding
+- Complete website customization
+- Logo upload and management
+- Hero and about section customization
+- Social media integration
+- SEO optimization settings
+- Opening hours management
+
+### Theme Customization
+- Custom color schemes (primary, secondary, accent)
+- Font selection for headers and body text
+- Live preview of theme changes
+- Consistent branding across customer portal
+
+### Customer Portal Enhancements
+- Dynamic home page with content blocks
+- Integrated reservation system
+- Menu display with active menu selection
+- Mobile-responsive design
+- Theme-aware styling
+
+## 🛠️ Tech Stack
+
+### Backend
+- Node.js + TypeScript
+- Express.js
+- PostgreSQL with Prisma ORM
+- JWT Authentication
+- Cloudinary for image management
+
+### Frontend
+- React 18 with TypeScript
+- Material-UI (MUI) component library
+- React Router v6
+- React Query for data fetching
+- Vite for build tooling
+
+## 📦 Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/kitchen-sync.git
+cd kitchen-sync
 ```
-+---------------------+      +-----------------------+      +---------------------+ 
-| 1. Recipe Engine    |----->| 2. Prep Flow Manager  |----->| (Feedback/Status?)  |
-| (Create, Scale,     |  (Recipe Data, Scaled  |      | (Prep Task Status)  |
-|  Manage Recipes)    |   Ingredients, Tasks)  |      +---------------------+
-+--------^------------+      +----------^------------+
-         |                       | (Production Needs?) 
-(Recipe Data, Pricing?)        |
-         |                       |
-         v                       |
-+--------+------------+      +-----------------------+      +-----------------------+
-| 3. Menu Designer    |----->| 4. Reservation/Order  |----->| 5. Kitchen Display    |
-| (Layout, Print Menus)|  (Menu Item Data)     |    System (Rez_Coq?)   |      |   System (KDS)        |
-| (Using Recipe Data) |      +-----------------------+      |  (Order/Ticket Data)  |
-+---------------------+                                     +----------+------------+
-                                                                       |
-                                                                       | (Order Status Updates)
-                                                                       v
-                                                                 (Back to Order Sys?)
+
+2. Install dependencies:
+```bash
+# Backend
+cd backend
+npm install
+
+# Frontend
+cd ../frontend
+npm install
 ```
 
-**Explanation:**
+3. Set up environment variables:
+```bash
+# Backend .env
+DATABASE_URL="your-postgresql-url"
+JWT_SECRET="your-jwt-secret"
+SESSION_SECRET="your-session-secret"
+CLOUDINARY_CLOUD_NAME="your-cloud-name"
+CLOUDINARY_API_KEY="your-api-key"
+CLOUDINARY_API_SECRET="your-api-secret"
 
-*   **Recipe Engine (CookBook):** The foundation. Creates and manages all recipe data.
-*   **Prep Flow Manager (AgileChef):** Pulls specific recipes and scaling information from the Recipe Engine to generate prep task cards. May receive input on daily production needs. Status updates on tasks might feed back somewhere (TBD).
-*   **Menu Designer (MenuBuilder):** Pulls finalized recipe details (name, description, possibly price calculated from Recipe Engine) to design menus.
-*   **Reservation/Order System (TableFarm):** Uses the menu item data defined via the Menu Designer. Takes reservations and customer orders.
-*   **Kitchen Display System (KDS):** Receives confirmed orders/tickets from the Order System for display on the kitchen line. Status updates (e.g., "Firing," "Ready") might feed back to the Order System or POS.
+# Frontend .env
+VITE_API_URL="http://localhost:3001/api"
+```
 
-## Tech Stack
+4. Run database migrations:
+```bash
+cd backend
+npx prisma migrate dev
+```
 
-*   **Frontend:** React, Vite, TypeScript
-*   **Backend:** Node.js, Express
-*   **Database:** PostgreSQL
-*   **Deployment:** Render.com
+5. Start the development servers:
+```bash
+# Backend (port 3001)
+cd backend
+npm run dev
 
-## 4. High-Level Project Strategy & Next Steps
+# Frontend (port 5173)
+cd frontend
+npm run dev
+```
 
-### 4.1. Strategy Outline:
+## 🚀 Deployment
 
-#### Immediate Priority Features:
-1. **System Administration & Security**
-   - Implementation of SuperAdmin role (george@seabreeze.farm)
-   - Enhanced user role management system
-   - Audit logging for critical operations
+The application is configured for deployment on Render.com with automatic deployments from the main branch.
 
-2. **Feature & Bug Tracking System**
-   - Internal admin interface for tracking and managing issues
-   - Customer-facing feedback/issue reporting interface
-   - Issue prioritization and status tracking
-   - Integration with development workflow
+### Backend Deployment
+- PostgreSQL database on Render
+- Node.js web service
+- Environment variables configured in Render dashboard
 
-3. **Backup & Data Security**
-   - Automated database backup system
-   - Backup verification and integrity checks
-   - Backup restoration testing procedures
-   - Data export capabilities for users
+### Frontend Deployment
+- Static site deployment
+- Automatic builds from GitHub pushes
+- Environment variables for API endpoints
 
-#### Module Development Status:
+## 👥 User Roles
 
-1. **CookBook (Recipe Engine)**
-   - Status: Active Development / Testing
-   - Current Focus: Real-world recipe input and testing
-   - Next Steps: Bug fixes and feature enhancements based on actual usage
+KitchenSync supports multiple user roles:
+- **SuperAdmin**: Full system access
+- **Admin/Owner**: Restaurant management and settings
+- **Manager/Chef**: Kitchen and menu management
+- **Staff**: Order and reservation handling
+- **Customer**: Public portal access
 
-2. **AgileChef (Prep Flow)**
-   - Status: Planning
-   - Dependencies: Stable CookBook module
+## 📱 Customer Portal
 
-3. **MenuBuilder**
-   - Status: Planning
-   - Dependencies: Stable CookBook module
+The customer-facing portal (accessible at `/customer`) includes:
+- Restaurant information and branding
+- Online menu viewing
+- Reservation system
+- Contact information
+- Opening hours
+- Dynamic content managed through CMS
 
-4. **TableFarm**
-   - Status: Planning
-   - Dependencies: Stable MenuBuilder module
+## 🔒 Security
 
-5. **ChefRail**
-   - Status: Planning
-   - Dependencies: Stable TableFarm module
+- JWT-based authentication
+- Role-based access control
+- Secure password hashing with bcrypt
+- Environment variable protection
+- CORS configuration
 
-### 4.2. Development Principles:
-- Test-driven development for new features
-- Regular backup testing and verification
-- Security-first approach to user management
-- User feedback integration into development cycle
+## 📄 License
 
-## Setup
+MIT License - see LICENSE file for details
 
-*   (Instructions TBD) 
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📞 Support
+
+For questions or support, please open an issue in the GitHub repository.
+
+---
+
+Built with ❤️ for the restaurant industry 
