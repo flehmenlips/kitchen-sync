@@ -11,12 +11,13 @@ import {
 import {
   CalendarMonth as CalendarIcon,
   ListAlt as ListIcon,
+  Receipt as OrderIcon,
   Assessment as AssessmentIcon,
   Add as AddIcon
 } from '@mui/icons-material';
 import { ReservationCalendar } from '../components/tablefarm/ReservationCalendar';
+import OrderListPage from './OrderListPage';
 // import { ReservationList } from '../components/tablefarm/ReservationList';
-// import { OrderManagement } from '../components/tablefarm/OrderManagement';
 // import { TableFarmAnalytics } from '../components/tablefarm/TableFarmAnalytics';
 
 interface TabPanelProps {
@@ -36,7 +37,7 @@ function TabPanel(props: TabPanelProps) {
       aria-labelledby={`tablefarm-tab-${index}`}
       {...other}
     >
-      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
+      {value === index && <Box>{children}</Box>}
     </div>
   );
 }
@@ -83,8 +84,8 @@ export const TableFarmPage: React.FC = () => {
             sx={{ minHeight: 48 }}
           />
           <Tab
-            label="Order Management"
-            icon={<AddIcon />}
+            label="Orders"
+            icon={<OrderIcon />}
             iconPosition="start"
             sx={{ minHeight: 48 }}
           />
@@ -97,7 +98,9 @@ export const TableFarmPage: React.FC = () => {
         </Tabs>
 
         <TabPanel value={tabValue} index={0}>
-          <ReservationCalendar />
+          <Box sx={{ py: 3 }}>
+            <ReservationCalendar />
+          </Box>
         </TabPanel>
 
         <TabPanel value={tabValue} index={1}>
@@ -112,14 +115,7 @@ export const TableFarmPage: React.FC = () => {
         </TabPanel>
 
         <TabPanel value={tabValue} index={2}>
-          <Box sx={{ p: 3, textAlign: 'center' }}>
-            <Typography variant="h6" color="text.secondary" gutterBottom>
-              Order Management
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Coming soon: Create and manage customer orders
-            </Typography>
-          </Box>
+          <OrderListPage />
         </TabPanel>
 
         <TabPanel value={tabValue} index={3}>

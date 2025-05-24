@@ -232,6 +232,75 @@ As per updated strategy (2024-12-20), KitchenSync will initially launch as a sin
 - [ ] Add user authentication improvements
 - [ ] Implement backup and data export features
 
+## Current Focus: TableFarm Enhancement Sprint
+
+### TableFarm Enhancement Plan (Started: 2024-12-24)
+
+#### Phase 1: Order Entry Interface (Staff-facing)
+1. **Create Order List View**
+   - Display all orders with status filters
+   - Search by order number or customer
+   - Quick status updates
+
+2. **Order Entry Form**
+   - Customer selection/creation
+   - Menu item selection from active menus
+   - Quantity and modifiers
+   - Special instructions
+   - Table assignment (optional)
+
+3. **Order Management**
+   - Edit existing orders
+   - Update order status
+   - Calculate totals
+   - Print order receipts
+
+#### Phase 2: Customer Authentication & Accounts
+1. **Registration Flow**
+   - Email/password registration
+   - Profile creation (name, phone)
+   - Email verification (optional for MVP)
+
+2. **Login System**
+   - JWT-based authentication for customers
+   - Separate from staff login
+   - Remember me functionality
+
+3. **Customer Dashboard**
+   - View upcoming reservations
+   - View past orders
+   - Update profile information
+   - Cancel reservations
+
+#### Phase 3: Enhanced Reservation Management
+1. **Customer Reservation List**
+   - View all reservations (upcoming/past)
+   - Cancel upcoming reservations
+   - Modify reservation details
+
+2. **Staff Reservation Management**
+   - Complete reservation list with filters
+   - Table assignment
+   - Convert reservation to order
+   - Guest notes and preferences
+
+3. **Reservation-Order Integration**
+   - Link orders to reservations
+   - Pre-order functionality
+   - Guest history tracking
+
+### Implementation Progress
+- [ ] Create Order model enhancements
+- [ ] Build order service API endpoints  
+- [ ] Create OrderListPage component
+- [ ] Implement OrderEntryDialog
+- [ ] Add menu item selection interface
+- [ ] Create customer registration flow
+- [ ] Implement customer login
+- [ ] Build customer dashboard
+- [ ] Create reservation list views
+- [ ] Add reservation management features
+
 ## Current Focus
 Creating restaurant settings management system for admin control over customer-facing content.
 
