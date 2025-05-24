@@ -6,7 +6,7 @@ export const api = axios.create({
     // In development, use the full base URL with '/api' included
     baseURL: import.meta.env.PROD 
         ? 'https://kitchen-sync-api.onrender.com/api'
-        : (import.meta.env.VITE_API_URL || 'http://localhost:3001') + '/api',
+        : (import.meta.env.VITE_API_URL || 'http://localhost:3001/api'),
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json', // Explicitly request JSON
@@ -78,9 +78,13 @@ api.interceptors.response.use(
         
         // Handle 401 Unauthorized errors
         if (error.response?.status === 401) {
-            // Clear local storage and redirect to login
-            localStorage.clear();
-            window.location.href = '/login';
+            console.warn('401 Unauthorized - User may need to log in');
+            // Don't auto-redirect if we're already on login page
+            if (!window.location.pathname.includes('/login')) {
+                // Clear local storage and redirect to login
+                localStorage.clear();
+                window.location.href = '/login';
+            }
         }
         return Promise.reject(error);
     }
