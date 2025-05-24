@@ -16,6 +16,8 @@ import prepColumnRoutes from './routes/prepColumnRoutes';
 import menuRoutes from './routes/menuRoutes'; // Import menu routes
 import reservationRoutes from './routes/reservationRoutes'; // Import reservation routes
 import orderRoutes from './routes/orderRoutes'; // Import order routes
+import restaurantSettingsRoutes from './routes/restaurantSettingsRoutes';
+import contentBlockRoutes from './routes/contentBlockRoutes';
 import { Request, Response, NextFunction } from 'express';
 
 // Load environment variables
@@ -49,6 +51,8 @@ app.use('/api/prep-columns', prepColumnRoutes);
 app.use('/api/menus', menuRoutes); // Mount menu routes
 app.use('/api/reservations', reservationRoutes); // Mount reservation routes
 app.use('/api/orders', orderRoutes); // Mount order routes
+app.use('/api/restaurant', restaurantSettingsRoutes); // Mount restaurant settings routes
+app.use('/api/content-blocks', contentBlockRoutes); // Mount content block routes
 
 // Basic route for testing
 app.get('/', (req, res) => {

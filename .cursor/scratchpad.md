@@ -21,9 +21,14 @@ The vision of KitchenSync is to create a centralized, dynamic, customizable, and
 - **Deployment**: Render.com (or similar Platform-as-a-Service)
 
 ### Current Development Focus
-Currently, the project is focused on two primary modules:
-1. **CookBook (Recipe Engine)**: Currently in active development and testing phase
-2. **AgileChef (Prep Flow Manager)**: The current focus of our development efforts
+Implementing customer menu view and restaurant settings management system.
+
+## MVP Strategy - Single Restaurant Focus
+As per updated strategy (2024-12-20), KitchenSync will initially launch as a single-restaurant system:
+- **Simplified Architecture**: No multi-tenant complexity in MVP
+- **Faster Development**: Focus on core functionality for one restaurant
+- **Restaurant**: Seabreeze Kitchen (george@seabreeze.farm)
+- **Future**: Multi-restaurant support will be added after MVP validation
 
 ## Project Status Board
 - [x] Implement custom prep columns feature
@@ -42,298 +47,125 @@ Currently, the project is focused on two primary modules:
 - [x] Implement recipe photo upload capability
 - [x] Add photo display to recipe detail pages
 - [x] Implement Menu Title/Description fields for recipes
+- [x] Create TableFarm backend (reservations and orders)
+- [x] Design multi-tenant architecture documentation
+- [x] Create TableFarm frontend calendar view
+- [x] Create customer portal layout and routing
+- [x] Implement customer home page
+- [x] Implement customer reservation form
+- [x] Create customer menu view page
+- [ ] Apply restaurant settings database migration
+- [ ] Create restaurant settings admin interface
+- [ ] Update customer portal to use dynamic restaurant settings
+- [ ] Implement customer reservations list
+- [ ] Add customer authentication
+- [ ] Create order entry interface for staff
+- [ ] Add WebSocket support for real-time updates
+- [ ] Implement ChefRail module
 - [ ] Implement Recipe URL Import feature
 - [ ] Add user authentication improvements
 - [ ] Implement backup and data export features
 
 ## Current Focus
-We've successfully implemented the Menu Title/Description fields feature that allows recipes to have separate kitchen-focused and customer-facing content. This provides seamless integration between the CookBook and MenuBuilder modules.
+Creating restaurant settings management system for admin control over customer-facing content.
 
-### Next Strategic Steps - Planning Phase
-Based on our project roadmap and current state, here are the recommended next strategic steps:
+### Restaurant Settings Implementation Progress
 
-1. **Recipe Import Enhancement (Phase 1 - URL Import)**
-   - Implement web scraping for popular recipe websites
-   - Add URL validation and preview functionality
-   - Create mapping between scraped data and our recipe model
-   - This will significantly improve user onboarding and recipe creation
+#### Completed ✅
+1. **Customer Menu View**
+   - Created public menu service
+   - Implemented customer menu page with tabs for multiple menus
+   - Integrated with existing MenuBuilder data
+   - Added proper styling with menu customization support
+   - Added route to customer portal
 
-2. **Security & User Management Enhancements**
-   - Implement proper role-based access control
-   - Add team/organization support for restaurant use
-   - Enhance authentication with features like password reset
-   - Add audit logging for critical operations
+2. **Restaurant Settings Model**
+   - Designed comprehensive RestaurantSettings table
+   - Includes hero section, about, contact, hours, social media
+   - Menu display settings and SEO fields
+   - Created SQL migration file
 
-3. **Data Management & Backup**
-   - Implement automated backup system
-   - Add recipe export/import functionality (JSON, CSV)
-   - Create data migration tools for bulk operations
-   - Add version history for recipes
+3. **Backend Controller**
+   - Created restaurant settings controller
+   - Endpoints for admin (get/update settings)
+   - Public endpoint for customer portal
+   - Image upload handling prepared
 
-4. **MenuBuilder Module Enhancements**
-   - Add PDF export functionality
-   - Implement menu templates and themes
-   - Add pricing calculation tools
-   - Support for multiple menu versions (lunch, dinner, seasonal)
+#### In Progress 🚧
+1. **Database Migration**
+   - Need to run Prisma migration to add RestaurantSettings table
+   - Generate Prisma client to include new model
 
-5. **Performance & Scalability**
-   - Implement caching for frequently accessed data
-   - Add pagination for large recipe lists
-   - Optimize image loading and storage
-   - Consider implementing a CDN for assets
+2. **Admin Interface**
+   - Create comprehensive settings page for restaurant owner
+   - Form sections for all content areas
+   - Image upload functionality
+   - Menu selection for customer display
 
-## TableFarm & ChefRail Implementation Plan
+3. **Customer Portal Updates**
+   - Update home page to use dynamic settings
+   - Update layout to use dynamic restaurant info
+   - Dynamic footer with restaurant details
 
-### Phase 1: TableFarm (Reservation & Order System) - Week 1-3
+### Key Architecture Decisions
 
-#### Database Schema Design
-1. **Reservations Table**
-   - id, customerName, customerPhone, customerEmail
-   - partySize, reservationDate, reservationTime
-   - status (confirmed, cancelled, completed, no-show)
-   - notes, createdAt, updatedAt, userId
-   
-2. **Tables Table** (future enhancement)
-   - id, tableNumber, capacity, status
-   - section, notes
-   
-3. **Orders Table**
-   - id, orderNumber, reservationId (optional)
-   - tableId (future), customerName
-   - status (new, in-progress, ready, completed, cancelled)
-   - orderType (dine-in, takeout, delivery)
-   - notes, createdAt, updatedAt, userId
-   
-4. **OrderItems Table**
-   - id, orderId, menuItemId
-   - quantity, price, modifiers (JSON)
-   - status (pending, preparing, ready, served)
-   - notes, createdAt, updatedAt
+#### Restaurant Settings Structure
+- **Hero Section**: Title, subtitle, image, CTA button
+- **About Section**: Title, description, image
+- **Contact Info**: All restaurant contact details
+- **Opening Hours**: JSON structure for flexible hours
+- **Social Media**: Links to social platforms
+- **Menu Settings**: Control which menus appear and how
+- **SEO**: Meta tags for search engines
 
-#### Backend Implementation Tasks
-1. [x] Create Prisma schema for reservations and orders
-2. [x] Implement reservation CRUD endpoints
-3. [x] Implement order management endpoints
-4. [ ] Create WebSocket service for real-time updates
-5. [ ] Add order status workflow logic
-6. [ ] Implement order-to-kitchen communication
+#### Admin Control Features
+1. **Content Management**:
+   - Edit all text content
+   - Upload images for hero/about sections
+   - Manage opening hours
 
-#### Frontend Implementation Tasks
-1. [ ] Create reservation calendar view
-2. [ ] Build reservation form and list
-3. [ ] Create order entry interface
-4. [ ] Implement menu item selection from MenuBuilder data
-5. [ ] Add order modification capabilities
-6. [ ] Build order status tracking view
+2. **Menu Control**:
+   - Select which menus to display
+   - Choose display mode (tabs, accordion, single)
 
-### Phase 2: ChefRail (Kitchen Display System) - Week 4-6
+3. **Branding**:
+   - Restaurant name and description
+   - Social media links
+   - Footer customization
 
-#### Backend Implementation Tasks
-1. [ ] Create ticket management service
-2. [ ] Implement WebSocket endpoints for real-time updates
-3. [ ] Add timer functionality for tickets
-4. [ ] Create station assignment logic (future)
-5. [ ] Implement ticket status transitions
-6. [ ] Add ticket history and analytics
+### Next Implementation Steps
+1. **Run Database Migration**
+   ```bash
+   cd backend
+   npx prisma migrate dev --name add_restaurant_settings
+   npx prisma generate
+   ```
 
-#### Frontend Implementation Tasks
-1. [ ] Create kitchen display dashboard
-2. [ ] Implement real-time ticket cards
-3. [ ] Add drag-and-drop for status updates
-4. [ ] Build timer displays with alerts
-5. [ ] Create ticket detail modal
-6. [ ] Add sound notifications for new orders
-7. [ ] Implement filter and sort options
+2. **Create Admin Routes**
+   - Add routes for restaurant settings endpoints
+   - Secure with authentication middleware
 
-### Integration Points
-1. **MenuBuilder → TableFarm**
-   - TableFarm reads active menus and items
-   - Prices and descriptions pulled from MenuBuilder
-   
-2. **TableFarm → ChefRail**
-   - Orders sent via WebSocket on creation
-   - Status updates flow bidirectionally
-   
-3. **CookBook → ChefRail**
-   - Recipe details available for reference
-   - Prep instructions linked to tickets
+3. **Build Admin Settings Page**
+   - Multi-section form interface
+   - Real-time preview option
+   - Save/reset functionality
 
-### Technical Considerations
-1. **Real-time Communication**
-   - Use Socket.io for WebSocket implementation
-   - Implement reconnection logic
-   - Handle offline scenarios gracefully
-   
-2. **Performance**
-   - Optimize for tablet/touch interfaces
-   - Minimize re-renders for real-time updates
-   - Implement efficient data caching
-   
-3. **User Experience**
-   - Large, touch-friendly buttons for kitchen environment
-   - High contrast, readable displays
-   - Audio/visual alerts for urgent items
-
-### MVP Features for Initial Release
-
-#### TableFarm MVP
-- Basic reservation CRUD
-- Simple order creation
-- Menu item selection
-- Order status tracking
-- Send orders to kitchen
-
-#### ChefRail MVP
-- Display incoming orders
-- Update order status
-- Basic timers
-- Simple filtering
-- Clear completed orders
+4. **Update Customer Portal**
+   - Fetch settings from public endpoint
+   - Replace hardcoded content with dynamic data
 
 ## Recent Decisions and Changes
-1. **Custom Columns Feature** (2024-04-20)
-   - Implemented drag-and-drop column reordering
-   - Added column management UI
-   - Created backend API endpoints
+1. **Customer Menu View** (2024-12-20)
+   - Created customer-friendly menu display
+   - Uses existing MenuBuilder data and styling
+   - Supports multiple menus with tab navigation
+   - Filters to show only active, non-archived content
 
-2. **Code Cleanup** (2024-04-20)
-   - Removed redundant `app.ts` (functionality exists in `server.ts`)
-   - Separated maintenance scripts to dedicated branch
-   - Stashed AddRecipeDialog changes for future PR
-
-3. **Recipe Task Management Implementation** (2024-04-24)
-   - Updated PrepBoard.tsx to include a Floating Action Button that opens the AddRecipeDialog
-   - Enhanced AddRecipeDialog to dynamically use custom columns
-   - Updated RecipeDetail.tsx to show a column selection dialog when adding recipes to prep
-   - Added proper task creation through the prepTaskService API
-   - Improved UX with better error handling and success messages
-
-4. **API Configuration Fix** (2024-04-24)
-   - Fixed inconsistent API endpoint paths in `prepTaskService.ts`
-   - Fixed missing `/api` prefix in `prepColumnService.ts` API endpoint paths
-   - Fixed double `/api` prefix issue by removing it from axios baseURL in `api.ts`
-   - Updated Vite proxy configuration to target correct backend port (3001)
-   - Resolved 404 errors when loading prep board and adding recipes
-
-5. **Type Mismatch Fix** (2024-04-24)
-   - Fixed type mismatch between frontend and backend for recipeId
-   - Updated `CreatePrepTaskInput` interface to use number instead of string
-   - Added explicit type conversion in components before sending data to the API
-   - Prevented 500 internal server errors when adding recipes to the prep board
-
-6. **Column Management Implementation** (2024-04-24)
-   - Created reusable dialog components for column operations
-   - Implemented create, edit, and delete functionality for columns
-   - Updated PrepBoard UI with a SpeedDial for adding columns and recipes
-   - Added proper error handling and loading indicators
-   - Enhanced the user experience with feedback messages
-
-7. **Drag-and-Drop Enhancements** (2024-04-24)
-   - Implemented column drag-and-drop functionality for horizontal reordering
-   - Added visual cues for draggable elements (grab cursor, drag handle icon)
-   - Improved drag feedback with shadows and hover effects
-   - Connected reordering to backend persistence
-   - Enhanced dropzone visual feedback for both tasks and columns
-
-8. **Task Drag-and-Drop Implementation** (2024-04-24)
-   - Implemented proper task dragging functionality with react-beautiful-dnd
-   - Made PrepCard components draggable with visual feedback
-   - Updated moveTask logic to handle batch updates efficiently
-   - Improved error handling and recovery for failed drag operations
-   - Enhanced visual cues for task dragging states
-
-9. **Vertical Drag-and-Drop Bug Fix** (2024-04-25)
-   - Fixed critical bug where tasks would disappear when dragged vertically within a column
-   - Identified the issue in the moveTask function in prepBoardStore.ts
-   - Added special handling for same-column reordering operations
-   - Used different array manipulation logic for vertical vs. horizontal moves
-   - Added additional logging throughout the drag-and-drop flow for debugging
-   - Enhanced API request/response logging to improve traceability
-   - Verified fix works by testing various drag scenarios
-   - Released fix as v1.3.0 with tag "Fully functioning drag and drop kanban prep board"
-
-10. **Column Color Customization** (2024-04-26)
-    - Added color customization for columns to improve visual organization
-    - Created a color picker with 12 predefined colors in the column form dialog
-    - Added column color accents to both columns and task cards for better tracking
-    - Implemented color badges/pills on task cards to maintain column context
-    - Added quick color change option directly in the column menu
-
-11. **Column Update API Fix** (2024-04-26)
-    - Fixed issue with column color updates not being applied
-    - Changed frontend API method from PATCH to PUT to match backend route configuration
-    - Added comprehensive logging throughout the update flow
-    - Improved error handling and debugging capabilities
-    - Added debug middleware for API route tracing
-    - Enhanced controller logging for better visibility into backend operations
-
-12. **Production API Endpoint Fix** (2024-04-26)
-    - Fixed critical issue with API endpoints in production environment
-    - Updated API baseURL configuration to use absolute URL instead of relative path
-    - Changed from `/api` to `https://kitchen-sync-api.onrender.com/api` in production
-    - Tagged as v1.5.0 for the stable production build
-    - Made stable-version the new main branch via hard reset
-    - Created main-backup branch to preserve previous main state
-    - Version 1.5.0 is now the official production version
-
-13. **Recipe Photo Upload and Display Feature** (2024-04-30)
-    - Added photo upload capability to recipe form
-    - Created dedicated photo upload endpoint on the backend
-    - Implemented file storage mechanism on the server
-    - Added Multer middleware for handling multipart form data
-    - Created proper photoUrl handling in the database
-    - Fixed API URL construction for photo upload to work with the development proxy
-    - Enhanced recipe detail view to prominently display recipe photos
-    - Added fallback for recipes without photos
-    - Fixed a bug where the wrong component file was being edited - photo display was added to the correct component
-    - Tagged as v2.3.0 for this feature release
-
-14. **Cloudinary Integration for Recipe Photos** (2024-05-07)
-    - Integrated Cloudinary cloud service for recipe photo storage
-    - Added photoPublicId field to Recipe model for proper photo management
-    - Created database migration to add the photo_public_id column
-    - Updated recipe controller to handle photo uploads to Cloudinary
-    - Implemented automatic deletion of old photos when replaced
-    - Enhanced error handling for photo uploads
-    - Updated photo URL handling to use Cloudinary URLs
-    - Fixed prisma import issue that broke the Recipes module
-    - Added UUID dependency for file handling
-    - Tagged as v2.5.0 for the Cloudinary integration release
-    - Successfully deployed to production environment
-
-15. **Recipe Thumbnail Implementation** (2024-05-09)
-    - Added thumbnails to the recipe list view using Cloudinary image transformations
-    - Implemented a utility function to generate optimized thumbnail URLs
-    - Added fallback avatar with recipe icon for recipes without photos
-    - Created responsive design with properly sized thumbnails
-    - Improved user experience with visual cues for recipe recognition
-    - Enhanced type safety with custom type definitions for recipe list items
-    - Optimized image loading with Cloudinary's automatic quality settings
-    - Improved recipe list visuals with a more engaging grid-like display
-    - Added thumbnails to task details drawer in the prep board for recipe tasks
-    - Used consistent styling between recipe list and prep board thumbnails
-
-16. **Task Details Drawer Improvements** (2024-05-10)
-    - Reorganized drawer sections to improve information hierarchy
-    - Moved recipe details section directly under task description for better context
-    - Fixed HTML rendering in recipe instructions
-    - Added styles to properly format ordered and unordered lists in instructions
-    - Improved spacing and margins for better readability
-    - Enhanced the recipe details card layout
-    - Added proper HTML sanitization with dangerouslySetInnerHTML
-    - Improved visual consistency between drawer sections
-
-17. **Menu Title/Description Fields Implementation** (2024-12-20)
-    - Added optional menuTitle and menuDescription fields to Recipe model
-    - Created database migration with manual SQL execution due to permission constraints
-    - Updated backend controllers to handle new fields with backward compatibility
-    - Added "Menu Display Options" section to recipe form with clear visual separation
-    - Enhanced MenuBuilder to automatically use menu fields when available
-    - Implemented intelligent fallback logic (menuTitle → name, menuDescription → description)
-    - Added tooltips showing which fields will be used during menu import
-    - Added visual indicator (sparkle emoji) when recipes have menu-specific fields
-    - Maintained full backward compatibility for existing recipes without menu fields
-    - Fixed persistence issue where menu fields were cleared on edit (missing from transformRecipeToFormData)
+2. **Restaurant Settings Architecture** (2024-12-20)
+   - Comprehensive settings model for all customer-facing content
+   - Single source of truth for restaurant information
+   - Admin interface planned for easy management
+   - Public API endpoint for customer portal access
 
 ## Lessons
 - Always check for hardcoded constants when implementing dynamic features
@@ -344,196 +176,34 @@ Based on our project roadmap and current state, here are the recommended next st
 - Include info useful for debugging in the program output
 - Be aware of how path prefixes are applied in the API service configuration - avoid double prefixing
 - Ensure type consistency between frontend and backend, especially for IDs and foreign keys
-- Reusable dialog components improve maintainability and consistency
-- Adding visual cues for interactive elements improves user experience
-- When implementing drag-and-drop, consider both mouse and touch interactions
-- For complex reordering operations, use batch updates to minimize API calls
-- Implement optimistic UI updates for a responsive user experience
-- Test drag operations thoroughly across different devices and scenarios
-- Handle vertical and horizontal drag operations differently - they often require different logic
-- Add comprehensive logging during development to identify issues quickly
-- Include debug code that can be easily enabled when problems arise
-- Adding a new item to force a fresh data fetch can reveal state synchronization issues
-- Don't forget to test edge cases like dragging to empty columns or reordering single tasks
-- Match frontend HTTP methods (GET, POST, PUT, PATCH, DELETE) with backend route configurations
-- When a feature doesn't work as expected, add logging at each level (component, store, service, API) to trace the flow
-- Consider using forced refreshes after certain operations to ensure UI consistency with backend state
-- In production, use absolute URLs for API endpoints rather than relative paths to avoid routing issues
-- When deploying a React app with Vite, the development proxy doesn't exist in production, so API routes need to be handled differently
-- Create backup branches before doing major branch operations like hard resets
-- If you have two different API configuration files, ensure they use consistent URL patterns for the same environment
+- When implementing complex systems, document the architecture and user roles first
+- Separate customer-facing and internal-facing interfaces from the start
+- Plan for multi-tenancy early in the project to avoid major refactoring later
+- Start with single-tenant MVP to validate concept before adding complexity
+- Use clear restaurant branding in customer-facing interfaces
+- Implement multi-step forms for better UX in reservation flow
+- Create comprehensive settings models to avoid hardcoding throughout the app
+- Always regenerate Prisma client after schema changes
 
 ## Executor's Feedback or Assistance Requests
-- Recipe task addition to custom columns has been successfully implemented 
-- Both PrepBoard.tsx and RecipeDetail.tsx now use dynamic column selection
-- Column CRUD operations (create, read, update, delete) are now fully implemented
-- Drag-and-drop reordering for columns has been implemented
-- Drag-and-drop functionality for tasks within and between columns is now working
-- The vertical drag-and-drop bug has been fixed and verified
-- The application has been tagged as v1.3.0 for the fully functioning kanban board
-- Critical production API endpoint issues have been fixed and verified in production
-- Updated version to v1.5.0 for the stable production build
-- Successfully made stable-version the new main branch for future development
-- Future enhancement: Consider adding batch operations for adding multiple recipes at once
-- Menu Title/Description fields feature has been successfully implemented with full backward compatibility
-- The feature provides seamless integration between CookBook and MenuBuilder modules
-- Manual testing is recommended to verify the UI flow and data persistence
+- Restaurant settings model and controller created
+- Need to run Prisma migration before continuing
+- Customer menu view is functional and ready
+- Admin interface design should be comprehensive but user-friendly
+- Consider adding image upload to Cloudinary for consistency with recipe photos
 
 ## Key Challenges and Analysis
-- Maintaining data integrity while allowing custom columns
-- Ensuring smooth transition from hardcoded to dynamic column system
-- Coordinating database maintenance without disrupting service
-- Managing consistent API endpoint configurations between frontend and backend
-- Ensuring type consistency between frontend TypeScript interfaces and backend database schema
-- Implementing proper drag-and-drop behavior with visual feedback
-- Handling complex task reordering operations across multiple columns
-- Diagnosing and fixing state management issues during same-column drag operations
-- Resolving production API endpoint issues where relative paths were failing in the production environment
+### Restaurant Settings Management (Priority: High)
+- **What**: Admin interface for all customer-facing content
+- **Why**: Eliminate hardcoded values and give owner full control
+- **Status**: Backend ready, need migration and frontend
+- **Challenges**:
+  1. Complex form with many sections
+  2. Image upload handling
+  3. Real-time preview of changes
+  4. Validation of opening hours format
+  5. Menu selection interface
 
-### Recipe Task Addition Implementation (Priority: High)
-- **What**: Implement recipe task addition to prep board columns
-- **Why**: Current implementation uses hardcoded columns and outdated task structure
-- **Status**: ✅ COMPLETED
-- **Components Updated**:
-  1. AddRecipeDialog:
-     - Removed hardcoded column references
-     - Updated to use dynamic column selection
-     - Improved error handling and success messaging
-     - Added proper type conversion for recipeId (string → number)
-  2. RecipeDetail:
-     - Removed hardcoded column references
-     - Added column selection dialog
-     - Improved user feedback on adding tasks
-     - Added proper type conversion for recipeId (string → number)
-  3. PrepBoard:
-     - Added Floating Action Button for adding recipes
-     - Integrated AddRecipeDialog component
-     - Improved overall user experience
-- **Verification**:
-  - Users can now add recipes to any custom column 
-  - Dynamic column selection implemented in two entry points:
-    1. From the Prep Board via the "+" FAB
-    2. From a Recipe Detail page via the "Add to Prep Board" button
-  - Consistent UX between both methods
-  
-### API Configuration Fix (Priority: High)
-- **What**: Fix API endpoint configuration for prep tasks and columns
-- **Why**: Users encountered 404 errors when using the prep board features
-- **Status**: ✅ COMPLETED
-- **Issues Fixed**:
-  1. Inconsistent API paths in prepTaskService.ts:
-     - `getAllTasks` used `BASE_URL` (/api/prep-tasks)
-     - `getTasks` used a different path (/prep-tasks)
-  2. Missing `/api` prefix in prepColumnService.ts paths:
-     - All endpoint paths were missing the `/api` prefix
-     - Added `BASE_URL` constant to ensure consistency
-  3. Double `/api` prefix in axios configuration:
-     - baseURL in api.ts included `/api` suffix
-     - This caused endpoints to have `/api` twice
-     - Removed `/api` suffix from baseURL
-  4. Incorrect proxy configuration in Vite:
-     - Target was set to port 3000 instead of 3001
-- **Verification**:
-  - Prep board loads columns and tasks correctly
-  - Add recipe functionality works correctly from both entry points
-  - No 404 errors in console when using prep board features
-  
-### Type Mismatch Fix (Priority: High)
-- **What**: Fix type mismatch between frontend and backend for recipeId
-- **Why**: Backend expects recipeId as an integer but frontend was sending it as a string
-- **Status**: ✅ COMPLETED
-- **Issues Fixed**:
-  1. Updated the `CreatePrepTaskInput` interface in `prep.ts`:
-     - Changed `recipeId` from `string` to `number` type
-  2. Modified `AddRecipeDialog.tsx` component:
-     - Added explicit conversion of recipe.id to number using parseInt()
-  3. Modified `RecipeDetail.tsx` component:
-     - Added explicit conversion of recipe.id to number using parseInt()
-- **Verification**:
-  - Adding recipes to prep board works correctly from both entry points
-  - No more 500 internal server errors when adding recipes
-  - Server correctly processes the recipe reference and adds tasks to the selected column
-
-### Column Management Implementation (Priority: High)
-- **What**: Implement CRUD operations for prep columns
-- **Why**: Allow users to customize their prep board with their own workflow
-- **Status**: ✅ COMPLETED
-- **Components Created/Modified**:
-  1. Created new components:
-     - `ColumnFormDialog.tsx` for adding/editing columns
-     - `DeleteConfirmationDialog.tsx` for confirming deletion
-  2. Updated existing components:
-     - `PrepColumn.tsx` to add edit/delete menu options
-     - `PrepBoard.tsx` to add SpeedDial and integrate dialogs
-     - `prepBoardStore.ts` to add column management methods
-- **Key Features**:
-  1. Create new columns with custom names
-  2. Edit existing column names
-  3. Delete columns with confirmation dialog
-  4. Visual feedback for all operations
-  5. Loading indicators during API requests
-- **Verification**:
-  - All column operations work correctly
-  - Column changes persist after page refresh
-  - Error handling is implemented for all operations
-  - User feedback is provided through snackbar messages
-
-### Column Drag-and-Drop Implementation (Priority: Medium)
-- **What**: Implement drag-and-drop functionality for columns
-- **Why**: Provide intuitive UX for organizing prep board layout
-- **Status**: ✅ COMPLETED
-- **Components Updated**:
-  1. PrepBoard.tsx:
-     - Added Droppable container for columns
-     - Wrapped columns in Draggable components
-     - Enhanced handleDragEnd to handle column reordering
-     - Added handleReorderColumns method to sync with backend
-  2. PrepColumn.tsx:
-     - Added drag handle icon and improved styling
-     - Enhanced cursor feedback during drag operations
-     - Improved visual feedback with hover styles and transitions
-- **Key Features**:
-  1. Columns can be dragged horizontally to reorder
-  2. Column order persists after page refresh
-  3. Visual feedback during drag operations (shadow, cursor changes)
-  4. Drag handle icons indicate draggability
-  5. Consistent UI between task and column dragging
-- **Verification**:
-  - Column drag-and-drop works smoothly
-  - Column order persists after reordering
-  - Visual feedback is clear and intuitive
-  - Both touch and mouse interactions are supported
-
-### Task Drag-and-Drop Implementation (Priority: High)
-- **What**: Implement task dragging functionality within and between columns
-- **Why**: Enable users to easily reorder and reorganize their tasks
-- **Status**: ✅ COMPLETED
-- **Components Updated**:
-  1. PrepCard.tsx:
-     - Wrapped in Draggable component from react-beautiful-dnd
-     - Added drag handle icon and visual feedback styles
-     - Enhanced styling for better UX during dragging
-  2. PrepColumn.tsx:
-     - Updated to properly pass index prop to PrepCard
-     - Enhanced Droppable area styling for clearer visual cues
-  3. prepBoardStore.ts:
-     - Improved moveTask method to handle batch updates
-     - Added handling for tasks being reordered within same column
-     - Optimized backend synchronization
-  4. PrepBoard.tsx:
-     - Enhanced handleDragEnd to clearly distinguish task vs column dragging
-- **Key Features**:
-  1. Drag tasks vertically within columns to prioritize
-  2. Drag tasks horizontally between columns to change status
-  3. Visual feedback during drag operations
-  4. Optimistic UI updates for responsive feel
-  5. Efficient backend synchronization
-- **Verification**:
-  - Tasks can be dragged and dropped within and between columns
-  - Task order persists after page refresh
-  - Multiple task movements are correctly synchronized
-  - Edge cases (empty columns, many tasks) are handled properly
-  
 ## Recipe Engine (CookBook) Improvement Plan
 
 ### Current State Analysis

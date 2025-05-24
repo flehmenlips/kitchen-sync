@@ -61,6 +61,19 @@ import MenusPage from './pages/MenusPage';
 import MenuFormPage from './pages/MenuFormPage';
 import MenuDetailPage from './pages/MenuDetailPage';
 
+// TableFarm Component
+import { TableFarmPage } from './pages/TableFarmPage';
+
+// Restaurant Settings
+import RestaurantSettingsPage from './pages/RestaurantSettingsPage';
+import ContentBlocksPage from './pages/ContentBlocksPage';
+
+// Customer Portal Components
+import CustomerLayout from './components/customer/CustomerLayout';
+import CustomerHomePage from './pages/customer/CustomerHomePage';
+import CustomerReservationPage from './pages/customer/CustomerReservationPage';
+import CustomerMenuPage from './pages/customer/CustomerMenuPage';
+
 // Create a client
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -92,6 +105,17 @@ const App: React.FC = () => {
                       <RegisterPage />
                     </PublicRoute>
                   } />
+
+                  {/* Customer Portal Routes - Public Access */}
+                  <Route path="/customer" element={<CustomerLayout />}>
+                    <Route index element={<CustomerHomePage />} />
+                    <Route path="reservations/new" element={<CustomerReservationPage />} />
+                    <Route path="menu" element={<CustomerMenuPage />} />
+                    {/* Future customer routes */}
+                    {/* <Route path="reservations" element={<CustomerReservationsListPage />} /> */}
+                    {/* <Route path="login" element={<CustomerLoginPage />} /> */}
+                    {/* <Route path="profile" element={<CustomerProfilePage />} /> */}
+                  </Route>
 
                   {/* Protected routes */}
                   <Route element={<ProtectedRoute />}>
@@ -131,6 +155,13 @@ const App: React.FC = () => {
                       <Route path="menus/new" element={<MenuFormPage />} />
                       <Route path="menus/:id" element={<MenuDetailPage />} />
                       <Route path="menus/:id/edit" element={<MenuFormPage />} />
+
+                      {/* TableFarm Module Routes */}
+                      <Route path="tablefarm" element={<TableFarmPage />} />
+
+                      {/* Restaurant Settings */}
+                      <Route path="settings" element={<RestaurantSettingsPage />} />
+                      <Route path="content-blocks" element={<ContentBlocksPage />} />
 
                       {/* AgileChef Module Routes */}
                       <Route path="prep" element={<PrepBoard />} />

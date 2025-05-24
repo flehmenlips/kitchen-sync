@@ -14,11 +14,14 @@ model Category {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
   userId      Int      @map("user_id")
+  restaurantId Int      @map("restaurant_id")
   author      User     @relation("UserRecipeCategories", fields: [userId], references: [id], onDelete: Cascade)
+  restaurant  Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   recipes     Recipe[]
 
-  @@unique([name, userId])
+  @@unique([name, userId, restaurantId])
   @@index([userId])
+  @@index([restaurantId])
   @@map("categories")
 }
 
@@ -151,6 +154,10 @@ model User {
   createdAt            DateTime             @default(now()) @map("created_at")
   updatedAt            DateTime             @updatedAt @map("updated_at")
   role                 UserRole             @default(USER)
+  isCustomer           Boolean              @default(false) @map("is_customer")
+  phone                String?              @db.VarChar(50)
+  restaurantStaff      RestaurantStaff[]    @relation("StaffUser")
+  customerReservations Reservation[]        @relation("CustomerReservations")
   recipeCategories     Category[]           @relation("UserRecipeCategories")
   comments             Comment[]
   ingredientCategories IngredientCategory[] @relation("UserIngredientCategories")
@@ -331,18 +338,25 @@ model Reservation {
   customerName     String             @db.VarChar(255) @map("customer_name")
   customerPhone    String?            @db.VarChar(50) @map("customer_phone")
   customerEmail    String?            @db.VarChar(255) @map("customer_email")
+  customerId       Int?               @map("customer_id")
+  restaurantId     Int                @map("restaurant_id")
   partySize        Int                @map("party_size")
   reservationDate  DateTime           @map("reservation_date")
   reservationTime  String             @db.VarChar(10) @map("reservation_time")
   status           ReservationStatus  @default(CONFIRMED)
   notes            String?
+  specialRequests  String?            @map("special_requests")
   createdAt        DateTime           @default(now()) @map("created_at")
   updatedAt        DateTime           @updatedAt @map("updated_at")
   userId           Int                @map("user_id")
   user             User               @relation("UserReservations", fields: [userId], references: [id], onDelete: Cascade)
+  customer         User?              @relation("CustomerReservations", fields: [customerId], references: [id])
+  restaurant       Restaurant         @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   orders           Order[]            @relation("ReservationOrders")
 
   @@index([userId])
+  @@index([customerId])
+  @@index([restaurantId])
   @@index([reservationDate])
   @@index([status])
   @@map("reservations")
@@ -352,6 +366,7 @@ model Order {
   id             Int         @id @default(autoincrement())
   orderNumber    String      @unique @db.VarChar(50) @map("order_number")
   reservationId  Int?        @map("reservation_id")
+  restaurantId   Int         @map("restaurant_id")
   customerName   String?     @db.VarChar(255) @map("customer_name")
   status         OrderStatus @default(NEW)
   orderType      OrderType   @default(DINE_IN) @map("order_type")
@@ -361,10 +376,12 @@ model Order {
   updatedAt      DateTime    @updatedAt @map("updated_at")
   userId         Int         @map("user_id")
   user           User        @relation("UserOrders", fields: [userId], references: [id], onDelete: Cascade)
+  restaurant     Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   reservation    Reservation? @relation("ReservationOrders", fields: [reservationId], references: [id])
   orderItems     OrderItem[] @relation("OrderOrderItems")
 
   @@index([userId])
+  @@index([restaurantId])
   @@index([reservationId])
   @@index([status])
   @@index([createdAt])
@@ -389,6 +406,149 @@ model OrderItem {
   @@index([menuItemId])
   @@index([status])
   @@map("order_items")
+}
+
+model Restaurant {
+  id               Int               @id @default(autoincrement())
+  name             String            @db.VarChar(255)
+  slug             String            @unique @db.VarChar(255)
+  description      String?
+  cuisine          String?           @db.VarChar(100)
+  address          String?
+  city             String?           @db.VarChar(100)
+  state            String?           @db.VarChar(50)
+  zipCode          String?           @db.VarChar(20) @map("zip_code")
+  country          String?           @db.VarChar(100)
+  phone            String?           @db.VarChar(50)
+  email            String?           @db.VarChar(255)
+  website          String?
+  logoUrl          String?           @map("logo_url")
+  coverImageUrl    String?           @map("cover_image_url")
+  openingHours     Json?             @map("opening_hours")
+  isActive         Boolean           @default(true) @map("is_active")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+  settings         RestaurantSettings?
+  staff            RestaurantStaff[]
+  reservations     Reservation[]
+  orders           Order[]
+  categories       Category[]
+  contentBlocks    ContentBlock[]
+
+  @@index([slug])
+  @@index([isActive])
+  @@map("restaurants")
+}
+
+model RestaurantSettings {
+  id                  Int        @id @default(autoincrement())
+  restaurantId        Int        @unique @map("restaurant_id")
+  
+  // Website Branding
+  websiteName         String?    @map("website_name")
+  tagline             String?
+  logoUrl             String?    @map("logo_url")
+  logoPublicId        String?    @map("logo_public_id")
+  
+  // Hero Section
+  heroTitle           String?    @map("hero_title")
+  heroSubtitle        String?    @map("hero_subtitle")
+  heroImageUrl        String?    @map("hero_image_url")
+  heroImagePublicId   String?    @map("hero_image_public_id")
+  heroCTAText         String?    @map("hero_cta_text")
+  heroCTALink         String?    @map("hero_cta_link")
+  
+  // About Section
+  aboutTitle          String?    @map("about_title")
+  aboutDescription    String?    @map("about_description") @db.Text
+  aboutImageUrl       String?    @map("about_image_url")
+  aboutImagePublicId  String?    @map("about_image_public_id")
+  
+  // Theme Customization
+  primaryColor        String?    @default("#1976d2") @map("primary_color")
+  secondaryColor      String?    @default("#dc004e") @map("secondary_color")
+  accentColor         String?    @default("#333333") @map("accent_color")
+  fontPrimary         String?    @default("Roboto, sans-serif") @map("font_primary")
+  fontSecondary       String?    @default("Playfair Display, serif") @map("font_secondary")
+  
+  // Contact Info
+  contactPhone        String?    @map("contact_phone")
+  contactEmail        String?    @map("contact_email")
+  contactAddress      String?    @map("contact_address")
+  contactCity         String?    @map("contact_city")
+  contactState        String?    @map("contact_state")
+  contactZip          String?    @map("contact_zip")
+  
+  // Opening Hours (JSON object with day: hours format)
+  openingHours        Json?      @map("opening_hours")
+  
+  // Social Media
+  facebookUrl         String?    @map("facebook_url")
+  instagramUrl        String?    @map("instagram_url")
+  twitterUrl          String?    @map("twitter_url")
+  
+  // Menu Display Settings
+  activeMenuIds       Int[]      @map("active_menu_ids")
+  menuDisplayMode     String?    @default("tabs") @map("menu_display_mode") // tabs, accordion, single
+  
+  // Footer
+  footerText          String?    @map("footer_text")
+  
+  // SEO
+  metaTitle           String?    @map("meta_title")
+  metaDescription     String?    @map("meta_description")
+  metaKeywords        String?    @map("meta_keywords")
+  
+  createdAt           DateTime   @default(now()) @map("created_at")
+  updatedAt           DateTime   @updatedAt @map("updated_at")
+  
+  restaurant          Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  
+  @@map("restaurant_settings")
+}
+
+model ContentBlock {
+  id             Int          @id @default(autoincrement())
+  restaurantId   Int          @map("restaurant_id")
+  page           String       @default("home") @db.VarChar(50)
+  blockType      String       @map("block_type") @db.VarChar(50)
+  title          String?      @db.VarChar(255)
+  subtitle       String?      @db.VarChar(500)
+  content        String?      @db.Text
+  imageUrl       String?      @map("image_url")
+  imagePublicId  String?      @map("image_public_id") @db.VarChar(255)
+  videoUrl       String?      @map("video_url")
+  buttonText     String?      @map("button_text") @db.VarChar(100)
+  buttonLink     String?      @map("button_link") @db.VarChar(255)
+  buttonStyle    String?      @default("primary") @map("button_style") @db.VarChar(50)
+  settings       Json?        @default("{}") @db.Json
+  displayOrder   Int          @default(0) @map("display_order")
+  isActive       Boolean      @default(true) @map("is_active")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  
+  restaurant     Restaurant   @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  
+  @@index([restaurantId, page])
+  @@index([displayOrder])
+  @@map("content_blocks")
+}
+
+model RestaurantStaff {
+  id           Int          @id @default(autoincrement())
+  userId       Int          @map("user_id")
+  restaurantId Int          @map("restaurant_id")
+  role         StaffRole    @default(STAFF)
+  isActive     Boolean      @default(true) @map("is_active")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+  user         User         @relation("StaffUser", fields: [userId], references: [id], onDelete: Cascade)
+  restaurant   Restaurant   @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, restaurantId])
+  @@index([userId])
+  @@index([restaurantId])
+  @@map("restaurant_staff")
 }
 
 enum UnitType {
@@ -459,4 +619,10 @@ enum OrderItemStatus {
   READY
   SERVED
   CANCELLED
+}
+
+enum StaffRole {
+  STAFF
+  MANAGER
+  OWNER
 }

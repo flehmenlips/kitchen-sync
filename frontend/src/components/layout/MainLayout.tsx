@@ -45,6 +45,8 @@ import ScaleIcon from '@mui/icons-material/Scale';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import Logout from '@mui/icons-material/Logout';
 import PersonIcon from '@mui/icons-material/Person';
+import SettingsIcon from '@mui/icons-material/Settings';
+import PublicIcon from '@mui/icons-material/Public';
 
 // Constants
 const DRAWER_WIDTH = 280;
@@ -86,8 +88,7 @@ const KITCHEN_SYNC_MODULES = [
         name: 'TableFarm',
         icon: <TableRestaurantIcon />,
         description: 'Reservation & Order System',
-        path: '/tables',
-        comingSoon: true
+        path: '/tablefarm'
     },
     {
         id: 'chefrail',
@@ -211,6 +212,33 @@ const MainLayout: React.FC = () => {
                 ))}
 
                 <Divider sx={{ my: 1 }} />
+                
+                {/* Customer Portal Link */}
+                <ListItem disablePadding>
+                    <ListItemButton 
+                        component="a" 
+                        href="/customer" 
+                        target="_blank"
+                        sx={{
+                            backgroundColor: 'primary.main',
+                            color: 'white',
+                            '&:hover': {
+                                backgroundColor: 'primary.dark',
+                            },
+                            mx: 1,
+                            borderRadius: 1,
+                            my: 1
+                        }}
+                    >
+                        <ListItemIcon sx={{ color: 'inherit' }}>
+                            <PublicIcon />
+                        </ListItemIcon>
+                        <ListItemText primary="View Customer Portal" />
+                    </ListItemButton>
+                </ListItem>
+
+                <Divider sx={{ my: 1 }} />
+                
                 <ListItem disablePadding>
                     <ListItemButton component={RouterLink} to="/issues">
                         <ListItemIcon>
@@ -221,6 +249,29 @@ const MainLayout: React.FC = () => {
                         <ListItemText primary="Issue Tracker" />
                     </ListItemButton>
                 </ListItem>
+
+                {/* Restaurant Settings - Only visible to admin/owner */}
+                {(user?.role === 'ADMIN' || user?.role === 'SUPERADMIN') && (
+                    <>
+                        <Divider sx={{ my: 1 }} />
+                        <ListItem disablePadding>
+                            <ListItemButton component={RouterLink} to="/settings">
+                                <ListItemIcon>
+                                    <SettingsIcon />
+                                </ListItemIcon>
+                                <ListItemText primary="Restaurant Settings" />
+                            </ListItemButton>
+                        </ListItem>
+                        <ListItem disablePadding>
+                            <ListItemButton component={RouterLink} to="/content-blocks">
+                                <ListItemIcon>
+                                    <DashboardIcon />
+                                </ListItemIcon>
+                                <ListItemText primary="Content Blocks" />
+                            </ListItemButton>
+                        </ListItem>
+                    </>
+                )}
 
                 {/* Admin Tools - Only visible to SuperAdmin */}
                 {user?.role === 'SUPERADMIN' && (

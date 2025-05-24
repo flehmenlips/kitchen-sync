@@ -3,6 +3,7 @@ export interface UserProfile {
     name: string | null;
     email: string;
     role: 'USER' | 'ADMIN' | 'SUPERADMIN';
+    isCustomer?: boolean;
     company?: string;
     position?: string;
     phone?: string;
