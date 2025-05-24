@@ -177,6 +177,7 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
             name, description, instructions, yieldQuantity, yieldUnitId,
             prepTimeMinutes, cookTimeMinutes, tags,
             categoryId, photoUrl,
+            menuTitle, menuDescription,
             ingredients
         } = req.body;
 
@@ -224,6 +225,8 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
                     tags: tagsArray,
                     categoryId: categoryIdNum,
                     photoUrl,
+                    menuTitle,
+                    menuDescription,
                     userId: req.user!.id,
                 },
             });
@@ -296,6 +299,7 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
             name, description, instructions, yieldQuantity, yieldUnitId,
             prepTimeMinutes, cookTimeMinutes, tags,
             categoryId, photoUrl,
+            menuTitle, menuDescription,
             ingredients
         } = req.body;
 
@@ -377,6 +381,8 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
                     tags: tagsArray,
                     categoryId: categoryIdNum,
                     photoUrl,
+                    menuTitle,
+                    menuDescription,
                 },
             });
 

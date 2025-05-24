@@ -11,4 +11,6 @@ export interface Recipe {
     cookTimeMinutes: number | null;
     sections?: RecipeSection[];
     photoUrl?: string | null;
+    menuTitle?: string | null;
+    menuDescription?: string | null;
 } 

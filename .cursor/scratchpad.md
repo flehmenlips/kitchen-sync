@@ -41,9 +41,36 @@ Currently, the project is focused on two primary modules:
 - [x] Implement task details panel with comments and recipe details
 - [x] Implement recipe photo upload capability
 - [x] Add photo display to recipe detail pages
+- [ ] Implement Menu Title/Description fields for recipes
 
 ## Current Focus
 We've successfully implemented a complete, customizable prep board system with drag-and-drop functionality for both columns and tasks. Users can now fully manage their prep workflow through an intuitive interface. We've also added a task details panel that allows users to view recipe details and add comments/notes to tasks.
+
+### Menu Title/Description Fields for CookBook-MenuBuilder Integration (Priority: High)
+- **What**: Add optional menuTitle and menuDescription fields to recipes for menu-specific presentation
+- **Why**: Recipe names/descriptions are kitchen-focused while menus need customer-facing content
+- **Status**: IN PROGRESS
+- **Task Breakdown**:
+  1. Database Schema Update:
+     - [x] Add menuTitle and menuDescription fields to Recipe model in Prisma
+     - [x] Create and run database migration
+     - [x] Update DTOs and interfaces
+  2. Backend Updates:
+     - [x] Update recipe controller to handle new fields
+     - [x] Update recipe service to include new fields
+     - [x] Ensure backward compatibility
+  3. Frontend Recipe Form Updates:
+     - [x] Add Menu Title and Menu Description fields to recipe form
+     - [x] Update recipe edit functionality
+     - [x] Add visual separation/section for menu-specific fields
+  4. MenuBuilder Integration:
+     - [x] Update MenuSectionsEditor to use menu fields when available
+     - [x] Modify toggles to prefer menu fields over standard fields
+     - [x] Add fallback logic for recipes without menu fields
+  5. Testing:
+     - [ ] Test recipe creation with menu fields
+     - [ ] Test MenuBuilder import with and without menu fields
+     - [ ] Verify backward compatibility
 
 ### Prep Column CRUD (Priority: High)
 - **What**: Implement Create, Read, Update, Delete operations for prep columns

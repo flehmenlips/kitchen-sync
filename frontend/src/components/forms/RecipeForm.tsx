@@ -69,6 +69,8 @@ export interface RecipeFormData {
     name: string;
     description: string;
     photoUrl?: string;
+    menuTitle?: string;
+    menuDescription?: string;
     yieldQuantity: number | string;
     yieldUnitId: number | string;
     prepTimeMinutes: number | string;
@@ -147,6 +149,8 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
         defaultValues: initialData || {
             name: '',
             description: '',
+            menuTitle: '',
+            menuDescription: '',
             yieldQuantity: '',
             yieldUnitId: '',
             prepTimeMinutes: '',
@@ -518,6 +522,35 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                 multiline
                 rows={2}
             />
+
+            {/* Menu-Specific Fields Section */}
+            <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
+                <Typography variant="subtitle1" gutterBottom sx={{ mb: 2, color: 'primary.main' }}>
+                    Menu Display Options (Optional)
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    These fields allow you to specify how this recipe appears on menus, separate from the kitchen-focused recipe title and description above.
+                </Typography>
+                <Stack spacing={2}>
+                    <TextField
+                        {...register("menuTitle")}
+                        label="Menu Title"
+                        fullWidth
+                        placeholder="e.g., 'Atlantic Salmon' instead of 'Pan-Seared Salmon with Lemon Beurre Blanc'"
+                        helperText="How this dish should appear on customer-facing menus"
+                    />
+                    <TextField
+                        {...register("menuDescription")}
+                        label="Menu Description"
+                        fullWidth
+                        multiline
+                        rows={2}
+                        placeholder="e.g., 'Fresh Atlantic salmon, pan-seared to perfection...'"
+                        helperText="Enticing description for menu presentation"
+                    />
+                </Stack>
+            </Paper>
+
             <Box sx={{ mt: 2, mb: 2 }}>
                 <Typography variant="subtitle1" gutterBottom>
                     Recipe Photo

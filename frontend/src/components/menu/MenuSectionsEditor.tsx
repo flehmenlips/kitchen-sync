@@ -24,6 +24,8 @@ interface MenuRecipe {
   name: string;
   description?: string | null;
   photoUrl?: string | null;
+  menuTitle?: string | null;
+  menuDescription?: string | null;
 }
 
 interface MenuSectionsEditorProps {
@@ -155,7 +157,9 @@ const ItemDialog: React.FC<ItemDialogProps> = ({
             id: typeof recipe.id === 'string' ? parseInt(recipe.id, 10) : recipe.id,
             name: recipe.name,
             description: recipe.description,
-            photoUrl: recipe.photoUrl
+            photoUrl: recipe.photoUrl,
+            menuTitle: recipe.menuTitle,
+            menuDescription: recipe.menuDescription
           }));
           
           setRecipes(mappedRecipes);
@@ -183,10 +187,15 @@ const ItemDialog: React.FC<ItemDialogProps> = ({
   useEffect(() => {
     if (selectedRecipe) {
       if (useRecipeName) {
-        setName(selectedRecipe.name);
+        // Use menuTitle if available, otherwise fall back to recipe name
+        setName(selectedRecipe.menuTitle || selectedRecipe.name);
       }
-      if (importDescription && selectedRecipe.description) {
-        setDescription(selectedRecipe.description);
+      if (importDescription) {
+        // Use menuDescription if available, otherwise fall back to recipe description
+        const descriptionToUse = selectedRecipe.menuDescription || selectedRecipe.description;
+        if (descriptionToUse) {
+          setDescription(descriptionToUse);
+        }
       }
     }
   }, [selectedRecipe, useRecipeName, importDescription]);
@@ -260,6 +269,11 @@ const ItemDialog: React.FC<ItemDialogProps> = ({
             <Typography variant="subtitle2" gutterBottom>
               Recipe Import Options
             </Typography>
+            {(selectedRecipe.menuTitle || selectedRecipe.menuDescription) && (
+              <Typography variant="body2" color="primary" sx={{ mb: 1, fontStyle: 'italic' }}>
+                ✨ This recipe has menu-specific fields that will be used when enabled
+              </Typography>
+            )}
             <FormControlLabel
               control={
                 <Switch 
@@ -267,7 +281,14 @@ const ItemDialog: React.FC<ItemDialogProps> = ({
                   onChange={(e) => setUseRecipeName(e.target.checked)} 
                 />
               }
-              label="Use Recipe Name For Menu Item"
+              label={
+                <Tooltip title={selectedRecipe.menuTitle ? 
+                  `Will use: "${selectedRecipe.menuTitle}"` : 
+                  `Will use: "${selectedRecipe.name}"`
+                }>
+                  <span>Use Recipe Title For Menu Item</span>
+                </Tooltip>
+              }
             />
             <FormControlLabel
               control={
@@ -276,7 +297,17 @@ const ItemDialog: React.FC<ItemDialogProps> = ({
                   onChange={(e) => setImportDescription(e.target.checked)} 
                 />
               }
-              label="Import Recipe Description"
+              label={
+                <Tooltip title={
+                  selectedRecipe.menuDescription ? 
+                    `Will use menu description: "${selectedRecipe.menuDescription.substring(0, 50)}..."` : 
+                    (selectedRecipe.description ? 
+                      `Will use recipe description: "${selectedRecipe.description.substring(0, 50)}..."` : 
+                      "No description available")
+                }>
+                  <span>Import Recipe Description</span>
+                </Tooltip>
+              }
             />
           </Box>
         )}

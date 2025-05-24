@@ -50,21 +50,27 @@ export interface RecipeIngredient {
 }
 
 export interface Recipe {
-  id: number;
-  name: string;
-  description: string | null;
-  instructions: string;
-  yieldQuantity: number | null;
-  yieldUnit: { id: number; name: string; abbreviation: string } | null;
-  prepTimeMinutes: number | null;
-  cookTimeMinutes: number | null;
-  tags: string[];
-  categoryId: number | null; // Added categoryId from backend
-  category: Category | null; // Added OPTIONAL nested category object
-  photoUrl: string | null; // Added photoUrl field
-  createdAt: string; // Assuming ISO string format from backend
-  updatedAt: string;
-  recipeIngredients?: RecipeIngredient[]; // Optional based on fetch endpoint
+    id: number;
+    name: string;
+    description?: string;
+    instructions: string;
+    prepTimeMinutes?: number;
+    cookTimeMinutes?: number;
+    yieldQuantity?: number;
+    yieldUnit?: UnitOfMeasure;
+    yieldUnitId?: number;
+    tags?: string[];
+    photoUrl?: string | null;
+    photoPublicId?: string | null;
+    menuTitle?: string | null;
+    menuDescription?: string | null;
+    userId?: number;
+    categoryId?: number;
+    category?: Category;
+    recipeIngredients?: RecipeIngredient[];
+    ingredients?: RecipeIngredient[];
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 // Interface for Unit data from form

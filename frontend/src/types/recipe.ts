@@ -66,6 +66,8 @@ export interface RecipeFormData {
     name: string;
     description: string;
     photoUrl?: string;
+    menuTitle?: string;
+    menuDescription?: string;
     yieldQuantity: string;
     yieldUnitId: string;
     prepTimeMinutes: string;
@@ -89,6 +91,8 @@ export interface RecipeApiData {
     name: string;
     description: string;
     photoUrl?: string;
+    menuTitle?: string;
+    menuDescription?: string;
     yieldQuantity?: number;
     yieldUnitId?: number;
     prepTimeMinutes?: number;

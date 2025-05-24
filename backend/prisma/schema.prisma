@@ -89,6 +89,8 @@ model Recipe {
   userId            Int            @map("user_id")
   photoUrl          String?        @map("photo_url")
   photoPublicId     String?        @map("photo_public_id")
+  menuTitle         String?        @map("menu_title") @db.VarChar(255)
+  menuDescription   String?        @map("menu_description")
   menuItems         MenuItem[]     @relation("RecipeMenuItems")
   prepTasks         PrepTask[]     @relation("RecipePrepTasks")
   recipeIngredients UnitQuantity[] @relation("RecipeParent")
