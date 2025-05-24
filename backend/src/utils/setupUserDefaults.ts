@@ -25,11 +25,11 @@ export const setupUserDefaults = async (userId: number): Promise<void> => {
     
     // Add recipe categories
     await Promise.all([
-      prisma.category.create({ data: { name: 'Breakfast', userId } }),
-      prisma.category.create({ data: { name: 'Lunch', userId } }),
-      prisma.category.create({ data: { name: 'Dinner', userId } }),
-      prisma.category.create({ data: { name: 'Dessert', userId } }),
-      prisma.category.create({ data: { name: 'Appetizer', userId } }),
+      prisma.category.create({ data: { name: 'Breakfast', userId, restaurantId: 1 } }),
+      prisma.category.create({ data: { name: 'Lunch', userId, restaurantId: 1 } }),
+      prisma.category.create({ data: { name: 'Dinner', userId, restaurantId: 1 } }),
+      prisma.category.create({ data: { name: 'Dessert', userId, restaurantId: 1 } }),
+      prisma.category.create({ data: { name: 'Appetizer', userId, restaurantId: 1 } }),
     ]);
     
     // Add ingredient categories

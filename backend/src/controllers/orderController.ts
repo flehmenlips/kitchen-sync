@@ -180,8 +180,13 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
             const price = safeParseFloat(item.price) || 0;
             totalAmount += quantity * price;
             
+            const menuItemId = safeParseInt(item.menuItemId);
+            if (!menuItemId) {
+                throw new Error('Invalid menu item ID');
+            }
+            
             return {
-                menuItemId: safeParseInt(item.menuItemId),
+                menuItem: { connect: { id: menuItemId } },
                 quantity,
                 price,
                 modifiers: item.modifiers || null,
@@ -200,6 +205,7 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
                 notes: notes || null,
                 totalAmount,
                 userId: req.user.id,
+                restaurantId: 1, // Single restaurant MVP
                 orderItems: {
                     create: processedItems
                 }

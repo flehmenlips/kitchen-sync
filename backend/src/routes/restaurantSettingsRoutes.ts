@@ -6,7 +6,7 @@ import {
   getPublicRestaurantSettings
 } from '../controllers/restaurantSettingsController';
 import { protect } from '../middleware/authMiddleware';
-import multer from 'multer';
+const multer = require('multer');
 
 const router = express.Router();
 
@@ -17,7 +17,7 @@ const upload = multer({
   limits: {
     fileSize: 5 * 1024 * 1024 // 5MB limit
   },
-  fileFilter: (req, file, cb) => {
+  fileFilter: (req: any, file: any, cb: any) => {
     // Accept only image files
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);

@@ -110,7 +110,7 @@ export const updateContentBlock = async (req: Request, res: Response) => {
 };
 
 // Delete a content block
-export const deleteContentBlock = async (req: Request, res: Response) => {
+export const deleteContentBlock = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -120,7 +120,8 @@ export const deleteContentBlock = async (req: Request, res: Response) => {
     });
 
     if (!block) {
-      return res.status(404).json({ error: 'Content block not found' });
+      res.status(404).json({ error: 'Content block not found' });
+      return;
     }
 
     // Delete image from Cloudinary if exists
@@ -166,12 +167,13 @@ export const reorderContentBlocks = async (req: Request, res: Response) => {
 };
 
 // Upload image for content block
-export const uploadContentBlockImage = async (req: Request, res: Response) => {
+export const uploadContentBlockImage = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
 
     if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
+      res.status(400).json({ error: 'No file uploaded' });
+      return;
     }
 
     // Get current block
@@ -180,7 +182,8 @@ export const uploadContentBlockImage = async (req: Request, res: Response) => {
     });
 
     if (!block) {
-      return res.status(404).json({ error: 'Content block not found' });
+      res.status(404).json({ error: 'Content block not found' });
+      return;
     }
 
     // Delete old image if exists
@@ -229,7 +232,7 @@ export const uploadContentBlockImage = async (req: Request, res: Response) => {
 };
 
 // Duplicate a content block
-export const duplicateContentBlock = async (req: Request, res: Response) => {
+export const duplicateContentBlock = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -239,7 +242,8 @@ export const duplicateContentBlock = async (req: Request, res: Response) => {
     });
 
     if (!originalBlock) {
-      return res.status(404).json({ error: 'Content block not found' });
+      res.status(404).json({ error: 'Content block not found' });
+      return;
     }
 
     // Create duplicate without id and timestamps
@@ -250,7 +254,8 @@ export const duplicateContentBlock = async (req: Request, res: Response) => {
         ...blockData,
         title: `${blockData.title} (Copy)`,
         displayOrder: blockData.displayOrder + 1,
-        isActive: false // Start as inactive
+        isActive: false, // Start as inactive
+        settings: blockData.settings || {}
       }
     });
 

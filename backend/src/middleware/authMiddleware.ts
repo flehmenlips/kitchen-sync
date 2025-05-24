@@ -44,7 +44,9 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
             name: true,
             role: true,
             createdAt: true,
-            updatedAt: true
+            updatedAt: true,
+            isCustomer: true,
+            phone: true
         }
       });
        console.log('[AuthMiddleware] User found in DB:', user ? user.id : 'Not Found');

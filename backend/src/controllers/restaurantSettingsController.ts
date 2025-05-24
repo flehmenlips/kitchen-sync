@@ -114,13 +114,14 @@ export const updateRestaurantSettings = async (req: Request, res: Response) => {
   }
 };
 
-export const uploadRestaurantImage = async (req: Request, res: Response) => {
+export const uploadRestaurantImage = async (req: Request, res: Response): Promise<void> => {
   try {
     const { field } = req.params; // hero, about, logo
     const restaurantId = 1;
 
     if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
+      res.status(400).json({ error: 'No file uploaded' });
+      return;
     }
 
     // Get current settings to check for existing images
@@ -137,7 +138,8 @@ export const uploadRestaurantImage = async (req: Request, res: Response) => {
 
     const dbFields = fieldMap[field];
     if (!dbFields) {
-      return res.status(400).json({ error: 'Invalid image field' });
+      res.status(400).json({ error: 'Invalid image field' });
+      return;
     }
 
     // Delete old image from Cloudinary if exists
@@ -189,7 +191,7 @@ export const uploadRestaurantImage = async (req: Request, res: Response) => {
 };
 
 // Public endpoint for customer portal
-export const getPublicRestaurantSettings = async (req: Request, res: Response) => {
+export const getPublicRestaurantSettings = async (req: Request, res: Response): Promise<void> => {
   try {
     const restaurantId = 1;
     
@@ -231,7 +233,8 @@ export const getPublicRestaurantSettings = async (req: Request, res: Response) =
     });
 
     if (!settings) {
-      return res.status(404).json({ error: 'Restaurant settings not found' });
+      res.status(404).json({ error: 'Restaurant settings not found' });
+      return;
     }
 
     // Add restaurant info

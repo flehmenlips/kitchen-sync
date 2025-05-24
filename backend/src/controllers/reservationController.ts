@@ -147,7 +147,8 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
                 reservationDate: new Date(reservationDate),
                 reservationTime,
                 notes,
-                userId: req.user.id
+                userId: req.user.id,
+                restaurantId: 1 // Single restaurant MVP
             }
         });
 

@@ -75,7 +75,7 @@ export const defaultIngredients: Omit<Prisma.IngredientCreateInput, 'author'>[] 
 ];
 
 // Define categories too
-export const defaultCategories: Omit<Prisma.CategoryCreateInput, 'author'>[] = [
+export const defaultCategories: Omit<Prisma.CategoryCreateInput, 'author' | 'restaurant'>[] = [
   { name: 'Breakfast', description: 'Morning meals and breakfast recipes' },
   { name: 'Lunch', description: 'Midday meals and lunch recipes' },
   { name: 'Dinner', description: 'Evening meals and dinner recipes' },

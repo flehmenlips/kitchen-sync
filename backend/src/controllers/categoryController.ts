@@ -46,6 +46,7 @@ export const createCategory = async (req: Request, res: Response): Promise<void>
                 name,
                 description: description || null,
                 userId: userId, // Associate with the logged-in user
+                restaurantId: 1, // Single restaurant MVP
             },
         });
         res.status(201).json(newCategory);
