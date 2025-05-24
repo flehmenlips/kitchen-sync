@@ -11,6 +11,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "dev:local": "NODE_ENV=development dotenv -e .env.local -- ts-node-dev --respawn --transpile-only src/server.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "test:recipe": "ts-node src/tests/run-recipe-tests.ts"
   },
@@ -47,6 +48,7 @@
     "@types/bcryptjs": "^3.0.0",
     "@types/multer": "^1.4.12",
     "@types/uuid": "^10.0.0",
+    "dotenv-cli": "^8.0.0",
     "nodemon": "^3.1.9",
     "prisma": "^6.7.0",
     "ts-node": "^10.9.2",
