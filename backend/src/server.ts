@@ -18,6 +18,7 @@ import reservationRoutes from './routes/reservationRoutes'; // Import reservatio
 import orderRoutes from './routes/orderRoutes'; // Import order routes
 import restaurantSettingsRoutes from './routes/restaurantSettingsRoutes';
 import contentBlockRoutes from './routes/contentBlockRoutes';
+import customerAuthRoutes from './routes/customerAuthRoutes'; // Import customer auth routes
 import { Request, Response, NextFunction } from 'express';
 
 // Load environment variables
@@ -28,7 +29,7 @@ const app = express();
 // Middleware
 app.use(cors({ 
     origin: process.env.FRONTEND_URL || 'http://localhost:5173', // Allow frontend origin
-    // credentials: true // Remove - not needed for Bearer token
+    credentials: true // Enable credentials for authentication
 })); 
 app.use(express.json()); // Middleware to parse JSON request bodies
 app.use(express.urlencoded({ extended: true })); // Middleware to parse URL-encoded bodies
@@ -38,6 +39,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 // Routes
 app.use('/api/users', userRoutes); // Mount user routes
+app.use('/api/auth/customer', customerAuthRoutes); // Mount customer auth routes
 app.use('/api/recipes', recipeRoutes);
 app.use('/api/units', unitRoutes); // Mount unit routes
 app.use('/api/ingredients', ingredientRoutes); // Mount ingredient routes

@@ -15,9 +15,11 @@ import { theme } from './theme'; // Import theme from a separate file
 // Layout and Context Providers
 import MainLayout from './components/layout/MainLayout';
 import { AuthProvider } from './context/AuthContext';
+import { CustomerAuthProvider } from './context/CustomerAuthContext';
 import { SnackbarProvider } from './context/SnackbarContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import PublicRoute from './components/common/PublicRoute';
+import CustomerProtectedRoute from './components/common/CustomerProtectedRoute';
 
 // Pages
 import LoginPage from './pages/LoginPage';
@@ -73,6 +75,11 @@ import CustomerLayout from './components/customer/CustomerLayout';
 import CustomerHomePage from './pages/customer/CustomerHomePage';
 import CustomerReservationPage from './pages/customer/CustomerReservationPage';
 import CustomerMenuPage from './pages/customer/CustomerMenuPage';
+import { CustomerRegisterPage } from './pages/customer/CustomerRegisterPage';
+import { CustomerLoginPage } from './pages/customer/CustomerLoginPage';
+import { CustomerVerifyEmailSentPage } from './pages/customer/CustomerVerifyEmailSentPage';
+import { CustomerVerifyEmailPage } from './pages/customer/CustomerVerifyEmailPage';
+import CustomerDashboardPage from './pages/customer/CustomerDashboardPage';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -107,13 +114,26 @@ const App: React.FC = () => {
                   } />
 
                   {/* Customer Portal Routes - Public Access */}
-                  <Route path="/customer" element={<CustomerLayout />}>
+                  <Route path="/customer" element={
+                    <CustomerAuthProvider>
+                      <CustomerLayout />
+                    </CustomerAuthProvider>
+                  }>
                     <Route index element={<CustomerHomePage />} />
                     <Route path="reservations/new" element={<CustomerReservationPage />} />
                     <Route path="menu" element={<CustomerMenuPage />} />
+                    <Route path="register" element={<CustomerRegisterPage />} />
+                    <Route path="login" element={<CustomerLoginPage />} />
+                    <Route path="verify-email-sent" element={<CustomerVerifyEmailSentPage />} />
+                    <Route path="verify-email" element={<CustomerVerifyEmailPage />} />
+                    {/* Protected customer routes */}
+                    <Route path="dashboard" element={
+                      <CustomerProtectedRoute>
+                        <CustomerDashboardPage />
+                      </CustomerProtectedRoute>
+                    } />
                     {/* Future customer routes */}
                     {/* <Route path="reservations" element={<CustomerReservationsListPage />} /> */}
-                    {/* <Route path="login" element={<CustomerLoginPage />} /> */}
                     {/* <Route path="profile" element={<CustomerProfilePage />} /> */}
                   </Route>
 

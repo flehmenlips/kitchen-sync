@@ -220,12 +220,60 @@ As per updated strategy (2024-12-20), KitchenSync will initially launch as a sin
 - [x] Implement customer home page
 - [x] Implement customer reservation form
 - [x] Create customer menu view page
+- [x] Create order entry interface for staff
+- [x] Order management system with list and entry dialog
+
+### Enhanced Reservation System Tasks
+
+#### Phase 1: Customer Account System
+- [x] Create customer profile database schema
+- [x] Implement customer registration API
+- [x] Build customer registration UI
+- [x] Add email verification flow
+- [ ] Build customer dashboard
+- [ ] Implement guest checkout option
+- [ ] Create password reset functionality
+
+#### Phase 2: Table Management
+- [ ] Design table configuration schema
+- [ ] Create table management API endpoints
+- [ ] Build table configuration UI
+- [ ] Implement floor plan editor
+- [ ] Create table assignment logic
+- [ ] Add table combination rules
+- [ ] Build table availability calculations
+
+#### Phase 3: Operational Settings
+- [ ] Create operating hours schema
+- [ ] Build hours configuration API
+- [ ] Design reservation rules engine
+- [ ] Implement pacing & duration settings
+- [ ] Create blackout date management
+- [ ] Build settings management UI
+- [ ] Add service period definitions
+
+#### Phase 4: Admin Features
+- [ ] Build reservation management dashboard
+- [ ] Create manual reservation entry
+- [ ] Implement guest management system
+- [ ] Add communication tools
+- [ ] Build floor plan view
+- [ ] Create waitlist management
+- [ ] Add reservation reporting
+
+#### Phase 5: Integration
+- [ ] Update customer portal with new features
+- [ ] Integrate staff portal components
+- [ ] Add role-based permissions
+- [ ] Create help documentation
+- [ ] Implement analytics dashboard
+- [ ] Performance optimization
+- [ ] User acceptance testing
+
+### Other Pending Tasks
 - [ ] Apply restaurant settings database migration
 - [ ] Create restaurant settings admin interface
 - [ ] Update customer portal to use dynamic restaurant settings
-- [ ] Implement customer reservations list
-- [ ] Add customer authentication
-- [ ] Create order entry interface for staff
 - [ ] Add WebSocket support for real-time updates
 - [ ] Implement ChefRail module
 - [ ] Implement Recipe URL Import feature
@@ -290,16 +338,46 @@ As per updated strategy (2024-12-20), KitchenSync will initially launch as a sin
    - Guest history tracking
 
 ### Implementation Progress
-- [ ] Create Order model enhancements
-- [ ] Build order service API endpoints  
-- [ ] Create OrderListPage component
-- [ ] Implement OrderEntryDialog
-- [ ] Add menu item selection interface
+- [x] Create Order model enhancements
+- [x] Build order service API endpoints  
+- [x] Create OrderListPage component
+- [x] Implement OrderEntryDialog
+- [x] Add menu item selection interface
 - [ ] Create customer registration flow
 - [ ] Implement customer login
 - [ ] Build customer dashboard
 - [ ] Create reservation list views
 - [ ] Add reservation management features
+
+### Completed Features (2024-12-24)
+
+#### Order Management System
+1. **OrderListPage**:
+   - Comprehensive order list with real-time status updates
+   - Advanced filtering by date, status, and order type
+   - Search functionality
+   - Quick status updates via dropdown
+   - Action buttons for view, edit, print, and delete
+
+2. **OrderEntryDialog**:
+   - Customer name entry
+   - Order type selection (Dine In, Takeout, Delivery)
+   - Menu-based item selection
+   - Quantity management
+   - Special instructions per item
+   - Order total calculation
+   - Integration with existing menus
+
+3. **Order Service**:
+   - Full CRUD operations
+   - Status management
+   - Order item status tracking
+   - Helper functions for formatting and colors
+
+4. **Integration**:
+   - Added to TableFarm module as "Orders" tab
+   - Works with existing menu data
+   - Ready for reservation integration
 
 ## Current Focus
 Creating restaurant settings management system for admin control over customer-facing content.
@@ -419,13 +497,65 @@ Creating restaurant settings management system for admin control over customer-f
 - Implement multi-step forms for better UX in reservation flow
 - Create comprehensive settings models to avoid hardcoding throughout the app
 - Always regenerate Prisma client after schema changes
+- Always use `npm run dev:local` in the backend - This uses `.env.local` which points to the local database. Never use `npm run dev` as it uses `.env` which connects to the production database!
+- CORS Configuration - When using authentication with JWT tokens, always ensure:
+  - Backend has `credentials: true` in CORS config
+  - Frontend has `withCredentials: true` in axios config
+- Read the file before you try to edit it.
+- If there are vulnerabilities that appear in the terminal, run npm audit before proceeding
+- Always ask before using the -force git command
+- **Separate Customer and Staff Authentication** - Always use separate axios instances and auth storage for customer vs staff to avoid:
+  - Shared authorization headers causing cross-authentication
+  - Wrong redirects (customers going to staff login)
+  - Mixed authentication states
+- **Customer Auth Context Issues** - When using customer authentication:
+  - Initialize auth state from storage in useState to avoid losing auth on route changes
+  - Use the context's login method instead of calling the service directly in components
+  - Ensure the CustomerAuthProvider persists across route changes (wrap parent layout, not individual routes)
+  - Add small delays after login to ensure state updates before navigation
 
 ## Executor's Feedback or Assistance Requests
-- Restaurant settings model and controller created
-- Need to run Prisma migration before continuing
-- Customer menu view is functional and ready
-- Admin interface design should be comprehensive but user-friendly
-- Consider adding image upload to Cloudinary for consistency with recipe photos
+
+### Port Configuration Issues Investigation (2024-12-28)
+
+**Issue**: Customer account creation is experiencing issues related to port confusion between 5173 and 5174.
+
+**Findings**:
+1. **Frontend Port Configuration**:
+   - Vite config does not specify a port (defaults to 5173)
+   - Package.json dev script runs `vite` without port specification
+   - Frontend can run on different ports depending on availability
+
+2. **Backend Configuration**:
+   - CORS is configured with: `process.env.FRONTEND_URL || 'http://localhost:5173'`
+   - Email verification URL uses: `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`
+   - This means `FRONTEND_URL` environment variable must be set correctly
+
+3. **Current Issues**:
+   - No .env files found in workspace (may be gitignored)
+   - FRONTEND_URL must match the actual port where frontend is running
+   - If frontend starts on 5174 (when 5173 is busy), but FRONTEND_URL points to 5173, verification links will fail
+
+**Database Query Results**:
+- Unable to view customer accounts directly via CLI
+- Prisma Studio launched in background for manual inspection
+
+**Recommendations**:
+1. **Immediate Fix**:
+   - Check which port frontend is actually running on
+   - Update FRONTEND_URL environment variable to match
+   - Consider forcing Vite to use specific port
+
+2. **Long-term Solution**:
+   - Add port configuration to vite.config.ts
+   - Document required environment variables
+   - Add validation for environment configuration
+
+**Next Steps**:
+1. Determine actual frontend port
+2. Update environment configuration
+3. Test account creation again
+4. Query database to verify accounts
 
 ## Key Challenges and Analysis
 ### Restaurant Settings Management (Priority: High)
@@ -1059,3 +1189,552 @@ Next steps include:
   4. **Future**: Assign tasks to users, set due dates, manage priority
 
 ## Long-Term Roadmap (Based on Project Vision)
+
+## Current Focus: Enhanced Reservation System
+Implementing comprehensive reservation management with customer accounts, table management, operational settings, and admin controls.
+
+### Background and Motivation
+The current reservation system provides basic functionality but lacks critical features needed for real restaurant operations:
+- No customer account system for repeat guests
+- No table management or capacity planning
+- No operational hours/restrictions
+- Limited admin controls for reservation management
+- No customer communication features
+- No floor plan or table assignment capabilities
+
+### Key Challenges and Analysis
+
+#### 1. Customer Account System
+- **Challenge**: Implementing secure customer authentication separate from staff
+- **Considerations**: 
+  - Email verification for account creation
+  - Social login options (Google, Facebook)
+  - Guest checkout vs account creation
+  - Customer profile management
+  - Reservation history tracking
+
+#### 2. Table Management System
+- **Challenge**: Dynamic table configuration and capacity management
+- **Considerations**:
+  - Table sizes and combinations
+  - Floor plan layouts
+  - Table status tracking (available, occupied, reserved, cleaning)
+  - Capacity calculations
+  - Turn time estimations
+
+#### 3. Operational Settings
+- **Challenge**: Flexible configuration for different restaurant needs
+- **Considerations**:
+  - Operating hours by day of week
+  - Holiday schedules
+  - Blackout dates
+  - Service periods (lunch, dinner)
+  - Lead time requirements
+  - Maximum party sizes
+
+#### 4. Reservation Pacing & Duration
+- **Challenge**: Optimize restaurant flow and prevent overbooking
+- **Considerations**:
+  - Time slot availability
+  - Table turn times by party size
+  - Buffer times between reservations
+  - Peak hour management
+  - Walk-in availability
+
+#### 5. Admin Reservation Management
+- **Challenge**: Comprehensive tools for staff to manage all aspects
+- **Considerations**:
+  - Manual reservation entry
+  - Guest notes and preferences
+  - Waitlist management
+  - No-show tracking
+  - Customer communication logs
+
+### High-level Task Breakdown
+
+#### Phase 1: Customer Account System (Week 1-2)
+
+1. **Database Schema Updates**
+   - Enhance User model for customer accounts
+   - Add Customer profile table with preferences
+   - Create authentication tokens table
+   - Add reservation history tracking
+   - Success criteria: Schema supports full customer lifecycle
+
+2. **Customer Authentication API**
+   - Registration endpoint with email verification
+   - Login/logout endpoints
+   - Password reset functionality
+   - Profile management endpoints
+   - Success criteria: Secure authentication flow with JWT tokens
+
+3. **Customer Registration UI**
+   - Registration form with validation
+   - Email verification flow
+   - Password strength requirements
+   - Terms acceptance
+   - Success criteria: Smooth registration process with clear feedback
+
+4. **Customer Login & Dashboard**
+   - Login page with remember me
+   - Customer dashboard layout
+   - Profile management interface
+   - Reservation history view
+   - Success criteria: Customers can manage their account and view history
+
+5. **Guest Checkout Option**
+   - Allow reservations without account
+   - Capture essential contact info
+   - Option to create account after
+   - Success criteria: Frictionless booking for new customers
+
+#### Phase 2: Table Management System (Week 3-4)
+
+1. **Table Configuration Schema**
+   - Tables model with properties
+   - Floor sections/areas
+   - Table combinations rules
+   - Capacity calculations
+   - Success criteria: Flexible table configuration system
+
+2. **Table Management API**
+   - CRUD operations for tables
+   - Table status management
+   - Availability calculations
+   - Combination logic
+   - Success criteria: Complete table management backend
+
+3. **Table Configuration UI**
+   - Table setup interface
+   - Drag-and-drop floor plan editor
+   - Table properties management
+   - Combination rules setup
+   - Success criteria: Intuitive table configuration for managers
+
+4. **Table Assignment Logic**
+   - Auto-assignment algorithm
+   - Manual override capabilities
+   - Optimization for party size
+   - Walk-in accommodation
+   - Success criteria: Smart table allocation with manual control
+
+#### Phase 3: Operational Settings (Week 5-6)
+
+1. **Operating Hours Configuration**
+   - Weekly schedule setup
+   - Service periods definition
+   - Holiday calendar
+   - Special events handling
+   - Success criteria: Flexible scheduling system
+
+2. **Reservation Rules Engine**
+   - Time slot generation
+   - Availability calculations
+   - Blackout date management
+   - Party size restrictions
+   - Success criteria: Dynamic availability based on rules
+
+3. **Pacing & Duration Settings**
+   - Turn time configuration by party size
+   - Buffer time settings
+   - Peak hour adjustments
+   - Capacity thresholds
+   - Success criteria: Optimized restaurant flow control
+
+4. **Settings Management UI**
+   - Operating hours interface
+   - Rules configuration forms
+   - Visual calendar for blackouts
+   - Pacing controls
+   - Success criteria: Easy-to-use settings management
+
+#### Phase 4: Enhanced Admin Features (Week 7-8)
+
+1. **Reservation Management Dashboard**
+   - Comprehensive reservation list
+   - Advanced filtering and search
+   - Bulk operations
+   - Status management
+   - Success criteria: Efficient reservation management
+
+2. **Manual Reservation Entry**
+   - Staff booking interface
+   - Customer search/creation
+   - Table assignment
+   - Special requests handling
+   - Success criteria: Quick manual booking process
+
+3. **Guest Management System**
+   - Customer profiles with history
+   - Preferences and allergies
+   - VIP status tracking
+   - Notes and tags
+   - Success criteria: Complete guest information system
+
+4. **Communication Tools**
+   - Email/SMS templates
+   - Confirmation messages
+   - Reminder system
+   - Waitlist notifications
+   - Success criteria: Automated customer communications
+
+5. **Floor Plan View**
+   - Real-time table status
+   - Drag-and-drop reservations
+   - Visual availability
+   - Quick actions menu
+   - Success criteria: Visual reservation management
+
+#### Phase 5: Integration & Polish (Week 9-10)
+
+1. **Customer Portal Integration**
+   - Update reservation form with table selection
+   - Show availability based on settings
+   - Account integration
+   - Reservation management
+   - Success criteria: Seamless customer experience
+
+2. **Staff Portal Integration**
+   - Connect all admin features
+   - Role-based permissions
+   - Training mode
+   - Help documentation
+   - Success criteria: Cohesive staff interface
+
+3. **Reporting & Analytics**
+   - Reservation reports
+   - No-show tracking
+   - Capacity utilization
+   - Customer analytics
+   - Success criteria: Actionable insights for management
+
+4. **Testing & Optimization**
+   - Load testing
+   - User acceptance testing
+   - Performance optimization
+   - Bug fixes
+   - Success criteria: Production-ready system
+
+### Technical Architecture
+
+#### Database Schema Additions
+
+```sql
+-- Customer profile extension
+CREATE TABLE customer_profiles (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id),
+  phone_verified BOOLEAN DEFAULT false,
+  email_verified BOOLEAN DEFAULT false,
+  preferred_contact_method VARCHAR(20),
+  dietary_restrictions TEXT,
+  special_requests TEXT,
+  vip_status BOOLEAN DEFAULT false,
+  tags TEXT[],
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table management
+CREATE TABLE tables (
+  id SERIAL PRIMARY KEY,
+  restaurant_id INTEGER,
+  table_number VARCHAR(20),
+  section VARCHAR(50),
+  min_capacity INTEGER,
+  max_capacity INTEGER,
+  combinable_with INTEGER[],
+  position_x INTEGER,
+  position_y INTEGER,
+  shape VARCHAR(20),
+  active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Operating hours
+CREATE TABLE operating_hours (
+  id SERIAL PRIMARY KEY,
+  restaurant_id INTEGER,
+  day_of_week INTEGER,
+  open_time TIME,
+  close_time TIME,
+  service_periods JSONB,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Reservation rules
+CREATE TABLE reservation_rules (
+  id SERIAL PRIMARY KEY,
+  restaurant_id INTEGER,
+  rule_type VARCHAR(50),
+  rule_config JSONB,
+  priority INTEGER,
+  active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Enhanced reservations
+ALTER TABLE reservations ADD COLUMN table_ids INTEGER[];
+ALTER TABLE reservations ADD COLUMN duration_minutes INTEGER;
+ALTER TABLE reservations ADD COLUMN source VARCHAR(20);
+ALTER TABLE reservations ADD COLUMN confirmation_sent BOOLEAN DEFAULT false;
+ALTER TABLE reservations ADD COLUMN reminder_sent BOOLEAN DEFAULT false;
+```
+
+#### API Endpoints Structure
+
+```
+Customer Authentication:
+POST   /api/auth/customer/register
+POST   /api/auth/customer/login
+POST   /api/auth/customer/logout
+POST   /api/auth/customer/verify-email
+POST   /api/auth/customer/reset-password
+GET    /api/auth/customer/profile
+PUT    /api/auth/customer/profile
+
+Table Management:
+GET    /api/admin/tables
+POST   /api/admin/tables
+PUT    /api/admin/tables/:id
+DELETE /api/admin/tables/:id
+GET    /api/admin/tables/availability
+POST   /api/admin/tables/assign
+
+Operating Settings:
+GET    /api/admin/settings/hours
+PUT    /api/admin/settings/hours
+GET    /api/admin/settings/rules
+POST   /api/admin/settings/rules
+PUT    /api/admin/settings/rules/:id
+DELETE /api/admin/settings/rules/:id
+
+Enhanced Reservations:
+GET    /api/reservations/availability
+POST   /api/reservations/check-availability
+GET    /api/admin/reservations/dashboard
+POST   /api/admin/reservations/manual
+PUT    /api/admin/reservations/:id/assign-table
+POST   /api/admin/reservations/:id/communicate
+```
+
+#### Frontend Components Structure
+
+```
+Customer Account:
+- CustomerAuthLayout
+- RegisterForm
+- LoginForm  
+- EmailVerification
+- CustomerDashboard
+- ProfileSettings
+- ReservationHistory
+
+Table Management:
+- TableConfigPage
+- FloorPlanEditor
+- TablePropertiesPanel
+- TableCombinationRules
+- TableAvailabilityView
+
+Operational Settings:
+- OperatingHoursPage
+- ServicePeriodEditor
+- BlackoutCalendar
+- ReservationRulesPage
+- PacingSettings
+
+Admin Reservation:
+- ReservationDashboard
+- ManualBookingDialog
+- GuestProfilePanel
+- CommunicationLog
+- FloorPlanView
+- ReservationFilters
+```
+
+### Implementation Priorities
+
+1. **Must Have (MVP)**:
+   - Basic customer accounts
+   - Simple table configuration
+   - Operating hours
+   - Manual reservation entry
+   - Basic availability checking
+
+2. **Should Have**:
+   - Email verification
+   - Floor plan editor
+   - Service periods
+   - Guest preferences
+   - Automated confirmations
+
+3. **Nice to Have**:
+   - Social login
+   - Advanced pacing algorithms
+   - SMS notifications
+   - Waitlist management
+   - Analytics dashboard
+
+### Success Metrics
+
+1. **Customer Experience**:
+   - Account creation conversion rate > 60%
+   - Reservation completion rate > 80%
+   - Customer portal usage > 40%
+
+2. **Operational Efficiency**:
+   - Manual booking time < 1 minute
+   - Table utilization > 75%
+   - No-show rate < 10%
+
+3. **System Performance**:
+   - Availability check < 500ms
+   - Reservation creation < 1 second
+   - Dashboard load < 2 seconds
+
+### Risk Mitigation
+
+1. **Complexity Management**:
+   - Phased rollout approach
+   - Feature flags for gradual enablement
+   - Extensive testing at each phase
+
+2. **Data Migration**:
+   - Backward compatibility for existing reservations
+   - Gradual migration tools
+   - Data validation scripts
+
+3. **User Adoption**:
+   - Comprehensive staff training
+   - Help documentation
+   - Gradual feature introduction
+
+## Project Status Board
+
+## Current Architecture Analysis: Customer vs Staff User Separation
+
+### Issue Summary
+The current system has a conceptual overlap between:
+1. **Staff Users**: Restaurant employees who use KitchenSync to manage the restaurant (recipes, prep, menus, etc.)
+2. **Customer Users**: Restaurant patrons who only need access to make/view reservations and their profile
+
+### Current Implementation
+
+#### Database Level
+- Single `User` table with `isCustomer` boolean flag
+- `CustomerProfile` table for additional customer-specific data
+- Roles: SuperAdmin, Admin, Manager, Staff, User (but customers also have roles)
+
+#### Authentication
+1. **Staff Authentication**:
+   - Uses `/api/users` endpoints
+   - `authMiddleware.ts` for general authentication
+   - Full access to KitchenSync features
+
+2. **Customer Authentication**:
+   - Uses `/api/auth/customer` endpoints
+   - `authenticateCustomer.ts` middleware that checks `isCustomer` flag
+   - Separate `CustomerAuthContext` in frontend
+
+#### Frontend Separation
+- **Staff Portal**: Main app routes under `/` with `MainLayout`
+- **Customer Portal**: Routes under `/customer/*` with `CustomerLayout`
+- Separate auth contexts (AuthContext vs CustomerAuthContext)
+
+### Problems with Current Approach
+
+1. **Shared User Table**: 
+   - Customers and staff in same table creates security/access concerns
+   - Risk of privilege escalation if `isCustomer` flag is compromised
+   - Confusing data model (why would a customer have a "role"?)
+
+2. **Authentication Complexity**:
+   - Two different auth systems for what should be completely separate entities
+   - Middleware must constantly check `isCustomer` flag
+
+3. **Conceptual Mixing**:
+   - A restaurant customer is NOT a user of KitchenSync
+   - They are a customer of the restaurant that happens to use KitchenSync
+
+### Recommended Architecture
+
+#### Option 1: Separate Customer Entity (Recommended)
+1. **Database Changes**:
+   ```sql
+   -- Remove isCustomer from users table
+   ALTER TABLE users DROP COLUMN is_customer;
+   
+   -- Create separate customers table
+   CREATE TABLE customers (
+     id SERIAL PRIMARY KEY,
+     restaurant_id INTEGER REFERENCES restaurants(id),
+     email VARCHAR(255) UNIQUE NOT NULL,
+     password VARCHAR(255) NOT NULL,
+     name VARCHAR(255),
+     phone VARCHAR(50),
+     email_verified BOOLEAN DEFAULT false,
+     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+   );
+   
+   -- Update reservations to reference customers
+   ALTER TABLE reservations 
+     DROP COLUMN customer_id,
+     ADD COLUMN customer_id INTEGER REFERENCES customers(id);
+   ```
+
+2. **Benefits**:
+   - Clear separation of concerns
+   - No risk of privilege escalation
+   - Simpler authentication logic
+   - Scalable for multi-restaurant future
+
+3. **API Structure**:
+   ```
+   /api/auth/staff/* - Staff authentication
+   /api/auth/customer/* - Customer authentication
+   /api/admin/* - Staff-only endpoints
+   /api/customer/* - Customer-only endpoints
+   /api/public/* - Public endpoints (menus, etc.)
+   ```
+
+#### Option 2: Role-Based Access Control (Current Enhancement)
+1. **Keep single User table but enforce strict separation**:
+   - Add `user_type` enum: 'STAFF' | 'CUSTOMER'
+   - Remove role inheritance between types
+   - Strict middleware enforcement
+
+2. **Challenges**:
+   - Still conceptually mixed
+   - More complex middleware
+   - Harder to scale
+
+### Migration Strategy
+
+1. **Phase 1**: Create new customer infrastructure
+   - New customers table
+   - New auth endpoints
+   - Keep existing for compatibility
+
+2. **Phase 2**: Migrate existing customers
+   - Script to move customer users to new table
+   - Update reservations foreign keys
+   - Test thoroughly
+
+3. **Phase 3**: Remove old infrastructure
+   - Remove isCustomer flag
+   - Clean up mixed authentication
+   - Update documentation
+
+### Implementation Tasks
+
+- [ ] Design new customer database schema
+- [ ] Create customer auth controllers
+- [ ] Build customer-specific middleware
+- [ ] Update reservation/order models
+- [ ] Create migration scripts
+- [ ] Update frontend auth flow
+- [ ] Test customer isolation
+- [ ] Document new architecture

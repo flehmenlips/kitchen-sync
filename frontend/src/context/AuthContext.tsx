@@ -34,7 +34,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(() => {
       try {
         const storedUserInfo = localStorage.getItem(USER_INFO_KEY);
-        return storedUserInfo ? JSON.parse(storedUserInfo).user : null;
+        if (storedUserInfo) {
+          const parsed = JSON.parse(storedUserInfo);
+          // Check if this is a customer user - they shouldn't be in the staff auth context
+          if (parsed.user?.isCustomer) {
+            localStorage.removeItem(USER_INFO_KEY);
+            return null;
+          }
+          return parsed.user;
+        }
+        return null;
       } catch (error) { 
         console.error("Error reading user info from localStorage:", error);
         return null;

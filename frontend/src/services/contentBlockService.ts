@@ -1,4 +1,5 @@
 import { api } from './api';
+import { customerApi } from './customerApi';
 
 export interface ContentBlock {
   id: number;
@@ -54,9 +55,9 @@ export const BLOCK_TYPE_LABELS = {
 };
 
 export const contentBlockService = {
-  // Public endpoint - get blocks for a specific page
+  // Get public content blocks for a page (customer portal)
   async getPublicBlocks(page: string = 'home'): Promise<ContentBlock[]> {
-    const response = await api.get('/content-blocks/public', {
+    const response = await customerApi.get('/content-blocks/public', {
       params: { page }
     });
     return response.data;

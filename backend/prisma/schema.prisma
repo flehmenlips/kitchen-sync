@@ -8,16 +8,16 @@ datasource db {
 }
 
 model Category {
-  id          Int      @id @default(autoincrement())
-  name        String   @db.VarChar(150)
-  description String?
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  userId      Int      @map("user_id")
-  restaurantId Int      @map("restaurant_id")
-  author      User     @relation("UserRecipeCategories", fields: [userId], references: [id], onDelete: Cascade)
-  restaurant  Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  recipes     Recipe[]
+  id           Int        @id @default(autoincrement())
+  name         String     @db.VarChar(150)
+  description  String?
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+  userId       Int        @map("user_id")
+  restaurantId Int        @map("restaurant_id")
+  author       User       @relation("UserRecipeCategories", fields: [userId], references: [id], onDelete: Cascade)
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  recipes      Recipe[]
 
   @@unique([name, userId, restaurantId])
   @@index([userId])
@@ -147,32 +147,252 @@ model PrepColumn {
 }
 
 model User {
-  id                   Int                  @id @default(autoincrement())
-  email                String               @unique
-  name                 String?
-  password             String
-  createdAt            DateTime             @default(now()) @map("created_at")
-  updatedAt            DateTime             @updatedAt @map("updated_at")
-  role                 UserRole             @default(USER)
-  isCustomer           Boolean              @default(false) @map("is_customer")
-  phone                String?              @db.VarChar(50)
-  restaurantStaff      RestaurantStaff[]    @relation("StaffUser")
-  customerReservations Reservation[]        @relation("CustomerReservations")
-  recipeCategories     Category[]           @relation("UserRecipeCategories")
-  comments             Comment[]
-  ingredientCategories IngredientCategory[] @relation("UserIngredientCategories")
-  ingredients          Ingredient[]         @relation("UserIngredients")
-  assignedIssues       Issue[]              @relation("AssignedIssues")
-  createdIssues        Issue[]              @relation("CreatedIssues")
-  menus                Menu[]               @relation("UserMenus")
-  prepColumns          PrepColumn[]         @relation("UserPrepColumns")
-  prepTasks            PrepTask[]           @relation("UserPrepTasks")
-  recipes              Recipe[]
-  units                UnitOfMeasure[]      @relation("UserUnits")
-  reservations         Reservation[]        @relation("UserReservations")
-  orders               Order[]              @relation("UserOrders")
+  id                         Int                      @id @default(autoincrement())
+  email                      String                   @unique
+  name                       String?
+  password                   String
+  createdAt                  DateTime                 @default(now()) @map("created_at")
+  updatedAt                  DateTime                 @updatedAt @map("updated_at")
+  role                       UserRole                 @default(USER)
+  isCustomer                 Boolean                  @default(false) @map("is_customer")
+  phone                      String?                  @db.VarChar(50)
+  restaurantStaff            RestaurantStaff[]        @relation("StaffUser")
+  customerReservations       Reservation[]            @relation("CustomerReservations")
+  recipeCategories           Category[]               @relation("UserRecipeCategories")
+  comments                   Comment[]
+  ingredientCategories       IngredientCategory[]     @relation("UserIngredientCategories")
+  ingredients                Ingredient[]             @relation("UserIngredients")
+  assignedIssues             Issue[]                  @relation("AssignedIssues")
+  createdIssues              Issue[]                  @relation("CreatedIssues")
+  menus                      Menu[]                   @relation("UserMenus")
+  prepColumns                PrepColumn[]             @relation("UserPrepColumns")
+  prepTasks                  PrepTask[]               @relation("UserPrepTasks")
+  recipes                    Recipe[]
+  units                      UnitOfMeasure[]          @relation("UserUnits")
+  reservations               Reservation[]            @relation("UserReservations")
+  orders                     Order[]                  @relation("UserOrders")
+  customerProfile            CustomerProfile?
+  emailVerificationTokens    EmailVerificationToken[]
+  passwordResetTokens        PasswordResetToken[]
+  refreshTokens              RefreshToken[]
+  reservationLogs            ReservationLog[]
+  convertedGuestReservations GuestReservation[]       @relation("convertedToUser")
+  ReservationNew             ReservationNew[]
+  OrderNew                   OrderNew[]
 
   @@map("users")
+}
+
+model Customer {
+  id            Int      @id @default(autoincrement())
+  email         String   @unique
+  name          String?
+  password      String
+  phone         String?  @db.VarChar(50)
+  emailVerified Boolean  @default(false) @map("email_verified")
+  phoneVerified Boolean  @default(false) @map("phone_verified")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Customer-specific relations
+  profile                 CustomerProfileNew?
+  reservations            ReservationNew[]                 @relation("CustomerReservationsNew")
+  orders                  OrderNew[]                       @relation("CustomerOrdersNew")
+  emailVerificationTokens CustomerEmailVerificationToken[]
+  passwordResetTokens     CustomerPasswordResetToken[]
+  refreshTokens           CustomerRefreshToken[]
+
+  @@map("customers")
+}
+
+model CustomerProfileNew {
+  id                     Int       @id @default(autoincrement())
+  customerId             Int       @unique @map("customer_id")
+  preferredContactMethod String?   @default("email") @map("preferred_contact_method") @db.VarChar(20)
+  dietaryRestrictions    String?   @map("dietary_restrictions")
+  specialRequests        String?   @map("special_requests")
+  vipStatus              Boolean   @default(false) @map("vip_status")
+  tags                   String[]
+  notes                  String?
+  marketingOptIn         Boolean   @default(true) @map("marketing_opt_in")
+  birthday               DateTime? @db.Date
+  anniversary            DateTime? @db.Date
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+  customer               Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([vipStatus])
+  @@map("customer_profiles_new")
+}
+
+model CustomerEmailVerificationToken {
+  id         Int       @id @default(autoincrement())
+  customerId Int       @map("customer_id")
+  token      String    @unique @db.VarChar(255)
+  expiresAt  DateTime  @map("expires_at")
+  usedAt     DateTime? @map("used_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  customer   Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([customerId])
+  @@map("customer_email_verification_tokens")
+}
+
+model CustomerPasswordResetToken {
+  id         Int       @id @default(autoincrement())
+  customerId Int       @map("customer_id")
+  token      String    @unique @db.VarChar(255)
+  expiresAt  DateTime  @map("expires_at")
+  usedAt     DateTime? @map("used_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  customer   Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([customerId])
+  @@map("customer_password_reset_tokens")
+}
+
+model CustomerRefreshToken {
+  id         Int      @id @default(autoincrement())
+  customerId Int      @map("customer_id")
+  token      String   @unique @db.VarChar(500)
+  expiresAt  DateTime @map("expires_at")
+  deviceInfo String?  @map("device_info")
+  createdAt  DateTime @default(now()) @map("created_at")
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([customerId])
+  @@map("customer_refresh_tokens")
+}
+
+model ReservationNew {
+  id                  Int               @id @default(autoincrement())
+  customerName        String            @map("customer_name") @db.VarChar(255)
+  customerPhone       String?           @map("customer_phone") @db.VarChar(50)
+  customerEmail       String?           @map("customer_email") @db.VarChar(255)
+  customerId          Int?              @map("customer_id")
+  restaurantId        Int               @map("restaurant_id")
+  partySize           Int               @map("party_size")
+  reservationDate     DateTime          @map("reservation_date")
+  reservationTime     String            @map("reservation_time") @db.VarChar(10)
+  status              ReservationStatus @default(CONFIRMED)
+  notes               String?
+  specialRequests     String?           @map("special_requests")
+  tableIds            Int[]             @map("table_ids")
+  durationMinutes     Int               @default(90) @map("duration_minutes")
+  source              String            @default("website") @db.VarChar(20)
+  confirmationSent    Boolean           @default(false) @map("confirmation_sent")
+  reminderSent        Boolean           @default(false) @map("reminder_sent")
+  actualArrivalTime   DateTime?         @map("actual_arrival_time")
+  actualDepartureTime DateTime?         @map("actual_departure_time")
+  guestNotes          String?           @map("guest_notes")
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+  createdByUserId     Int?              @map("created_by_user_id")
+  createdByUser       User?             @relation(fields: [createdByUserId], references: [id])
+  customer            Customer?         @relation("CustomerReservationsNew", fields: [customerId], references: [id])
+  restaurant          Restaurant        @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  orders              OrderNew[]        @relation("ReservationOrdersNew")
+
+  @@index([createdByUserId])
+  @@index([customerId])
+  @@index([restaurantId])
+  @@index([reservationDate])
+  @@index([status])
+  @@map("reservations_new")
+}
+
+model OrderNew {
+  id              Int             @id @default(autoincrement())
+  orderNumber     String          @unique @map("order_number") @db.VarChar(50)
+  reservationId   Int?            @map("reservation_id")
+  restaurantId    Int             @map("restaurant_id")
+  customerId      Int?            @map("customer_id")
+  customerName    String?         @map("customer_name") @db.VarChar(255)
+  status          OrderStatus     @default(NEW)
+  orderType       OrderType       @default(DINE_IN) @map("order_type")
+  notes           String?
+  totalAmount     Decimal?        @map("total_amount") @db.Decimal(10, 2)
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  createdByUserId Int?            @map("created_by_user_id")
+  createdByUser   User?           @relation(fields: [createdByUserId], references: [id])
+  customer        Customer?       @relation("CustomerOrdersNew", fields: [customerId], references: [id])
+  restaurant      Restaurant      @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  reservation     ReservationNew? @relation("ReservationOrdersNew", fields: [reservationId], references: [id])
+  orderItems      OrderItemNew[]  @relation("OrderOrderItemsNew")
+
+  @@index([createdByUserId])
+  @@index([customerId])
+  @@index([restaurantId])
+  @@index([reservationId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("orders_new")
+}
+
+model OrderItemNew {
+  id         Int             @id @default(autoincrement())
+  orderId    Int             @map("order_id")
+  menuItemId Int             @map("menu_item_id")
+  quantity   Int             @default(1)
+  price      Decimal         @db.Decimal(10, 2)
+  modifiers  Json?           @db.Json
+  status     OrderItemStatus @default(PENDING)
+  notes      String?
+  createdAt  DateTime        @default(now()) @map("created_at")
+  updatedAt  DateTime        @updatedAt @map("updated_at")
+  order      OrderNew        @relation("OrderOrderItemsNew", fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem   MenuItem        @relation(fields: [menuItemId], references: [id])
+
+  @@index([orderId])
+  @@index([menuItemId])
+  @@map("order_items_new")
+}
+
+model EmailVerificationToken {
+  id        Int       @id @default(autoincrement())
+  userId    Int       @map("user_id")
+  token     String    @unique @db.VarChar(255)
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@map("email_verification_tokens")
+}
+
+model PasswordResetToken {
+  id        Int       @id @default(autoincrement())
+  userId    Int       @map("user_id")
+  token     String    @unique @db.VarChar(255)
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+model RefreshToken {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  token      String   @unique @db.VarChar(500)
+  expiresAt  DateTime @map("expires_at")
+  deviceInfo String?  @map("device_info")
+  createdAt  DateTime @default(now()) @map("created_at")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@map("refresh_tokens")
 }
 
 model Issue {
@@ -315,17 +535,18 @@ model MenuSection {
 }
 
 model MenuItem {
-  id          Int         @id @default(autoincrement())
-  name        String      @db.VarChar(255)
-  description String?
-  price       String?
-  position    Int         @default(0)
-  active      Boolean     @default(true)
-  recipeId    Int?        @map("recipe_id")
-  sectionId   Int         @map("section_id")
-  orderItems  OrderItem[] @relation("MenuItemOrderItems")
-  recipe      Recipe?     @relation("RecipeMenuItems", fields: [recipeId], references: [id])
-  section     MenuSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  id            Int            @id @default(autoincrement())
+  name          String         @db.VarChar(255)
+  description   String?
+  price         String?
+  position      Int            @default(0)
+  active        Boolean        @default(true)
+  recipeId      Int?           @map("recipe_id")
+  sectionId     Int            @map("section_id")
+  orderItems    OrderItem[]    @relation("MenuItemOrderItems")
+  orderItemsNew OrderItemNew[]
+  recipe        Recipe?        @relation("RecipeMenuItems", fields: [recipeId], references: [id])
+  section       MenuSection    @relation(fields: [sectionId], references: [id], onDelete: Cascade)
 
   @@index([sectionId])
   @@index([recipeId])
@@ -334,25 +555,35 @@ model MenuItem {
 }
 
 model Reservation {
-  id               Int                @id @default(autoincrement())
-  customerName     String             @db.VarChar(255) @map("customer_name")
-  customerPhone    String?            @db.VarChar(50) @map("customer_phone")
-  customerEmail    String?            @db.VarChar(255) @map("customer_email")
-  customerId       Int?               @map("customer_id")
-  restaurantId     Int                @map("restaurant_id")
-  partySize        Int                @map("party_size")
-  reservationDate  DateTime           @map("reservation_date")
-  reservationTime  String             @db.VarChar(10) @map("reservation_time")
-  status           ReservationStatus  @default(CONFIRMED)
-  notes            String?
-  specialRequests  String?            @map("special_requests")
-  createdAt        DateTime           @default(now()) @map("created_at")
-  updatedAt        DateTime           @updatedAt @map("updated_at")
-  userId           Int                @map("user_id")
-  user             User               @relation("UserReservations", fields: [userId], references: [id], onDelete: Cascade)
-  customer         User?              @relation("CustomerReservations", fields: [customerId], references: [id])
-  restaurant       Restaurant         @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  orders           Order[]            @relation("ReservationOrders")
+  id                  Int               @id @default(autoincrement())
+  customerName        String            @map("customer_name") @db.VarChar(255)
+  customerPhone       String?           @map("customer_phone") @db.VarChar(50)
+  customerEmail       String?           @map("customer_email") @db.VarChar(255)
+  customerId          Int?              @map("customer_id")
+  restaurantId        Int               @map("restaurant_id")
+  partySize           Int               @map("party_size")
+  reservationDate     DateTime          @map("reservation_date")
+  reservationTime     String            @map("reservation_time") @db.VarChar(10)
+  status              ReservationStatus @default(CONFIRMED)
+  notes               String?
+  specialRequests     String?           @map("special_requests")
+  tableIds            Int[]             @map("table_ids")
+  durationMinutes     Int               @default(90) @map("duration_minutes")
+  source              String            @default("website") @db.VarChar(20)
+  confirmationSent    Boolean           @default(false) @map("confirmation_sent")
+  reminderSent        Boolean           @default(false) @map("reminder_sent")
+  actualArrivalTime   DateTime?         @map("actual_arrival_time")
+  actualDepartureTime DateTime?         @map("actual_departure_time")
+  guestNotes          String?           @map("guest_notes")
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+  userId              Int               @map("user_id")
+  user                User              @relation("UserReservations", fields: [userId], references: [id], onDelete: Cascade)
+  customer            User?             @relation("CustomerReservations", fields: [customerId], references: [id])
+  restaurant          Restaurant        @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  orders              Order[]           @relation("ReservationOrders")
+  reservationLogs     ReservationLog[]
+  guestReservation    GuestReservation?
 
   @@index([userId])
   @@index([customerId])
@@ -362,23 +593,56 @@ model Reservation {
   @@map("reservations")
 }
 
+model ReservationLog {
+  id            Int         @id @default(autoincrement())
+  reservationId Int         @map("reservation_id")
+  userId        Int?        @map("user_id")
+  action        String      @db.VarChar(50)
+  changes       Json?       @db.Json
+  notes         String?
+  createdAt     DateTime    @default(now()) @map("created_at")
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  user          User?       @relation(fields: [userId], references: [id])
+
+  @@index([reservationId])
+  @@index([userId])
+  @@index([action])
+  @@map("reservation_logs")
+}
+
+model GuestReservation {
+  id                Int         @id @default(autoincrement())
+  reservationId     Int         @unique @map("reservation_id")
+  guestEmail        String      @map("guest_email") @db.VarChar(255)
+  guestPhone        String?     @map("guest_phone") @db.VarChar(50)
+  conversionToken   String?     @unique @map("conversion_token") @db.VarChar(255)
+  convertedToUserId Int?        @map("converted_to_user_id")
+  createdAt         DateTime    @default(now()) @map("created_at")
+  reservation       Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  convertedToUser   User?       @relation("convertedToUser", fields: [convertedToUserId], references: [id])
+
+  @@index([guestEmail])
+  @@index([conversionToken])
+  @@map("guest_reservations")
+}
+
 model Order {
-  id             Int         @id @default(autoincrement())
-  orderNumber    String      @unique @db.VarChar(50) @map("order_number")
-  reservationId  Int?        @map("reservation_id")
-  restaurantId   Int         @map("restaurant_id")
-  customerName   String?     @db.VarChar(255) @map("customer_name")
-  status         OrderStatus @default(NEW)
-  orderType      OrderType   @default(DINE_IN) @map("order_type")
-  notes          String?
-  totalAmount    Decimal?    @db.Decimal(10, 2) @map("total_amount")
-  createdAt      DateTime    @default(now()) @map("created_at")
-  updatedAt      DateTime    @updatedAt @map("updated_at")
-  userId         Int         @map("user_id")
-  user           User        @relation("UserOrders", fields: [userId], references: [id], onDelete: Cascade)
-  restaurant     Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  reservation    Reservation? @relation("ReservationOrders", fields: [reservationId], references: [id])
-  orderItems     OrderItem[] @relation("OrderOrderItems")
+  id            Int          @id @default(autoincrement())
+  orderNumber   String       @unique @map("order_number") @db.VarChar(50)
+  reservationId Int?         @map("reservation_id")
+  restaurantId  Int          @map("restaurant_id")
+  customerName  String?      @map("customer_name") @db.VarChar(255)
+  status        OrderStatus  @default(NEW)
+  orderType     OrderType    @default(DINE_IN) @map("order_type")
+  notes         String?
+  totalAmount   Decimal?     @map("total_amount") @db.Decimal(10, 2)
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+  userId        Int          @map("user_id")
+  user          User         @relation("UserOrders", fields: [userId], references: [id], onDelete: Cascade)
+  restaurant    Restaurant   @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  reservation   Reservation? @relation("ReservationOrders", fields: [reservationId], references: [id])
+  orderItems    OrderItem[]  @relation("OrderOrderItems")
 
   @@index([userId])
   @@index([restaurantId])
@@ -389,18 +653,18 @@ model Order {
 }
 
 model OrderItem {
-  id          Int            @id @default(autoincrement())
-  orderId     Int            @map("order_id")
-  menuItemId  Int            @map("menu_item_id")
-  quantity    Int            @default(1)
-  price       Decimal        @db.Decimal(10, 2)
-  modifiers   Json?          @db.Json
-  status      OrderItemStatus @default(PENDING)
-  notes       String?
-  createdAt   DateTime       @default(now()) @map("created_at")
-  updatedAt   DateTime       @updatedAt @map("updated_at")
-  order       Order          @relation("OrderOrderItems", fields: [orderId], references: [id], onDelete: Cascade)
-  menuItem    MenuItem       @relation("MenuItemOrderItems", fields: [menuItemId], references: [id])
+  id         Int             @id @default(autoincrement())
+  orderId    Int             @map("order_id")
+  menuItemId Int             @map("menu_item_id")
+  quantity   Int             @default(1)
+  price      Decimal         @db.Decimal(10, 2)
+  modifiers  Json?           @db.Json
+  status     OrderItemStatus @default(PENDING)
+  notes      String?
+  createdAt  DateTime        @default(now()) @map("created_at")
+  updatedAt  DateTime        @updatedAt @map("updated_at")
+  order      Order           @relation("OrderOrderItems", fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem   MenuItem        @relation("MenuItemOrderItems", fields: [menuItemId], references: [id])
 
   @@index([orderId])
   @@index([menuItemId])
@@ -409,31 +673,33 @@ model OrderItem {
 }
 
 model Restaurant {
-  id               Int               @id @default(autoincrement())
-  name             String            @db.VarChar(255)
-  slug             String            @unique @db.VarChar(255)
-  description      String?
-  cuisine          String?           @db.VarChar(100)
-  address          String?
-  city             String?           @db.VarChar(100)
-  state            String?           @db.VarChar(50)
-  zipCode          String?           @db.VarChar(20) @map("zip_code")
-  country          String?           @db.VarChar(100)
-  phone            String?           @db.VarChar(50)
-  email            String?           @db.VarChar(255)
-  website          String?
-  logoUrl          String?           @map("logo_url")
-  coverImageUrl    String?           @map("cover_image_url")
-  openingHours     Json?             @map("opening_hours")
-  isActive         Boolean           @default(true) @map("is_active")
-  createdAt        DateTime          @default(now()) @map("created_at")
-  updatedAt        DateTime          @updatedAt @map("updated_at")
-  settings         RestaurantSettings?
-  staff            RestaurantStaff[]
-  reservations     Reservation[]
-  orders           Order[]
-  categories       Category[]
-  contentBlocks    ContentBlock[]
+  id              Int                 @id @default(autoincrement())
+  name            String              @db.VarChar(255)
+  slug            String              @unique @db.VarChar(255)
+  description     String?
+  cuisine         String?             @db.VarChar(100)
+  address         String?
+  city            String?             @db.VarChar(100)
+  state           String?             @db.VarChar(50)
+  zipCode         String?             @map("zip_code") @db.VarChar(20)
+  country         String?             @db.VarChar(100)
+  phone           String?             @db.VarChar(50)
+  email           String?             @db.VarChar(255)
+  website         String?
+  logoUrl         String?             @map("logo_url")
+  coverImageUrl   String?             @map("cover_image_url")
+  openingHours    Json?               @map("opening_hours")
+  isActive        Boolean             @default(true) @map("is_active")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+  settings        RestaurantSettings?
+  staff           RestaurantStaff[]
+  reservations    Reservation[]
+  orders          Order[]
+  categories      Category[]
+  contentBlocks   ContentBlock[]
+  reservationsNew ReservationNew[]
+  ordersNew       OrderNew[]
 
   @@index([slug])
   @@index([isActive])
@@ -441,109 +707,109 @@ model Restaurant {
 }
 
 model RestaurantSettings {
-  id                  Int        @id @default(autoincrement())
-  restaurantId        Int        @unique @map("restaurant_id")
-  
+  id           Int @id @default(autoincrement())
+  restaurantId Int @unique @map("restaurant_id")
+
   // Website Branding
-  websiteName         String?    @map("website_name")
-  tagline             String?
-  logoUrl             String?    @map("logo_url")
-  logoPublicId        String?    @map("logo_public_id")
-  
+  websiteName  String? @map("website_name")
+  tagline      String?
+  logoUrl      String? @map("logo_url")
+  logoPublicId String? @map("logo_public_id")
+
   // Hero Section
-  heroTitle           String?    @map("hero_title")
-  heroSubtitle        String?    @map("hero_subtitle")
-  heroImageUrl        String?    @map("hero_image_url")
-  heroImagePublicId   String?    @map("hero_image_public_id")
-  heroCTAText         String?    @map("hero_cta_text")
-  heroCTALink         String?    @map("hero_cta_link")
-  
+  heroTitle         String? @map("hero_title")
+  heroSubtitle      String? @map("hero_subtitle")
+  heroImageUrl      String? @map("hero_image_url")
+  heroImagePublicId String? @map("hero_image_public_id")
+  heroCTAText       String? @map("hero_cta_text")
+  heroCTALink       String? @map("hero_cta_link")
+
   // About Section
-  aboutTitle          String?    @map("about_title")
-  aboutDescription    String?    @map("about_description") @db.Text
-  aboutImageUrl       String?    @map("about_image_url")
-  aboutImagePublicId  String?    @map("about_image_public_id")
-  
+  aboutTitle         String? @map("about_title")
+  aboutDescription   String? @map("about_description") @db.Text
+  aboutImageUrl      String? @map("about_image_url")
+  aboutImagePublicId String? @map("about_image_public_id")
+
   // Theme Customization
-  primaryColor        String?    @default("#1976d2") @map("primary_color")
-  secondaryColor      String?    @default("#dc004e") @map("secondary_color")
-  accentColor         String?    @default("#333333") @map("accent_color")
-  fontPrimary         String?    @default("Roboto, sans-serif") @map("font_primary")
-  fontSecondary       String?    @default("Playfair Display, serif") @map("font_secondary")
-  
+  primaryColor   String? @default("#1976d2") @map("primary_color")
+  secondaryColor String? @default("#dc004e") @map("secondary_color")
+  accentColor    String? @default("#333333") @map("accent_color")
+  fontPrimary    String? @default("Roboto, sans-serif") @map("font_primary")
+  fontSecondary  String? @default("Playfair Display, serif") @map("font_secondary")
+
   // Contact Info
-  contactPhone        String?    @map("contact_phone")
-  contactEmail        String?    @map("contact_email")
-  contactAddress      String?    @map("contact_address")
-  contactCity         String?    @map("contact_city")
-  contactState        String?    @map("contact_state")
-  contactZip          String?    @map("contact_zip")
-  
+  contactPhone   String? @map("contact_phone")
+  contactEmail   String? @map("contact_email")
+  contactAddress String? @map("contact_address")
+  contactCity    String? @map("contact_city")
+  contactState   String? @map("contact_state")
+  contactZip     String? @map("contact_zip")
+
   // Opening Hours (JSON object with day: hours format)
-  openingHours        Json?      @map("opening_hours")
-  
+  openingHours Json? @map("opening_hours")
+
   // Social Media
-  facebookUrl         String?    @map("facebook_url")
-  instagramUrl        String?    @map("instagram_url")
-  twitterUrl          String?    @map("twitter_url")
-  
+  facebookUrl  String? @map("facebook_url")
+  instagramUrl String? @map("instagram_url")
+  twitterUrl   String? @map("twitter_url")
+
   // Menu Display Settings
-  activeMenuIds       Int[]      @map("active_menu_ids")
-  menuDisplayMode     String?    @default("tabs") @map("menu_display_mode") // tabs, accordion, single
-  
+  activeMenuIds   Int[]   @map("active_menu_ids")
+  menuDisplayMode String? @default("tabs") @map("menu_display_mode") // tabs, accordion, single
+
   // Footer
-  footerText          String?    @map("footer_text")
-  
+  footerText String? @map("footer_text")
+
   // SEO
-  metaTitle           String?    @map("meta_title")
-  metaDescription     String?    @map("meta_description")
-  metaKeywords        String?    @map("meta_keywords")
-  
-  createdAt           DateTime   @default(now()) @map("created_at")
-  updatedAt           DateTime   @updatedAt @map("updated_at")
-  
-  restaurant          Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  
+  metaTitle       String? @map("meta_title")
+  metaDescription String? @map("meta_description")
+  metaKeywords    String? @map("meta_keywords")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
   @@map("restaurant_settings")
 }
 
 model ContentBlock {
-  id             Int          @id @default(autoincrement())
-  restaurantId   Int          @map("restaurant_id")
-  page           String       @default("home") @db.VarChar(50)
-  blockType      String       @map("block_type") @db.VarChar(50)
-  title          String?      @db.VarChar(255)
-  subtitle       String?      @db.VarChar(500)
-  content        String?      @db.Text
-  imageUrl       String?      @map("image_url")
-  imagePublicId  String?      @map("image_public_id") @db.VarChar(255)
-  videoUrl       String?      @map("video_url")
-  buttonText     String?      @map("button_text") @db.VarChar(100)
-  buttonLink     String?      @map("button_link") @db.VarChar(255)
-  buttonStyle    String?      @default("primary") @map("button_style") @db.VarChar(50)
-  settings       Json?        @default("{}") @db.Json
-  displayOrder   Int          @default(0) @map("display_order")
-  isActive       Boolean      @default(true) @map("is_active")
-  createdAt      DateTime     @default(now()) @map("created_at")
-  updatedAt      DateTime     @updatedAt @map("updated_at")
-  
-  restaurant     Restaurant   @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  
+  id            Int      @id @default(autoincrement())
+  restaurantId  Int      @map("restaurant_id")
+  page          String   @default("home") @db.VarChar(50)
+  blockType     String   @map("block_type") @db.VarChar(50)
+  title         String?  @db.VarChar(255)
+  subtitle      String?  @db.VarChar(500)
+  content       String?  @db.Text
+  imageUrl      String?  @map("image_url")
+  imagePublicId String?  @map("image_public_id") @db.VarChar(255)
+  videoUrl      String?  @map("video_url")
+  buttonText    String?  @map("button_text") @db.VarChar(100)
+  buttonLink    String?  @map("button_link") @db.VarChar(255)
+  buttonStyle   String?  @default("primary") @map("button_style") @db.VarChar(50)
+  settings      Json?    @default("{}") @db.Json
+  displayOrder  Int      @default(0) @map("display_order")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
   @@index([restaurantId, page])
   @@index([displayOrder])
   @@map("content_blocks")
 }
 
 model RestaurantStaff {
-  id           Int          @id @default(autoincrement())
-  userId       Int          @map("user_id")
-  restaurantId Int          @map("restaurant_id")
-  role         StaffRole    @default(STAFF)
-  isActive     Boolean      @default(true) @map("is_active")
-  createdAt    DateTime     @default(now()) @map("created_at")
-  updatedAt    DateTime     @updatedAt @map("updated_at")
-  user         User         @relation("StaffUser", fields: [userId], references: [id], onDelete: Cascade)
-  restaurant   Restaurant   @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  id           Int        @id @default(autoincrement())
+  userId       Int        @map("user_id")
+  restaurantId Int        @map("restaurant_id")
+  role         StaffRole  @default(STAFF)
+  isActive     Boolean    @default(true) @map("is_active")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+  user         User       @relation("StaffUser", fields: [userId], references: [id], onDelete: Cascade)
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 
   @@unique([userId, restaurantId])
   @@index([userId])
@@ -625,4 +891,27 @@ enum StaffRole {
   STAFF
   MANAGER
   OWNER
+}
+
+model CustomerProfile {
+  id                     Int       @id @default(autoincrement())
+  userId                 Int       @unique @map("user_id")
+  phoneVerified          Boolean   @default(false) @map("phone_verified")
+  emailVerified          Boolean   @default(false) @map("email_verified")
+  preferredContactMethod String?   @default("email") @map("preferred_contact_method") @db.VarChar(20)
+  dietaryRestrictions    String?   @map("dietary_restrictions")
+  specialRequests        String?   @map("special_requests")
+  vipStatus              Boolean   @default(false) @map("vip_status")
+  tags                   String[]
+  notes                  String?
+  marketingOptIn         Boolean   @default(true) @map("marketing_opt_in")
+  birthday               DateTime? @db.Date
+  anniversary            DateTime? @db.Date
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([vipStatus])
+  @@map("customer_profiles")
 }

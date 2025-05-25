@@ -1,4 +1,5 @@
 import { api } from './api';
+import { customerApi } from './customerApi';
 
 export interface RestaurantSettings {
   id: number;
@@ -101,9 +102,9 @@ export const restaurantSettingsService = {
     return response.data;
   },
 
-  // Public endpoint
+  // Get public restaurant settings (for customer portal)
   async getPublicSettings(): Promise<RestaurantSettings> {
-    const response = await api.get('/restaurant/public/settings');
+    const response = await customerApi.get('/restaurant/public/settings');
     return response.data;
   }
 }; 

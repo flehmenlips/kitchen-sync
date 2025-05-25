@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Typography, Button, Stack, Container, Paper, Grid } from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext'; // Import useAuth hook
 import AddIcon from '@mui/icons-material/Add';
 import SearchIcon from '@mui/icons-material/Search';
@@ -14,6 +14,14 @@ import { getDashboardStats, DashboardStats } from '../services/apiService'; // I
 
 const DashboardPage: React.FC = () => {
   const { user } = useAuth(); // Get user info from context
+
+  // Check if a customer user is somehow accessing this page
+  React.useEffect(() => {
+    const customerAuth = sessionStorage.getItem('customerAuth');
+    if (customerAuth) {
+      window.location.href = '/customer/dashboard';
+    }
+  }, []);
 
   // State for dashboard stats
   const [stats, setStats] = React.useState<DashboardStats | null>(null);

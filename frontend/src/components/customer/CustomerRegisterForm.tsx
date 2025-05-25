@@ -1,0 +1,308 @@
+import React, { useState } from 'react';
+import {
+  Box,
+  TextField,
+  Button,
+  Typography,
+  Alert,
+  CircularProgress,
+  Link,
+  Paper,
+  InputAdornment,
+  IconButton,
+  FormControlLabel,
+  Checkbox
+} from '@mui/material';
+import {
+  Visibility,
+  VisibilityOff,
+  Email as EmailIcon,
+  Person as PersonIcon,
+  Phone as PhoneIcon,
+  Lock as LockIcon
+} from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
+import { customerAuthService, RegisterData } from '../../services/customerAuthService';
+
+interface CustomerRegisterFormProps {
+  onSuccess?: () => void;
+}
+
+export const CustomerRegisterForm: React.FC<CustomerRegisterFormProps> = ({ onSuccess }) => {
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState<RegisterData>({
+    email: '',
+    password: '',
+    name: '',
+    phone: ''
+  });
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Partial<RegisterData>>({});
+
+  const validateForm = (): boolean => {
+    const errors: Partial<RegisterData> = {};
+    
+    // Email validation
+    if (!formData.email) {
+      errors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = 'Please enter a valid email';
+    }
+    
+    // Name validation
+    if (!formData.name) {
+      errors.name = 'Name is required';
+    } else if (formData.name.length < 2) {
+      errors.name = 'Name must be at least 2 characters';
+    }
+    
+    // Password validation
+    if (!formData.password) {
+      errors.password = 'Password is required';
+    } else if (formData.password.length < 8) {
+      errors.password = 'Password must be at least 8 characters';
+    }
+    
+    // Confirm password validation
+    if (formData.password !== confirmPassword) {
+      setError('Passwords do not match');
+      return false;
+    }
+    
+    // Phone validation (optional)
+    if (formData.phone && !/^[\d\s\-\+\(\)]+$/.test(formData.phone)) {
+      errors.phone = 'Please enter a valid phone number';
+    }
+    
+    // Terms acceptance
+    if (!acceptTerms) {
+      setError('Please accept the terms and conditions');
+      return false;
+    }
+    
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    
+    if (!validateForm()) {
+      return;
+    }
+    
+    setLoading(true);
+    
+    try {
+      await customerAuthService.register(formData);
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        navigate('/customer/verify-email-sent');
+      }
+    } catch (err: any) {
+      console.error('Registration error:', err);
+      setError(err.response?.data?.error || 'Failed to create account. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (field: keyof RegisterData) => (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setFormData({ ...formData, [field]: e.target.value });
+    setFieldErrors({ ...fieldErrors, [field]: undefined });
+    setError(null);
+  };
+
+  return (
+    <Paper elevation={3} sx={{ p: 4, maxWidth: 500, mx: 'auto' }}>
+      <Box component="form" onSubmit={handleSubmit} noValidate>
+        <Typography variant="h4" component="h1" gutterBottom align="center">
+          Create Account
+        </Typography>
+        
+        <Typography variant="body2" color="text.secondary" align="center" mb={3}>
+          Join Seabreeze Kitchen for easy online reservations
+        </Typography>
+
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
+
+        <TextField
+          fullWidth
+          label="Full Name"
+          value={formData.name}
+          onChange={handleChange('name')}
+          error={!!fieldErrors.name}
+          helperText={fieldErrors.name}
+          margin="normal"
+          required
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <PersonIcon color="action" />
+              </InputAdornment>
+            ),
+          }}
+        />
+
+        <TextField
+          fullWidth
+          label="Email Address"
+          type="email"
+          value={formData.email}
+          onChange={handleChange('email')}
+          error={!!fieldErrors.email}
+          helperText={fieldErrors.email}
+          margin="normal"
+          required
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <EmailIcon color="action" />
+              </InputAdornment>
+            ),
+          }}
+        />
+
+        <TextField
+          fullWidth
+          label="Phone Number"
+          value={formData.phone}
+          onChange={handleChange('phone')}
+          error={!!fieldErrors.phone}
+          helperText={fieldErrors.phone || 'Optional - for reservation confirmations'}
+          margin="normal"
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <PhoneIcon color="action" />
+              </InputAdornment>
+            ),
+          }}
+        />
+
+        <TextField
+          fullWidth
+          label="Password"
+          type={showPassword ? 'text' : 'password'}
+          value={formData.password}
+          onChange={handleChange('password')}
+          error={!!fieldErrors.password}
+          helperText={fieldErrors.password || 'At least 8 characters'}
+          margin="normal"
+          required
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <LockIcon color="action" />
+              </InputAdornment>
+            ),
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton
+                  onClick={() => setShowPassword(!showPassword)}
+                  edge="end"
+                >
+                  {showPassword ? <VisibilityOff /> : <Visibility />}
+                </IconButton>
+              </InputAdornment>
+            ),
+          }}
+        />
+
+        <TextField
+          fullWidth
+          label="Confirm Password"
+          type={showConfirmPassword ? 'text' : 'password'}
+          value={confirmPassword}
+          onChange={(e) => {
+            setConfirmPassword(e.target.value);
+            setError(null);
+          }}
+          margin="normal"
+          required
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <LockIcon color="action" />
+              </InputAdornment>
+            ),
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  edge="end"
+                >
+                  {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                </IconButton>
+              </InputAdornment>
+            ),
+          }}
+        />
+
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={acceptTerms}
+              onChange={(e) => {
+                setAcceptTerms(e.target.checked);
+                setError(null);
+              }}
+              color="primary"
+            />
+          }
+          label={
+            <Typography variant="body2">
+              I accept the{' '}
+              <Link href="/terms" target="_blank">
+                Terms and Conditions
+              </Link>{' '}
+              and{' '}
+              <Link href="/privacy" target="_blank">
+                Privacy Policy
+              </Link>
+            </Typography>
+          }
+          sx={{ mt: 2, mb: 2 }}
+        />
+
+        <Button
+          type="submit"
+          fullWidth
+          variant="contained"
+          size="large"
+          disabled={loading}
+          sx={{ mt: 2, mb: 2 }}
+        >
+          {loading ? <CircularProgress size={24} /> : 'Create Account'}
+        </Button>
+
+        <Typography variant="body2" align="center">
+          Already have an account?{' '}
+          <Link
+            component="button"
+            variant="body2"
+            onClick={(e) => {
+              e.preventDefault();
+              navigate('/customer/login');
+            }}
+          >
+            Sign In
+          </Link>
+        </Typography>
+      </Box>
+    </Paper>
+  );
+}; 

@@ -23,7 +23,22 @@ const ProtectedRoute: React.FC = () => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // If user is logged in, render the nested routes
+  // Check if user is a customer trying to access staff routes
+  // This prevents customers who somehow have auth tokens from accessing the main app
+  const userInfo = localStorage.getItem('kitchenSyncUserInfo');
+  if (userInfo) {
+    try {
+      const parsed = JSON.parse(userInfo);
+      // If this is a customer user (has isCustomer flag), redirect to customer portal
+      if (parsed.user?.isCustomer) {
+        return <Navigate to="/customer" replace />;
+      }
+    } catch (e) {
+      console.error('Error checking user type:', e);
+    }
+  }
+
+  // If user is logged in and not a customer, render the nested routes
   return <Outlet />;
 };
 

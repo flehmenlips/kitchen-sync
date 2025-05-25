@@ -11,6 +11,7 @@ export const api = axios.create({
         'Content-Type': 'application/json',
         'Accept': 'application/json', // Explicitly request JSON
     },
+    withCredentials: true // Send credentials with cross-origin requests
 });
 
 // Add a request interceptor
@@ -33,11 +34,23 @@ api.interceptors.request.use(
                 const userInfo = localStorage.getItem('kitchenSyncUserInfo');
                 if (userInfo) {
                     const parsed = JSON.parse(userInfo);
-                    token = parsed.token;
+                    // Skip if this is a customer user
+                    if (parsed.user?.isCustomer) {
+                        token = null;
+                    } else {
+                        token = parsed.token;
+                    }
                 }
             } catch (e) {
                 console.error('Error parsing user info:', e);
             }
+        }
+        
+        // Also check if there's a customer auth in session storage - if so, skip this request
+        const customerAuth = sessionStorage.getItem('customerAuth');
+        if (customerAuth) {
+            // Don't set any auth header if customer is logged in
+            token = null;
         }
         
         if (token) {

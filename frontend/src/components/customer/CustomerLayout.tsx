@@ -34,7 +34,7 @@ import {
   Email as EmailIcon,
   LocationOn as LocationIcon
 } from '@mui/icons-material';
-import { useAuth } from '../../context/AuthContext';
+import { useCustomerAuth } from '../../context/CustomerAuthContext';
 import { restaurantSettingsService, RestaurantSettings } from '../../services/restaurantSettingsService';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 
@@ -42,7 +42,7 @@ const CustomerLayout: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout } = useCustomerAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [settings, setSettings] = useState<RestaurantSettings | null>(null);
@@ -208,7 +208,7 @@ const CustomerLayout: React.FC = () => {
               </Box>
             )}
 
-            {user && user.isCustomer ? (
+            {user ? (
               <>
                 <IconButton onClick={handleUserMenuOpen}>
                   <AccountIcon />
@@ -218,25 +218,45 @@ const CustomerLayout: React.FC = () => {
                   open={Boolean(anchorEl)}
                   onClose={handleUserMenuClose}
                 >
-                  <MenuItem onClick={() => navigate('/customer/profile')}>
+                  <MenuItem onClick={() => {
+                    handleUserMenuClose();
+                    navigate('/customer/dashboard');
+                  }}>
+                    Dashboard
+                  </MenuItem>
+                  <MenuItem onClick={() => {
+                    handleUserMenuClose();
+                    navigate('/customer/profile');
+                  }}>
                     My Profile
                   </MenuItem>
-                  <MenuItem onClick={() => navigate('/customer/reservations')}>
+                  <MenuItem onClick={() => {
+                    handleUserMenuClose();
+                    navigate('/customer/reservations');
+                  }}>
                     My Reservations
                   </MenuItem>
                   <Divider />
                   <MenuItem onClick={handleLogout}>
-                    Logout
+                    Sign Out
                   </MenuItem>
                 </Menu>
               </>
             ) : (
-              <Button
-                variant="contained"
-                onClick={() => navigate('/login')}
-              >
-                Sign In
-              </Button>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button
+                  variant="outlined"
+                  onClick={() => navigate('/customer/login')}
+                >
+                  Sign In
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={() => navigate('/customer/register')}
+                >
+                  Sign Up
+                </Button>
+              </Box>
             )}
           </Toolbar>
         </AppBar>
@@ -267,6 +287,38 @@ const CustomerLayout: React.FC = () => {
                   <ListItemText primary={item.text} />
                 </ListItem>
               ))}
+              {user && (
+                <>
+                  <Divider />
+                  <ListItem
+                    button
+                    component={Link}
+                    to="/customer/dashboard"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <ListItemIcon><AccountIcon /></ListItemIcon>
+                    <ListItemText primary="Dashboard" />
+                  </ListItem>
+                  <ListItem
+                    button
+                    component={Link}
+                    to="/customer/profile"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <ListItemIcon><AccountIcon /></ListItemIcon>
+                    <ListItemText primary="My Profile" />
+                  </ListItem>
+                  <ListItem
+                    button
+                    component={Link}
+                    to="/customer/reservations"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <ListItemIcon><EventSeatIcon /></ListItemIcon>
+                    <ListItemText primary="My Reservations" />
+                  </ListItem>
+                </>
+              )}
             </List>
           </Box>
         </Drawer>
