@@ -11,6 +11,7 @@ import {
   isTokenExpired
 } from '../utils/tokenUtils';
 import { emailService } from '../services/emailService';
+import { CustomerAuthRequest } from '../middleware/authenticateCustomer';
 
 const prisma = new PrismaClient();
 
@@ -503,9 +504,13 @@ export const customerAuthController = {
   },
 
   // Get customer profile
-  async getProfile(req: Request, res: Response) {
+  async getProfile(req: CustomerAuthRequest, res: Response) {
     try {
-      const userId = (req as any).user.userId;
+      const userId = req.customerUser?.userId;
+
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
 
       const user = await prisma.user.findUnique({
         where: { id: userId },
@@ -547,9 +552,14 @@ export const customerAuthController = {
   },
 
   // Update customer profile
-  async updateProfile(req: Request, res: Response) {
+  async updateProfile(req: CustomerAuthRequest, res: Response) {
     try {
-      const userId = (req as any).user.userId;
+      const userId = req.customerUser?.userId;
+      
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
       const { 
         name, 
         phone, 

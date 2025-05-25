@@ -14,7 +14,7 @@ router.post('/refresh-token', customerAuthController.refreshToken);
 router.post('/logout', customerAuthController.logout);
 
 // Protected routes - require customer authentication
-router.get('/profile', authenticateCustomer, customerAuthController.getProfile);
-router.put('/profile', authenticateCustomer, customerAuthController.updateProfile);
+router.get('/profile', authenticateCustomer as any, customerAuthController.getProfile as any);
+router.put('/profile', authenticateCustomer as any, customerAuthController.updateProfile as any);
 
 export default router; 

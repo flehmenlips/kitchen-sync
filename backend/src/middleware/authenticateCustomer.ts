@@ -1,8 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken } from '../utils/tokenUtils';
 
-interface AuthenticatedRequest extends Request {
-  user?: {
+// Use a different interface name to avoid conflicts with the global Express Request extension
+export interface CustomerAuthRequest extends Request {
+  customerUser?: {
     userId: number;
     email: string;
     isCustomer: boolean;
@@ -11,7 +12,7 @@ interface AuthenticatedRequest extends Request {
 }
 
 export const authenticateCustomer = (
-  req: AuthenticatedRequest,
+  req: CustomerAuthRequest,
   res: Response,
   next: NextFunction
 ): void => {
@@ -34,7 +35,7 @@ export const authenticateCustomer = (
         return;
       }
       
-      req.user = payload;
+      req.customerUser = payload;
       next();
     } catch (error) {
       res.status(401).json({ error: 'Invalid or expired token' });
