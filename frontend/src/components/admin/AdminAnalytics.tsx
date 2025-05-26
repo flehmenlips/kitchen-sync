@@ -94,29 +94,29 @@ const AdminAnalytics: React.FC = () => {
         staffApi.getStaffAnalytics()
       ]);
 
-      // Combine the analytics data
+      // Combine the analytics data with proper null checks
       setAnalytics({
-        customers: customerAnalytics.customers || {
-          total: customerAnalytics.total || 0,
-          newThisMonth: customerAnalytics.newThisMonth || 0,
-          verified: customerAnalytics.verified || 0,
-          withReservations: customerAnalytics.withReservations || 0,
-          growth: customerAnalytics.growth || 0,
-          topCustomers: customerAnalytics.topCustomers || []
+        customers: {
+          total: customerAnalytics?.total || 0,
+          newThisMonth: customerAnalytics?.newThisMonth || 0,
+          verified: customerAnalytics?.verified || 0,
+          withReservations: customerAnalytics?.withReservations || 0,
+          growth: customerAnalytics?.growth || 0,
+          topCustomers: customerAnalytics?.topCustomers || []
         },
-        reservations: customerAnalytics.reservations || {
-          totalThisMonth: 0,
-          completedThisMonth: 0,
-          cancelledThisMonth: 0,
-          averagePartySize: 0,
-          growth: 0,
-          upcomingCount: 0
+        reservations: {
+          totalThisMonth: customerAnalytics?.reservations?.totalThisMonth || 0,
+          completedThisMonth: customerAnalytics?.reservations?.completedThisMonth || 0,
+          cancelledThisMonth: customerAnalytics?.reservations?.cancelledThisMonth || 0,
+          averagePartySize: customerAnalytics?.reservations?.averagePartySize || 0,
+          growth: customerAnalytics?.reservations?.growth || 0,
+          upcomingCount: customerAnalytics?.reservations?.upcomingCount || 0
         },
-        staff: staffAnalytics || {
-          total: staffAnalytics.total || 0,
-          admins: staffAnalytics.admins || 0,
-          activeToday: staffAnalytics.activeToday || 0,
-          newThisMonth: staffAnalytics.newThisMonth || 0
+        staff: {
+          total: staffAnalytics?.total || 0,
+          admins: staffAnalytics?.admins || 0,
+          activeToday: staffAnalytics?.activeToday || 0,
+          newThisMonth: staffAnalytics?.newThisMonth || 0
         }
       });
     } catch (err) {
