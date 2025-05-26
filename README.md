@@ -1,16 +1,16 @@
 # KitchenSync - Restaurant Management Platform
-> Version 2.10.0
+> Version 2.11.1
 
 A comprehensive restaurant management system that streamlines kitchen operations, menu management, and customer interactions.
 
-## 🚀 Latest Release (v2.10.0)
+## 🚀 Latest Release (v2.11.1)
 
 ### Major Features Added:
-- **Content Management System**: Dynamic content blocks for customer-facing website
-- **Restaurant Branding & Settings**: Complete customization of website appearance
-- **Theme Customization**: Custom colors, fonts, and branding options
-- **Cloudinary Integration**: Professional image management and optimization
-- **Customer Portal**: Fully functional customer-facing website with reservations
+- **Admin Dashboard**: Comprehensive customer and staff management interface
+- **Customer CRM**: Search, filter, and manage all restaurant customers
+- **Staff Management**: Create and manage staff accounts with role-based permissions
+- **Analytics API**: Ready-to-use endpoints for business intelligence
+- **Email Infrastructure**: SendGrid integration with testing tools
 
 ## 🏗️ Architecture
 
@@ -48,35 +48,26 @@ KitchenSync is built as a modular platform with five integrated modules:
 - Kitchen communication
 - Order tracking and timing
 
-## 🌟 New Features in v2.10.0
+## 🌟 New Features in v2.11.1
 
-### Content Management System
-- Create and manage dynamic content blocks
-- Multiple block types: Text, HTML, Image, Video, CTA, Hero, Features
-- Drag-and-drop reordering
-- Page-specific content organization
-- Active/inactive status management
+### Admin Dashboard
+- **Customer Management**: Comprehensive CRM with search, filtering, and pagination
+- **Customer Analytics**: View stats on new customers, verification rates, and engagement
+- **Staff Management**: Create, edit, and manage staff accounts with role assignments
+- **Activity Tracking**: Monitor staff activity and content creation
+- **Role-Based Access**: Secure access control for admin features
 
-### Restaurant Settings & Branding
-- Complete website customization
-- Logo upload and management
-- Hero and about section customization
-- Social media integration
-- SEO optimization settings
-- Opening hours management
+### Email Infrastructure
+- **SendGrid Integration**: Production-ready email service
+- **Email Templates**: Verification, welcome, password reset, and reservation confirmations
+- **Testing Tools**: Scripts to test all email types in development
+- **Environment Configuration**: Easy setup for different environments
 
-### Theme Customization
-- Custom color schemes (primary, secondary, accent)
-- Font selection for headers and body text
-- Live preview of theme changes
-- Consistent branding across customer portal
-
-### Customer Portal Enhancements
-- Dynamic home page with content blocks
-- Integrated reservation system
-- Menu display with active menu selection
-- Mobile-responsive design
-- Theme-aware styling
+### Customer/Staff Separation (v2.11.0)
+- **Separate Authentication**: Isolated auth systems for customers and staff
+- **Database Architecture**: Dedicated customer table with proper relationships
+- **Enhanced Security**: Prevents privilege escalation and cross-authentication
+- **Migration Safety**: Production-safe scripts with rollback capabilities
 
 ## 🛠️ Tech Stack
 
@@ -115,13 +106,16 @@ npm install
 
 3. Set up environment variables:
 ```bash
-# Backend .env
+# Backend .env.local (for development)
 DATABASE_URL="your-postgresql-url"
 JWT_SECRET="your-jwt-secret"
 SESSION_SECRET="your-session-secret"
 CLOUDINARY_CLOUD_NAME="your-cloud-name"
 CLOUDINARY_API_KEY="your-api-key"
 CLOUDINARY_API_SECRET="your-api-secret"
+SENDGRID_API_KEY="your-sendgrid-key"
+FROM_EMAIL="noreply@yourrestaurant.com"
+FRONTEND_URL="http://localhost:5173"
 
 # Frontend .env
 VITE_API_URL="http://localhost:3001/api"
@@ -135,13 +129,21 @@ npx prisma migrate dev
 
 5. Start the development servers:
 ```bash
-# Backend (port 3001)
+# Backend (port 3001) - ALWAYS use dev:local for development
 cd backend
-npm run dev
+npm run dev:local
 
 # Frontend (port 5173)
 cd frontend
 npm run dev
+```
+
+## 📧 Email Testing
+
+Test email functionality in development:
+```bash
+cd backend
+npm run test:email:local
 ```
 
 ## 🚀 Deployment
@@ -161,11 +163,17 @@ The application is configured for deployment on Render.com with automatic deploy
 ## 👥 User Roles
 
 KitchenSync supports multiple user roles:
-- **SuperAdmin**: Full system access
-- **Admin/Owner**: Restaurant management and settings
-- **Manager/Chef**: Kitchen and menu management
-- **Staff**: Order and reservation handling
-- **Customer**: Public portal access
+- **SuperAdmin**: Full system access, admin dashboard
+- **Admin**: Restaurant management, settings, and admin dashboard
+- **User**: Staff members with kitchen and menu management
+- **Customer**: Separate authentication for restaurant patrons
+
+### Admin Dashboard Access
+The Admin Dashboard is available at `/admin` for users with Admin or SuperAdmin roles. Features include:
+- Customer relationship management (CRM)
+- Staff account management
+- Analytics and reporting
+- Customer communication tools
 
 ## 📱 Customer Portal
 
