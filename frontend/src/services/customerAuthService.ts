@@ -46,7 +46,20 @@ const REFRESH_TOKEN_KEY = 'customerRefreshToken';
 export const customerAuthService = {
   // Register a new customer
   async register(data: RegisterData): Promise<AuthResponse> {
-    const response = await customerApi.post('/auth/customer/register', data);
+    // Split the name into firstName and lastName for the backend
+    const nameParts = data.name.trim().split(' ');
+    const firstName = nameParts[0];
+    const lastName = nameParts.slice(1).join(' ') || undefined;
+    
+    const registrationData = {
+      email: data.email,
+      password: data.password,
+      firstName,
+      lastName,
+      phone: data.phone
+    };
+    
+    const response = await customerApi.post('/auth/customer/register', registrationData);
     this.setAuth(response.data);
     return response.data;
   },
