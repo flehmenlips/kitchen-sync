@@ -295,7 +295,7 @@ const AdminAnalytics: React.FC = () => {
                 </ListItemIcon>
                 <ListItemText
                   primary="Customers with Reservations"
-                  secondary={`${analytics.customers.withReservations} (${Math.round((analytics.customers.withReservations / analytics.customers.total) * 100)}%)`}
+                  secondary={`${analytics.customers.withReservations} (${analytics.customers.total > 0 ? Math.round((analytics.customers.withReservations / analytics.customers.total) * 100) : 0}%)`}
                 />
               </ListItem>
               <Divider />
@@ -305,7 +305,7 @@ const AdminAnalytics: React.FC = () => {
                 </ListItemIcon>
                 <ListItemText
                   primary="Email Verification Rate"
-                  secondary={`${Math.round((analytics.customers.verified / analytics.customers.total) * 100)}%`}
+                  secondary={`${analytics.customers.total > 0 ? Math.round((analytics.customers.verified / analytics.customers.total) * 100) : 0}%`}
                 />
               </ListItem>
             </List>
@@ -335,7 +335,7 @@ const AdminAnalytics: React.FC = () => {
                 </ListItemIcon>
                 <ListItemText
                   primary="Completed Reservations"
-                  secondary={`${analytics.reservations.completedThisMonth} (${Math.round((analytics.reservations.completedThisMonth / analytics.reservations.totalThisMonth) * 100)}%)`}
+                  secondary={`${analytics.reservations.completedThisMonth} (${analytics.reservations.totalThisMonth > 0 ? Math.round((analytics.reservations.completedThisMonth / analytics.reservations.totalThisMonth) * 100) : 0}%)`}
                 />
               </ListItem>
               <Divider />
@@ -345,7 +345,7 @@ const AdminAnalytics: React.FC = () => {
                 </ListItemIcon>
                 <ListItemText
                   primary="Average Party Size"
-                  secondary={analytics.reservations.averagePartySize.toFixed(1)}
+                  secondary={(analytics.reservations.averagePartySize || 0).toFixed(1)}
                 />
               </ListItem>
             </List>
