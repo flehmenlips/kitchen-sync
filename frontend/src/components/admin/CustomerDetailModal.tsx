@@ -353,7 +353,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                   <Typography variant="h6" gutterBottom>
                     Tags
                   </Typography>
-                  <Stack direction="row" spacing={1} flexWrap="wrap">
+                  <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
                     {customer.tags.map((tag, index) => (
                       <Chip key={index} label={tag} />
                     ))}
