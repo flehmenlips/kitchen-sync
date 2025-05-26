@@ -210,13 +210,11 @@ async function createCustomerTables() {
     log('✅ Created customer_restaurants table');
     
     // Create indexes
-    await prisma.$executeRawUnsafe(`
-      CREATE INDEX IF NOT EXISTS idx_customers_email ON customers(email);
-      CREATE INDEX IF NOT EXISTS idx_customer_sessions_token ON customer_sessions(token);
-      CREATE INDEX IF NOT EXISTS idx_customer_sessions_customer_id ON customer_sessions(customer_id);
-      CREATE INDEX IF NOT EXISTS idx_customer_restaurants_customer_id ON customer_restaurants(customer_id);
-      CREATE INDEX IF NOT EXISTS idx_customer_restaurants_restaurant_id ON customer_restaurants(restaurant_id);
-    `);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS idx_customers_email ON customers(email)`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS idx_customer_sessions_token ON customer_sessions(token)`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS idx_customer_sessions_customer_id ON customer_sessions(customer_id)`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS idx_customer_restaurants_customer_id ON customer_restaurants(customer_id)`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS idx_customer_restaurants_restaurant_id ON customer_restaurants(restaurant_id)`);
     log('✅ Created indexes');
     
   } catch (err) {
