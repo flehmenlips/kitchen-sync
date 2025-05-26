@@ -1,0 +1,185 @@
+{
+  "startTime": "2025-05-26T00:40:41.318Z",
+  "environment": "PRODUCTION",
+  "dryRun": false,
+  "rollback": false,
+  "steps": [
+    {
+      "timestamp": "2025-05-26T00:40:41.318Z",
+      "level": "INFO",
+      "message": "=== PERFORMING SAFETY CHECKS ==="
+    },
+    {
+      "timestamp": "2025-05-26T00:40:41.318Z",
+      "level": "WARNING",
+      "message": "⚠️  PRODUCTION EXECUTION MODE - Changes will be permanent!"
+    },
+    {
+      "timestamp": "2025-05-26T00:40:58.252Z",
+      "level": "INFO",
+      "message": "✅ Database connection verified"
+    },
+    {
+      "timestamp": "2025-05-26T00:40:58.374Z",
+      "level": "WARNING",
+      "message": "All customer tables already exist - migration may have already been run"
+    },
+    {
+      "timestamp": "2025-05-26T00:40:58.374Z",
+      "level": "INFO",
+      "message": "Found 4/4 customer tables"
+    },
+    {
+      "timestamp": "2025-05-26T00:40:58.565Z",
+      "level": "INFO",
+      "message": "Found 3 customers to migrate"
+    },
+    {
+      "timestamp": "2025-05-26T00:40:58.566Z",
+      "level": "INFO",
+      "message": "Found 6 staff users (will not be affected)"
+    },
+    {
+      "timestamp": "2025-05-26T00:40:58.566Z",
+      "level": "INFO",
+      "message": "\n=== CREATING CUSTOMER TABLES ==="
+    },
+    {
+      "timestamp": "2025-05-26T00:40:58.678Z",
+      "level": "INFO",
+      "message": "✅ Created customers table"
+    },
+    {
+      "timestamp": "2025-05-26T00:40:58.790Z",
+      "level": "INFO",
+      "message": "✅ Created customer_profiles table"
+    },
+    {
+      "timestamp": "2025-05-26T00:40:58.907Z",
+      "level": "INFO",
+      "message": "✅ Created customer_sessions table"
+    },
+    {
+      "timestamp": "2025-05-26T00:40:59.021Z",
+      "level": "INFO",
+      "message": "✅ Created customer_restaurants table"
+    },
+    {
+      "timestamp": "2025-05-26T00:40:59.670Z",
+      "level": "INFO",
+      "message": "✅ Created indexes"
+    },
+    {
+      "timestamp": "2025-05-26T00:40:59.670Z",
+      "level": "INFO",
+      "message": "\n=== MIGRATING CUSTOMERS ==="
+    },
+    {
+      "timestamp": "2025-05-26T00:41:00.275Z",
+      "level": "INFO",
+      "message": "Processing customer: amora@page.com"
+    },
+    {
+      "timestamp": "2025-05-26T00:41:00.540Z",
+      "level": "INFO",
+      "message": "  ✅ Created customer record with ID: 1"
+    },
+    {
+      "timestamp": "2025-05-26T00:41:00.604Z",
+      "level": "ERROR",
+      "message": "  ❌ Failed to migrate amora@page.com: \nInvalid `prisma.$executeRawUnsafe()` invocation:\n\n\nRaw query failed. Code: `42703`. Message: `column \"customer_id\" of relation \"customer_profiles\" does not exist`"
+    },
+    {
+      "timestamp": "2025-05-26T00:41:00.604Z",
+      "level": "INFO",
+      "message": "Processing customer: dad@page.com"
+    },
+    {
+      "timestamp": "2025-05-26T00:41:00.720Z",
+      "level": "INFO",
+      "message": "  ✅ Created customer record with ID: 2"
+    },
+    {
+      "timestamp": "2025-05-26T00:41:00.856Z",
+      "level": "ERROR",
+      "message": "  ❌ Failed to migrate dad@page.com: \nInvalid `prisma.$executeRawUnsafe()` invocation:\n\n\nRaw query failed. Code: `42703`. Message: `column \"customer_id\" of relation \"customer_profiles\" does not exist`"
+    },
+    {
+      "timestamp": "2025-05-26T00:41:00.856Z",
+      "level": "INFO",
+      "message": "Processing customer: george@seabreezefarm.net"
+    },
+    {
+      "timestamp": "2025-05-26T00:41:00.972Z",
+      "level": "INFO",
+      "message": "  ✅ Created customer record with ID: 3"
+    },
+    {
+      "timestamp": "2025-05-26T00:41:01.037Z",
+      "level": "ERROR",
+      "message": "  ❌ Failed to migrate george@seabreezefarm.net: \nInvalid `prisma.$executeRawUnsafe()` invocation:\n\n\nRaw query failed. Code: `42703`. Message: `column \"customer_id\" of relation \"customer_profiles\" does not exist`"
+    },
+    {
+      "timestamp": "2025-05-26T00:41:01.037Z",
+      "level": "INFO",
+      "message": "\nMigration complete: 0 succeeded, 3 failed"
+    },
+    {
+      "timestamp": "2025-05-26T00:41:01.037Z",
+      "level": "INFO",
+      "message": "\n=== CLEANUP PHASE ==="
+    },
+    {
+      "timestamp": "2025-05-26T00:41:01.163Z",
+      "level": "INFO",
+      "message": "✅ Removed 0 customer records from restaurant_staff"
+    },
+    {
+      "timestamp": "2025-05-26T00:41:01.653Z",
+      "level": "INFO",
+      "message": "✅ Marked 3 migrated users as inactive"
+    },
+    {
+      "timestamp": "2025-05-26T00:41:01.654Z",
+      "level": "INFO",
+      "message": "\n=== VERIFICATION ==="
+    },
+    {
+      "timestamp": "2025-05-26T00:41:02.156Z",
+      "level": "ERROR",
+      "message": "Verification failed: \nInvalid `prisma.$queryRaw()` invocation:\n\n\nRaw query failed. Code: `42703`. Message: `column \"customer_id\" does not exist`"
+    }
+  ],
+  "errors": [
+    {
+      "timestamp": "2025-05-26T00:41:00.604Z",
+      "message": "  ❌ Failed to migrate amora@page.com: \nInvalid `prisma.$executeRawUnsafe()` invocation:\n\n\nRaw query failed. Code: `42703`. Message: `column \"customer_id\" of relation \"customer_profiles\" does not exist`"
+    },
+    {
+      "timestamp": "2025-05-26T00:41:00.856Z",
+      "message": "  ❌ Failed to migrate dad@page.com: \nInvalid `prisma.$executeRawUnsafe()` invocation:\n\n\nRaw query failed. Code: `42703`. Message: `column \"customer_id\" of relation \"customer_profiles\" does not exist`"
+    },
+    {
+      "timestamp": "2025-05-26T00:41:01.037Z",
+      "message": "  ❌ Failed to migrate george@seabreezefarm.net: \nInvalid `prisma.$executeRawUnsafe()` invocation:\n\n\nRaw query failed. Code: `42703`. Message: `column \"customer_id\" of relation \"customer_profiles\" does not exist`"
+    },
+    {
+      "timestamp": "2025-05-26T00:41:02.156Z",
+      "message": "Verification failed: \nInvalid `prisma.$queryRaw()` invocation:\n\n\nRaw query failed. Code: `42703`. Message: `column \"customer_id\" does not exist`"
+    }
+  ],
+  "warnings": [
+    {
+      "timestamp": "2025-05-26T00:40:58.374Z",
+      "message": "All customer tables already exist - migration may have already been run"
+    }
+  ],
+  "summary": {
+    "customersToMigrate": 3,
+    "staffUsers": 6,
+    "migrated": 0,
+    "failed": 3
+  },
+  "endTime": "2025-05-26T00:41:02.157Z",
+  "duration": 20839
+}
