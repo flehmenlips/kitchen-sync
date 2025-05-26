@@ -20,6 +20,7 @@ import restaurantSettingsRoutes from './routes/restaurantSettingsRoutes';
 import contentBlockRoutes from './routes/contentBlockRoutes';
 import customerAuthRoutes from './routes/customerAuthRoutes'; // Import customer auth routes
 import customerReservationRoutes from './routes/customerReservationRoutes'; // Import customer reservation routes
+import adminRoutes from './routes/adminRoutes'; // Import admin routes
 import { Request, Response, NextFunction } from 'express';
 
 // Load environment variables
@@ -73,6 +74,7 @@ app.use('/api/reservations', reservationRoutes); // Mount reservation routes
 app.use('/api/orders', orderRoutes); // Mount order routes
 app.use('/api/restaurant', restaurantSettingsRoutes); // Mount restaurant settings routes
 app.use('/api/content-blocks', contentBlockRoutes); // Mount content block routes
+app.use('/api/admin', adminRoutes); // Mount admin routes
 
 // Basic route for testing
 app.get('/', (req, res) => {

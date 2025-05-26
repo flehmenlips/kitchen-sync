@@ -1708,3 +1708,124 @@ Customer reservations were failing with 500 error because:
 
 ### Result
 Customer reservations now work correctly. Customers can create reservations through the customer portal without errors.
+
+## Admin Dashboard Implementation Plan (2025-05-26)
+
+### Overview
+Create comprehensive admin dashboards for managing customers and staff with full CRM capabilities.
+
+### Features to Implement
+
+#### 1. Customer Management Dashboard
+- **Customer List View**
+  - Search/filter by name, email, phone
+  - Sort by registration date, last activity
+  - Quick stats (total customers, new this month)
+  - Pagination for large datasets
+
+- **Customer Detail View**
+  - Personal information (name, email, phone)
+  - Account status (verified, active, etc.)
+  - Reservation history with details
+  - Order history (when implemented)
+  - Visit frequency and patterns
+  - Total spend calculations
+  - Notes and tags for staff
+  - Communication log
+
+- **Customer Actions**
+  - Edit customer information
+  - Reset customer password
+  - Send email to customer
+  - Add internal notes
+  - Tag customers (VIP, regular, etc.)
+  - View/export customer data
+
+#### 2. Staff Management Dashboard
+- **Staff List View**
+  - All users with roles (Admin, Manager, Staff)
+  - Active/inactive status
+  - Last login information
+  - Quick role assignment
+
+- **Staff Detail View**
+  - Personal information
+  - Role and permissions
+  - Activity log
+  - Created content (recipes, menus, etc.)
+
+- **Staff Actions**
+  - Create new staff user
+  - Edit staff information
+  - Change roles/permissions
+  - Deactivate/activate accounts
+  - Reset passwords
+
+#### 3. Analytics Dashboard
+- **Customer Analytics**
+  - New customers over time
+  - Customer retention rates
+  - Popular reservation times
+  - Average party sizes
+
+- **Staff Analytics**
+  - Staff activity levels
+  - Content creation stats
+
+### Technical Implementation Plan
+
+#### Backend API Endpoints
+1. **Customer Management**
+   - GET `/api/admin/customers` - List all customers with filters
+   - GET `/api/admin/customers/:id` - Get customer details
+   - PUT `/api/admin/customers/:id` - Update customer
+   - POST `/api/admin/customers/:id/notes` - Add note
+   - POST `/api/admin/customers/:id/tags` - Add/remove tags
+   - GET `/api/admin/customers/:id/history` - Get full history
+
+2. **Staff Management**
+   - GET `/api/admin/staff` - List all staff users
+   - GET `/api/admin/staff/:id` - Get staff details
+   - POST `/api/admin/staff` - Create new staff user
+   - PUT `/api/admin/staff/:id` - Update staff user
+   - PUT `/api/admin/staff/:id/role` - Change role
+   - DELETE `/api/admin/staff/:id` - Deactivate user
+
+3. **Analytics**
+   - GET `/api/admin/analytics/customers` - Customer analytics
+   - GET `/api/admin/analytics/staff` - Staff analytics
+   - GET `/api/admin/analytics/overview` - Dashboard overview
+
+#### Frontend Components
+1. **Layout**
+   - AdminDashboard component
+   - Navigation with tabs/sidebar
+   - Role-based access control
+
+2. **Customer Components**
+   - CustomerListTable
+   - CustomerDetailModal
+   - CustomerEditForm
+   - CustomerHistoryTimeline
+   - CustomerNotesSection
+
+3. **Staff Components**
+   - StaffListTable
+   - StaffDetailModal
+   - StaffEditForm
+   - RoleManagement
+
+4. **Shared Components**
+   - DataTable with sorting/filtering
+   - SearchBar with advanced filters
+   - ExportButton
+   - ActivityFeed
+
+### Implementation Priority
+1. Customer list view with basic details
+2. Customer detail modal with history
+3. Staff list view
+4. Customer search and filters
+5. Note and tag system
+6. Analytics dashboard
+7. Advanced features

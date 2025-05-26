@@ -53,6 +53,7 @@ import ViewAgendaIcon from '@mui/icons-material/ViewAgenda';
 import ViewListIcon from '@mui/icons-material/ViewList';
 import StraightenIcon from '@mui/icons-material/Straighten';
 import EventIcon from '@mui/icons-material/Event';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 
 // Constants
 const DRAWER_WIDTH = 280;
@@ -264,6 +265,14 @@ const MainLayout: React.FC = () => {
                 {(user?.role === 'ADMIN' || user?.role === 'SUPERADMIN') && (
                     <>
                         <Divider sx={{ my: 1 }} />
+                        <ListItem disablePadding>
+                            <ListItemButton component={RouterLink} to="/admin">
+                                <ListItemIcon>
+                                    <AdminPanelSettingsIcon />
+                                </ListItemIcon>
+                                <ListItemText primary="Admin Dashboard" />
+                            </ListItemButton>
+                        </ListItem>
                         <ListItem disablePadding>
                             <ListItemButton component={RouterLink} to="/settings">
                                 <ListItemIcon>

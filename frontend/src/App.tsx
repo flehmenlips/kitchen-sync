@@ -84,6 +84,9 @@ import CustomerDashboardPage from './pages/customer/CustomerDashboardPage';
 // Reservation Management Page
 import ReservationManagementPage from './pages/ReservationManagementPage';
 
+// Admin Dashboard
+import AdminDashboard from './pages/AdminDashboard';
+
 // Create a client
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -198,6 +201,9 @@ const App: React.FC = () => {
 
                       {/* Profile Route */}
                       <Route path="profile" element={<ProfilePage />} />
+
+                      {/* Admin Dashboard */}
+                      <Route path="admin" element={<AdminDashboard />} />
 
                       {/* Redirect any unknown routes to dashboard */}
                       <Route path="*" element={<Navigate to="/" replace />} />
