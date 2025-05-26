@@ -1,6 +1,10 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+// In production, use the production backend URL
+// In development, use the environment variable or localhost
+const API_URL = import.meta.env.PROD 
+  ? 'https://kitchen-sync-api.onrender.com/api'
+  : (import.meta.env.VITE_API_URL || 'http://localhost:3001/api');
 
 // Create axios instance with auth interceptor
 const api = axios.create({
