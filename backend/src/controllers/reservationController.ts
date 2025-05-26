@@ -33,8 +33,27 @@ export const getReservations = async (req: Request, res: Response): Promise<void
     try {
         const { date, status } = req.query;
         
-        // For admin/staff, show all reservations, not just ones they created
-        const where: any = {};
+        // Get the restaurants this user has access to
+        const userRestaurants = await prisma.restaurantStaff.findMany({
+            where: { 
+                userId: req.user.id,
+                isActive: true
+            },
+            select: { restaurantId: true }
+        });
+
+        // If user has no restaurant associations, they shouldn't see any reservations
+        if (userRestaurants.length === 0) {
+            res.status(200).json([]);
+            return;
+        }
+
+        const restaurantIds = userRestaurants.map(r => r.restaurantId);
+        
+        // Build where clause with restaurant filtering
+        const where: any = {
+            restaurantId: { in: restaurantIds }
+        };
         
         if (date) {
             const startDate = new Date(date as string);
@@ -146,6 +165,20 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
             return;
         }
 
+        // Get user's primary restaurant
+        const userRestaurant = await prisma.restaurantStaff.findFirst({
+            where: { 
+                userId: req.user.id,
+                isActive: true
+            },
+            orderBy: { createdAt: 'asc' } // Use their first/primary restaurant
+        });
+
+        if (!userRestaurant) {
+            res.status(403).json({ message: 'You must be associated with a restaurant to create reservations' });
+            return;
+        }
+
         const newReservation = await prisma.reservation.create({
             data: {
                 customerName,
@@ -156,7 +189,7 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
                 reservationTime,
                 notes,
                 userId: req.user.id,
-                restaurantId: 1 // Single restaurant MVP
+                restaurantId: userRestaurant.restaurantId
             }
         });
 

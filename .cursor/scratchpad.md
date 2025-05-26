@@ -328,3 +328,70 @@ VITE_API_URL=http://localhost:3001/api
 - Added `export { api };` to api.ts to fix import issues in prepTaskService and other services
 - Also updated all API service files (apiClient.ts, api.ts, customerApi.ts, apiService.ts) to use production URLs
 - All fixes committed and pushed, waiting for Render auto-deployment
+
+# KitchenSync Multi-Tenancy Fix Plan
+
+## Background and Motivation
+KitchenSync currently has a broken multi-tenancy model where:
+1. Any staff user can see ALL reservations from ALL restaurants
+2. Data models are inconsistently tied to restaurants
+3. The RestaurantStaff relationship exists but isn't utilized
+4. New users automatically become staff in the production restaurant
+
+## Key Challenges and Analysis
+
+### Current State Issues:
+1. **Reservations Controller**: Shows all reservations regardless of restaurant
+2. **Hardcoded Restaurant ID**: Everything defaults to restaurant ID 1
+3. **Missing Restaurant Context**: User sessions don't track which restaurant they're working with
+4. **Incomplete Schema**: Many models (Recipe, Menu, Ingredient) lack restaurantId
+
+### Required Changes:
+1. Add restaurantId to all relevant models
+2. Implement restaurant context in user sessions
+3. Filter all queries by current restaurant
+4. Separate restaurant account creation from staff addition
+5. Implement proper restaurant switching for multi-restaurant staff
+
+## High-level Task Breakdown
+
+### Phase 1: Schema Updates
+- [ ] Add restaurantId to Recipe, Menu, Ingredient, UnitOfMeasure, PrepTask, PrepColumn models
+- [ ] Create migration script to assign existing data to restaurant 1
+- [ ] Update all Prisma queries to include restaurantId filters
+
+### Phase 2: Restaurant Context
+- [ ] Add currentRestaurantId to user session/JWT
+- [ ] Create restaurant selection UI for multi-restaurant staff
+- [ ] Update all API endpoints to use current restaurant context
+
+### Phase 3: Reservation Filtering Fix
+- [ ] Update getReservations to filter by restaurantId
+- [ ] Ensure all reservation CRUD operations respect restaurant boundaries
+- [ ] Add restaurant validation to prevent cross-restaurant data access
+
+### Phase 4: Restaurant Registration
+- [ ] Create restaurant registration flow (separate from user registration)
+- [ ] Restaurant owner creates restaurant account
+- [ ] Owner can invite staff members
+- [ ] Staff join specific restaurants via invitation
+
+### Phase 5: Access Control
+- [ ] Implement middleware to check RestaurantStaff permissions
+- [ ] Validate user has access to current restaurant
+- [ ] Prevent unauthorized restaurant switching
+
+## Current Status / Progress Tracking
+- [x] Identified multi-tenancy issues
+- [ ] Schema updates planned
+- [ ] Implementation started
+
+## Executor's Feedback or Assistance Requests
+- Need to decide on approach: Add restaurantId to all models vs. use RestaurantStaff for access control
+- Consider impact on existing production data
+- Plan for data migration strategy
+
+## Lessons
+- Multi-tenancy must be designed from the start
+- Restaurant context should be part of every API request
+- Access control needs to be enforced at the database query level
