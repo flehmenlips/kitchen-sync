@@ -203,7 +203,7 @@ const App: React.FC = () => {
                       <Route path="profile" element={<ProfilePage />} />
 
                       {/* Admin Dashboard */}
-                      <Route path="admin" element={<AdminDashboard />} />
+                      <Route path="admin-dashboard" element={<AdminDashboard />} />
 
                       {/* Redirect any unknown routes to dashboard */}
                       <Route path="*" element={<Navigate to="/" replace />} />

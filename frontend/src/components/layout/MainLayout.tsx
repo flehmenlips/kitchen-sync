@@ -266,7 +266,7 @@ const MainLayout: React.FC = () => {
                     <>
                         <Divider sx={{ my: 1 }} />
                         <ListItem disablePadding>
-                            <ListItemButton component={RouterLink} to="/admin">
+                            <ListItemButton component={RouterLink} to="/admin-dashboard">
                                 <ListItemIcon>
                                     <AdminPanelSettingsIcon />
                                 </ListItemIcon>
