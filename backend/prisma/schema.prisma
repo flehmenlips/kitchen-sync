@@ -402,7 +402,7 @@ model Reservation {
   specialRequests     String?           @map("special_requests")
   createdAt           DateTime          @default(now()) @map("created_at")
   updatedAt           DateTime          @updatedAt @map("updated_at")
-  userId              Int               @map("user_id")
+  userId              Int?              @map("user_id")
   actualArrivalTime   DateTime?         @map("actual_arrival_time")
   actualDepartureTime DateTime?         @map("actual_departure_time")
   confirmationSent    Boolean           @default(false) @map("confirmation_sent")
@@ -416,7 +416,7 @@ model Reservation {
   reservationLogs     ReservationLog[]
   customer            User?             @relation("CustomerReservations", fields: [customerId], references: [id])
   restaurant          Restaurant        @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  user                User              @relation("UserReservations", fields: [userId], references: [id], onDelete: Cascade)
+  user                User?             @relation("UserReservations", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([customerId])

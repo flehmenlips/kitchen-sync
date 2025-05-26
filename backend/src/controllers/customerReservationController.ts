@@ -356,7 +356,7 @@ export const customerReservationController = {
       // Create the reservation
       const reservation = await prisma.reservation.create({
         data: {
-          // customerId, // Commenting out due to schema mismatch - expects User not Customer
+          customerId: customer.id, // Now using the correct foreign key
           customerName: `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.email,
           customerEmail: customer.email,
           customerPhone: customer.phone,
@@ -367,7 +367,7 @@ export const customerReservationController = {
           status: 'CONFIRMED',
           notes,
           specialRequests,
-          userId: 1, // Using default user ID for customer reservations
+          // userId is now nullable, so we don't need to provide it for customer reservations
           source: 'customer_portal'
         },
         include: {
