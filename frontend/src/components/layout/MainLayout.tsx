@@ -47,6 +47,12 @@ import Logout from '@mui/icons-material/Logout';
 import PersonIcon from '@mui/icons-material/Person';
 import SettingsIcon from '@mui/icons-material/Settings';
 import PublicIcon from '@mui/icons-material/Public';
+import BookIcon from '@mui/icons-material/Book';
+import ViewKanbanIcon from '@mui/icons-material/ViewKanban';
+import ViewAgendaIcon from '@mui/icons-material/ViewAgenda';
+import ViewListIcon from '@mui/icons-material/ViewList';
+import StraightenIcon from '@mui/icons-material/Straighten';
+import EventIcon from '@mui/icons-material/Event';
 
 // Constants
 const DRAWER_WIDTH = 280;
@@ -88,7 +94,11 @@ const KITCHEN_SYNC_MODULES = [
         name: 'TableFarm',
         icon: <TableRestaurantIcon />,
         description: 'Reservation & Order System',
-        path: '/tablefarm'
+        path: '/tablefarm',
+        subItems: [
+            { name: 'Calendar', icon: <DashboardIcon />, path: '/tablefarm' },
+            { name: 'Reservations', icon: <EventIcon />, path: '/reservations' }
+        ]
     },
     {
         id: 'chefrail',

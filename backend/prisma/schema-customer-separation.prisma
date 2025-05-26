@@ -1,0 +1,83 @@
+// New Customer Models for Separation
+// This file shows the new models to be added to schema.prisma
+
+model Customer {
+  id                      Int                      @id @default(autoincrement())
+  restaurantId            Int                      @default(1) @map("restaurant_id")
+  email                   String                   @unique
+  password                String
+  firstName               String?                  @map("first_name")
+  lastName                String?                  @map("last_name")
+  phone                   String?                  @db.VarChar(50)
+  emailVerified           Boolean                  @default(false) @map("email_verified")
+  emailVerificationToken  String?                  @map("email_verification_token")
+  emailVerificationExpires DateTime?               @map("email_verification_expires")
+  passwordResetToken      String?                  @map("password_reset_token")
+  passwordResetExpires    DateTime?                @map("password_reset_expires")
+  lastLogin               DateTime?                @map("last_login")
+  createdAt               DateTime                 @default(now()) @map("created_at")
+  updatedAt               DateTime                 @updatedAt @map("updated_at")
+  
+  // Relations
+  customerPreferences     CustomerPreferences?
+  sessions                CustomerSession[]
+  reservations            Reservation[]            @relation("CustomerReservations")
+  orders                  Order[]                  @relation("CustomerOrders")
+  restaurant              Restaurant               @relation("RestaurantCustomers", fields: [restaurantId], references: [id])
+
+  @@index([email])
+  @@index([restaurantId])
+  @@map("customers")
+}
+
+model CustomerPreferences {
+  id                    Int       @id @default(autoincrement())
+  customerId            Int       @unique @map("customer_id")
+  dietaryRestrictions   String?   @map("dietary_restrictions")
+  seatingPreferences    String?   @map("seating_preferences")
+  specialOccasions      Json?     @map("special_occasions") @db.Json
+  marketingOptIn        Boolean   @default(true) @map("marketing_opt_in")
+  smsNotifications      Boolean   @default(false) @map("sms_notifications")
+  preferredContactMethod String?  @default("email") @map("preferred_contact_method") @db.VarChar(20)
+  notes                 String?
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+  
+  // Relations
+  customer              Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@map("customer_preferences")
+}
+
+model CustomerSession {
+  id          Int       @id @default(autoincrement())
+  customerId  Int       @map("customer_id")
+  token       String    @unique @db.VarChar(255)
+  expiresAt   DateTime  @map("expires_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  
+  // Relations
+  customer    Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@map("customer_sessions")
+}
+
+// Updates needed to existing models:
+// 
+// Restaurant model - add customers relation:
+// customers  Customer[]  @relation("RestaurantCustomers")
+//
+// Reservation model - update customer relation:
+// customerId  Int?  @map("customer_id") 
+// customer    Customer?  @relation("CustomerReservations", fields: [customerId], references: [id])
+// Remove the User relation for customers
+//
+// Order model - add customer relation:
+// customerId  Int?  @map("customer_id")
+// customer    Customer?  @relation("CustomerOrders", fields: [customerId], references: [id])
+//
+// User model - remove:
+// isCustomer field
+// customerProfile relation
+// customerReservations relation 

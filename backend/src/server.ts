@@ -19,6 +19,7 @@ import orderRoutes from './routes/orderRoutes'; // Import order routes
 import restaurantSettingsRoutes from './routes/restaurantSettingsRoutes';
 import contentBlockRoutes from './routes/contentBlockRoutes';
 import customerAuthRoutes from './routes/customerAuthRoutes'; // Import customer auth routes
+import customerReservationRoutes from './routes/customerReservationRoutes'; // Import customer reservation routes
 import { Request, Response, NextFunction } from 'express';
 
 // Load environment variables
@@ -40,6 +41,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 // Routes
 app.use('/api/users', userRoutes); // Mount user routes
 app.use('/api/auth/customer', customerAuthRoutes); // Mount customer auth routes
+app.use('/api/customer/reservations', customerReservationRoutes); // Mount customer reservation routes
 app.use('/api/recipes', recipeRoutes);
 app.use('/api/units', unitRoutes); // Mount unit routes
 app.use('/api/ingredients', ingredientRoutes); // Mount ingredient routes

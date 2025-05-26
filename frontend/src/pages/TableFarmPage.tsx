@@ -17,7 +17,7 @@ import {
 } from '@mui/icons-material';
 import { ReservationCalendar } from '../components/tablefarm/ReservationCalendar';
 import OrderListPage from './OrderListPage';
-// import { ReservationList } from '../components/tablefarm/ReservationList';
+import ReservationManagementPage from './ReservationManagementPage';
 // import { TableFarmAnalytics } from '../components/tablefarm/TableFarmAnalytics';
 
 interface TabPanelProps {
@@ -104,14 +104,7 @@ export const TableFarmPage: React.FC = () => {
         </TabPanel>
 
         <TabPanel value={tabValue} index={1}>
-          <Box sx={{ p: 3, textAlign: 'center' }}>
-            <Typography variant="h6" color="text.secondary" gutterBottom>
-              Reservation List View
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Coming soon: View and manage all reservations in a list format
-            </Typography>
-          </Box>
+          <ReservationManagementPage />
         </TabPanel>
 
         <TabPanel value={tabValue} index={2}>

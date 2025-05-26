@@ -1,0 +1,51 @@
+# KitchenSync Project Rules
+
+## Project Structure
+- This is a full-stack TypeScript application
+- Backend is in `./backend` directory (Node.js, Express, Prisma, PostgreSQL)
+- Frontend is in `./frontend` directory (React, TypeScript, Vite)
+- Always run commands from the project root directory
+
+## Running Commands
+ALWAYS use these commands from the project root:
+- `npm run backend` - Start backend with LOCAL database (safe for development)
+- `npm run frontend` - Start frontend dev server
+- `npm run dev:all` - Start both backend and frontend
+- `npm run db:studio` - Open Prisma Studio
+- `npm run db:check` - Check multi-tenant status
+
+NEVER run `npm run dev` in the backend directory (it uses PRODUCTION database)
+
+## Database Safety
+- `backend/.env.local` = LOCAL database (safe to use)
+- `backend/.env` = PRODUCTION database (dangerous - do not use for development)
+- All root-level npm scripts automatically use the LOCAL database
+
+## Current Architecture
+- Multi-tenant system with separate `users` (staff) and `customers` tables
+- Customers can belong to multiple restaurants via `customer_restaurants` join table
+- Each restaurant has its own data isolation
+- Customer authentication uses `customers` table, not `users` table
+
+## When Making Changes
+1. Always check current directory with `pwd` before running commands
+2. Use the root-level npm scripts instead of navigating to subdirectories
+3. For database changes, always use the local database (scripts ending in `:local`)
+4. Run TypeScript compilation (`npm run build:backend`) to check for errors
+5. The backend uses `server.ts`, not `index.ts`
+
+## API Structure
+- Backend runs on port 3001
+- API routes are under `/api/*`
+- Customer routes are under `/api/customer/*`
+- Static files are served from backend for customer portal
+
+## Testing
+- Test customer features with the emails that were migrated to `customers` table
+- Staff features use the `users` table (test@example.com)
+
+## Common Pitfalls to Avoid
+- Don't run commands from the wrong directory
+- Don't use production database for development
+- Don't mix up `users` (staff) and `customers` tables
+- Don't forget that the backend entry point is `server.ts` 

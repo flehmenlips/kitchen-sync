@@ -230,9 +230,19 @@ As per updated strategy (2024-12-20), KitchenSync will initially launch as a sin
 - [x] Implement customer registration API
 - [x] Build customer registration UI
 - [x] Add email verification flow
-- [ ] Build customer dashboard
+- [x] Build customer dashboard
 - [ ] Implement guest checkout option
 - [ ] Create password reset functionality
+
+#### Phase 1.5: Customer Reservation Management (NEW - IN PROGRESS)
+- [x] Create customer reservation API endpoints
+- [x] Implement reservation creation for customers
+- [x] Connect reservation form to backend API
+- [x] Update dashboard to show customer's reservations
+- [x] Implement reservation cancellation
+- [ ] Add reservation modification functionality
+- [ ] Create customer reservation list page
+- [ ] Add email confirmation for reservations
 
 #### Phase 2: Table Management
 - [ ] Design table configuration schema
@@ -513,6 +523,14 @@ Creating restaurant settings management system for admin control over customer-f
   - Use the context's login method instead of calling the service directly in components
   - Ensure the CustomerAuthProvider persists across route changes (wrap parent layout, not individual routes)
   - Add small delays after login to ensure state updates before navigation
+- **Database Safety - CRITICAL**: 
+  - NEVER use `dotenv -e .env.local -- command` syntax as it may fail and load production `.env` instead
+  - ALWAYS use npm scripts that explicitly load `.env.local` (e.g., `npm run prisma:studio`, `npm run dev:local`)
+  - ALWAYS verify database connection before any operations using `npm run db:check`
+  - Production database URLs contain `render.com`, `amazonaws.com`, etc. - local URLs contain `localhost`
+  - If you see production data when expecting test data, STOP immediately
+  - Use `pkill -f prisma` as emergency kill switch
+  - Create visual distinctions (terminal colors, prompts) between prod and dev environments
 
 ## Executor's Feedback or Assistance Requests
 
@@ -1190,428 +1208,95 @@ Next steps include:
 
 ## Long-Term Roadmap (Based on Project Vision)
 
-## Current Focus: Enhanced Reservation System
-Implementing comprehensive reservation management with customer accounts, table management, operational settings, and admin controls.
-
-### Background and Motivation
-The current reservation system provides basic functionality but lacks critical features needed for real restaurant operations:
-- No customer account system for repeat guests
-- No table management or capacity planning
-- No operational hours/restrictions
-- Limited admin controls for reservation management
-- No customer communication features
-- No floor plan or table assignment capabilities
-
-### Key Challenges and Analysis
-
-#### 1. Customer Account System
-- **Challenge**: Implementing secure customer authentication separate from staff
-- **Considerations**: 
-  - Email verification for account creation
-  - Social login options (Google, Facebook)
-  - Guest checkout vs account creation
-  - Customer profile management
-  - Reservation history tracking
-
-#### 2. Table Management System
-- **Challenge**: Dynamic table configuration and capacity management
-- **Considerations**:
-  - Table sizes and combinations
-  - Floor plan layouts
-  - Table status tracking (available, occupied, reserved, cleaning)
-  - Capacity calculations
-  - Turn time estimations
-
-#### 3. Operational Settings
-- **Challenge**: Flexible configuration for different restaurant needs
-- **Considerations**:
-  - Operating hours by day of week
-  - Holiday schedules
-  - Blackout dates
-  - Service periods (lunch, dinner)
-  - Lead time requirements
-  - Maximum party sizes
-
-#### 4. Reservation Pacing & Duration
-- **Challenge**: Optimize restaurant flow and prevent overbooking
-- **Considerations**:
-  - Time slot availability
-  - Table turn times by party size
-  - Buffer times between reservations
-  - Peak hour management
-  - Walk-in availability
-
-#### 5. Admin Reservation Management
-- **Challenge**: Comprehensive tools for staff to manage all aspects
-- **Considerations**:
-  - Manual reservation entry
-  - Guest notes and preferences
-  - Waitlist management
-  - No-show tracking
-  - Customer communication logs
-
-### High-level Task Breakdown
-
-#### Phase 1: Customer Account System (Week 1-2)
-
-1. **Database Schema Updates**
-   - Enhance User model for customer accounts
-   - Add Customer profile table with preferences
-   - Create authentication tokens table
-   - Add reservation history tracking
-   - Success criteria: Schema supports full customer lifecycle
-
-2. **Customer Authentication API**
-   - Registration endpoint with email verification
-   - Login/logout endpoints
-   - Password reset functionality
-   - Profile management endpoints
-   - Success criteria: Secure authentication flow with JWT tokens
-
-3. **Customer Registration UI**
-   - Registration form with validation
-   - Email verification flow
-   - Password strength requirements
-   - Terms acceptance
-   - Success criteria: Smooth registration process with clear feedback
-
-4. **Customer Login & Dashboard**
-   - Login page with remember me
-   - Customer dashboard layout
-   - Profile management interface
-   - Reservation history view
-   - Success criteria: Customers can manage their account and view history
-
-5. **Guest Checkout Option**
-   - Allow reservations without account
-   - Capture essential contact info
-   - Option to create account after
-   - Success criteria: Frictionless booking for new customers
-
-#### Phase 2: Table Management System (Week 3-4)
-
-1. **Table Configuration Schema**
-   - Tables model with properties
-   - Floor sections/areas
-   - Table combinations rules
-   - Capacity calculations
-   - Success criteria: Flexible table configuration system
-
-2. **Table Management API**
-   - CRUD operations for tables
-   - Table status management
-   - Availability calculations
-   - Combination logic
-   - Success criteria: Complete table management backend
-
-3. **Table Configuration UI**
-   - Table setup interface
-   - Drag-and-drop floor plan editor
-   - Table properties management
-   - Combination rules setup
-   - Success criteria: Intuitive table configuration for managers
-
-4. **Table Assignment Logic**
-   - Auto-assignment algorithm
-   - Manual override capabilities
-   - Optimization for party size
-   - Walk-in accommodation
-   - Success criteria: Smart table allocation with manual control
-
-#### Phase 3: Operational Settings (Week 5-6)
-
-1. **Operating Hours Configuration**
-   - Weekly schedule setup
-   - Service periods definition
-   - Holiday calendar
-   - Special events handling
-   - Success criteria: Flexible scheduling system
-
-2. **Reservation Rules Engine**
-   - Time slot generation
-   - Availability calculations
-   - Blackout date management
-   - Party size restrictions
-   - Success criteria: Dynamic availability based on rules
-
-3. **Pacing & Duration Settings**
-   - Turn time configuration by party size
-   - Buffer time settings
-   - Peak hour adjustments
-   - Capacity thresholds
-   - Success criteria: Optimized restaurant flow control
-
-4. **Settings Management UI**
-   - Operating hours interface
-   - Rules configuration forms
-   - Visual calendar for blackouts
-   - Pacing controls
-   - Success criteria: Easy-to-use settings management
-
-#### Phase 4: Enhanced Admin Features (Week 7-8)
-
-1. **Reservation Management Dashboard**
-   - Comprehensive reservation list
-   - Advanced filtering and search
-   - Bulk operations
-   - Status management
-   - Success criteria: Efficient reservation management
-
-2. **Manual Reservation Entry**
-   - Staff booking interface
-   - Customer search/creation
-   - Table assignment
-   - Special requests handling
-   - Success criteria: Quick manual booking process
-
-3. **Guest Management System**
-   - Customer profiles with history
-   - Preferences and allergies
-   - VIP status tracking
-   - Notes and tags
-   - Success criteria: Complete guest information system
-
-4. **Communication Tools**
-   - Email/SMS templates
-   - Confirmation messages
-   - Reminder system
-   - Waitlist notifications
-   - Success criteria: Automated customer communications
-
-5. **Floor Plan View**
-   - Real-time table status
-   - Drag-and-drop reservations
-   - Visual availability
-   - Quick actions menu
-   - Success criteria: Visual reservation management
-
-#### Phase 5: Integration & Polish (Week 9-10)
-
-1. **Customer Portal Integration**
-   - Update reservation form with table selection
-   - Show availability based on settings
-   - Account integration
-   - Reservation management
-   - Success criteria: Seamless customer experience
-
-2. **Staff Portal Integration**
-   - Connect all admin features
-   - Role-based permissions
-   - Training mode
-   - Help documentation
-   - Success criteria: Cohesive staff interface
-
-3. **Reporting & Analytics**
-   - Reservation reports
-   - No-show tracking
-   - Capacity utilization
-   - Customer analytics
-   - Success criteria: Actionable insights for management
-
-4. **Testing & Optimization**
-   - Load testing
-   - User acceptance testing
-   - Performance optimization
-   - Bug fixes
-   - Success criteria: Production-ready system
-
-### Technical Architecture
-
-#### Database Schema Additions
-
-```sql
--- Customer profile extension
-CREATE TABLE customer_profiles (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES users(id),
-  phone_verified BOOLEAN DEFAULT false,
-  email_verified BOOLEAN DEFAULT false,
-  preferred_contact_method VARCHAR(20),
-  dietary_restrictions TEXT,
-  special_requests TEXT,
-  vip_status BOOLEAN DEFAULT false,
-  tags TEXT[],
-  notes TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Table management
-CREATE TABLE tables (
-  id SERIAL PRIMARY KEY,
-  restaurant_id INTEGER,
-  table_number VARCHAR(20),
-  section VARCHAR(50),
-  min_capacity INTEGER,
-  max_capacity INTEGER,
-  combinable_with INTEGER[],
-  position_x INTEGER,
-  position_y INTEGER,
-  shape VARCHAR(20),
-  active BOOLEAN DEFAULT true,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Operating hours
-CREATE TABLE operating_hours (
-  id SERIAL PRIMARY KEY,
-  restaurant_id INTEGER,
-  day_of_week INTEGER,
-  open_time TIME,
-  close_time TIME,
-  service_periods JSONB,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Reservation rules
-CREATE TABLE reservation_rules (
-  id SERIAL PRIMARY KEY,
-  restaurant_id INTEGER,
-  rule_type VARCHAR(50),
-  rule_config JSONB,
-  priority INTEGER,
-  active BOOLEAN DEFAULT true,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Enhanced reservations
-ALTER TABLE reservations ADD COLUMN table_ids INTEGER[];
-ALTER TABLE reservations ADD COLUMN duration_minutes INTEGER;
-ALTER TABLE reservations ADD COLUMN source VARCHAR(20);
-ALTER TABLE reservations ADD COLUMN confirmation_sent BOOLEAN DEFAULT false;
-ALTER TABLE reservations ADD COLUMN reminder_sent BOOLEAN DEFAULT false;
-```
-
-#### API Endpoints Structure
-
-```
-Customer Authentication:
-POST   /api/auth/customer/register
-POST   /api/auth/customer/login
-POST   /api/auth/customer/logout
-POST   /api/auth/customer/verify-email
-POST   /api/auth/customer/reset-password
-GET    /api/auth/customer/profile
-PUT    /api/auth/customer/profile
-
-Table Management:
-GET    /api/admin/tables
-POST   /api/admin/tables
-PUT    /api/admin/tables/:id
-DELETE /api/admin/tables/:id
-GET    /api/admin/tables/availability
-POST   /api/admin/tables/assign
-
-Operating Settings:
-GET    /api/admin/settings/hours
-PUT    /api/admin/settings/hours
-GET    /api/admin/settings/rules
-POST   /api/admin/settings/rules
-PUT    /api/admin/settings/rules/:id
-DELETE /api/admin/settings/rules/:id
-
-Enhanced Reservations:
-GET    /api/reservations/availability
-POST   /api/reservations/check-availability
-GET    /api/admin/reservations/dashboard
-POST   /api/admin/reservations/manual
-PUT    /api/admin/reservations/:id/assign-table
-POST   /api/admin/reservations/:id/communicate
-```
-
-#### Frontend Components Structure
-
-```
-Customer Account:
-- CustomerAuthLayout
-- RegisterForm
-- LoginForm  
-- EmailVerification
-- CustomerDashboard
-- ProfileSettings
-- ReservationHistory
-
-Table Management:
-- TableConfigPage
-- FloorPlanEditor
-- TablePropertiesPanel
-- TableCombinationRules
-- TableAvailabilityView
-
-Operational Settings:
-- OperatingHoursPage
-- ServicePeriodEditor
-- BlackoutCalendar
-- ReservationRulesPage
-- PacingSettings
-
-Admin Reservation:
-- ReservationDashboard
-- ManualBookingDialog
-- GuestProfilePanel
-- CommunicationLog
-- FloorPlanView
-- ReservationFilters
-```
-
-### Implementation Priorities
-
-1. **Must Have (MVP)**:
-   - Basic customer accounts
-   - Simple table configuration
-   - Operating hours
-   - Manual reservation entry
-   - Basic availability checking
-
-2. **Should Have**:
-   - Email verification
-   - Floor plan editor
-   - Service periods
-   - Guest preferences
-   - Automated confirmations
-
-3. **Nice to Have**:
-   - Social login
-   - Advanced pacing algorithms
-   - SMS notifications
-   - Waitlist management
-   - Analytics dashboard
-
-### Success Metrics
-
-1. **Customer Experience**:
-   - Account creation conversion rate > 60%
-   - Reservation completion rate > 80%
-   - Customer portal usage > 40%
-
-2. **Operational Efficiency**:
-   - Manual booking time < 1 minute
-   - Table utilization > 75%
-   - No-show rate < 10%
-
-3. **System Performance**:
-   - Availability check < 500ms
-   - Reservation creation < 1 second
-   - Dashboard load < 2 seconds
-
-### Risk Mitigation
-
-1. **Complexity Management**:
-   - Phased rollout approach
-   - Feature flags for gradual enablement
-   - Extensive testing at each phase
-
-2. **Data Migration**:
-   - Backward compatibility for existing reservations
-   - Gradual migration tools
-   - Data validation scripts
-
-3. **User Adoption**:
-   - Comprehensive staff training
-   - Help documentation
-   - Gradual feature introduction
-
-## Project Status Board
+## Current Focus: Production-Ready Reservation System
+
+As the restaurant owner and superadmin, the immediate priorities are:
+
+### Immediate Tasks for Live Reservations
+
+#### 1. Email Service Implementation (Priority: CRITICAL)
+- [x] Choose email provider (SendGrid recommended)
+- [x] Install SendGrid package
+- [x] Implement real email sending service
+- [x] Update controllers to send emails
+- [ ] Set up SendGrid account and API keys
+- [ ] Test verification emails
+- [ ] Test reservation confirmation emails
+
+#### 2. Complete Customer Dashboard (Priority: HIGH)
+- [x] Basic dashboard UI created
+- [x] Create customer reservation service
+- [x] Create backend routes for customer reservations
+- [ ] Connect reservation data to dashboard
+- [ ] Add ability to view/cancel reservations
+- [ ] Add profile update functionality
+
+#### 3. Admin Reservation Management (Priority: CRITICAL)
+- [x] Create admin reservation list view
+- [x] Add ability to manually create reservations
+- [x] View all reservations with filters
+- [x] Edit/cancel reservations as admin
+- [x] Add customer notes/preferences
+- [x] Quick status updates from list view
+
+#### 4. Reservation Flow Enhancements (Priority: HIGH)
+- [x] Add confirmation emails for reservations
+- [ ] Add reservation reminder emails (scheduled task)
+- [ ] Implement reservation modification
+- [x] Add guest notes to reservations
+
+#### 5. Basic Operational Settings (Priority: HIGH)
+- [ ] Set restaurant operating hours
+- [ ] Define max party size
+- [ ] Set reservation time slots
+- [ ] Add basic availability rules
+
+### Just Completed
+1. **SendGrid Email Integration**:
+   - Installed @sendgrid/mail package
+   - Updated emailService.ts with real SendGrid implementation
+   - Added email templates for verification, password reset, reservation confirmation, and welcome emails
+   - Created EMAIL_SETUP.md documentation
+
+2. **Admin Reservation Management**:
+   - Created comprehensive ReservationManagementPage
+   - Added filtering by date and status
+   - Quick status updates from dropdown
+   - Manual reservation creation dialog
+   - Edit/delete functionality
+   - Total covers counter
+   - Added route to navigation under TableFarm module
+
+3. **Customer Reservation Backend**:
+   - Created customerReservationController with full CRUD operations
+   - Created customerReservationService for frontend
+   - Added customer-specific reservation routes
+   - Integrated email confirmation on reservation creation
+
+### Next Steps
+1. **Complete Customer Dashboard Integration**:
+   - Update CustomerDashboardPage to use customerReservationService
+   - Add cancel reservation functionality
+   - Add reservation modification
+
+2. **Set up SendGrid Account**:
+   - Follow EMAIL_SETUP.md guide
+   - Configure API keys in production
+   - Test email delivery
+
+3. **Basic Operational Settings**:
+   - Create simple settings for operating hours
+   - Add reservation time slot configuration
+   - Implement basic availability checking
+
+## Executor's Feedback or Assistance Requests
+
+Current task: Implementing email service for production use. This is critical for:
+- Customer email verification
+- Reservation confirmations
+- Password resets
+
+Recommendation: Use SendGrid for reliable email delivery with good documentation and free tier.
 
 ## Current Architecture Analysis: Customer vs Staff User Separation
 
@@ -1738,3 +1423,263 @@ The current system has a conceptual overlap between:
 - [ ] Update frontend auth flow
 - [ ] Test customer isolation
 - [ ] Document new architecture
+
+## Production Migration Plan: Customer/User Separation
+
+### 🚨 CRITICAL SAFETY MEASURES 🚨
+
+1. **Pre-Migration Backup**
+   - Full database backup before ANY changes
+   - Test restore procedure on separate database
+   - Keep backup for at least 30 days
+
+2. **Migration Testing Protocol**
+   - Test ENTIRE migration on staging database first
+   - Verify all existing functionality works
+   - Test rollback procedure
+
+3. **Zero Downtime Strategy**
+   - Deploy backend code that supports BOTH old and new schemas
+   - Run migration scripts
+   - Deploy frontend code
+   - Clean up legacy code in future release
+
+### Phase 1: Pre-Migration Analysis (LOCAL)
+
+#### 1.1 Analyze Current State
+- [ ] Run `npm run db:check` on LOCAL database
+- [ ] Run `npm run db:check` on PRODUCTION database (read-only)
+- [ ] Document all differences between environments
+- [ ] Identify all uncommitted changes
+
+#### 1.2 Git Status Check
+- [ ] Review all uncommitted changes: `git status`
+- [ ] Create feature branch: `git checkout -b feature/customer-user-separation`
+- [ ] Commit all local changes with clear messages
+- [ ] Document any experimental code that shouldn't go to production
+
+### Phase 2: Code Preparation
+
+#### 2.1 Backend Compatibility Layer
+- [ ] Create backward-compatible authentication middleware
+- [ ] Support both `users.isCustomer=true` AND `customers` table
+- [ ] Add feature flags for gradual rollout
+- [ ] Ensure all endpoints work with both schemas
+
+#### 2.2 Database Schema Updates
+- [ ] Review Prisma schema for customer tables
+- [ ] Ensure no breaking changes to existing tables
+- [ ] Add indexes for performance
+- [ ] Create safe migration scripts
+
+#### 2.3 Migration Scripts
+- [ ] Create idempotent migration scripts (can run multiple times safely)
+- [ ] Add dry-run mode to all scripts
+- [ ] Include progress logging
+- [ ] Add rollback capability
+
+### Phase 3: Staging Environment Testing
+
+#### 3.1 Create Staging Database
+- [ ] Clone production database to staging
+- [ ] Run full migration process
+- [ ] Test all functionality:
+  - [ ] Staff login/operations
+  - [ ] Customer registration
+  - [ ] Customer login
+  - [ ] Reservations (staff + customer)
+  - [ ] Orders
+  - [ ] All existing features
+
+#### 3.2 Performance Testing
+- [ ] Measure query performance
+- [ ] Check for N+1 queries
+- [ ] Verify indexes are used
+- [ ] Load test authentication endpoints
+
+### Phase 4: Production Migration Plan
+
+#### 4.1 Pre-Migration (Day Before)
+1. [ ] Final backup of production database
+2. [ ] Notify users of potential brief slowdown
+3. [ ] Deploy backend with compatibility layer (no breaking changes)
+4. [ ] Monitor for any issues
+
+#### 4.2 Migration Day
+1. **Hour 0: Final Preparations**
+   - [ ] Take fresh backup
+   - [ ] Put site in read-only mode (optional)
+   - [ ] Run pre-migration checks
+
+2. **Hour 1: Database Migration**
+   - [ ] Create customer tables
+   - [ ] Migrate existing customers from users table
+   - [ ] Create customer_restaurants links
+   - [ ] Verify data integrity
+
+3. **Hour 2: Backend Deployment**
+   - [ ] Deploy updated backend code
+   - [ ] Test all endpoints
+   - [ ] Monitor error logs
+
+4. **Hour 3: Frontend Deployment**
+   - [ ] Deploy customer portal updates
+   - [ ] Test customer flows
+   - [ ] Test staff flows
+
+5. **Hour 4: Verification**
+   - [ ] Run comprehensive test suite
+   - [ ] Check all user reports
+   - [ ] Monitor performance metrics
+
+#### 4.3 Post-Migration
+- [ ] Monitor for 24 hours
+- [ ] Address any user issues
+- [ ] Plan cleanup of legacy code
+
+### Phase 5: Rollback Plan
+
+#### 5.1 Immediate Rollback (< 1 hour)
+1. Revert frontend deployment
+2. Revert backend deployment
+3. Keep new tables (no data loss)
+
+#### 5.2 Full Rollback (if critical issues)
+1. Restore from backup
+2. Revert all code deployments
+3. Investigate and fix issues
+
+### Migration Scripts Checklist
+
+1. **create-customer-tables.js**
+   - Creates tables if not exist
+   - Idempotent (safe to run multiple times)
+   - No data destruction
+
+2. **migrate-customers.js**
+   - Copies customers from users to customers table
+   - Preserves all data
+   - Creates audit log
+   - Idempotent with checks
+
+3. **verify-migration.js**
+   - Checks data integrity
+   - Reports any issues
+   - Non-destructive
+
+### Testing Checklist
+
+#### Staff Operations
+- [ ] Login as staff
+- [ ] Create/edit recipes
+- [ ] Manage menus
+- [ ] Handle reservations
+- [ ] Process orders
+
+#### Customer Operations
+- [ ] Register new account
+- [ ] Login
+- [ ] Make reservation
+- [ ] View reservations
+- [ ] Cancel reservation
+- [ ] View menu
+
+#### Data Integrity
+- [ ] All existing users can login
+- [ ] All reservations intact
+- [ ] All orders intact
+- [ ] No data loss
+
+### Communication Plan
+
+1. **Pre-Migration**
+   - Email users about improvements
+   - No downtime expected
+   - New customer features
+
+2. **During Migration**
+   - Status page updates
+   - Monitor support channels
+
+3. **Post-Migration**
+   - Success announcement
+   - Guide for new features
+   - Support contact info
+
+### Success Criteria
+
+1. **Zero Data Loss**
+   - All users can access their accounts
+   - All reservations preserved
+   - All orders intact
+
+2. **Functionality**
+   - Staff operations unaffected
+   - Customer portal fully functional
+   - No performance degradation
+
+3. **User Experience**
+   - Seamless transition for existing users
+   - Clear communication
+   - Quick issue resolution
+
+### Lessons from Previous Incidents
+
+1. **NEVER run scripts on production without:**
+   - Reading the script completely
+   - Understanding what it does
+   - Having a fresh backup
+   - Testing on staging first
+
+2. **Always use `.env.local` for development**
+   - Production credentials only for emergencies
+   - Use read-only access when possible
+
+3. **Backup before ANY operation**
+   - Even "safe" operations
+   - Test restore procedure
+   - Keep multiple backup versions
+
+## Production Migration Progress (2025-05-25)
+
+### Completed Tasks
+1. ✅ Created comprehensive migration plan in scratchpad
+2. ✅ Created production-safe migration scripts:
+   - `production-customer-migration.js` - Main migration with dry-run, execute, and rollback modes
+   - `production-backup.js` - JSON backup script for pre-migration safety
+   - `production-preflight-check.js` - Read-only verification script
+3. ✅ Created detailed migration guide: `backend/docs/PRODUCTION_MIGRATION_GUIDE.md`
+4. ✅ Fixed schema compatibility issues:
+   - User model uses `name` instead of `firstName`/`lastName`
+   - No `isActive` field in User model
+   - No email verification fields in User model
+5. ✅ Created feature branch: `feature/customer-user-separation-production`
+
+### Script Features
+- **Safety First**: All scripts default to dry-run mode
+- **Comprehensive Logging**: Detailed JSON logs with timestamps
+- **Rollback Capability**: Can undo migration if issues found
+- **Production Checks**: Multiple confirmations for production changes
+- **Idempotent**: Scripts can be run multiple times safely
+
+### Next Steps
+1. [ ] Test all scripts on local database
+2. [ ] Commit all changes to feature branch
+3. [ ] Create staging environment for testing
+4. [ ] Update backend code for compatibility layer
+5. [ ] Run full test suite
+6. [ ] Schedule production migration window
+
+### Important Notes
+- Production database uses different schema (name vs firstName/lastName)
+- Customer tables partially exist in production (customer_profiles)
+- Reservations table already has customer_id column
+- 3 customers need to be migrated from users table
+- All scripts require explicit confirmation for production execution
+
+### Migration Safety Checklist
+- [ ] Backup production database
+- [ ] Test on staging environment
+- [ ] Review all uncommitted changes
+- [ ] Ensure rollback plan is ready
+- [ ] Monitor for 24 hours post-migration

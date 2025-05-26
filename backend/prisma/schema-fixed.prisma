@@ -1,0 +1,171 @@
+// This is a copy of schema.prisma with fixed Customer relations
+// Changes made:
+// 1. Add customerId field to Order model
+// 2. Change customer relation in Reservation from User to Customer
+// 3. Add customer relation to Order model
+// 4. Add CustomerRestaurant model for multi-restaurant support
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Keep all existing models...
+// (copying only the models that need changes and new ones)
+
+model Reservation {
+  id                  Int               @id @default(autoincrement())
+  customerName        String            @map("customer_name") @db.VarChar(255)
+  customerPhone       String?           @map("customer_phone") @db.VarChar(50)
+  customerEmail       String?           @map("customer_email") @db.VarChar(255)
+  customerId          Int?              @map("customer_id")
+  restaurantId        Int               @map("restaurant_id")
+  partySize           Int               @map("party_size")
+  reservationDate     DateTime          @map("reservation_date")
+  reservationTime     String            @map("reservation_time") @db.VarChar(10)
+  status              ReservationStatus @default(CONFIRMED)
+  notes               String?
+  specialRequests     String?           @map("special_requests")
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+  userId              Int               @map("user_id")
+  actualArrivalTime   DateTime?         @map("actual_arrival_time")
+  actualDepartureTime DateTime?         @map("actual_departure_time")
+  confirmationSent    Boolean           @default(false) @map("confirmation_sent")
+  durationMinutes     Int               @default(90) @map("duration_minutes")
+  guestNotes          String?           @map("guest_notes")
+  reminderSent        Boolean           @default(false) @map("reminder_sent")
+  source              String            @default("website") @db.VarChar(20)
+  tableIds            Int[]             @map("table_ids")
+  guestReservation    GuestReservation?
+  orders              Order[]           @relation("ReservationOrders")
+  reservationLogs     ReservationLog[]
+  customerNew         Customer?         @relation("CustomerReservations", fields: [customerId], references: [id])
+  restaurant          Restaurant        @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  user                User              @relation("UserReservations", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([customerId])
+  @@index([restaurantId])
+  @@index([reservationDate])
+  @@index([status])
+  @@map("reservations")
+}
+
+model Order {
+  id            Int          @id @default(autoincrement())
+  orderNumber   String       @unique @map("order_number") @db.VarChar(50)
+  reservationId Int?         @map("reservation_id")
+  restaurantId  Int          @map("restaurant_id")
+  customerId    Int?         @map("customer_id") // Added this field
+  customerName  String?      @map("customer_name") @db.VarChar(255)
+  status        OrderStatus  @default(NEW)
+  orderType     OrderType    @default(DINE_IN) @map("order_type")
+  notes         String?
+  totalAmount   Decimal?     @map("total_amount") @db.Decimal(10, 2)
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+  userId        Int          @map("user_id")
+  orderItems    OrderItem[]  @relation("OrderOrderItems")
+  reservation   Reservation? @relation("ReservationOrders", fields: [reservationId], references: [id])
+  restaurant    Restaurant   @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  user          User         @relation("UserOrders", fields: [userId], references: [id], onDelete: Cascade)
+  customerNew   Customer?    @relation("CustomerOrders", fields: [customerId], references: [id]) // Added this relation
+
+  @@index([userId])
+  @@index([customerId]) // Added this index
+  @@index([restaurantId])
+  @@index([reservationId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model Customer {
+  id                      Int                      @id @default(autoincrement())
+  email                   String                   @unique
+  password                String
+  firstName               String?                  @map("first_name")
+  lastName                String?                  @map("last_name")
+  phone                   String?                  @db.VarChar(50)
+  emailVerified           Boolean                  @default(false) @map("email_verified")
+  emailVerificationToken  String?                  @map("email_verification_token")
+  emailVerificationExpires DateTime?               @map("email_verification_expires")
+  passwordResetToken      String?                  @map("password_reset_token")
+  passwordResetExpires    DateTime?                @map("password_reset_expires")
+  lastLogin               DateTime?                @map("last_login")
+  createdAt               DateTime                 @default(now()) @map("created_at")
+  updatedAt               DateTime                 @updatedAt @map("updated_at")
+  
+  // Relations
+  customerPreferences     CustomerPreferences?
+  sessions                CustomerSession[]
+  reservations            Reservation[]            @relation("CustomerReservations")
+  orders                  Order[]                  @relation("CustomerOrders")
+  restaurants             CustomerRestaurant[]     @relation("CustomerToRestaurants") // New relation for multi-restaurant
+
+  @@index([email])
+  @@map("customers")
+}
+
+// New model for multi-restaurant customer support
+model CustomerRestaurant {
+  customerId    Int      @map("customer_id")
+  restaurantId  Int      @map("restaurant_id")
+  firstVisit    DateTime @default(now()) @map("first_visit")
+  lastVisit     DateTime @updatedAt @map("last_visit")
+  visitCount    Int      @default(0) @map("visit_count")
+  totalSpent    Decimal? @map("total_spent") @db.Decimal(10, 2)
+  notes         String?
+  tags          String[]
+  vipStatus     Boolean  @default(false) @map("vip_status")
+  preferences   Json?    @db.Json
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  customer      Customer    @relation("CustomerToRestaurants", fields: [customerId], references: [id], onDelete: Cascade)
+  restaurant    Restaurant  @relation("RestaurantToCustomers", fields: [restaurantId], references: [id], onDelete: Cascade)
+  
+  @@id([customerId, restaurantId])
+  @@index([customerId])
+  @@index([restaurantId])
+  @@map("customer_restaurants")
+}
+
+model Restaurant {
+  id            Int                 @id @default(autoincrement())
+  name          String              @db.VarChar(255)
+  slug          String              @unique @db.VarChar(255)
+  description   String?
+  cuisine       String?             @db.VarChar(100)
+  address       String?
+  city          String?             @db.VarChar(100)
+  state         String?             @db.VarChar(50)
+  zipCode       String?             @map("zip_code") @db.VarChar(20)
+  country       String?             @db.VarChar(100)
+  phone         String?             @db.VarChar(50)
+  email         String?             @db.VarChar(255)
+  website       String?
+  logoUrl       String?             @map("logo_url")
+  coverImageUrl String?             @map("cover_image_url")
+  openingHours  Json?               @map("opening_hours")
+  isActive      Boolean             @default(true) @map("is_active")
+  createdAt     DateTime            @default(now()) @map("created_at")
+  updatedAt     DateTime            @updatedAt @map("updated_at")
+  categories    Category[]
+  contentBlocks ContentBlock[]
+  customers     CustomerRestaurant[]  @relation("RestaurantToCustomers") // Changed from Customer[] to CustomerRestaurant[]
+  orders        Order[]
+  reservations  Reservation[]
+  settings      RestaurantSettings?
+  staff         RestaurantStaff[]
+
+  @@index([slug])
+  @@index([isActive])
+  @@map("restaurants")
+} 

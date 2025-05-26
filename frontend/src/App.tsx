@@ -81,6 +81,9 @@ import { CustomerVerifyEmailSentPage } from './pages/customer/CustomerVerifyEmai
 import { CustomerVerifyEmailPage } from './pages/customer/CustomerVerifyEmailPage';
 import CustomerDashboardPage from './pages/customer/CustomerDashboardPage';
 
+// Reservation Management Page
+import ReservationManagementPage from './pages/ReservationManagementPage';
+
 // Create a client
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -178,6 +181,7 @@ const App: React.FC = () => {
 
                       {/* TableFarm Module Routes */}
                       <Route path="tablefarm" element={<TableFarmPage />} />
+                      <Route path="reservations" element={<ReservationManagementPage />} />
 
                       {/* Restaurant Settings */}
                       <Route path="settings" element={<RestaurantSettingsPage />} />

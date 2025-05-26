@@ -19,21 +19,21 @@ export const customerAuthController = {
   // Customer registration
   async register(req: Request, res: Response) {
     try {
-      const { email, password, name, phone } = req.body;
+      const { email, password, firstName, lastName, phone, restaurantId = 1 } = req.body;
 
       // Validate input
-      if (!email || !password || !name) {
+      if (!email || !password || !firstName) {
         return res.status(400).json({ 
-          error: 'Email, password, and name are required' 
+          error: 'Email, password, and first name are required' 
         });
       }
 
-      // Check if user already exists
-      const existingUser = await prisma.user.findUnique({
+      // Check if customer already exists
+      const existingCustomer = await prisma.customer.findUnique({
         where: { email }
       });
 
-      if (existingUser) {
+      if (existingCustomer) {
         return res.status(409).json({ 
           error: 'An account with this email already exists' 
         });
@@ -42,78 +42,86 @@ export const customerAuthController = {
       // Hash password
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      // Create user and customer profile in a transaction
-      const user = await prisma.$transaction(async (tx) => {
-        // Create user
-        const newUser = await tx.user.create({
+      // Create customer and related data in a transaction
+      const customer = await prisma.$transaction(async (tx) => {
+        // Create customer
+        const newCustomer = await tx.customer.create({
           data: {
             email,
             password: hashedPassword,
-            name,
+            firstName,
+            lastName,
             phone,
-            isCustomer: true,
-            role: 'USER'
+            restaurantId
           }
         });
 
-        // Create customer profile
-        await tx.customerProfile.create({
+        // Create customer preferences
+        await tx.customerPreferences.create({
           data: {
-            userId: newUser.id,
-            emailVerified: false,
-            phoneVerified: false
+            customerId: newCustomer.id
           }
         });
 
-        // Create email verification token
+        // Create customer-restaurant link
+        await tx.customerRestaurant.create({
+          data: {
+            customerId: newCustomer.id,
+            restaurantId: restaurantId
+          }
+        });
+
+        // Generate email verification token
         const verificationToken = generateEmailVerificationToken();
-        await tx.emailVerificationToken.create({
+        const expiresAt = getTokenExpiryDate(24); // 24 hours
+        
+        // Store verification token directly in customer record
+        await tx.customer.update({
+          where: { id: newCustomer.id },
           data: {
-            userId: newUser.id,
-            token: verificationToken,
-            expiresAt: getTokenExpiryDate(24) // 24 hours
+            emailVerificationToken: verificationToken,
+            emailVerificationExpires: expiresAt
           }
         });
 
         // Send verification email
-        const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
-        await emailService.sendVerificationEmail(email, name, verificationUrl);
+        const verificationUrl = `${process.env.FRONTEND_URL}/customer/verify-email?token=${verificationToken}`;
+        await emailService.sendVerificationEmail(email, firstName, verificationUrl);
 
-        return newUser;
+        return newCustomer;
       });
 
       // Generate tokens
       const accessToken = generateAccessToken({
-        userId: user.id,
-        email: user.email,
+        userId: customer.id,
+        email: customer.email,
         isCustomer: true,
-        role: user.role
+        role: 'CUSTOMER'
       });
 
-      // Create refresh token
-      const refreshToken = await prisma.refreshToken.create({
+      // Create session
+      const session = await prisma.customerSession.create({
         data: {
-          userId: user.id,
+          customerId: customer.id,
           token: generateRefreshToken({
-            userId: user.id,
-            email: user.email,
+            userId: customer.id,
+            email: customer.email,
             isCustomer: true,
             tokenId: 0 // Will be updated
           }),
-          expiresAt: getTokenExpiryDate(24 * 30), // 30 days
-          deviceInfo: req.headers['user-agent']
+          expiresAt: getTokenExpiryDate(24 * 30) // 30 days
         }
       });
 
-      // Update refresh token with its own ID
-      const updatedRefreshToken = await prisma.refreshToken.update({
-        where: { id: refreshToken.id },
+      // Update session with its own ID
+      const updatedSession = await prisma.customerSession.update({
+        where: { id: session.id },
         data: {
           token: generateRefreshToken({
-            userId: user.id,
-            email: user.email,
+            userId: customer.id,
+            email: customer.email,
             isCustomer: true,
-            tokenId: refreshToken.id
+            tokenId: session.id
           })
         }
       });
@@ -121,17 +129,20 @@ export const customerAuthController = {
       res.status(201).json({
         message: 'Registration successful. Please check your email to verify your account.',
         user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          isCustomer: user.isCustomer
+          id: customer.id,
+          email: customer.email,
+          name: `${customer.firstName}${customer.lastName ? ' ' + customer.lastName : ''}`,
+          firstName: customer.firstName,
+          lastName: customer.lastName,
+          isCustomer: true,
+          emailVerified: customer.emailVerified
         },
         accessToken,
-        refreshToken: updatedRefreshToken.token
+        refreshToken: updatedSession.token
       });
     } catch (error) {
       console.error('Registration error:', error);
-      res.status(500).json({ error: 'Failed to register user' });
+      res.status(500).json({ error: 'Failed to register customer' });
     }
   },
 
@@ -147,71 +158,82 @@ export const customerAuthController = {
         });
       }
 
-      // Find user
-      const user = await prisma.user.findUnique({
+      // Find customer
+      const customer = await prisma.customer.findUnique({
         where: { email },
-        include: { customerProfile: true }
+        include: { 
+          customerPreferences: true,
+          restaurantLinks: true
+        }
       });
 
-      if (!user || !user.isCustomer) {
+      if (!customer) {
         return res.status(401).json({ 
           error: 'Invalid email or password' 
         });
       }
 
       // Verify password
-      const validPassword = await bcrypt.compare(password, user.password);
+      const validPassword = await bcrypt.compare(password, customer.password);
       if (!validPassword) {
         return res.status(401).json({ 
           error: 'Invalid email or password' 
         });
       }
 
+      // Update last login
+      await prisma.customer.update({
+        where: { id: customer.id },
+        data: { lastLogin: new Date() }
+      });
+
       // Generate tokens
       const accessToken = generateAccessToken({
-        userId: user.id,
-        email: user.email,
+        userId: customer.id,
+        email: customer.email,
         isCustomer: true,
-        role: user.role
+        role: 'CUSTOMER'
       });
 
       let refreshTokenResponse = null;
       
       if (rememberMe) {
-        // Create refresh token for "remember me" functionality
-        const refreshToken = await prisma.refreshToken.create({
+        // Create session for "remember me" functionality
+        const session = await prisma.customerSession.create({
           data: {
-            userId: user.id,
+            customerId: customer.id,
             token: '', // Temporary
-            expiresAt: getTokenExpiryDate(24 * 30), // 30 days
-            deviceInfo: req.headers['user-agent']
+            expiresAt: getTokenExpiryDate(24 * 30) // 30 days
           }
         });
 
-        // Update with actual token containing the token ID
-        const updatedRefreshToken = await prisma.refreshToken.update({
-          where: { id: refreshToken.id },
+        // Update with actual token containing the session ID
+        const updatedSession = await prisma.customerSession.update({
+          where: { id: session.id },
           data: {
             token: generateRefreshToken({
-              userId: user.id,
-              email: user.email,
+              userId: customer.id,
+              email: customer.email,
               isCustomer: true,
-              tokenId: refreshToken.id
+              tokenId: session.id
             })
           }
         });
 
-        refreshTokenResponse = updatedRefreshToken.token;
+        refreshTokenResponse = updatedSession.token;
       }
 
       res.json({
         message: 'Login successful',
         user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          isCustomer: user.isCustomer,
-          emailVerified: user.customerProfile?.emailVerified || false
+          id: customer.id,
+          email: customer.email,
+          name: `${customer.firstName}${customer.lastName ? ' ' + customer.lastName : ''}`,
+          firstName: customer.firstName,
+          lastName: customer.lastName,
+          isCustomer: true,
+          emailVerified: customer.emailVerified,
+          restaurantLinks: customer.restaurantLinks
         },
         accessToken,
         refreshToken: refreshTokenResponse
@@ -233,59 +255,48 @@ export const customerAuthController = {
         });
       }
 
-      // Find token
-      const verificationToken = await prisma.emailVerificationToken.findUnique({
-        where: { token },
-        include: { user: true }
+      // Find customer with this token
+      const customer = await prisma.customer.findFirst({
+        where: { 
+          emailVerificationToken: token,
+          emailVerificationExpires: {
+            gt: new Date()
+          }
+        }
       });
 
-      if (!verificationToken) {
+      if (!customer) {
         return res.status(404).json({ 
-          error: 'Invalid verification token' 
+          error: 'Invalid or expired verification token' 
         });
       }
 
-      // Check if token is expired
-      if (isTokenExpired(verificationToken.expiresAt)) {
-        return res.status(400).json({ 
-          error: 'Verification token has expired' 
-        });
-      }
-
-      // Check if already used
-      if (verificationToken.usedAt) {
-        return res.status(400).json({ 
-          error: 'Verification token has already been used' 
-        });
-      }
-
-      // Update token and customer profile
-      await prisma.$transaction(async (tx) => {
-        // Mark token as used
-        await tx.emailVerificationToken.update({
-          where: { id: verificationToken.id },
-          data: { usedAt: new Date() }
-        });
-
-        // Update customer profile
-        await tx.customerProfile.update({
-          where: { userId: verificationToken.userId },
-          data: { emailVerified: true }
-        });
+      // Update customer
+      await prisma.customer.update({
+        where: { id: customer.id },
+        data: { 
+          emailVerified: true,
+          emailVerificationToken: null,
+          emailVerificationExpires: null
+        }
       });
 
       // Send welcome email
       await emailService.sendWelcomeEmail(
-        verificationToken.user.email,
-        verificationToken.user.name || 'Customer'
+        customer.email,
+        customer.firstName || 'Customer'
       );
 
       res.json({
         message: 'Email verified successfully',
         user: {
-          id: verificationToken.user.id,
-          email: verificationToken.user.email,
-          name: verificationToken.user.name
+          id: customer.id,
+          email: customer.email,
+          name: `${customer.firstName}${customer.lastName ? ' ' + customer.lastName : ''}`,
+          firstName: customer.firstName,
+          lastName: customer.lastName,
+          isCustomer: true,
+          emailVerified: true
         }
       });
     } catch (error) {
@@ -305,13 +316,13 @@ export const customerAuthController = {
         });
       }
 
-      // Find user
-      const user = await prisma.user.findUnique({
+      // Find customer
+      const customer = await prisma.customer.findUnique({
         where: { email }
       });
 
       // Always return success to prevent email enumeration
-      if (!user || !user.isCustomer) {
+      if (!customer) {
         return res.json({
           message: 'If an account exists with this email, you will receive password reset instructions.'
         });
@@ -319,19 +330,21 @@ export const customerAuthController = {
 
       // Create password reset token
       const resetToken = generatePasswordResetToken();
-      await prisma.passwordResetToken.create({
+      const expiresAt = getTokenExpiryDate(2); // 2 hours
+      
+      await prisma.customer.update({
+        where: { id: customer.id },
         data: {
-          userId: user.id,
-          token: resetToken,
-          expiresAt: getTokenExpiryDate(2) // 2 hours
+          passwordResetToken: resetToken,
+          passwordResetExpires: expiresAt
         }
       });
 
       // Send password reset email
-      const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+      const resetUrl = `${process.env.FRONTEND_URL}/customer/reset-password?token=${resetToken}`;
       await emailService.sendPasswordResetEmail(
-        user.email,
-        user.name || 'Customer',
+        customer.email,
+        customer.firstName || 'Customer',
         resetUrl
       );
 
@@ -355,52 +368,40 @@ export const customerAuthController = {
         });
       }
 
-      // Find token
-      const resetToken = await prisma.passwordResetToken.findUnique({
-        where: { token },
-        include: { user: true }
+      // Find customer with valid token
+      const customer = await prisma.customer.findFirst({
+        where: {
+          passwordResetToken: token,
+          passwordResetExpires: {
+            gt: new Date()
+          }
+        }
       });
 
-      if (!resetToken) {
+      if (!customer) {
         return res.status(404).json({ 
-          error: 'Invalid reset token' 
-        });
-      }
-
-      // Check if token is expired
-      if (isTokenExpired(resetToken.expiresAt)) {
-        return res.status(400).json({ 
-          error: 'Reset token has expired' 
-        });
-      }
-
-      // Check if already used
-      if (resetToken.usedAt) {
-        return res.status(400).json({ 
-          error: 'Reset token has already been used' 
+          error: 'Invalid or expired reset token' 
         });
       }
 
       // Hash new password
       const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-      // Update password and mark token as used
+      // Update password and clear reset token
       await prisma.$transaction(async (tx) => {
-        // Update user password
-        await tx.user.update({
-          where: { id: resetToken.userId },
-          data: { password: hashedPassword }
+        // Update customer password
+        await tx.customer.update({
+          where: { id: customer.id },
+          data: { 
+            password: hashedPassword,
+            passwordResetToken: null,
+            passwordResetExpires: null
+          }
         });
 
-        // Mark token as used
-        await tx.passwordResetToken.update({
-          where: { id: resetToken.id },
-          data: { usedAt: new Date() }
-        });
-
-        // Invalidate all refresh tokens for security
-        await tx.refreshToken.deleteMany({
-          where: { userId: resetToken.userId }
+        // Invalidate all sessions for security
+        await tx.customerSession.deleteMany({
+          where: { customerId: customer.id }
         });
       });
 
@@ -434,22 +435,22 @@ export const customerAuthController = {
         });
       }
 
-      // Find refresh token in database
-      const storedToken = await prisma.refreshToken.findUnique({
+      // Find session in database
+      const session = await prisma.customerSession.findUnique({
         where: { id: payload.tokenId },
-        include: { user: true }
+        include: { customer: true }
       });
 
-      if (!storedToken || storedToken.token !== refreshToken) {
+      if (!session || session.token !== refreshToken) {
         return res.status(401).json({ 
           error: 'Invalid refresh token' 
         });
       }
 
-      // Check if token is expired
-      if (isTokenExpired(storedToken.expiresAt)) {
-        await prisma.refreshToken.delete({
-          where: { id: storedToken.id }
+      // Check if session is expired
+      if (isTokenExpired(session.expiresAt)) {
+        await prisma.customerSession.delete({
+          where: { id: session.id }
         });
         return res.status(401).json({ 
           error: 'Refresh token has expired' 
@@ -458,20 +459,24 @@ export const customerAuthController = {
 
       // Generate new access token
       const accessToken = generateAccessToken({
-        userId: storedToken.user.id,
-        email: storedToken.user.email,
-        isCustomer: storedToken.user.isCustomer,
-        role: storedToken.user.role
+        userId: session.customer.id,
+        email: session.customer.email,
+        isCustomer: true,
+        role: 'CUSTOMER'
       });
 
       res.json({
-        accessToken,
+        message: 'Access token refreshed',
         user: {
-          id: storedToken.user.id,
-          email: storedToken.user.email,
-          name: storedToken.user.name,
-          isCustomer: storedToken.user.isCustomer
-        }
+          id: session.customer.id,
+          email: session.customer.email,
+          name: `${session.customer.firstName}${session.customer.lastName ? ' ' + session.customer.lastName : ''}`,
+          firstName: session.customer.firstName,
+          lastName: session.customer.lastName,
+          isCustomer: true,
+          emailVerified: session.customer.emailVerified
+        },
+        accessToken
       });
     } catch (error) {
       console.error('Token refresh error:', error);
@@ -485,10 +490,10 @@ export const customerAuthController = {
       const { refreshToken } = req.body;
 
       if (refreshToken) {
-        // Delete refresh token if provided
+        // Delete session if provided
         try {
           const payload = verifyRefreshToken(refreshToken);
-          await prisma.refreshToken.delete({
+          await prisma.customerSession.delete({
             where: { id: payload.tokenId }
           });
         } catch (error) {
@@ -506,44 +511,41 @@ export const customerAuthController = {
   // Get customer profile
   async getProfile(req: CustomerAuthRequest, res: Response) {
     try {
-      const userId = req.customerUser?.userId;
+      const customerId = req.customer?.id || req.customerUser!.userId;
 
-      if (!userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
-      }
-
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        include: { 
-          customerProfile: true,
-          customerReservations: {
-            orderBy: { reservationDate: 'desc' },
-            take: 5
+      const customer = await prisma.customer.findUnique({
+        where: { id: customerId },
+        include: {
+          customerPreferences: true,
+          restaurantLinks: {
+            include: {
+              restaurant: true
+            }
           }
         }
       });
 
-      if (!user) {
-        return res.status(404).json({ 
-          error: 'User not found' 
-        });
+      if (!customer) {
+        return res.status(404).json({ error: 'Customer not found' });
       }
 
       res.json({
         user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          phone: user.phone,
-          isCustomer: user.isCustomer,
-          emailVerified: user.customerProfile?.emailVerified || false,
-          phoneVerified: user.customerProfile?.phoneVerified || false,
-          marketingOptIn: user.customerProfile?.marketingOptIn || false,
-          dietaryRestrictions: user.customerProfile?.dietaryRestrictions,
-          specialRequests: user.customerProfile?.specialRequests,
-          vipStatus: user.customerProfile?.vipStatus || false
+          id: customer.id,
+          email: customer.email,
+          name: `${customer.firstName}${customer.lastName ? ' ' + customer.lastName : ''}`,
+          firstName: customer.firstName,
+          lastName: customer.lastName,
+          phone: customer.phone,
+          isCustomer: true,
+          emailVerified: customer.emailVerified,
+          phoneVerified: false, // Customer model doesn't have this field yet
+          marketingOptIn: customer.customerPreferences?.marketingOptIn || false,
+          dietaryRestrictions: customer.customerPreferences?.dietaryRestrictions,
+          specialRequests: customer.customerPreferences?.notes, // Using notes field
+          vipStatus: customer.restaurantLinks?.[0]?.vipStatus || false
         },
-        recentReservations: user.customerReservations
+        recentReservations: []  // TODO: Add actual reservations
       });
     } catch (error) {
       console.error('Get profile error:', error);
@@ -554,53 +556,70 @@ export const customerAuthController = {
   // Update customer profile
   async updateProfile(req: CustomerAuthRequest, res: Response) {
     try {
-      const userId = req.customerUser?.userId;
-      
-      if (!userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
-      }
-
+      const customerId = req.customer?.id || req.customerUser!.userId;
       const { 
-        name, 
-        phone, 
-        dietaryRestrictions, 
-        specialRequests,
-        marketingOptIn,
-        preferredContactMethod
+        firstName, 
+        lastName, 
+        phone,
+        preferences 
       } = req.body;
 
-      // Update user and profile
-      const updatedUser = await prisma.$transaction(async (tx) => {
-        // Update user
-        const user = await tx.user.update({
-          where: { id: userId },
+      // Update customer and preferences in transaction
+      const updatedCustomer = await prisma.$transaction(async (tx) => {
+        // Update customer basic info
+        const customer = await tx.customer.update({
+          where: { id: customerId },
           data: {
-            name,
+            firstName,
+            lastName,
             phone
           }
         });
 
-        // Update customer profile
-        await tx.customerProfile.update({
-          where: { userId },
-          data: {
-            dietaryRestrictions,
-            specialRequests,
-            marketingOptIn,
-            preferredContactMethod
-          }
-        });
+        // Update preferences if provided
+        if (preferences) {
+          await tx.customerPreferences.upsert({
+            where: { customerId },
+            create: {
+              customerId,
+              ...preferences
+            },
+            update: preferences
+          });
+        }
 
-        return user;
+        return customer;
+      });
+
+      // Fetch complete updated profile
+      const completeProfile = await prisma.customer.findUnique({
+        where: { id: customerId },
+        include: {
+          customerPreferences: true,
+          restaurantLinks: {
+            include: {
+              restaurant: true
+            }
+          }
+        }
       });
 
       res.json({
         message: 'Profile updated successfully',
         user: {
-          id: updatedUser.id,
-          email: updatedUser.email,
-          name: updatedUser.name,
-          phone: updatedUser.phone
+          id: completeProfile!.id,
+          email: completeProfile!.email,
+          name: `${completeProfile!.firstName}${completeProfile!.lastName ? ' ' + completeProfile!.lastName : ''}`,
+          firstName: completeProfile!.firstName,
+          lastName: completeProfile!.lastName,
+          phone: completeProfile!.phone,
+          isCustomer: true,
+          emailVerified: completeProfile!.emailVerified,
+          phoneVerified: false,
+          marketingOptIn: completeProfile!.customerPreferences?.marketingOptIn || false,
+          dietaryRestrictions: completeProfile!.customerPreferences?.dietaryRestrictions,
+          specialRequests: completeProfile!.customerPreferences?.notes,
+          vipStatus: completeProfile!.restaurantLinks?.[0]?.vipStatus || false
         }
       });
     } catch (error) {

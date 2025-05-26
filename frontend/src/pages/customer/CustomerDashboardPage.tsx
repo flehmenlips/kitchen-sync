@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSnackbar } from 'notistack';
 import {
   Container,
   Grid,
@@ -30,16 +31,10 @@ import {
 } from '@mui/icons-material';
 import { useCustomerAuth } from '../../context/CustomerAuthContext';
 import { customerAuthService, CustomerProfile } from '../../services/customerAuthService';
+import { customerReservationService, Reservation } from '../../services/customerReservationService';
 import { format } from 'date-fns';
 
-interface Reservation {
-  id: number;
-  reservationDate: string;
-  reservationTime: string;
-  partySize: number;
-  status: 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW';
-  notes?: string;
-}
+// Using Reservation type from customerReservationService
 
 interface Order {
   id: number;
@@ -52,6 +47,7 @@ interface Order {
 
 const CustomerDashboardPage: React.FC = () => {
   const navigate = useNavigate();
+  const { enqueueSnackbar } = useSnackbar();
   const { user } = useCustomerAuth();
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -65,9 +61,27 @@ const CustomerDashboardPage: React.FC = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const data = await customerAuthService.getProfile();
-      setProfile(data.user);
-      setReservations(data.recentReservations || []);
+      // Fetch profile data
+      const profileData = await customerAuthService.getProfile();
+      setProfile(profileData.user);
+      
+      // Fetch reservations
+      const reservationsData = await customerReservationService.getMyReservations();
+      console.log('Raw reservations data:', reservationsData);
+      
+      // Filter for upcoming reservations only
+      const upcomingReservations = reservationsData.filter(res => {
+        // Parse the ISO date and extract just the date part
+        const dateOnly = res.reservationDate.split('T')[0];
+        const resDateTime = new Date(`${dateOnly}T${res.reservationTime}`);
+        const isUpcoming = resDateTime > new Date();
+        const isConfirmed = res.status === 'CONFIRMED';
+        console.log(`Reservation ${res.id}: date=${res.reservationDate}, time=${res.reservationTime}, parsed=${resDateTime}, isUpcoming=${isUpcoming}, status=${res.status}, isConfirmed=${isConfirmed}`);
+        return isUpcoming && isConfirmed;
+      });
+      console.log('Filtered upcoming reservations:', upcomingReservations);
+      setReservations(upcomingReservations);
+      
       // TODO: Add orders when implemented
       setOrders([]);
     } catch (err) {
@@ -79,8 +93,15 @@ const CustomerDashboardPage: React.FC = () => {
   };
 
   const handleCancelReservation = async (reservationId: number) => {
-    // TODO: Implement reservation cancellation
-    console.log('Cancel reservation:', reservationId);
+    try {
+      await customerReservationService.cancelReservation(reservationId);
+      // Refresh the reservations list
+      await fetchDashboardData();
+      enqueueSnackbar('Reservation cancelled successfully', { variant: 'success' });
+    } catch (err) {
+      enqueueSnackbar('Failed to cancel reservation', { variant: 'error' });
+      console.error('Error cancelling reservation:', err);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -99,7 +120,9 @@ const CustomerDashboardPage: React.FC = () => {
   };
 
   const formatDateTime = (date: string, time: string) => {
-    const dateTime = new Date(`${date}T${time}`);
+    // Extract just the date part if it's an ISO string
+    const dateOnly = date.split('T')[0];
+    const dateTime = new Date(`${dateOnly}T${time}`);
     return format(dateTime, 'MMM d, yyyy h:mm a');
   };
 

@@ -1,5 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken } from '../utils/tokenUtils';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 // Use a different interface name to avoid conflicts with the global Express Request extension
 export interface CustomerAuthRequest extends Request {
@@ -9,13 +12,21 @@ export interface CustomerAuthRequest extends Request {
     isCustomer: boolean;
     role?: string;
   };
+  customer?: {
+    id: number;
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+    phone: string | null;
+    restaurantId: number;
+  };
 }
 
-export const authenticateCustomer = (
+export const authenticateCustomer = async (
   req: CustomerAuthRequest,
   res: Response,
   next: NextFunction
-): void => {
+): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
     
@@ -35,7 +46,19 @@ export const authenticateCustomer = (
         return;
       }
       
+      // Fetch customer from database
+      const customer = await prisma.customer.findUnique({
+        where: { id: payload.userId }
+      });
+
+      if (!customer) {
+        res.status(401).json({ error: 'Customer not found' });
+        return;
+      }
+      
+      // Add both for backward compatibility
       req.customerUser = payload;
+      req.customer = customer;
       next();
     } catch (error) {
       res.status(401).json({ error: 'Invalid or expired token' });

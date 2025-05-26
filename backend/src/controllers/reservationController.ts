@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import prisma from '../config/db';
 import { ReservationStatus } from '@prisma/client';
+import { emailService } from '../services/emailService';
+import { format } from 'date-fns';
 
 // Helper function for safe integer parsing
 const safeParseInt = (val: unknown): number | undefined => {
@@ -10,6 +12,13 @@ const safeParseInt = (val: unknown): number | undefined => {
         return !isNaN(parsed) ? parsed : undefined;
     }
     return undefined;
+};
+
+// Helper function to generate confirmation number
+const generateConfirmationNumber = (id: number): string => {
+    const prefix = 'SBK'; // Seabreeze Kitchen
+    const paddedId = id.toString().padStart(6, '0');
+    return `${prefix}${paddedId}`;
 };
 
 // @desc    Get all reservations
@@ -24,7 +33,8 @@ export const getReservations = async (req: Request, res: Response): Promise<void
     try {
         const { date, status } = req.query;
         
-        const where: any = { userId: req.user.id };
+        // For admin/staff, show all reservations, not just ones they created
+        const where: any = {};
         
         if (date) {
             const startDate = new Date(date as string);
@@ -95,10 +105,8 @@ export const getReservationById = async (req: Request, res: Response): Promise<v
             return;
         }
 
-        if (reservation.userId !== req.user.id) {
-            res.status(403).json({ message: 'Not authorized to view this reservation' });
-            return;
-        }
+        // Admin/staff can view any reservation
+        // Remove user check since staff should see all reservations
 
         res.status(200).json(reservation);
     } catch (error) {
@@ -152,6 +160,27 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
             }
         });
 
+        // Send confirmation email if customer email is provided
+        if (customerEmail) {
+            try {
+                const formattedDate = format(new Date(reservationDate), 'EEEE, MMMM d, yyyy');
+                await emailService.sendReservationConfirmation(
+                    customerEmail,
+                    customerName,
+                    {
+                        date: formattedDate,
+                        time: reservationTime,
+                        partySize: partySizeNum,
+                        specialRequests: notes,
+                        confirmationNumber: generateConfirmationNumber(newReservation.id)
+                    }
+                );
+            } catch (emailError) {
+                console.error('Failed to send confirmation email:', emailError);
+                // Don't fail the reservation creation if email fails
+            }
+        }
+
         res.status(201).json(newReservation);
     } catch (error) {
         console.error('Error creating reservation:', error);
@@ -187,10 +216,7 @@ export const updateReservation = async (req: Request, res: Response): Promise<vo
             return;
         }
 
-        if (existingReservation.userId !== req.user.id) {
-            res.status(403).json({ message: 'Not authorized to update this reservation' });
-            return;
-        }
+        // Admin/staff can update any reservation
 
         const {
             customerName,
@@ -259,10 +285,7 @@ export const deleteReservation = async (req: Request, res: Response): Promise<vo
             return;
         }
 
-        if (existingReservation.userId !== req.user.id) {
-            res.status(403).json({ message: 'Not authorized to delete this reservation' });
-            return;
-        }
+        // Admin/staff can delete any reservation
 
         await prisma.reservation.delete({
             where: { id: reservationId }

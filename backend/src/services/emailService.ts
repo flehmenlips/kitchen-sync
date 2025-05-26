@@ -1,3 +1,5 @@
+import sgMail from '@sendgrid/mail';
+
 interface EmailOptions {
   to: string;
   subject: string;
@@ -7,23 +9,51 @@ interface EmailOptions {
 
 // Placeholder email service - in production, integrate with SendGrid, AWS SES, etc.
 export class EmailService {
+  constructor() {
+    // Initialize SendGrid with API key if available
+    const apiKey = process.env.SENDGRID_API_KEY;
+    if (apiKey) {
+      sgMail.setApiKey(apiKey);
+      console.log('✅ SendGrid initialized for email delivery');
+    } else {
+      console.warn('⚠️ SENDGRID_API_KEY not set - emails will be logged only');
+    }
+  }
+
   private async sendEmail(options: EmailOptions): Promise<void> {
-    // In development, just log the email
-    console.log('📧 Email Service - Sending email:');
-    console.log(`To: ${options.to}`);
-    console.log(`Subject: ${options.subject}`);
-    console.log(`Content: ${options.text || 'See HTML content'}`);
+    const fromEmail = process.env.FROM_EMAIL || 'noreply@seabreezekitchen.com';
+    const isDevelopment = process.env.NODE_ENV !== 'production';
     
-    // TODO: Integrate with actual email service
-    // Example with SendGrid:
-    // const msg = {
-    //   to: options.to,
-    //   from: process.env.FROM_EMAIL,
-    //   subject: options.subject,
-    //   text: options.text,
-    //   html: options.html,
-    // };
-    // await sgMail.send(msg);
+    // Always log in development
+    if (isDevelopment) {
+      console.log('📧 Email Service - Sending email:');
+      console.log(`To: ${options.to}`);
+      console.log(`From: ${fromEmail}`);
+      console.log(`Subject: ${options.subject}`);
+      console.log(`Content: ${options.text || 'See HTML content'}`);
+    }
+    
+    // Send actual email if SendGrid is configured
+    if (process.env.SENDGRID_API_KEY) {
+      try {
+        const msg = {
+          to: options.to,
+          from: fromEmail,
+          subject: options.subject,
+          text: options.text,
+          html: options.html,
+        };
+        
+        await sgMail.send(msg);
+        console.log(`✅ Email sent successfully to ${options.to}`);
+      } catch (error) {
+        console.error('❌ SendGrid error:', error);
+        // Don't throw in production to avoid breaking the flow
+        if (isDevelopment) {
+          throw error;
+        }
+      }
+    }
   }
 
   async sendVerificationEmail(email: string, name: string, verificationUrl: string): Promise<void> {
@@ -109,6 +139,7 @@ If you didn't request a password reset, please ignore this email. Your password 
       time: string;
       partySize: number;
       specialRequests?: string;
+      confirmationNumber?: string;
     }
   ): Promise<void> {
     const subject = 'Reservation Confirmed - Seabreeze Kitchen';
@@ -119,22 +150,49 @@ If you didn't request a password reset, please ignore this email. Your password 
         <p>Your reservation at Seabreeze Kitchen has been confirmed.</p>
         <div style="background-color: #f5f5f5; padding: 20px; border-radius: 4px; margin: 20px 0;">
           <h3 style="margin-top: 0;">Reservation Details</h3>
+          ${reservationDetails.confirmationNumber ? `<p><strong>Confirmation #:</strong> ${reservationDetails.confirmationNumber}</p>` : ''}
           <p><strong>Date:</strong> ${reservationDetails.date}</p>
           <p><strong>Time:</strong> ${reservationDetails.time}</p>
           <p><strong>Party Size:</strong> ${reservationDetails.partySize} guests</p>
           ${reservationDetails.specialRequests ? `<p><strong>Special Requests:</strong> ${reservationDetails.specialRequests}</p>` : ''}
         </div>
         <p>We look forward to seeing you!</p>
+        <p>If you need to modify or cancel your reservation, please call us at (555) 123-4567.</p>
         <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
         <p style="color: #666; font-size: 14px;">
           Seabreeze Kitchen<br>
           123 Ocean Drive, Beach City<br>
-          Phone: (555) 123-4567
+          Phone: (555) 123-4567<br>
+          <a href="https://seabreezekitchen.com">www.seabreezekitchen.com</a>
         </p>
       </div>
     `;
 
-    await this.sendEmail({ to: email, subject, html });
+    const text = `
+Reservation Confirmed!
+
+Dear ${name},
+
+Your reservation at Seabreeze Kitchen has been confirmed.
+
+Reservation Details:
+${reservationDetails.confirmationNumber ? `Confirmation #: ${reservationDetails.confirmationNumber}` : ''}
+Date: ${reservationDetails.date}
+Time: ${reservationDetails.time}
+Party Size: ${reservationDetails.partySize} guests
+${reservationDetails.specialRequests ? `Special Requests: ${reservationDetails.specialRequests}` : ''}
+
+We look forward to seeing you!
+
+If you need to modify or cancel your reservation, please call us at (555) 123-4567.
+
+Seabreeze Kitchen
+123 Ocean Drive, Beach City
+Phone: (555) 123-4567
+www.seabreezekitchen.com
+    `.trim();
+
+    await this.sendEmail({ to: email, subject, html, text });
   }
 
   async sendWelcomeEmail(email: string, name: string): Promise<void> {
@@ -156,12 +214,34 @@ If you didn't request a password reset, please ignore this email. Your password 
         <p style="color: #666; font-size: 14px;">
           Seabreeze Kitchen<br>
           123 Ocean Drive, Beach City<br>
-          Phone: (555) 123-4567
+          Phone: (555) 123-4567<br>
+          <a href="https://seabreezekitchen.com">www.seabreezekitchen.com</a>
         </p>
       </div>
     `;
 
-    await this.sendEmail({ to: email, subject, html });
+    const text = `
+Welcome to Seabreeze Kitchen!
+
+Hi ${name},
+
+Thank you for creating an account with us. We're excited to have you as part of our community!
+
+With your account, you can:
+- Make and manage reservations online
+- View your dining history
+- Save your preferences
+- Receive exclusive offers and updates
+
+We look forward to serving you soon!
+
+Seabreeze Kitchen
+123 Ocean Drive, Beach City
+Phone: (555) 123-4567
+www.seabreezekitchen.com
+    `.trim();
+
+    await this.sendEmail({ to: email, subject, html, text });
   }
 }
 

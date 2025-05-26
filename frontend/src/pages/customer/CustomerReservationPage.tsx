@@ -34,9 +34,9 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { format, addDays, isBefore, isAfter, startOfDay } from 'date-fns';
-import { reservationService, CreateReservationInput } from '../../services/reservationService';
+import { customerReservationService, ReservationFormData } from '../../services/customerReservationService';
 import { useSnackbar } from 'notistack';
-import { useAuth } from '../../context/AuthContext';
+import { useCustomerAuth } from '../../context/CustomerAuthContext';
 
 interface FormData {
   customerName: string;
@@ -53,7 +53,7 @@ const CustomerReservationPage: React.FC = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
-  const { user } = useAuth();
+  const { user } = useCustomerAuth();
   
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -61,7 +61,7 @@ const CustomerReservationPage: React.FC = () => {
   
   const [formData, setFormData] = useState<FormData>({
     customerName: user?.name || '',
-    customerPhone: user?.phone || '',
+    customerPhone: '', // Phone not available in user object yet
     customerEmail: user?.email || '',
     partySize: '2',
     reservationDate: null,
@@ -110,19 +110,16 @@ const CustomerReservationPage: React.FC = () => {
     setLoading(true);
     
     try {
-      const data: CreateReservationInput = {
-        customerName: formData.customerName,
-        customerPhone: formData.customerPhone,
-        customerEmail: formData.customerEmail,
-        partySize: parseInt(formData.partySize),
+      const data: ReservationFormData = {
         reservationDate: format(formData.reservationDate!, 'yyyy-MM-dd'),
         reservationTime: formData.reservationTime,
-        specialRequests: formData.specialRequests || undefined,
-        restaurantId: 1 // Single restaurant for MVP
+        partySize: parseInt(formData.partySize),
+        notes: formData.specialRequests || undefined,
+        specialRequests: formData.specialRequests || undefined
       };
       
-      const reservation = await reservationService.createReservation(data);
-      setConfirmationData(reservation);
+      const response = await customerReservationService.createReservation(data);
+      setConfirmationData(response.reservation);
       setActiveStep(2);
       enqueueSnackbar('Reservation confirmed!', { variant: 'success' });
     } catch (error) {
