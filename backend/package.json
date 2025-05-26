@@ -1,6 +1,7 @@
 {
   "name": "backend",
-  "version": "2.10.0",
+  "version": "2.11.1",
+  "private": true,
   "description": "",
   "main": "dist/server.js",
   "directories": {

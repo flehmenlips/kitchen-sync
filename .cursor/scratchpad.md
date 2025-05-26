@@ -1683,3 +1683,28 @@ The current system has a conceptual overlap between:
 - [ ] Review all uncommitted changes
 - [ ] Ensure rollback plan is ready
 - [ ] Monitor for 24 hours post-migration
+
+## Production Fix: Reservation Foreign Key (2025-05-26)
+
+### Issue Fixed
+Customer reservations were failing with 500 error because:
+1. The `reservations.customer_id` foreign key was pointing to `users` table instead of `customers` table
+2. The `reservations.user_id` field was NOT NULL, preventing customer-only reservations
+3. The customerReservationController wasn't using the `customerId` field due to type mismatch
+
+### Changes Made
+1. **Database Changes**:
+   - Fixed foreign key constraint: `reservations.customer_id` now references `customers(id)`
+   - Made `user_id` nullable to allow customer reservations without staff assignment
+   - Created and ran `fix-reservation-foreign-key.js` script
+
+2. **Schema Updates**:
+   - Updated Prisma schema to mark `userId` as optional (`Int?`)
+   - Regenerated Prisma client to update TypeScript types
+
+3. **Code Updates**:
+   - Updated `customerReservationController` to use `customerId` field
+   - Removed requirement for `userId` in customer reservations
+
+### Result
+Customer reservations now work correctly. Customers can create reservations through the customer portal without errors.
