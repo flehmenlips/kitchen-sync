@@ -1,15 +1,17 @@
 import axios from 'axios';
 
-// In production, use the production API URL
+// In production, use the production backend URL
+// In development, use the environment variable or localhost
 const API_URL = import.meta.env.PROD 
     ? 'https://kitchen-sync-api.onrender.com' // Production API URL
     : (import.meta.env.VITE_API_URL || 'http://localhost:3001');
 
-export const apiClient = axios.create({
+const apiClient = axios.create({
     baseURL: API_URL,
     headers: {
         'Content-Type': 'application/json'
-    }
+    },
+    withCredentials: true, // Enable sending cookies with requests
 });
 
 // Add request interceptor to add auth token

@@ -1,19 +1,21 @@
 import axios from 'axios';
 
-// Create a separate axios instance for customer API calls
-export const customerApi = axios.create({
-    baseURL: import.meta.env.PROD 
-        ? 'https://kitchen-sync-api.onrender.com/api'
-        : (import.meta.env.VITE_API_URL || 'http://localhost:3001/api'),
-    headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-    },
-    withCredentials: true
+// In production, use the production backend URL
+// In development, use the environment variable or localhost
+const API_URL = import.meta.env.PROD 
+  ? 'https://kitchen-sync-api.onrender.com/api'
+  : (import.meta.env.VITE_API_URL || 'http://localhost:3001/api');
+
+const api = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  withCredentials: true,
 });
 
 // Add a request interceptor for customer authentication
-customerApi.interceptors.request.use(
+api.interceptors.request.use(
     (config) => {
         // Get customer auth token from sessionStorage
         const authStr = sessionStorage.getItem('customerAuth');
@@ -37,7 +39,7 @@ customerApi.interceptors.request.use(
 );
 
 // Add a response interceptor for customer-specific error handling
-customerApi.interceptors.response.use(
+api.interceptors.response.use(
     (response) => {
         return response;
     },
@@ -63,4 +65,7 @@ customerApi.interceptors.response.use(
         }
         return Promise.reject(error);
     }
-); 
+);
+
+// Export the configured axios instance as customerApi
+export const customerApi = api; 

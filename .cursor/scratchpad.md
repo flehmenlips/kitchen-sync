@@ -303,6 +303,8 @@ VITE_API_URL=http://localhost:3001/api
 - [x] Build admin frontend structure
 - [x] Implement customer list view
 - [x] Add email testing infrastructure
+- [x] Fix production API URL configuration
+- [ ] Wait for Render auto-deployment (in progress)
 - [ ] Complete customer detail modal
 - [ ] Complete customer edit form
 - [ ] Build staff management UI
@@ -311,3 +313,12 @@ VITE_API_URL=http://localhost:3001/api
 - [ ] Implement bulk operations
 - [ ] Add customer communication features
 - [ ] Create help documentation
+
+## Executor's Feedback or Assistance Requests
+
+### Status Update (2025-05-26)
+- Fixed the production API URL issue in both `adminApi.ts` and `config.ts`
+- Both files now correctly use `https://kitchen-sync-api.onrender.com` when in production
+- Changes have been committed and pushed to GitHub
+- Render should automatically deploy the changes since auto-deploy is enabled
+- Once deployed, the admin dashboard should work correctly in production

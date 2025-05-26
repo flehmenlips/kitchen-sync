@@ -2,10 +2,14 @@ import axios from 'axios';
 import { RecipeFormData } from '../components/forms/RecipeForm';
 import { UserProfile, UserCredentials, AuthResponse } from '../types/user';
 import { Recipe as RecipeType, RecipeApiData } from '../types/recipe';
+import { Restaurant, Menu, ContentBlock, MenuSection, MenuItem } from '../types';
+import { API_URL } from '../config';
 
-// Get the base URL from environment variables, defaulting to localhost:3001
-// Vite exposes env variables prefixed with VITE_
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+// In production, use the production backend URL
+// In development, use the environment variable or localhost
+const API_BASE_URL = import.meta.env.PROD 
+  ? 'https://kitchen-sync-api.onrender.com/api'
+  : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api');
 
 // Create an axios instance with auth interceptor
 const apiService = axios.create({

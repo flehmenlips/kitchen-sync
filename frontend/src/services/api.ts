@@ -1,17 +1,17 @@
 import axios from 'axios';
 
-// Create an axios instance with default config
-export const api = axios.create({
-    // In production, use the production API URL with '/api' path
-    // In development, use the full base URL with '/api' included
-    baseURL: import.meta.env.PROD 
-        ? 'https://kitchen-sync-api.onrender.com/api'
-        : (import.meta.env.VITE_API_URL || 'http://localhost:3001/api'),
-    headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json', // Explicitly request JSON
-    },
-    withCredentials: true // Send credentials with cross-origin requests
+// In production, use the production backend URL
+// In development, use the environment variable or localhost
+const API_URL = import.meta.env.PROD 
+  ? 'https://kitchen-sync-api.onrender.com/api'
+  : (import.meta.env.VITE_API_URL || 'http://localhost:3001/api');
+
+const api = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  withCredentials: true,
 });
 
 // Add a request interceptor
