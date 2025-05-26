@@ -12,12 +12,27 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true,
 });
 
 // Add auth token to requests
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('authToken');
+    // Get the token from localStorage - check both keys for backward compatibility
+    let token = localStorage.getItem('token');
+    if (!token) {
+      // Try to get from kitchenSyncUserInfo
+      try {
+        const userInfo = localStorage.getItem('kitchenSyncUserInfo');
+        if (userInfo) {
+          const parsed = JSON.parse(userInfo);
+          token = parsed.token;
+        }
+      } catch (e) {
+        console.error('Error parsing user info:', e);
+      }
+    }
+    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

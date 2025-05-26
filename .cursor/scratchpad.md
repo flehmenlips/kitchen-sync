@@ -322,3 +322,9 @@ VITE_API_URL=http://localhost:3001/api
 - Changes have been committed and pushed to GitHub
 - Render should automatically deploy the changes since auto-deploy is enabled
 - Once deployed, the admin dashboard should work correctly in production
+
+### Build Error Fix (2025-05-26)
+- Fixed Render build error: "api" is not exported by "src/services/api.ts"
+- Added `export { api };` to api.ts to fix import issues in prepTaskService and other services
+- Also updated all API service files (apiClient.ts, api.ts, customerApi.ts, apiService.ts) to use production URLs
+- All fixes committed and pushed, waiting for Render auto-deployment
