@@ -101,4 +101,7 @@ api.interceptors.response.use(
         }
         return Promise.reject(error);
     }
-); 
+);
+
+// Export the api instance
+export { api }; 
