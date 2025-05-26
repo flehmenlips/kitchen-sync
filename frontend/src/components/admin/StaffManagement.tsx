@@ -98,7 +98,7 @@ const StaffManagement: React.FC = () => {
         search: searchTerm,
         role: selectedRole || undefined
       });
-      setStaff(response.users);
+      setStaff(response.staff);
       setTotalCount(response.pagination.total);
     } catch (err) {
       setError('Failed to fetch staff users');
