@@ -902,7 +902,7 @@ model PlatformAdmin {
   
   // Relations
   actions           PlatformAction[]
-  supportTickets    SupportTicket[]     @relation("AssignedTickets")
+  supportTickets    SupportTicket[]
   notes             RestaurantNote[]
   
   @@map("platform_admins")
@@ -1100,69 +1100,175 @@ model DinerNotification {
   @@map("diner_notifications")
 }
 
-// Subscription management
+// ===== SUBSCRIPTION & BILLING MODELS =====
+
 model Subscription {
   id                 Int                 @id @default(autoincrement())
   restaurantId       Int                 @unique @map("restaurant_id")
   plan               SubscriptionPlan    @default(TRIAL)
   status             SubscriptionStatus  @default(TRIAL)
+  
+  // Stripe
   stripeCustomerId   String?             @unique @map("stripe_customer_id")
   stripeSubId        String?             @unique @map("stripe_sub_id")
+  stripePriceId      String?             @map("stripe_price_id")
+  
+  // Billing period
   currentPeriodStart DateTime            @default(now()) @map("current_period_start")
   currentPeriodEnd   DateTime            @map("current_period_end")
   cancelAt           DateTime?           @map("cancel_at")
   canceledAt         DateTime?           @map("canceled_at")
   trialEndsAt        DateTime?           @map("trial_ends_at")
+  
+  // Limits
   seats              Int                 @default(5)
   
-  // Billing
+  // Billing info
   billingEmail       String?             @map("billing_email")
   billingName        String?             @map("billing_name")
   billingAddress     Json?               @map("billing_address")
-  paymentMethod      Json?               @map("payment_method")
+  paymentMethodId    String?             @map("payment_method_id")
+  lastPaymentStatus  String?             @map("last_payment_status")
+  lastPaymentDate    DateTime?           @map("last_payment_date")
+  
+  // Metadata
+  metadata           Json?
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
   
   // Relations
   restaurant         Restaurant          @relation(fields: [restaurantId], references: [id])
   invoices           Invoice[]
   usageRecords       UsageRecord[]
   
+  @@index([status])
+  @@index([stripeCustomerId])
   @@map("subscriptions")
 }
 
-// Invoices
 model Invoice {
   id                 Int                 @id @default(autoincrement())
   subscriptionId     Int                 @map("subscription_id")
   stripeInvoiceId    String?             @unique @map("stripe_invoice_id")
+  
+  // Invoice details
+  invoiceNumber      String              @unique @map("invoice_number")
+  status             InvoiceStatus       @default(DRAFT)
   amount             Decimal             @db.Decimal(10, 2)
-  currency           String              @default("usd")
-  status             InvoiceStatus       @default(PENDING)
-  dueDate            DateTime            @map("due_date")
+  tax                Decimal?            @db.Decimal(10, 2)
+  total              Decimal             @db.Decimal(10, 2)
+  currency           String              @default("USD")
+  
+  // Dates
+  periodStart        DateTime            @map("period_start")
+  periodEnd          DateTime            @map("period_end")
+  dueDate            DateTime?           @map("due_date")
   paidAt             DateTime?           @map("paid_at")
+  
+  // Payment
+  paymentMethod      String?             @map("payment_method")
+  paymentIntentId    String?             @map("payment_intent_id")
+  
+  // PDF/Receipt
+  invoiceUrl         String?             @map("invoice_url")
+  hostedInvoiceUrl   String?             @map("hosted_invoice_url")
+  invoicePdf         String?             @map("invoice_pdf")
+  
+  metadata           Json?
   createdAt          DateTime            @default(now()) @map("created_at")
   
+  // Relations
   subscription       Subscription        @relation(fields: [subscriptionId], references: [id])
   
   @@index([subscriptionId])
+  @@index([status])
   @@map("invoices")
 }
 
-// Usage tracking
 model UsageRecord {
   id                 Int                 @id @default(autoincrement())
   subscriptionId     Int                 @map("subscription_id")
   metric             UsageMetric
-  quantity           Int
-  date               DateTime            @db.Date
-  createdAt          DateTime            @default(now()) @map("created_at")
   
+  // Usage data
+  quantity           Int
+  unitAmount         Decimal?            @db.Decimal(10, 4) @map("unit_amount")
+  totalAmount        Decimal?            @db.Decimal(10, 2) @map("total_amount")
+  
+  // Period
+  periodStart        DateTime            @map("period_start")
+  periodEnd          DateTime            @map("period_end")
+  recordedAt         DateTime            @default(now()) @map("recorded_at")
+  
+  // Stripe
+  stripeUsageRecordId String?            @unique @map("stripe_usage_record_id")
+  
+  metadata           Json?
+  
+  // Relations
   subscription       Subscription        @relation(fields: [subscriptionId], references: [id])
   
-  @@unique([subscriptionId, metric, date])
+  @@index([subscriptionId, metric])
+  @@index([periodStart, periodEnd])
   @@map("usage_records")
 }
 
-// Restaurant notes by platform
+// Support ticket system for platform
+model SupportTicket {
+  id                 Int                 @id @default(autoincrement())
+  restaurantId       Int                 @map("restaurant_id")
+  
+  // Ticket details
+  subject            String
+  description        String              @db.Text
+  status             TicketStatus        @default(OPEN)
+  priority           TicketPriority      @default(MEDIUM)
+  category           String?
+  
+  // Assignment
+  assignedToId       Int?                @map("assigned_to_id")
+  
+  // Timestamps
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+  resolvedAt         DateTime?           @map("resolved_at")
+  
+  // Relations
+  restaurant         Restaurant          @relation(fields: [restaurantId], references: [id])
+  assignedTo         PlatformAdmin?      @relation(fields: [assignedToId], references: [id])
+  messages           TicketMessage[]
+  
+  @@index([restaurantId])
+  @@index([status])
+  @@index([assignedToId])
+  @@map("support_tickets")
+}
+
+model TicketMessage {
+  id                 Int                 @id @default(autoincrement())
+  ticketId           Int                 @map("ticket_id")
+  
+  // Message details
+  message            String              @db.Text
+  isInternal         Boolean             @default(false) @map("is_internal")
+  
+  // Sender
+  senderType         SenderType          @map("sender_type")
+  senderId           Int                 @map("sender_id")
+  senderName         String              @map("sender_name")
+  
+  // Attachments
+  attachments        Json?
+  
+  createdAt          DateTime            @default(now()) @map("created_at")
+  
+  // Relations
+  ticket             SupportTicket       @relation(fields: [ticketId], references: [id])
+  
+  @@index([ticketId])
+  @@map("ticket_messages")
+}
+
 model RestaurantNote {
   id            Int            @id @default(autoincrement())
   restaurantId  Int            @map("restaurant_id")
@@ -1176,42 +1282,6 @@ model RestaurantNote {
   
   @@index([restaurantId])
   @@map("restaurant_notes")
-}
-
-// Support tickets
-model SupportTicket {
-  id            Int                @id @default(autoincrement())
-  restaurantId  Int                @map("restaurant_id")
-  subject       String
-  description   String             @db.Text
-  status        TicketStatus       @default(OPEN)
-  priority      TicketPriority     @default(MEDIUM)
-  assignedTo    Int?               @map("assigned_to")
-  createdAt     DateTime           @default(now()) @map("created_at")
-  updatedAt     DateTime           @updatedAt @map("updated_at")
-  
-  restaurant    Restaurant         @relation(fields: [restaurantId], references: [id])
-  assignee      PlatformAdmin?     @relation("AssignedTickets", fields: [assignedTo], references: [id])
-  messages      TicketMessage[]
-  
-  @@index([restaurantId])
-  @@index([status])
-  @@map("support_tickets")
-}
-
-// Support ticket messages
-model TicketMessage {
-  id            Int                @id @default(autoincrement())
-  ticketId      Int                @map("ticket_id")
-  senderId      Int?               @map("sender_id") // null = system message
-  senderType    SenderType         @map("sender_type")
-  message       String             @db.Text
-  createdAt     DateTime           @default(now()) @map("created_at")
-  
-  ticket        SupportTicket      @relation(fields: [ticketId], references: [id])
-  
-  @@index([ticketId])
-  @@map("ticket_messages")
 }
 
 // Platform Enums
@@ -1289,6 +1359,7 @@ enum NotificationType {
 }
 
 enum InvoiceStatus {
+  DRAFT
   PENDING
   PAID
   OVERDUE

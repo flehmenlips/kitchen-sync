@@ -17,6 +17,14 @@ import {
   getRestaurantAnalytics,
   getPlatformAnalytics,
 } from '../controllers/platform/restaurantController';
+import {
+  getSubscriptions,
+  getSubscription,
+  updateSubscription,
+  createTrialSubscription,
+  cancelSubscription,
+  getSubscriptionAnalytics,
+} from '../controllers/platform/subscriptionController';
 import { platformAuth, requirePlatformRole, logPlatformAction } from '../middleware/platformAuth';
 
 const router = Router();
@@ -106,6 +114,56 @@ router.get(
   platformAuth,
   requirePlatformRole(['SUPER_ADMIN', 'ADMIN']),
   getPlatformAnalytics
+);
+
+// ===== SUBSCRIPTION MANAGEMENT ROUTES =====
+
+// List all subscriptions
+router.get(
+  '/subscriptions',
+  platformAuth,
+  requirePlatformRole(['SUPER_ADMIN', 'ADMIN', 'BILLING']),
+  getSubscriptions
+);
+
+// Get subscription details
+router.get(
+  '/subscriptions/:id',
+  platformAuth,
+  requirePlatformRole(['SUPER_ADMIN', 'ADMIN', 'BILLING']),
+  getSubscription
+);
+
+// Update subscription (admin override)
+router.put(
+  '/subscriptions/:id',
+  platformAuth,
+  requirePlatformRole(['SUPER_ADMIN']),
+  updateSubscription
+);
+
+// Create trial subscription
+router.post(
+  '/subscriptions/trial',
+  platformAuth,
+  requirePlatformRole(['SUPER_ADMIN', 'ADMIN']),
+  createTrialSubscription
+);
+
+// Cancel subscription
+router.post(
+  '/subscriptions/:id/cancel',
+  platformAuth,
+  requirePlatformRole(['SUPER_ADMIN']),
+  cancelSubscription
+);
+
+// Get subscription analytics
+router.get(
+  '/subscriptions/analytics',
+  platformAuth,
+  requirePlatformRole(['SUPER_ADMIN', 'ADMIN', 'BILLING']),
+  getSubscriptionAnalytics
 );
 
 // ===== ADMIN MANAGEMENT ROUTES =====
