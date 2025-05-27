@@ -171,27 +171,27 @@ export const getUserRestaurants = async (req: Request, res: Response): Promise<v
       return;
     }
 
-    const assignments = await prisma.restaurantStaff.findMany({
-      where: {
-        userId: req.user.id,
-        isActive: true,
-        restaurant: {
-          isActive: true
-        }
-      },
-      include: {
-        restaurant: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            isActive: true
-          }
-        }
-      }
-    });
+    // Use raw SQL to avoid Prisma schema mismatch issues
+    const assignments: any[] = await prisma.$queryRaw`
+      SELECT 
+        r.id,
+        r.name,
+        r.slug,
+        r.is_active as "isActive"
+      FROM restaurant_staff rs
+      JOIN restaurants r ON rs.restaurant_id = r.id
+      WHERE rs.user_id = ${req.user.id}
+        AND rs.is_active = true
+        AND r.is_active = true
+    `;
 
-    const restaurants = assignments.map(a => a.restaurant);
+    // Convert the raw result to match expected format
+    const restaurants = assignments.map((r: any) => ({
+      id: r.id,
+      name: r.name,
+      slug: r.slug,
+      isActive: r.isActive
+    }));
 
     res.json({ restaurants });
   } catch (error) {
