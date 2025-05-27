@@ -28,6 +28,32 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Diagnostic reports
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Dependency directories
+jspm_packages/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# dotenv environment variables file
+.env.test
+.env.local
+.env.production
+
 # OS generated files
 .DS_Store
 .DS_Store?
@@ -66,5 +92,12 @@ junit.xml
 # Generated Code
 backend/src/generated/prisma/
 
-# Generated Code
-# backend/src/generated/prisma/ 
+# Database backups - contain sensitive data
+database-backups/
+*.sql
+*.sql.gz
+
+# Temporary files
+*.tmp
+*.temp
+.cursor/ 
