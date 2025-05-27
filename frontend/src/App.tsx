@@ -100,6 +100,7 @@ import PlatformAdminLayout from './platform-admin/components/PlatformAdminLayout
 import RestaurantList from './platform-admin/pages/RestaurantList';
 import RestaurantDetail from './platform-admin/pages/RestaurantDetail';
 import PlatformAnalytics from './platform-admin/pages/PlatformAnalytics';
+import { SubscriptionsPage } from './platform-admin/pages/SubscriptionsPage';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -147,6 +148,7 @@ const App: React.FC = () => {
                     <Route path="restaurants" element={<RestaurantList />} />
                     <Route path="restaurants/:id" element={<RestaurantDetail />} />
                     <Route path="analytics" element={<PlatformAnalytics />} />
+                    <Route path="subscriptions" element={<SubscriptionsPage />} />
                     <Route index element={<Navigate to="/platform-admin/dashboard" replace />} />
                   </Route>
 

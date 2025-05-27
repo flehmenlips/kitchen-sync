@@ -126,6 +126,14 @@ router.get(
   getSubscriptions
 );
 
+// Get subscription analytics (must be before :id route)
+router.get(
+  '/subscriptions/analytics',
+  platformAuth,
+  requirePlatformRole(['SUPER_ADMIN', 'ADMIN', 'BILLING']),
+  getSubscriptionAnalytics
+);
+
 // Get subscription details
 router.get(
   '/subscriptions/:id',
@@ -156,14 +164,6 @@ router.post(
   platformAuth,
   requirePlatformRole(['SUPER_ADMIN']),
   cancelSubscription
-);
-
-// Get subscription analytics
-router.get(
-  '/subscriptions/analytics',
-  platformAuth,
-  requirePlatformRole(['SUPER_ADMIN', 'ADMIN', 'BILLING']),
-  getSubscriptionAnalytics
 );
 
 // ===== ADMIN MANAGEMENT ROUTES =====

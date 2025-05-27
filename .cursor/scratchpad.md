@@ -332,11 +332,14 @@ VITE_API_URL=http://localhost:3001/api
 - [x] Create Stripe service for payment integration
 - [x] Create subscription controller with CRUD operations
 - [x] Add subscription routes to platform API
-- [ ] Create subscription UI components
-- [ ] Build subscription list page
-- [ ] Create subscription detail/edit modals
+- [x] Create subscription UI components
+- [x] Build subscription list page with filters and MRR calculation
+- [x] Create subscription detail modal with tabs for overview, invoices, and usage
+- [x] Create subscription edit modal with admin override warnings
+- [x] Add subscriptions page to platform admin navigation
 - [ ] Implement Stripe webhook handling
 - [ ] Create billing portal integration
+- [ ] Add subscription analytics page with charts
 - [ ] Implement multi-tenancy frontend
 - [ ] Create restaurant context provider
 - [ ] Add restaurant selector UI
@@ -1907,11 +1910,14 @@ The backend now properly enforces multi-tenant data isolation. Each restaurant's
 - [x] Create Stripe service for payment integration
 - [x] Create subscription controller with CRUD operations
 - [x] Add subscription routes to platform API
-- [ ] Create subscription UI components
-- [ ] Build subscription list page
-- [ ] Create subscription detail/edit modals
+- [x] Create subscription UI components
+- [x] Build subscription list page with filters and MRR calculation
+- [x] Create subscription detail modal with tabs for overview, invoices, and usage
+- [x] Create subscription edit modal with admin override warnings
+- [x] Add subscriptions page to platform admin navigation
 - [ ] Implement Stripe webhook handling
 - [ ] Create billing portal integration
+- [ ] Add subscription analytics page with charts
 - [ ] Implement multi-tenancy frontend
 - [ ] Create restaurant context provider
 - [ ] Add restaurant selector UI
