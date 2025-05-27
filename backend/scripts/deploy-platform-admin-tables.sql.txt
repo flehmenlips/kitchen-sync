@@ -1,0 +1,137 @@
+-- Platform Admin Tables Migration
+-- Run this script to create platform admin tables in production
+
+-- Create platform admin tables
+CREATE TABLE IF NOT EXISTS platform_admins (
+  id SERIAL PRIMARY KEY,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  name VARCHAR(255),
+  password VARCHAR(255) NOT NULL,
+  role VARCHAR(50) NOT NULL DEFAULT 'ADMIN' CHECK (role IN ('SUPERADMIN', 'ADMIN', 'SUPPORT')),
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS platform_actions (
+  id SERIAL PRIMARY KEY,
+  admin_id INTEGER NOT NULL REFERENCES platform_admins(id) ON DELETE CASCADE,
+  action VARCHAR(100) NOT NULL,
+  resource_type VARCHAR(50),
+  resource_id VARCHAR(100),
+  details JSONB,
+  ip_address VARCHAR(45),
+  user_agent TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS subscriptions (
+  id SERIAL PRIMARY KEY,
+  restaurant_id INTEGER UNIQUE NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+  plan VARCHAR(50) NOT NULL DEFAULT 'TRIAL' CHECK (plan IN ('TRIAL', 'BASIC', 'PRO', 'ENTERPRISE')),
+  status VARCHAR(50) NOT NULL DEFAULT 'TRIAL' CHECK (status IN ('TRIAL', 'ACTIVE', 'PAST_DUE', 'CANCELED', 'PAUSED')),
+  stripe_customer_id VARCHAR(255),
+  stripe_subscription_id VARCHAR(255),
+  current_period_start TIMESTAMP,
+  current_period_end TIMESTAMP,
+  trial_ends_at TIMESTAMP,
+  seats INTEGER DEFAULT 5,
+  monthly_price DECIMAL(10,2),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS invoices (
+  id SERIAL PRIMARY KEY,
+  subscription_id INTEGER NOT NULL REFERENCES subscriptions(id) ON DELETE CASCADE,
+  stripe_invoice_id VARCHAR(255),
+  amount DECIMAL(10,2) NOT NULL,
+  status VARCHAR(50) NOT NULL CHECK (status IN ('DRAFT', 'PENDING', 'PAID', 'FAILED', 'VOID')),
+  due_date TIMESTAMP,
+  paid_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS usage_records (
+  id SERIAL PRIMARY KEY,
+  restaurant_id INTEGER NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+  metric VARCHAR(50) NOT NULL CHECK (metric IN ('RESERVATIONS', 'ORDERS', 'MENU_VIEWS', 'STORAGE_GB')),
+  value INTEGER NOT NULL,
+  recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS restaurant_notes (
+  id SERIAL PRIMARY KEY,
+  restaurant_id INTEGER NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+  admin_id INTEGER NOT NULL REFERENCES platform_admins(id) ON DELETE CASCADE,
+  note TEXT NOT NULL,
+  is_internal BOOLEAN DEFAULT false,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS support_tickets (
+  id SERIAL PRIMARY KEY,
+  restaurant_id INTEGER NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+  subject VARCHAR(255) NOT NULL,
+  status VARCHAR(50) NOT NULL DEFAULT 'OPEN' CHECK (status IN ('OPEN', 'IN_PROGRESS', 'WAITING', 'RESOLVED', 'CLOSED')),
+  priority VARCHAR(50) NOT NULL DEFAULT 'MEDIUM' CHECK (priority IN ('LOW', 'MEDIUM', 'HIGH', 'URGENT')),
+  assigned_to INTEGER REFERENCES platform_admins(id),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS ticket_messages (
+  id SERIAL PRIMARY KEY,
+  ticket_id INTEGER NOT NULL REFERENCES support_tickets(id) ON DELETE CASCADE,
+  sender_type VARCHAR(50) NOT NULL CHECK (sender_type IN ('ADMIN', 'RESTAURANT')),
+  sender_id INTEGER NOT NULL,
+  message TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes for performance
+CREATE INDEX idx_platform_actions_admin_id ON platform_actions(admin_id);
+CREATE INDEX idx_platform_actions_created_at ON platform_actions(created_at);
+CREATE INDEX idx_subscriptions_restaurant_id ON subscriptions(restaurant_id);
+CREATE INDEX idx_subscriptions_status ON subscriptions(status);
+CREATE INDEX idx_invoices_subscription_id ON invoices(subscription_id);
+CREATE INDEX idx_invoices_status ON invoices(status);
+CREATE INDEX idx_usage_records_restaurant_id ON usage_records(restaurant_id);
+CREATE INDEX idx_usage_records_metric ON usage_records(metric);
+CREATE INDEX idx_restaurant_notes_restaurant_id ON restaurant_notes(restaurant_id);
+CREATE INDEX idx_support_tickets_restaurant_id ON support_tickets(restaurant_id);
+CREATE INDEX idx_support_tickets_status ON support_tickets(status);
+CREATE INDEX idx_ticket_messages_ticket_id ON ticket_messages(ticket_id);
+
+-- Create initial subscriptions for existing restaurants
+INSERT INTO subscriptions (restaurant_id, plan, status, current_period_start, current_period_end, trial_ends_at, seats)
+SELECT 
+  id,
+  'TRIAL',
+  'TRIAL',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP + INTERVAL '30 days',
+  CURRENT_TIMESTAMP + INTERVAL '30 days',
+  5
+FROM restaurants
+WHERE NOT EXISTS (
+  SELECT 1 FROM subscriptions WHERE restaurant_id = restaurants.id
+);
+
+-- Add update trigger for updated_at columns
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_platform_admins_updated_at BEFORE UPDATE ON platform_admins
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_subscriptions_updated_at BEFORE UPDATE ON subscriptions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_support_tickets_updated_at BEFORE UPDATE ON support_tickets
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column(); 
