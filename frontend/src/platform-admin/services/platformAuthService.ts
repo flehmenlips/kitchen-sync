@@ -1,6 +1,22 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+// Determine API URL based on environment
+const getApiUrl = () => {
+  // If VITE_API_URL is explicitly set, use it
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  
+  // If running in production (not localhost), use production API
+  if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return 'https://kitchen-sync-api.onrender.com/api';
+  }
+  
+  // Default to localhost for development
+  return 'http://localhost:3001/api';
+};
+
+const API_URL = getApiUrl();
 
 // Create a separate axios instance for platform admin
 const platformApi = axios.create({
