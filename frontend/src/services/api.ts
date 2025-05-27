@@ -57,10 +57,24 @@ api.interceptors.request.use(
             config.headers.Authorization = `Bearer ${token}`;
         }
         
+        // Add restaurant context header
+        try {
+            const storedRestaurant = localStorage.getItem('kitchenSyncCurrentRestaurant');
+            if (storedRestaurant) {
+                const restaurant = JSON.parse(storedRestaurant);
+                if (restaurant?.id) {
+                    config.headers['X-Restaurant-Id'] = restaurant.id.toString();
+                }
+            }
+        } catch (e) {
+            console.error('Error parsing restaurant context:', e);
+        }
+        
         // Log the outgoing request for debugging
         console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`, {
             data: config.data,
-            params: config.params
+            params: config.params,
+            headers: config.headers
         });
         
         return config;

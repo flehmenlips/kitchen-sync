@@ -65,6 +65,7 @@ export const prepColumnService = {
                     
                     // Add auth token
                     let token = null;
+                    let restaurantId = null;
                     try {
                         const userInfo = localStorage.getItem('kitchenSyncUserInfo');
                         if (userInfo) {
@@ -74,12 +75,26 @@ export const prepColumnService = {
                         } else {
                             console.warn('No user info found in localStorage');
                         }
+                        
+                        // Get restaurant context
+                        const storedRestaurant = localStorage.getItem('kitchenSyncCurrentRestaurant');
+                        if (storedRestaurant) {
+                            const restaurant = JSON.parse(storedRestaurant);
+                            restaurantId = restaurant?.id;
+                            console.log('Found restaurant context:', restaurantId);
+                        }
                     } catch (e) {
-                        console.error('Error parsing user info:', e);
+                        console.error('Error parsing auth/restaurant info:', e);
                     }
                     
                     // Make the request with auth header if token exists
-                    const requestConfig = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+                    const requestConfig: any = { headers: {} };
+                    if (token) {
+                        requestConfig.headers.Authorization = `Bearer ${token}`;
+                    }
+                    if (restaurantId) {
+                        requestConfig.headers['X-Restaurant-Id'] = restaurantId.toString();
+                    }
                     const endpoint = `${apiUrl.endsWith('/api') ? '' : '/api'}/prep-columns`;
                     console.log(`Making request to: ${endpoint}`);
                     
