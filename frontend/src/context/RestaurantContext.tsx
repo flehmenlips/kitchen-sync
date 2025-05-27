@@ -68,7 +68,7 @@ export const RestaurantProvider: React.FC<RestaurantProviderProps> = ({ children
     try {
       setIsLoading(true);
       // Get user's restaurant assignments
-      const response = await apiService.get('/user/restaurants');
+      const response = await apiService.get('/users/restaurants');
       const userRestaurants = response.data.restaurants || [];
       
       setRestaurants(userRestaurants);
