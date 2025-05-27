@@ -221,7 +221,17 @@ const RestaurantList: React.FC = () => {
                 <TableRow key={restaurant.id} hover>
                   <TableCell>
                     <Box>
-                      <Typography variant="subtitle1">{restaurant.name}</Typography>
+                      <Typography 
+                        variant="subtitle1" 
+                        sx={{ 
+                          cursor: 'pointer', 
+                          color: 'primary.main',
+                          '&:hover': { textDecoration: 'underline' }
+                        }}
+                        onClick={() => navigate(`/platform-admin/restaurants/${restaurant.id}`)}
+                      >
+                        {restaurant.name}
+                      </Typography>
                       <Typography variant="body2" color="text.secondary">
                         {restaurant.email}
                       </Typography>

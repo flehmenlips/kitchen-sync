@@ -35,8 +35,24 @@ export const getRestaurants = async (req: PlatformAuthRequest, res: Response): P
       where.onboardingStatus = status as OnboardingStatus;
     }
 
-    // Count total
-    const total = await prisma.restaurant.count({ where });
+    if (plan) {
+      where.subscription = {
+        plan: plan as any
+      };
+    }
+
+    // Count total - for plan filter, we need a different approach
+    let total;
+    if (plan) {
+      // When filtering by plan, we need to count differently because of the relation
+      const countResult = await prisma.restaurant.findMany({
+        where,
+        select: { id: true }
+      });
+      total = countResult.length;
+    } else {
+      total = await prisma.restaurant.count({ where });
+    }
 
     // Get restaurants - try with full relations first, fallback to basic query
     let restaurants;

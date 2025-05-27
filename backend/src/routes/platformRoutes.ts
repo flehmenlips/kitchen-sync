@@ -25,7 +25,9 @@ import {
   cancelSubscription,
   getSubscriptionAnalytics,
 } from '../controllers/platform/subscriptionController';
+import { handleStripeWebhook } from '../controllers/platform/webhookController';
 import { platformAuth, requirePlatformRole, logPlatformAction } from '../middleware/platformAuth';
+import express from 'express';
 
 const router = Router();
 
@@ -191,6 +193,15 @@ router.get(
     // TODO: Implement admin listing
     res.json({ message: 'Admin listing endpoint - to be implemented' });
   }
+);
+
+// ===== STRIPE WEBHOOK =====
+// This route should NOT have authentication middleware
+// Stripe sends the raw body which we need to verify the signature
+router.post(
+  '/webhooks/stripe',
+  express.raw({ type: 'application/json' }),
+  handleStripeWebhook
 );
 
 export default router; 

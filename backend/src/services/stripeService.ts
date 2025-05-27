@@ -1,10 +1,11 @@
 import Stripe from 'stripe';
 import { SubscriptionPlan } from '@prisma/client';
 
-// Initialize Stripe with your secret key
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+// Initialize Stripe with your secret key (only if available)
+const stripeKey = process.env.STRIPE_SECRET_KEY;
+const stripe = stripeKey ? new Stripe(stripeKey, {
   apiVersion: '2025-04-30.basil',
-});
+}) : null;
 
 // Price IDs for each plan (you'll need to create these in Stripe)
 const PRICE_IDS: Record<SubscriptionPlan, string | null> = {
@@ -14,11 +15,19 @@ const PRICE_IDS: Record<SubscriptionPlan, string | null> = {
   ENTERPRISE: process.env.STRIPE_PRICE_ENTERPRISE || 'price_enterprise',
 };
 
+// Helper function to check if Stripe is configured
+const checkStripeConfig = () => {
+  if (!stripe) {
+    throw new Error('Stripe is not configured. Please set STRIPE_SECRET_KEY environment variable.');
+  }
+};
+
 export const stripeService = {
   // Create a new customer in Stripe
   async createCustomer(email: string, name?: string, metadata?: any) {
+    checkStripeConfig();
     try {
-      const customer = await stripe.customers.create({
+      const customer = await stripe!.customers.create({
         email,
         name,
         metadata,
@@ -36,8 +45,9 @@ export const stripeService = {
     priceId: string,
     trialDays?: number
   ) {
+    checkStripeConfig();
     try {
-      const subscription = await stripe.subscriptions.create({
+      const subscription = await stripe!.subscriptions.create({
         customer: customerId,
         items: [{ price: priceId }],
         trial_period_days: trialDays,
@@ -57,10 +67,11 @@ export const stripeService = {
     newPriceId: string,
     prorationBehavior: 'create_prorations' | 'none' = 'create_prorations'
   ) {
+    checkStripeConfig();
     try {
-      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      const subscription = await stripe!.subscriptions.retrieve(subscriptionId);
       
-      const updatedSubscription = await stripe.subscriptions.update(subscriptionId, {
+      const updatedSubscription = await stripe!.subscriptions.update(subscriptionId, {
         items: [{
           id: subscription.items.data[0].id,
           price: newPriceId,
@@ -80,11 +91,12 @@ export const stripeService = {
     subscriptionId: string,
     immediately: boolean = false
   ) {
+    checkStripeConfig();
     try {
       if (immediately) {
-        return await stripe.subscriptions.cancel(subscriptionId);
+        return await stripe!.subscriptions.cancel(subscriptionId);
       } else {
-        return await stripe.subscriptions.update(subscriptionId, {
+        return await stripe!.subscriptions.update(subscriptionId, {
           cancel_at_period_end: true,
         });
       }
@@ -96,8 +108,9 @@ export const stripeService = {
 
   // Reactivate a canceled subscription
   async reactivateSubscription(subscriptionId: string) {
+    checkStripeConfig();
     try {
-      return await stripe.subscriptions.update(subscriptionId, {
+      return await stripe!.subscriptions.update(subscriptionId, {
         cancel_at_period_end: false,
       });
     } catch (error) {
@@ -108,8 +121,9 @@ export const stripeService = {
 
   // Get customer portal session
   async createPortalSession(customerId: string, returnUrl: string) {
+    checkStripeConfig();
     try {
-      const session = await stripe.billingPortal.sessions.create({
+      const session = await stripe!.billingPortal.sessions.create({
         customer: customerId,
         return_url: returnUrl,
       });
@@ -129,8 +143,9 @@ export const stripeService = {
     trialDays?: number,
     metadata?: any
   ) {
+    checkStripeConfig();
     try {
-      const session = await stripe.checkout.sessions.create({
+      const session = await stripe!.checkout.sessions.create({
         customer: customerId,
         payment_method_types: ['card'],
         mode: 'subscription',
@@ -154,8 +169,9 @@ export const stripeService = {
 
   // Get invoices for a customer
   async getInvoices(customerId: string, limit: number = 10) {
+    checkStripeConfig();
     try {
-      const invoices = await stripe.invoices.list({
+      const invoices = await stripe!.invoices.list({
         customer: customerId,
         limit,
       });
@@ -168,9 +184,10 @@ export const stripeService = {
 
   // Webhook handling
   async constructWebhookEvent(payload: string | Buffer, signature: string) {
+    checkStripeConfig();
     try {
       const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
-      return stripe.webhooks.constructEvent(payload, signature, webhookSecret);
+      return stripe!.webhooks.constructEvent(payload, signature, webhookSecret);
     } catch (error) {
       console.error('Error constructing webhook event:', error);
       throw error;
@@ -184,12 +201,24 @@ export const stripeService = {
 
   // Verify webhook signature
   verifyWebhookSignature(payload: string | Buffer, signature: string): boolean {
+    checkStripeConfig();
     try {
       const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
-      stripe.webhooks.constructEvent(payload, signature, webhookSecret);
+      stripe!.webhooks.constructEvent(payload, signature, webhookSecret);
       return true;
     } catch (error) {
       return false;
     }
+  },
+
+  // Get Stripe billing portal URL
+  async getPortalUrl(customerId: string, returnUrl: string): Promise<string> {
+    checkStripeConfig();
+    const session = await stripe!.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: returnUrl,
+    });
+
+    return session.url;
   },
 }; 

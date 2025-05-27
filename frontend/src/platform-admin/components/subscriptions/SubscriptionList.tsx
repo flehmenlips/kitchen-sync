@@ -34,29 +34,7 @@ import {
   TrendingUp as TrendingUpIcon,
 } from '@mui/icons-material';
 import { formatDistanceToNow } from 'date-fns';
-
-interface Subscription {
-  id: number;
-  restaurant: {
-    id: number;
-    name: string;
-    slug: string;
-    ownerEmail: string;
-    ownerName: string;
-  };
-  plan: 'TRIAL' | 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE';
-  status: 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'SUSPENDED';
-  currentPeriodStart: string;
-  currentPeriodEnd: string;
-  trialEndsAt?: string;
-  seats: number;
-  billingEmail?: string;
-  billingName?: string;
-  _count: {
-    invoices: number;
-    usageRecords: number;
-  };
-}
+import subscriptionService, { Subscription } from '../../services/subscriptionService';
 
 interface SubscriptionListProps {
   onViewDetails: (subscription: Subscription) => void;
@@ -107,21 +85,15 @@ export const SubscriptionList: React.FC<SubscriptionListProps> = ({
   const fetchSubscriptions = async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams({
-        page: (page + 1).toString(),
-        limit: rowsPerPage.toString(),
+      const params = {
+        page: page + 1,
+        limit: rowsPerPage,
         ...(search && { search }),
         ...(statusFilter && { status: statusFilter }),
         ...(planFilter && { plan: planFilter }),
-      });
+      };
 
-      const response = await fetch(`/api/platform/subscriptions?${params}`, {
-        credentials: 'include',
-      });
-
-      if (!response.ok) throw new Error('Failed to fetch subscriptions');
-
-      const data = await response.json();
+      const data = await subscriptionService.getSubscriptions(params);
       setSubscriptions(data.subscriptions);
       setTotalCount(data.pagination.total);
     } catch (error) {
