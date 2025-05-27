@@ -27,21 +27,41 @@ export const setRestaurantContext = async (
       return next();
     }
 
-    // Get all restaurants this user has access to
-    const staffAssignments = await prisma.restaurantStaff.findMany({
-      where: {
-        userId: req.user.id,
-        isActive: true,
-        restaurant: {
-          isActive: true
-        }
-      },
-      include: {
-        restaurant: true
-      }
-    });
+    // Get all restaurants this user has access to using raw SQL to avoid schema mismatch
+    const staffAssignments: any[] = await prisma.$queryRaw`
+      SELECT 
+        rs.id,
+        rs.user_id,
+        rs.restaurant_id,
+        rs.role,
+        rs.is_active,
+        r.id as restaurant_id,
+        r.name as restaurant_name,
+        r.slug as restaurant_slug,
+        r.is_active as restaurant_is_active
+      FROM restaurant_staff rs
+      JOIN restaurants r ON rs.restaurant_id = r.id
+      WHERE rs.user_id = ${req.user.id}
+        AND rs.is_active = true
+        AND r.is_active = true
+    `;
 
-    if (staffAssignments.length === 0) {
+    // Transform raw results to match expected structure
+    const transformedAssignments = staffAssignments.map(sa => ({
+      id: sa.id,
+      userId: sa.user_id,
+      restaurantId: sa.restaurant_id,
+      role: sa.role,
+      isActive: sa.is_active,
+      restaurant: {
+        id: sa.restaurant_id,
+        name: sa.restaurant_name,
+        slug: sa.restaurant_slug,
+        isActive: sa.restaurant_is_active
+      }
+    }));
+
+    if (transformedAssignments.length === 0) {
       // User has no restaurant access
       req.restaurantId = undefined;
       req.staffRestaurantIds = [];
@@ -49,7 +69,7 @@ export const setRestaurantContext = async (
     }
 
     // Store all restaurant IDs user has access to
-    req.staffRestaurantIds = staffAssignments.map(sa => sa.restaurant.id);
+    req.staffRestaurantIds = transformedAssignments.map(sa => sa.restaurant.id);
 
     // Check for restaurant context in different places
     let restaurantId: number | undefined;
@@ -71,13 +91,13 @@ export const setRestaurantContext = async (
     }
 
     // 4. If user only has access to one restaurant, use that
-    if (!restaurantId && staffAssignments.length === 1) {
-      restaurantId = staffAssignments[0].restaurant.id;
+    if (!restaurantId && transformedAssignments.length === 1) {
+      restaurantId = transformedAssignments[0].restaurant.id;
     }
 
     // Validate the user has access to the requested restaurant
     if (restaurantId) {
-      const hasAccess = staffAssignments.some(sa => sa.restaurant.id === restaurantId);
+      const hasAccess = transformedAssignments.some(sa => sa.restaurant.id === restaurantId);
       
       if (!hasAccess) {
         res.status(403).json({ error: 'Access denied to this restaurant' });
@@ -85,7 +105,7 @@ export const setRestaurantContext = async (
       }
 
       req.restaurantId = restaurantId;
-      const assignment = staffAssignments.find(sa => sa.restaurant.id === restaurantId);
+      const assignment = transformedAssignments.find(sa => sa.restaurant.id === restaurantId);
       req.restaurantSlug = assignment?.restaurant.slug;
       
       // Check if user is owner (has SUPERADMIN role AND is assigned to this restaurant)
