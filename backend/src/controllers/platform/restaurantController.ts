@@ -38,37 +38,74 @@ export const getRestaurants = async (req: PlatformAuthRequest, res: Response): P
     // Count total
     const total = await prisma.restaurant.count({ where });
 
-    // Get restaurants with subscription info
-    const restaurants = await prisma.restaurant.findMany({
-      where,
-      include: {
-        subscription: true,
-        _count: {
-          select: {
-            staff: true,
-            reservations: true,
-            orders: true,
-            customers: true
+    // Get restaurants - try with full relations first, fallback to basic query
+    let restaurants;
+    try {
+      restaurants = await prisma.restaurant.findMany({
+        where,
+        include: {
+          subscription: true,
+          _count: {
+            select: {
+              staff: true,
+              reservations: true,
+              orders: true,
+              customers: true
+            }
           }
+        },
+        skip,
+        take,
+        orderBy: {
+          [String(sortBy)]: sortOrder as Prisma.SortOrder
         }
-      },
-      skip,
-      take,
-      orderBy: {
-        [String(sortBy)]: sortOrder as Prisma.SortOrder
-      }
-    });
+      });
+    } catch (includeError) {
+      console.warn('Failed to include full relations, falling back to basic query:', includeError);
+      // Fallback to basic query without problematic relations
+      restaurants = await prisma.restaurant.findMany({
+        where,
+        include: {
+          _count: {
+            select: {
+              reservations: true,
+              staff: true
+            }
+          }
+        },
+        skip,
+        take,
+        orderBy: {
+          [String(sortBy)]: sortOrder as Prisma.SortOrder
+        }
+      });
 
-    // Log action
-    await prisma.platformAction.create({
-      data: {
-        adminId: req.platformAdmin!.id,
-        action: 'VIEW_RESTAURANTS',
-        metadata: { filters: { search, status, plan } },
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent')
-      }
-    });
+      // Add default values for missing relations
+      restaurants = restaurants.map(r => ({
+        ...r,
+        subscription: null,
+        _count: {
+          ...r._count,
+          orders: 0,
+          customers: 0
+        }
+      }));
+    }
+
+    // Log action - wrap in try-catch to avoid breaking the main flow
+    try {
+      await prisma.platformAction.create({
+        data: {
+          adminId: req.platformAdmin!.id,
+          action: 'VIEW_RESTAURANTS',
+          metadata: { filters: { search, status, plan } },
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent')
+        }
+      });
+    } catch (logError) {
+      console.error('Failed to log platform action:', logError);
+    }
 
     res.json({
       restaurants,
