@@ -411,18 +411,36 @@ model Reservation {
   reminderSent        Boolean           @default(false) @map("reminder_sent")
   source              String            @default("website") @db.VarChar(20)
   tableIds            Int[]             @map("table_ids")
+  
+  // Platform fields
+  dinerId               Int?                    @map("diner_id")
+  occasion              ReservationOccasion?
+  dietaryRestrictions   String[]                @map("dietary_restrictions")
+  platformSource        ReservationSource       @default(RESTAURANT_STAFF) @map("platform_source")
+  platformFee           Decimal?                @map("platform_fee") @db.Decimal(10, 2)
+  confirmationCode      String?                 @unique @map("confirmation_code")
+  
+  // Ticketing/Deposit
+  depositRequired       Boolean                 @default(false) @map("deposit_required")
+  depositAmount         Decimal?                @map("deposit_amount") @db.Decimal(10, 2)
+  depositPaid           Boolean                 @default(false) @map("deposit_paid")
+  
+  // Relations
   guestReservation    GuestReservation?
   orders              Order[]           @relation("ReservationOrders")
   reservationLogs     ReservationLog[]
   customer            User?             @relation("CustomerReservations", fields: [customerId], references: [id])
   restaurant          Restaurant        @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   user                User?             @relation("UserReservations", fields: [userId], references: [id], onDelete: Cascade)
+  diner               Diner?            @relation("DinerReservations", fields: [dinerId], references: [id])
+  review              Review?
 
   @@index([userId])
   @@index([customerId])
   @@index([restaurantId])
   @@index([reservationDate])
   @@index([status])
+  @@index([dinerId])
   @@map("reservations")
 }
 
@@ -530,6 +548,21 @@ model Restaurant {
   isActive      Boolean             @default(true) @map("is_active")
   createdAt     DateTime            @default(now()) @map("created_at")
   updatedAt     DateTime            @updatedAt @map("updated_at")
+  
+  // Platform fields
+  ownerEmail        String?         @map("owner_email")
+  ownerName         String?         @map("owner_name")
+  businessPhone     String?         @map("business_phone")
+  businessAddress   String?         @map("business_address")
+  taxId             String?         @map("tax_id")
+  onboardingStatus  OnboardingStatus @default(PENDING) @map("onboarding_status")
+  onboardingSteps   Json?           @default("{}") @map("onboarding_steps")
+  verifiedAt        DateTime?       @map("verified_at")
+  verifiedBy        Int?            @map("verified_by")
+  suspendedAt       DateTime?       @map("suspended_at")
+  suspendedReason   String?         @map("suspended_reason")
+  
+  // Relations
   categories    Category[]
   contentBlocks ContentBlock[]
   customers     Customer[]          @relation("RestaurantCustomers")
@@ -538,6 +571,13 @@ model Restaurant {
   reservations  Reservation[]
   settings      RestaurantSettings?
   staff         RestaurantStaff[]
+  subscription  Subscription?
+  notes         RestaurantNote[]
+  supportTickets SupportTicket[]
+  dinerProfiles DinerRestaurantProfile[]
+  favorites     FavoriteRestaurant[]
+  reviews       Review[]
+  loyaltyPoints LoyaltyPoints[]
 
   @@index([slug])
   @@index([isActive])
@@ -816,4 +856,441 @@ enum StaffRole {
   STAFF
   MANAGER
   OWNER
+}
+
+// ===== PLATFORM MODELS =====
+
+// Platform administration
+model PlatformAdmin {
+  id                Int                 @id @default(autoincrement())
+  email             String              @unique
+  password          String
+  name              String
+  role              PlatformRole        @default(SUPPORT)
+  lastLoginAt       DateTime?           @map("last_login_at")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+  
+  // Relations
+  actions           PlatformAction[]
+  supportTickets    SupportTicket[]     @relation("AssignedTickets")
+  notes             RestaurantNote[]
+  
+  @@map("platform_admins")
+}
+
+model PlatformAction {
+  id            Int            @id @default(autoincrement())
+  adminId       Int            @map("admin_id")
+  action        String
+  entityType    String?        @map("entity_type") // 'restaurant', 'subscription', etc.
+  entityId      Int?           @map("entity_id")
+  metadata      Json?
+  ipAddress     String?        @map("ip_address")
+  userAgent     String?        @map("user_agent")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  
+  admin         PlatformAdmin  @relation(fields: [adminId], references: [id])
+  
+  @@index([adminId])
+  @@index([entityType, entityId])
+  @@map("platform_actions")
+}
+
+// Diner account (platform-owned, across all restaurants)
+model Diner {
+  id                    Int                     @id @default(autoincrement())
+  email                 String                  @unique
+  password              String
+  firstName             String?                 @map("first_name")
+  lastName              String?                 @map("last_name")
+  phone                 String?                 @db.VarChar(50)
+  phoneVerified         Boolean                 @default(false) @map("phone_verified")
+  emailVerified         Boolean                 @default(false) @map("email_verified")
+  profilePhoto          String?                 @map("profile_photo")
+  bio                   String?
+  
+  // Platform preferences
+  emailOptIn            Boolean                 @default(true) @map("email_opt_in")
+  smsOptIn              Boolean                 @default(false) @map("sms_opt_in")
+  marketingOptIn        Boolean                 @default(true) @map("marketing_opt_in")
+  
+  // Auth tokens
+  emailVerificationToken    String?             @map("email_verification_token")
+  emailVerificationExpires  DateTime?           @map("email_verification_expires")
+  passwordResetToken        String?             @map("password_reset_token")
+  passwordResetExpires      DateTime?           @map("password_reset_expires")
+  
+  // Status
+  isActive              Boolean                 @default(true) @map("is_active")
+  joinedAt              DateTime                @default(now()) @map("joined_at")
+  lastActiveAt          DateTime?               @map("last_active_at")
+  
+  // Relations
+  reservations          Reservation[]           @relation("DinerReservations")
+  reviews               Review[]
+  favorites             FavoriteRestaurant[]
+  restaurantProfiles    DinerRestaurantProfile[]
+  loyaltyPoints         LoyaltyPoints[]
+  notifications         DinerNotification[]
+  sessions              DinerSession[]
+  
+  @@index([email])
+  @@map("diners")
+}
+
+// Diner session management
+model DinerSession {
+  id          Int       @id @default(autoincrement())
+  dinerId     Int       @map("diner_id")
+  token       String    @unique @db.VarChar(255)
+  expiresAt   DateTime  @map("expires_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  
+  // Relations
+  diner       Diner     @relation(fields: [dinerId], references: [id], onDelete: Cascade)
+  
+  @@index([token])
+  @@map("diner_sessions")
+}
+
+// Restaurant-specific diner data
+model DinerRestaurantProfile {
+  dinerId               Int                     @map("diner_id")
+  restaurantId          Int                     @map("restaurant_id")
+  
+  // Restaurant's notes about this diner
+  internalNotes         String?                 @map("internal_notes")
+  tags                  String[]
+  vipStatus             Boolean                 @default(false) @map("vip_status")
+  spendingTier          SpendingTier?           @map("spending_tier")
+  
+  // Stats
+  totalReservations     Int                     @default(0) @map("total_reservations")
+  totalSpent            Decimal?                @map("total_spent") @db.Decimal(10, 2)
+  averagePartySize      Float?                  @map("average_party_size")
+  noShowCount           Int                     @default(0) @map("no_show_count")
+  cancellationCount     Int                     @default(0) @map("cancellation_count")
+  
+  // Preferences known by restaurant
+  seatingPreferences    String?                 @map("seating_preferences")
+  allergyNotes          String?                 @map("allergy_notes")
+  specialOccasions      Json?                   @map("special_occasions")
+  
+  firstVisit            DateTime                @default(now()) @map("first_visit")
+  lastVisit             DateTime?               @map("last_visit")
+  
+  diner                 Diner                   @relation(fields: [dinerId], references: [id])
+  restaurant            Restaurant              @relation(fields: [restaurantId], references: [id])
+  
+  @@id([dinerId, restaurantId])
+  @@map("diner_restaurant_profiles")
+}
+
+// Favorite restaurants
+model FavoriteRestaurant {
+  dinerId               Int                     @map("diner_id")
+  restaurantId          Int                     @map("restaurant_id")
+  addedAt               DateTime                @default(now()) @map("added_at")
+  
+  diner                 Diner                   @relation(fields: [dinerId], references: [id])
+  restaurant            Restaurant              @relation(fields: [restaurantId], references: [id])
+  
+  @@id([dinerId, restaurantId])
+  @@map("favorite_restaurants")
+}
+
+// Reviews (platform-owned)
+model Review {
+  id                    Int                     @id @default(autoincrement())
+  dinerId               Int                     @map("diner_id")
+  restaurantId          Int                     @map("restaurant_id")
+  reservationId         Int                     @unique @map("reservation_id")
+  
+  // Ratings
+  overallRating         Int                     @map("overall_rating") // 1-5
+  foodRating            Int?                    @map("food_rating")
+  serviceRating         Int?                    @map("service_rating")
+  ambianceRating        Int?                    @map("ambiance_rating")
+  
+  // Content
+  reviewText            String?                 @map("review_text")
+  wouldRecommend        Boolean?                @map("would_recommend")
+  
+  // Platform moderation
+  status                ReviewStatus            @default(PENDING)
+  moderatedAt           DateTime?               @map("moderated_at")
+  moderatedBy           Int?                    @map("moderated_by")
+  
+  createdAt             DateTime                @default(now()) @map("created_at")
+  updatedAt             DateTime                @updatedAt @map("updated_at")
+  
+  // Relations
+  diner                 Diner                   @relation(fields: [dinerId], references: [id])
+  restaurant            Restaurant              @relation(fields: [restaurantId], references: [id])
+  reservation           Reservation             @relation(fields: [reservationId], references: [id])
+  
+  @@index([restaurantId, status])
+  @@map("reviews")
+}
+
+// Platform-wide loyalty
+model LoyaltyPoints {
+  id                    Int                     @id @default(autoincrement())
+  dinerId               Int                     @map("diner_id")
+  restaurantId          Int?                    @map("restaurant_id") // null = platform points
+  
+  points                Int
+  reason                String
+  reservationId         Int?                    @map("reservation_id")
+  
+  earnedAt              DateTime                @default(now()) @map("earned_at")
+  expiresAt             DateTime?               @map("expires_at")
+  
+  diner                 Diner                   @relation(fields: [dinerId], references: [id])
+  restaurant            Restaurant?             @relation(fields: [restaurantId], references: [id])
+  
+  @@index([dinerId])
+  @@map("loyalty_points")
+}
+
+// Diner notifications
+model DinerNotification {
+  id                    Int                     @id @default(autoincrement())
+  dinerId               Int                     @map("diner_id")
+  type                  NotificationType
+  title                 String
+  message               String
+  metadata              Json?
+  isRead                Boolean                 @default(false) @map("is_read")
+  createdAt             DateTime                @default(now()) @map("created_at")
+  
+  diner                 Diner                   @relation(fields: [dinerId], references: [id])
+  
+  @@index([dinerId, isRead])
+  @@map("diner_notifications")
+}
+
+// Subscription management
+model Subscription {
+  id                 Int                 @id @default(autoincrement())
+  restaurantId       Int                 @unique @map("restaurant_id")
+  plan               SubscriptionPlan    @default(TRIAL)
+  status             SubscriptionStatus  @default(TRIAL)
+  stripeCustomerId   String?             @unique @map("stripe_customer_id")
+  stripeSubId        String?             @unique @map("stripe_sub_id")
+  currentPeriodStart DateTime            @default(now()) @map("current_period_start")
+  currentPeriodEnd   DateTime            @map("current_period_end")
+  cancelAt           DateTime?           @map("cancel_at")
+  canceledAt         DateTime?           @map("canceled_at")
+  trialEndsAt        DateTime?           @map("trial_ends_at")
+  seats              Int                 @default(5)
+  
+  // Billing
+  billingEmail       String?             @map("billing_email")
+  billingName        String?             @map("billing_name")
+  billingAddress     Json?               @map("billing_address")
+  paymentMethod      Json?               @map("payment_method")
+  
+  // Relations
+  restaurant         Restaurant          @relation(fields: [restaurantId], references: [id])
+  invoices           Invoice[]
+  usageRecords       UsageRecord[]
+  
+  @@map("subscriptions")
+}
+
+// Invoices
+model Invoice {
+  id                 Int                 @id @default(autoincrement())
+  subscriptionId     Int                 @map("subscription_id")
+  stripeInvoiceId    String?             @unique @map("stripe_invoice_id")
+  amount             Decimal             @db.Decimal(10, 2)
+  currency           String              @default("usd")
+  status             InvoiceStatus       @default(PENDING)
+  dueDate            DateTime            @map("due_date")
+  paidAt             DateTime?           @map("paid_at")
+  createdAt          DateTime            @default(now()) @map("created_at")
+  
+  subscription       Subscription        @relation(fields: [subscriptionId], references: [id])
+  
+  @@index([subscriptionId])
+  @@map("invoices")
+}
+
+// Usage tracking
+model UsageRecord {
+  id                 Int                 @id @default(autoincrement())
+  subscriptionId     Int                 @map("subscription_id")
+  metric             UsageMetric
+  quantity           Int
+  date               DateTime            @db.Date
+  createdAt          DateTime            @default(now()) @map("created_at")
+  
+  subscription       Subscription        @relation(fields: [subscriptionId], references: [id])
+  
+  @@unique([subscriptionId, metric, date])
+  @@map("usage_records")
+}
+
+// Restaurant notes by platform
+model RestaurantNote {
+  id            Int            @id @default(autoincrement())
+  restaurantId  Int            @map("restaurant_id")
+  adminId       Int            @map("admin_id")
+  note          String         @db.Text
+  isInternal    Boolean        @default(true) @map("is_internal")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  
+  restaurant    Restaurant     @relation(fields: [restaurantId], references: [id])
+  admin         PlatformAdmin  @relation(fields: [adminId], references: [id])
+  
+  @@index([restaurantId])
+  @@map("restaurant_notes")
+}
+
+// Support tickets
+model SupportTicket {
+  id            Int                @id @default(autoincrement())
+  restaurantId  Int                @map("restaurant_id")
+  subject       String
+  description   String             @db.Text
+  status        TicketStatus       @default(OPEN)
+  priority      TicketPriority     @default(MEDIUM)
+  assignedTo    Int?               @map("assigned_to")
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+  
+  restaurant    Restaurant         @relation(fields: [restaurantId], references: [id])
+  assignee      PlatformAdmin?     @relation("AssignedTickets", fields: [assignedTo], references: [id])
+  messages      TicketMessage[]
+  
+  @@index([restaurantId])
+  @@index([status])
+  @@map("support_tickets")
+}
+
+// Support ticket messages
+model TicketMessage {
+  id            Int                @id @default(autoincrement())
+  ticketId      Int                @map("ticket_id")
+  senderId      Int?               @map("sender_id") // null = system message
+  senderType    SenderType         @map("sender_type")
+  message       String             @db.Text
+  createdAt     DateTime           @default(now()) @map("created_at")
+  
+  ticket        SupportTicket      @relation(fields: [ticketId], references: [id])
+  
+  @@index([ticketId])
+  @@map("ticket_messages")
+}
+
+// Platform Enums
+enum PlatformRole {
+  SUPER_ADMIN
+  ADMIN
+  SUPPORT
+  BILLING
+}
+
+enum OnboardingStatus {
+  PENDING
+  EMAIL_VERIFIED
+  INFO_SUBMITTED
+  PAYMENT_ADDED
+  VERIFIED
+  ACTIVE
+  REJECTED
+}
+
+enum SubscriptionPlan {
+  TRIAL
+  STARTER      // $49/mo - 5 staff
+  PROFESSIONAL // $149/mo - 20 staff
+  ENTERPRISE   // Custom
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  SUSPENDED
+}
+
+enum ReservationSource {
+  PLATFORM_WEB        // TableFarm.com
+  PLATFORM_APP        // TableFarm mobile app
+  RESTAURANT_WIDGET   // Restaurant's website widget
+  RESTAURANT_STAFF    // Staff entered
+  PHONE               // Called in
+  WALK_IN             // Walk-in converted
+}
+
+enum ReservationOccasion {
+  BIRTHDAY
+  ANNIVERSARY
+  DATE_NIGHT
+  BUSINESS_MEAL
+  SPECIAL_CELEBRATION
+  OTHER
+}
+
+enum ReviewStatus {
+  PENDING
+  PUBLISHED
+  HIDDEN
+  REMOVED
+}
+
+enum SpendingTier {
+  BRONZE    // < $500/year
+  SILVER    // $500-2000/year
+  GOLD      // $2000-5000/year
+  PLATINUM  // > $5000/year
+}
+
+enum NotificationType {
+  RESERVATION_CONFIRMED
+  RESERVATION_REMINDER
+  RESERVATION_CANCELLED
+  REVIEW_REQUEST
+  MARKETING
+  SYSTEM
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  OVERDUE
+  FAILED
+  REFUNDED
+}
+
+enum UsageMetric {
+  RESERVATIONS
+  ACTIVE_STAFF
+  STORAGE_MB
+  API_CALLS
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_CUSTOMER
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum SenderType {
+  PLATFORM_ADMIN
+  RESTAURANT_USER
+  SYSTEM
 }

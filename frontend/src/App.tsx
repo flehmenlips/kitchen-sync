@@ -22,8 +22,13 @@ import PublicRoute from './components/common/PublicRoute';
 import CustomerProtectedRoute from './components/common/CustomerProtectedRoute';
 
 // Pages
+import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import RestaurantRegisterPage from './pages/RestaurantRegisterPage';
+import RestaurantWelcomePage from './pages/RestaurantWelcomePage';
+import VerifyEmailSentPage from './pages/VerifyEmailSentPage';
+import VerifyEmailPage from './pages/VerifyEmailPage';
 import DashboardPage from './pages/DashboardPage';
 import ProfilePage from './pages/ProfilePage';
 
@@ -87,6 +92,14 @@ import ReservationManagementPage from './pages/ReservationManagementPage';
 // Admin Dashboard
 import AdminDashboard from './pages/AdminDashboard';
 
+// Platform Admin Components
+import PlatformLogin from './platform-admin/pages/PlatformLogin';
+import PlatformDashboard from './platform-admin/pages/PlatformDashboard';
+import PlatformAdminLayout from './platform-admin/components/PlatformAdminLayout';
+import RestaurantList from './platform-admin/pages/RestaurantList';
+import RestaurantDetail from './platform-admin/pages/RestaurantDetail';
+import PlatformAnalytics from './platform-admin/pages/PlatformAnalytics';
+
 // Create a client
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -107,6 +120,9 @@ const App: React.FC = () => {
             <NotistackProvider maxSnack={3}>
               <SnackbarProvider>
                 <Routes>
+                  {/* Landing page */}
+                  <Route path="/" element={<LandingPage />} />
+                  
                   {/* Public routes */}
                   <Route path="/login" element={
                     <PublicRoute>
@@ -115,9 +131,22 @@ const App: React.FC = () => {
                   } />
                   <Route path="/register" element={
                     <PublicRoute>
-                      <RegisterPage />
+                      <RestaurantRegisterPage />
                     </PublicRoute>
                   } />
+                  <Route path="/welcome" element={<RestaurantWelcomePage />} />
+                  <Route path="/verify-email-sent" element={<VerifyEmailSentPage />} />
+                  <Route path="/verify-email" element={<VerifyEmailPage />} />
+
+                  {/* Platform Admin Routes - Separate from main app */}
+                  <Route path="/platform-admin/login" element={<PlatformLogin />} />
+                  <Route path="/platform-admin" element={<PlatformAdminLayout />}>
+                    <Route path="dashboard" element={<PlatformDashboard />} />
+                    <Route path="restaurants" element={<RestaurantList />} />
+                    <Route path="restaurants/:id" element={<RestaurantDetail />} />
+                    <Route path="analytics" element={<PlatformAnalytics />} />
+                    <Route index element={<Navigate to="/platform-admin/dashboard" replace />} />
+                  </Route>
 
                   {/* Customer Portal Routes - Public Access */}
                   <Route path="/customer" element={
@@ -147,7 +176,7 @@ const App: React.FC = () => {
                   <Route element={<ProtectedRoute />}>
                     <Route element={<MainLayout />}>
                       {/* Dashboard */}
-                      <Route index element={<DashboardPage />} />
+                      <Route path="/dashboard" element={<DashboardPage />} />
 
                       {/* CookBook Module Routes */}
                       {/* Recipes */}

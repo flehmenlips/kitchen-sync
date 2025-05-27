@@ -21,6 +21,8 @@ import contentBlockRoutes from './routes/contentBlockRoutes';
 import customerAuthRoutes from './routes/customerAuthRoutes'; // Import customer auth routes
 import customerReservationRoutes from './routes/customerReservationRoutes'; // Import customer reservation routes
 import adminRoutes from './routes/adminRoutes'; // Import admin routes
+import platformRoutes from './routes/platformRoutes'; // Import platform routes
+import restaurantOnboardingRoutes from './routes/restaurantOnboardingRoutes'; // Import restaurant onboarding routes
 import { Request, Response, NextFunction } from 'express';
 
 // Load environment variables
@@ -59,6 +61,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 app.use('/api/users', userRoutes); // Mount user routes
 app.use('/api/auth/customer', customerAuthRoutes); // Mount customer auth routes
 app.use('/api/customer/reservations', customerReservationRoutes); // Mount customer reservation routes
+app.use('/api/restaurant-onboarding', restaurantOnboardingRoutes); // Mount restaurant onboarding routes
 app.use('/api/recipes', recipeRoutes);
 app.use('/api/units', unitRoutes); // Mount unit routes
 app.use('/api/ingredients', ingredientRoutes); // Mount ingredient routes
@@ -75,6 +78,7 @@ app.use('/api/orders', orderRoutes); // Mount order routes
 app.use('/api/restaurant', restaurantSettingsRoutes); // Mount restaurant settings routes
 app.use('/api/content-blocks', contentBlockRoutes); // Mount content block routes
 app.use('/api/admin', adminRoutes); // Mount admin routes
+app.use('/api/platform', platformRoutes); // Mount platform routes
 
 // Basic route for testing
 app.get('/', (req, res) => {

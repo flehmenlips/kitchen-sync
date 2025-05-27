@@ -14,7 +14,7 @@ interface PublicRouteProps {
  */
 const PublicRoute: React.FC<PublicRouteProps> = ({ 
   children, 
-  redirectTo = '/' 
+  redirectTo = '/dashboard' 
 }) => {
   const { user } = useAuth();
 
