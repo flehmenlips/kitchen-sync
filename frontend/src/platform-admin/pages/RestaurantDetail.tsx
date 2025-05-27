@@ -221,7 +221,6 @@ const RestaurantDetail: React.FC = () => {
         >
           Refresh
         </Button>
-        {/* Edit functionality not implemented yet
         <Button
           variant="contained"
           startIcon={<Edit />}
@@ -229,7 +228,6 @@ const RestaurantDetail: React.FC = () => {
         >
           Edit
         </Button>
-        */}
       </Box>
 
       {/* Tabs */}

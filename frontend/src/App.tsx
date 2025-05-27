@@ -99,6 +99,7 @@ import PlatformDashboard from './platform-admin/pages/PlatformDashboard';
 import PlatformAdminLayout from './platform-admin/components/PlatformAdminLayout';
 import RestaurantList from './platform-admin/pages/RestaurantList';
 import RestaurantDetail from './platform-admin/pages/RestaurantDetail';
+import RestaurantEdit from './platform-admin/pages/RestaurantEdit';
 import PlatformAnalytics from './platform-admin/pages/PlatformAnalytics';
 import { SubscriptionsPage } from './platform-admin/pages/SubscriptionsPage';
 import { SubscriptionAnalytics } from './platform-admin/pages/SubscriptionAnalytics';
@@ -148,6 +149,7 @@ const App: React.FC = () => {
                     <Route path="dashboard" element={<PlatformDashboard />} />
                     <Route path="restaurants" element={<RestaurantList />} />
                     <Route path="restaurants/:id" element={<RestaurantDetail />} />
+                    <Route path="restaurants/:id/edit" element={<RestaurantEdit />} />
                     <Route path="analytics" element={<PlatformAnalytics />} />
                     <Route path="subscriptions" element={<SubscriptionsPage />} />
                     <Route path="subscriptions/analytics" element={<SubscriptionAnalytics />} />
