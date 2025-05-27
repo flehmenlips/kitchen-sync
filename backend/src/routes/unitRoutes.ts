@@ -7,17 +7,23 @@ import {
     deleteUnit
 } from '../controllers/unitController'; // Using relative path
 import { protect } from '../middleware/authMiddleware';
+import { setRestaurantContext, requireRestaurantContext } from '../middleware/restaurantContext';
 
 const router = express.Router();
 
+// Apply auth and restaurant context middleware to all routes
+router.use(protect);
+router.use(setRestaurantContext);
+router.use(requireRestaurantContext);
+
 // Define routes
 router.route('/')
-    .get(protect, getUnits)
-    .post(protect, createUnit);
+    .get(getUnits)
+    .post(createUnit);
 
 router.route('/:id')
-    .get(protect, getUnitById)
-    .put(protect, updateUnit)
-    .delete(protect, deleteUnit);
+    .get(getUnitById)
+    .put(updateUnit)
+    .delete(deleteUnit);
 
 export default router; 

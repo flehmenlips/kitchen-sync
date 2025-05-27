@@ -32,11 +32,14 @@ model IngredientCategory {
   createdAt   DateTime     @default(now()) @map("created_at")
   updatedAt   DateTime     @updatedAt @map("updated_at")
   userId      Int          @map("user_id")
+  restaurantId Int         @map("restaurant_id")
   author      User         @relation("UserIngredientCategories", fields: [userId], references: [id], onDelete: Cascade)
+  restaurant  Restaurant   @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   ingredients Ingredient[]
 
   @@unique([name, userId])
   @@index([userId])
+  @@index([restaurantId])
   @@map("ingredient_categories")
 }
 
@@ -48,13 +51,16 @@ model UnitOfMeasure {
   createdAt         DateTime       @default(now()) @map("created_at")
   updatedAt         DateTime       @updatedAt @map("updated_at")
   userId            Int            @map("user_id")
+  restaurantId      Int            @map("restaurant_id")
   recipeIngredients UnitQuantity[] @relation("RecipeIngredientUnit")
   recipesYield      Recipe[]       @relation("RecipeYieldUnit")
   author            User           @relation("UserUnits", fields: [userId], references: [id], onDelete: Cascade)
+  restaurant        Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 
   @@unique([name, userId])
   @@unique([abbreviation, userId])
   @@index([userId])
+  @@index([restaurantId])
   @@map("units_of_measure")
 }
 
@@ -66,13 +72,16 @@ model Ingredient {
   updatedAt            DateTime            @updatedAt @map("updated_at")
   ingredientCategoryId Int?                @map("ingredient_category_id")
   userId               Int                 @map("user_id")
+  restaurantId         Int                 @map("restaurant_id")
   ingredientCategory   IngredientCategory? @relation(fields: [ingredientCategoryId], references: [id])
   author               User                @relation("UserIngredients", fields: [userId], references: [id], onDelete: Cascade)
   recipeIngredients    UnitQuantity[]      @relation("RecipeIngredientBase")
+  restaurant           Restaurant          @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 
   @@unique([name, userId])
   @@index([ingredientCategoryId])
   @@index([userId])
+  @@index([restaurantId])
   @@map("ingredients")
 }
 
@@ -90,6 +99,7 @@ model Recipe {
   updatedAt         DateTime       @updatedAt @map("updated_at")
   categoryId        Int?           @map("category_id")
   userId            Int            @map("user_id")
+  restaurantId      Int            @map("restaurant_id")
   menuDescription   String?        @map("menu_description")
   menuTitle         String?        @map("menu_title") @db.VarChar(255)
   photoPublicId     String?        @map("photo_public_id")
@@ -101,9 +111,11 @@ model Recipe {
   category          Category?      @relation(fields: [categoryId], references: [id])
   author            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   yieldUnit         UnitOfMeasure? @relation("RecipeYieldUnit", fields: [yieldUnitId], references: [id])
+  restaurant        Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 
   @@index([categoryId])
   @@index([userId])
+  @@index([restaurantId])
   @@map("recipes")
 }
 
@@ -135,9 +147,11 @@ model PrepColumn {
   order     Int        @default(0)
   color     String     @default("#1976d2") @db.VarChar(7)
   userId    Int        @map("user_id")
+  restaurantId Int     @map("restaurant_id")
   createdAt DateTime   @default(now()) @map("created_at")
   updatedAt DateTime   @updatedAt @map("updated_at")
   user      User       @relation("UserPrepColumns", fields: [userId], references: [id], onDelete: Cascade)
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   tasks     PrepTask[]
 
   @@unique([name, userId])
@@ -300,6 +314,7 @@ model PrepTask {
   description String?
   recipeId    Int?       @map("recipe_id")
   userId      Int        @map("user_id")
+  restaurantId Int        @map("restaurant_id")
   order       Int        @default(0)
   createdAt   DateTime   @default(now()) @map("created_at")
   updatedAt   DateTime   @updatedAt @map("updated_at")
@@ -307,11 +322,13 @@ model PrepTask {
   column      PrepColumn @relation(fields: [columnId], references: [id])
   recipe      Recipe?    @relation("RecipePrepTasks", fields: [recipeId], references: [id])
   user        User       @relation("UserPrepTasks", fields: [userId], references: [id], onDelete: Cascade)
+  restaurant  Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([recipeId])
   @@index([columnId])
   @@index([order])
+  @@index([restaurantId])
   @@map("prep_tasks")
 }
 
@@ -347,10 +364,13 @@ model Menu {
   createdAt           DateTime      @default(now()) @map("created_at")
   updatedAt           DateTime      @updatedAt @map("updated_at")
   userId              Int           @map("user_id")
+  restaurantId        Int           @map("restaurant_id")
   sections            MenuSection[]
   author              User          @relation("UserMenus", fields: [userId], references: [id], onDelete: Cascade)
+  restaurant          Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([restaurantId])
   @@map("menus")
 }
 
@@ -578,6 +598,15 @@ model Restaurant {
   favorites     FavoriteRestaurant[]
   reviews       Review[]
   loyaltyPoints LoyaltyPoints[]
+  
+  // Multi-tenant data relations
+  recipes           Recipe[]
+  menus             Menu[]
+  ingredients       Ingredient[]
+  ingredientCategories IngredientCategory[]
+  units             UnitOfMeasure[]
+  prepColumns       PrepColumn[]
+  prepTasks         PrepTask[]
 
   @@index([slug])
   @@index([isActive])

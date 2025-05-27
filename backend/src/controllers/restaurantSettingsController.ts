@@ -27,12 +27,20 @@ export const getRestaurantSettings = async (req: Request, res: Response) => {
 
     // If no settings exist, create default ones
     if (!settings) {
+      // Get restaurant name for defaults
+      const restaurant = await prisma.restaurant.findUnique({
+        where: { id: restaurantId },
+        select: { name: true }
+      });
+      
+      const restaurantName = restaurant?.name || 'Your Restaurant';
+      
       settings = await prisma.restaurantSettings.create({
         data: {
           restaurantId,
-          websiteName: 'Seabreeze Kitchen',
+          websiteName: restaurantName,
           tagline: 'Fresh, local ingredients meet culinary excellence',
-          heroTitle: 'Welcome to Seabreeze Kitchen',
+          heroTitle: `Welcome to ${restaurantName}`,
           heroSubtitle: 'Experience culinary excellence',
           heroCTAText: 'Make a Reservation',
           heroCTALink: '/customer/reservations/new',
@@ -54,9 +62,12 @@ export const getRestaurantSettings = async (req: Request, res: Response) => {
       });
     }
 
-    // Get menus separately for the response
+    // Get menus separately for the response - filter by restaurant
     const menus = await prisma.menu.findMany({
-      where: { isArchived: false },
+      where: { 
+        restaurantId,
+        isArchived: false 
+      },
       select: {
         id: true,
         name: true,
@@ -64,11 +75,17 @@ export const getRestaurantSettings = async (req: Request, res: Response) => {
       }
     });
 
+    // Get restaurant info
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { id: restaurantId },
+      select: { name: true, slug: true }
+    });
+
     res.json({
       ...settings,
       restaurant: {
-        name: settings.websiteName || 'Seabreeze Kitchen',
-        slug: 'seabreeze-kitchen',
+        name: settings.websiteName || restaurant?.name || 'Restaurant',
+        slug: restaurant?.slug || 'restaurant',
         description: settings.tagline || 'Fresh, local ingredients meet culinary excellence',
         menus
       }
@@ -99,9 +116,12 @@ export const updateRestaurantSettings = async (req: Request, res: Response) => {
       data: updateData
     });
 
-    // Get menus separately for the response
+    // Get menus separately for the response - filter by restaurant
     const menus = await prisma.menu.findMany({
-      where: { isArchived: false },
+      where: { 
+        restaurantId,
+        isArchived: false 
+      },
       select: {
         id: true,
         name: true,
@@ -109,11 +129,17 @@ export const updateRestaurantSettings = async (req: Request, res: Response) => {
       }
     });
 
+    // Get restaurant info
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { id: restaurantId },
+      select: { name: true, slug: true }
+    });
+
     res.json({
       ...settings,
       restaurant: {
-        name: settings.websiteName || 'Seabreeze Kitchen',
-        slug: 'seabreeze-kitchen',
+        name: settings.websiteName || restaurant?.name || 'Restaurant',
+        slug: restaurant?.slug || 'restaurant',
         description: settings.tagline || 'Fresh, local ingredients meet culinary excellence',
         menus
       }
@@ -208,7 +234,22 @@ export const uploadRestaurantImage = async (req: Request, res: Response): Promis
 // Public endpoint for customer portal
 export const getPublicRestaurantSettings = async (req: Request, res: Response): Promise<void> => {
   try {
-    const restaurantId = 1;
+    // Get restaurantId from params or query, default to 1 for backward compatibility
+    let restaurantId = 1;
+    
+    if (req.params.restaurantId) {
+      restaurantId = parseInt(req.params.restaurantId, 10);
+      if (isNaN(restaurantId)) {
+        res.status(400).json({ error: 'Invalid restaurant ID' });
+        return;
+      }
+    } else if (req.query.restaurantId) {
+      restaurantId = parseInt(req.query.restaurantId as string, 10);
+      if (isNaN(restaurantId)) {
+        res.status(400).json({ error: 'Invalid restaurant ID' });
+        return;
+      }
+    }
     
     const settings = await prisma.restaurantSettings.findUnique({
       where: { restaurantId },
@@ -252,11 +293,18 @@ export const getPublicRestaurantSettings = async (req: Request, res: Response): 
       return;
     }
 
+    // Get restaurant info
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { id: restaurantId },
+      select: { name: true, slug: true }
+    });
+
     // Add restaurant info
     const result = {
       ...settings,
       restaurant: {
-        name: settings.websiteName || 'Seabreeze Kitchen',
+        name: settings.websiteName || restaurant?.name || 'Restaurant',
+        slug: restaurant?.slug || 'restaurant',
         description: settings.tagline || 'Fresh, local ingredients meet culinary excellence'
       }
     };

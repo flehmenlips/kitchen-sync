@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../config/db';
 import { PrepTaskStatus } from '@prisma/client';
+import { getRestaurantFilter } from '../middleware/restaurantContext';
 
 // @desc    Get all prep tasks for the authenticated user
 // @route   GET /api/prep-tasks
@@ -10,10 +11,18 @@ export const getPrepTasks = async (req: Request, res: Response): Promise<void> =
         res.status(401).json({ message: 'Not authorized, user not found' });
         return;
     }
+    
+    if (!req.restaurantId) {
+        res.status(400).json({ message: 'Restaurant context required' });
+        return;
+    }
 
     try {
         const tasks = await prisma.prepTask.findMany({
-            where: { userId: req.user.id },
+            where: { 
+                userId: req.user.id,
+                restaurantId: req.restaurantId // Filter by current restaurant
+            },
             orderBy: [
                 { order: 'asc' },
                 { createdAt: 'desc' }
@@ -44,6 +53,11 @@ export const createPrepTask = async (req: Request, res: Response): Promise<void>
         res.status(401).json({ message: 'Not authorized, user not found' });
         return;
     }
+    
+    if (!req.restaurantId) {
+        res.status(400).json({ message: 'Restaurant context required' });
+        return;
+    }
 
     try {
         const { title, description, recipeId, columnId, order = 0 } = req.body;
@@ -65,6 +79,7 @@ export const createPrepTask = async (req: Request, res: Response): Promise<void>
                 columnId,
                 order,
                 userId: req.user.id,
+                restaurantId: req.restaurantId, // Use restaurant from context
                 recipeId: recipeId || null
             },
             include: {
@@ -94,6 +109,11 @@ export const updatePrepTask = async (req: Request, res: Response): Promise<void>
         res.status(401).json({ message: 'Not authorized, user not found' });
         return;
     }
+    
+    if (!req.restaurantId) {
+        res.status(400).json({ message: 'Restaurant context required' });
+        return;
+    }
 
     try {
         const { id } = req.params;
@@ -109,7 +129,7 @@ export const updatePrepTask = async (req: Request, res: Response): Promise<void>
             return;
         }
 
-        if (existingTask.userId !== req.user.id) {
+        if (existingTask.userId !== req.user.id || existingTask.restaurantId !== req.restaurantId) {
             res.status(403).json({ message: 'Not authorized to update this task' });
             return;
         }
@@ -150,6 +170,11 @@ export const deletePrepTask = async (req: Request, res: Response): Promise<void>
         res.status(401).json({ message: 'Not authorized, user not found' });
         return;
     }
+    
+    if (!req.restaurantId) {
+        res.status(400).json({ message: 'Restaurant context required' });
+        return;
+    }
 
     try {
         const { id } = req.params;
@@ -164,7 +189,7 @@ export const deletePrepTask = async (req: Request, res: Response): Promise<void>
             return;
         }
 
-        if (existingTask.userId !== req.user.id) {
+        if (existingTask.userId !== req.user.id || existingTask.restaurantId !== req.restaurantId) {
             res.status(403).json({ message: 'Not authorized to delete this task' });
             return;
         }
@@ -188,6 +213,11 @@ export const reorderPrepTasks = async (req: Request, res: Response): Promise<voi
         res.status(401).json({ message: 'Not authorized, user not found' });
         return;
     }
+    
+    if (!req.restaurantId) {
+        res.status(400).json({ message: 'Restaurant context required' });
+        return;
+    }
 
     try {
         const { tasks } = req.body;
@@ -197,12 +227,13 @@ export const reorderPrepTasks = async (req: Request, res: Response): Promise<voi
             return;
         }
 
-        // Verify all tasks exist and belong to the user
+        // Verify all tasks exist and belong to the user and restaurant
         const taskIds = tasks.map(t => t.id);
         const existingTasks = await prisma.prepTask.findMany({
             where: {
                 id: { in: taskIds },
-                userId: req.user.id
+                userId: req.user.id,
+                restaurantId: req.restaurantId
             }
         });
 
@@ -223,7 +254,10 @@ export const reorderPrepTasks = async (req: Request, res: Response): Promise<voi
 
         // Return the updated tasks
         const updatedTasks = await prisma.prepTask.findMany({
-            where: { userId: req.user.id },
+            where: { 
+                userId: req.user.id,
+                restaurantId: req.restaurantId
+            },
             orderBy: [
                 { order: 'asc' },
                 { createdAt: 'desc' }

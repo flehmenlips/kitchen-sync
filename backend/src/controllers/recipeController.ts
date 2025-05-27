@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import prisma from '../config/db';
 import { parseRecipeWithAI } from '../services/aiParserService';
 import cloudinaryService from '../services/cloudinaryService';
+import { getRestaurantFilter } from '../middleware/restaurantContext';
 
 // Create an asyncHandler function inline since we don't have the utility
 const asyncHandler = (fn: Function) => (req: Request, res: Response) => {
@@ -81,9 +82,18 @@ export const getRecipes = async (req: Request, res: Response): Promise<void> => 
      res.status(401).json({ message: 'Not authorized, user ID missing' });
      return;
   }
+  
+  if (!req.restaurantId) {
+    res.status(400).json({ message: 'Restaurant context required' });
+    return;
+  }
+  
   try {
     const recipes = await prisma.recipe.findMany({
-      where: { userId: req.user.id }, // Filter by logged-in user
+      where: { 
+        userId: req.user.id,
+        restaurantId: req.restaurantId // Filter by current restaurant
+      },
       include: { // Include category
         category: true,
         yieldUnit: true // Keep including yield unit too
@@ -108,6 +118,12 @@ export const getRecipeById = async (req: Request, res: Response): Promise<void> 
      res.status(401).json({ message: 'Not authorized, user ID missing' });
      return;
   }
+  
+  if (!req.restaurantId) {
+    res.status(400).json({ message: 'Restaurant context required' });
+    return;
+  }
+  
   try {
     const { id } = req.params;
     const recipeId = safeParseInt(id);
@@ -138,8 +154,9 @@ export const getRecipeById = async (req: Request, res: Response): Promise<void> 
       res.status(404).json({ message: 'Recipe not found' });
       return;
     }
-    // Ownership check
-    if (recipe.userId !== req.user.id) {
+    
+    // Check both user ownership and restaurant context
+    if (recipe.userId !== req.user.id || recipe.restaurantId !== req.restaurantId) {
         res.status(403).json({ message: 'Not authorized to view this recipe' });
         return;
     }
@@ -171,6 +188,11 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
         res.status(401).json({ message: 'Not authorized, user ID missing' });
         return;
     }
+    
+    if (!req.restaurantId) {
+        res.status(400).json({ message: 'Restaurant context required' });
+        return;
+    }
 
     try {
         const {
@@ -186,11 +208,12 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
             return;
         }
 
-        // Check for duplicate recipe name for this user
+        // Check for duplicate recipe name for this user in this restaurant
         const existingRecipe = await prisma.recipe.findFirst({
             where: {
                 name,
-                userId: req.user.id
+                userId: req.user.id,
+                restaurantId: req.restaurantId
             }
         });
 
@@ -228,6 +251,7 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
                     menuTitle,
                     menuDescription,
                     userId: req.user!.id,
+                    restaurantId: req.restaurantId!,
                 },
             });
 
@@ -292,6 +316,11 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
         res.status(401).json({ message: 'Not authorized, user ID missing' });
         return;
     }
+    
+    if (!req.restaurantId) {
+        res.status(400).json({ message: 'Restaurant context required' });
+        return;
+    }
 
     try {
         const { id } = req.params;
@@ -319,7 +348,7 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
             return;
         }
 
-        if (existingRecipe.userId !== req.user.id) {
+        if (existingRecipe.userId !== req.user.id || existingRecipe.restaurantId !== req.restaurantId) {
             res.status(403).json({ message: 'Not authorized to update this recipe' });
             return;
         }
@@ -330,6 +359,7 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
                 where: {
                     name,
                     userId: req.user.id,
+                    restaurantId: req.restaurantId,
                     id: { not: recipeId } // Exclude current recipe
                 }
             });
@@ -364,7 +394,7 @@ export const updateRecipe = async (req: Request, res: Response): Promise<void> =
                 throw new Error('P2025'); // Throw specific code/error Prisma uses
             }
             // Ownership check before update
-            if (existingRecipe.userId !== req.user!.id) {
+            if (existingRecipe.userId !== req.user!.id || existingRecipe.restaurantId !== req.restaurantId!) {
                  throw new Error('AUTH_ERROR'); // Custom error code for ownership
             }
 
@@ -488,6 +518,12 @@ export const deleteRecipe = async (req: Request, res: Response): Promise<void> =
      res.status(401).json({ message: 'Not authorized, user ID missing' });
      return;
   }
+  
+  if (!req.restaurantId) {
+     res.status(400).json({ message: 'Restaurant context required' });
+     return;
+  }
+  
   try {
     const { id } = req.params;
     const recipeId = safeParseInt(id);
@@ -502,7 +538,7 @@ export const deleteRecipe = async (req: Request, res: Response): Promise<void> =
          return;
     }
     // Ownership check before delete
-    if (existingRecipe.userId !== req.user!.id) {
+    if (existingRecipe.userId !== req.user!.id || existingRecipe.restaurantId !== req.restaurantId!) {
          res.status(403).json({ message: 'Not authorized to delete this recipe' });
          return;
     }

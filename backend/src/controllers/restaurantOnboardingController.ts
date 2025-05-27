@@ -148,7 +148,8 @@ export const registerRestaurant = async (req: Request, res: Response): Promise<v
           data: {
             name: prepColumns[i],
             order: i,
-            userId: user.id
+            userId: user.id,
+            restaurantId: restaurant.id
           }
         });
       }

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../config/db';
+import { getRestaurantFilter } from '../middleware/restaurantContext';
 
 // @desc    Get all categories for the authenticated user
 // @route   GET /api/categories
@@ -10,11 +11,20 @@ export const getCategories = async (req: Request, res: Response): Promise<void> 
         res.status(401).json({ message: 'Not authorized, user not found' });
         return;
     }
+    
+    if (!req.restaurantId) {
+        res.status(400).json({ message: 'Restaurant context required' });
+        return;
+    }
+    
     const userId = req.user.id;
 
     try {
         const categories = await prisma.category.findMany({
-            where: { userId: userId }, // Filter by user ID
+            where: { 
+                userId: userId,
+                restaurantId: req.restaurantId // Filter by current restaurant
+            },
             orderBy: { name: 'asc' } // Order alphabetically
         });
         res.status(200).json(categories);
@@ -33,6 +43,12 @@ export const createCategory = async (req: Request, res: Response): Promise<void>
         res.status(401).json({ message: 'Not authorized, user not found' });
         return;
     }
+    
+    if (!req.restaurantId) {
+        res.status(400).json({ message: 'Restaurant context required' });
+        return;
+    }
+    
     const userId = req.user.id;
 
     try {
@@ -41,12 +57,27 @@ export const createCategory = async (req: Request, res: Response): Promise<void>
             res.status(400).json({ message: 'Missing required field: name' });
             return;
         }
+        
+        // Check for duplicate in this restaurant
+        const existingCategory = await prisma.category.findFirst({
+            where: {
+                name,
+                userId: userId,
+                restaurantId: req.restaurantId
+            }
+        });
+        
+        if (existingCategory) {
+            res.status(409).json({ message: `Category with name '${name}' already exists in this restaurant.` });
+            return;
+        }
+        
         const newCategory = await prisma.category.create({
             data: {
                 name,
                 description: description || null,
-                userId: userId, // Associate with the logged-in user
-                restaurantId: 1, // Single restaurant MVP
+                userId: userId,
+                restaurantId: req.restaurantId, // Use restaurant from context
             },
         });
         res.status(201).json(newCategory);
@@ -69,6 +100,12 @@ export const updateCategory = async (req: Request, res: Response): Promise<void>
         res.status(401).json({ message: 'Not authorized, user not found' });
         return;
     }
+    
+    if (!req.restaurantId) {
+        res.status(400).json({ message: 'Restaurant context required' });
+        return;
+    }
+    
     const userId = req.user.id;
 
     try {
@@ -84,23 +121,26 @@ export const updateCategory = async (req: Request, res: Response): Promise<void>
             return;
         }
 
-        // First, check if the category exists and belongs to the user
+        // First, check if the category exists and belongs to the user and restaurant
         const existingCategory = await prisma.category.findUnique({
             where: {
                 id: categoryId,
-                userId: userId, // Check ownership
             },
         });
 
         if (!existingCategory) {
-            res.status(404).json({ message: 'Category not found or you do not have permission to update it.' });
+            res.status(404).json({ message: 'Category not found.' });
+            return;
+        }
+        
+        if (existingCategory.userId !== userId || existingCategory.restaurantId !== req.restaurantId) {
+            res.status(403).json({ message: 'Not authorized to update this category.' });
             return;
         }
 
         const updatedCategory = await prisma.category.update({
             where: {
                 id: categoryId,
-                // No need for userId here again as we checked ownership above
             },
             data: {
                 name,
@@ -131,6 +171,12 @@ export const deleteCategory = async (req: Request, res: Response): Promise<void>
         res.status(401).json({ message: 'Not authorized, user not found' });
         return;
     }
+    
+    if (!req.restaurantId) {
+        res.status(400).json({ message: 'Restaurant context required' });
+        return;
+    }
+    
     const userId = req.user.id;
 
     try {
@@ -143,16 +189,20 @@ export const deleteCategory = async (req: Request, res: Response): Promise<void>
          // Note: Because we used onDelete: SetNull, deleting a category will set
          // the categoryId to NULL for any recipes using it. It won't prevent deletion.
 
-         // First, check if the category exists and belongs to the user
+         // First, check if the category exists and belongs to the user and restaurant
         const existingCategory = await prisma.category.findUnique({
              where: {
                  id: categoryId,
-                 userId: userId, // Check ownership
              },
          });
 
         if (!existingCategory) {
-             res.status(404).json({ message: 'Category not found or you do not have permission to delete it.' });
+             res.status(404).json({ message: 'Category not found.' });
+             return;
+         }
+         
+         if (existingCategory.userId !== userId || existingCategory.restaurantId !== req.restaurantId) {
+             res.status(403).json({ message: 'Not authorized to delete this category.' });
              return;
          }
 
@@ -178,6 +228,12 @@ export const getCategoryById = async (req: Request, res: Response): Promise<void
         res.status(401).json({ message: 'Not authorized, user not found' });
         return;
     }
+    
+    if (!req.restaurantId) {
+        res.status(400).json({ message: 'Restaurant context required' });
+        return;
+    }
+    
     const userId = req.user.id;
 
     try {
@@ -190,13 +246,18 @@ export const getCategoryById = async (req: Request, res: Response): Promise<void
         const category = await prisma.category.findUnique({
             where: {
                 id: categoryId,
-                userId: userId // Check ownership
             }
         });
         if (!category) {
             res.status(404).json({ message: 'Category not found' });
             return;
         }
+        
+        if (category.userId !== userId || category.restaurantId !== req.restaurantId) {
+            res.status(403).json({ message: 'Not authorized to access this category' });
+            return;
+        }
+        
         res.status(200).json(category);
     } catch (error) {
         console.error(error);

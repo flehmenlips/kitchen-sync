@@ -7,16 +7,22 @@ import {
     deleteIngredientCategory
 } from '../controllers/ingredientCategoryController';
 import { protect } from '../middleware/authMiddleware';
+import { setRestaurantContext, requireRestaurantContext } from '../middleware/restaurantContext';
 
 const router = express.Router();
 
+// Apply auth and restaurant context middleware to all routes
+router.use(protect);
+router.use(setRestaurantContext);
+router.use(requireRestaurantContext);
+
 router.route('/')
-    .get(protect, getIngredientCategories)
-    .post(protect, createIngredientCategory);
+    .get(getIngredientCategories)
+    .post(createIngredientCategory);
 
 router.route('/:id')
-    // .get(protect, getIngredientCategoryById) // Optional: Protect if needed
-    .put(protect, updateIngredientCategory)
-    .delete(protect, deleteIngredientCategory);
+    .get(getIngredientCategoryById)
+    .put(updateIngredientCategory)
+    .delete(deleteIngredientCategory);
 
 export default router; 

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../config/db';
+import { getRestaurantFilter } from '../middleware/restaurantContext';
 
 // @desc    Get all prep columns for the authenticated user
 // @route   GET /api/prep-columns
@@ -9,10 +10,18 @@ export const getPrepColumns = async (req: Request, res: Response): Promise<void>
         res.status(401).json({ message: 'Not authorized, user not found' });
         return;
     }
+    
+    if (!req.restaurantId) {
+        res.status(400).json({ message: 'Restaurant context required' });
+        return;
+    }
 
     try {
         const columns = await prisma.prepColumn.findMany({
-            where: { userId: req.user.id },
+            where: { 
+                userId: req.user.id,
+                restaurantId: req.restaurantId // Filter by current restaurant
+            },
             orderBy: { order: 'asc' },
             include: {
                 tasks: {
@@ -35,6 +44,11 @@ export const createPrepColumn = async (req: Request, res: Response): Promise<voi
         res.status(401).json({ message: 'Not authorized, user not found' });
         return;
     }
+    
+    if (!req.restaurantId) {
+        res.status(400).json({ message: 'Restaurant context required' });
+        return;
+    }
 
     try {
         const { name, color } = req.body;
@@ -48,7 +62,8 @@ export const createPrepColumn = async (req: Request, res: Response): Promise<voi
         const existingColumn = await prisma.prepColumn.findFirst({
             where: {
                 name,
-                userId: req.user.id
+                userId: req.user.id,
+                restaurantId: req.restaurantId
             }
         });
 
@@ -59,7 +74,10 @@ export const createPrepColumn = async (req: Request, res: Response): Promise<voi
 
         // Get the highest order number and add 1
         const lastColumn = await prisma.prepColumn.findFirst({
-            where: { userId: req.user.id },
+            where: { 
+                userId: req.user.id,
+                restaurantId: req.restaurantId
+            },
             orderBy: { order: 'desc' }
         });
         const newOrder = (lastColumn?.order ?? -1) + 1;
@@ -69,7 +87,8 @@ export const createPrepColumn = async (req: Request, res: Response): Promise<voi
                 name,
                 color: color || '#1976d2', // Default to Material-UI primary blue
                 order: newOrder,
-                userId: req.user.id
+                userId: req.user.id,
+                restaurantId: req.restaurantId // Use restaurant from context
             }
         });
 
@@ -94,6 +113,11 @@ export const updatePrepColumn = async (req: Request, res: Response): Promise<voi
         res.status(401).json({ message: 'Not authorized, user not found' });
         return;
     }
+    
+    if (!req.restaurantId) {
+        res.status(400).json({ message: 'Restaurant context required' });
+        return;
+    }
 
     try {
         const { id } = req.params;
@@ -112,8 +136,8 @@ export const updatePrepColumn = async (req: Request, res: Response): Promise<voi
             return;
         }
 
-        if (existingColumn.userId !== req.user.id) {
-            console.log(`User ${req.user.id} not authorized to update column ${id} (owned by ${existingColumn.userId})`);
+        if (existingColumn.userId !== req.user.id || existingColumn.restaurantId !== req.restaurantId) {
+            console.log(`User ${req.user.id} not authorized to update column ${id}`);
             res.status(403).json({ message: 'Not authorized to update this column' });
             return;
         }
@@ -124,6 +148,7 @@ export const updatePrepColumn = async (req: Request, res: Response): Promise<voi
                 where: {
                     name,
                     userId: req.user.id,
+                    restaurantId: req.restaurantId,
                     id: { not: id }
                 }
             });
@@ -162,6 +187,11 @@ export const deletePrepColumn = async (req: Request, res: Response): Promise<voi
         res.status(401).json({ message: 'Not authorized, user not found' });
         return;
     }
+    
+    if (!req.restaurantId) {
+        res.status(400).json({ message: 'Restaurant context required' });
+        return;
+    }
 
     try {
         const { id } = req.params;
@@ -177,7 +207,7 @@ export const deletePrepColumn = async (req: Request, res: Response): Promise<voi
             return;
         }
 
-        if (existingColumn.userId !== req.user.id) {
+        if (existingColumn.userId !== req.user.id || existingColumn.restaurantId !== req.restaurantId) {
             res.status(403).json({ message: 'Not authorized to delete this column' });
             return;
         }
@@ -207,6 +237,11 @@ export const reorderPrepColumns = async (req: Request, res: Response): Promise<v
         res.status(401).json({ message: 'Not authorized, user not found' });
         return;
     }
+    
+    if (!req.restaurantId) {
+        res.status(400).json({ message: 'Restaurant context required' });
+        return;
+    }
 
     try {
         const { columnIds } = req.body;
@@ -220,7 +255,8 @@ export const reorderPrepColumns = async (req: Request, res: Response): Promise<v
         const existingColumns = await prisma.prepColumn.findMany({
             where: {
                 id: { in: columnIds },
-                userId: req.user.id
+                userId: req.user.id,
+                restaurantId: req.restaurantId
             }
         });
 
@@ -241,7 +277,10 @@ export const reorderPrepColumns = async (req: Request, res: Response): Promise<v
 
         // Return the updated columns
         const updatedColumns = await prisma.prepColumn.findMany({
-            where: { userId: req.user.id },
+            where: { 
+                userId: req.user.id,
+                restaurantId: req.restaurantId
+            },
             orderBy: { order: 'asc' },
             include: {
                 tasks: {

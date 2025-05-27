@@ -1,5 +1,6 @@
 import express from 'express';
 import { protect } from '../middleware/authMiddleware';
+import { setRestaurantContext, requireRestaurantContext } from '../middleware/restaurantContext';
 import {
     getPrepColumns,
     createPrepColumn,
@@ -20,7 +21,10 @@ router.use((req, res, next) => {
     next();
 });
 
+// Apply auth and restaurant context middleware to all routes
 router.use(protect);
+router.use(setRestaurantContext);
+router.use(requireRestaurantContext);
 
 router.route('/')
     .get(getPrepColumns)

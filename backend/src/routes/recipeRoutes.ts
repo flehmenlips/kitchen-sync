@@ -9,12 +9,15 @@ import {
   uploadRecipePhoto
 } from '../controllers/recipeController'; // Using relative path
 import { protect } from '../middleware/authMiddleware';
+import { setRestaurantContext, requireRestaurantContext } from '../middleware/restaurantContext';
 import upload from '../middleware/uploadMiddleware';
 
 const router = express.Router();
 
 // Apply auth middleware to all routes
 router.use(protect);
+router.use(setRestaurantContext);
+router.use(requireRestaurantContext);
 
 // Define routes
 router.route('/')

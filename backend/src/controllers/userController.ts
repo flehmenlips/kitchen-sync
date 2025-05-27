@@ -44,9 +44,10 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
         if (user) {
             // Set up default ingredients, units, and categories for the new user
             // Run this asynchronously so we don't delay the response
-            setupUserDefaults(user.id).catch(err => {
-                console.error(`Error setting up defaults for user ${user.id}:`, err);
-            });
+            // TODO: Call setupUserDefaults when user is assigned to a restaurant
+            // setupUserDefaults(user.id, restaurantId).catch(err => {
+            //     console.error(`Error setting up defaults for user ${user.id}:`, err);
+            // });
             
             const token = generateToken(user.id, user.role);
             res.status(201).json({

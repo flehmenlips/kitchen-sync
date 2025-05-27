@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../config/db'; // Using relative path
 // Import the type from the generated location
 import { UnitType } from '@prisma/client';
+import { getRestaurantFilter } from '../middleware/restaurantContext';
 
 // @desc    Get all units for the authenticated user
 // @route   GET /api/units
@@ -12,12 +13,18 @@ export const getUnits = async (req: Request, res: Response): Promise<void> => {
         res.status(401).json({ message: 'Not authorized, user not found' });
         return;
     }
+    
+    if (!req.restaurantId) {
+        res.status(400).json({ message: 'Restaurant context required' });
+        return;
+    }
 
     try {
         const userId = req.user.id;
         const units = await prisma.unitOfMeasure.findMany({
              where: {
                  userId: userId,
+                 restaurantId: req.restaurantId // Filter by current restaurant
              },
          });
         res.status(200).json(units);
@@ -36,6 +43,12 @@ export const createUnit = async (req: Request, res: Response): Promise<void> => 
         res.status(401).json({ message: 'Not authorized, user not found' });
         return;
     }
+    
+    if (!req.restaurantId) {
+        res.status(400).json({ message: 'Restaurant context required' });
+        return;
+    }
+    
     const userId = req.user.id; // Get userId from authenticated user
 
     try {
@@ -61,7 +74,8 @@ export const createUnit = async (req: Request, res: Response): Promise<void> => 
                 name,
                 abbreviation,
                 type: unitType,
-                userId: userId, // Associate with the logged-in user
+                userId: userId,
+                restaurantId: req.restaurantId, // Use restaurant from context
             },
         });
         res.status(201).json(newUnit);
@@ -85,6 +99,12 @@ export const getUnitById = async (req: Request, res: Response): Promise<void> =>
         res.status(401).json({ message: 'Not authorized, user not found' });
         return;
     }
+    
+    if (!req.restaurantId) {
+        res.status(400).json({ message: 'Restaurant context required' });
+        return;
+    }
+    
     const userId = req.user.id;
 
     try {
@@ -98,7 +118,6 @@ export const getUnitById = async (req: Request, res: Response): Promise<void> =>
         const unit = await prisma.unitOfMeasure.findUnique({
             where: {
                 id: unitId,
-                userId: userId, // Ensure the user owns this unit
             },
         });
 
@@ -106,6 +125,12 @@ export const getUnitById = async (req: Request, res: Response): Promise<void> =>
             res.status(404).json({ message: 'Unit not found' });
             return;
         }
+        
+        if (unit.userId !== userId || unit.restaurantId !== req.restaurantId) {
+            res.status(403).json({ message: 'Not authorized to access this unit' });
+            return;
+        }
+        
         res.status(200).json(unit);
     } catch (error) {
         console.error(error);
@@ -122,6 +147,12 @@ export const updateUnit = async (req: Request, res: Response): Promise<void> => 
         res.status(401).json({ message: 'Not authorized, user not found' });
         return;
     }
+    
+    if (!req.restaurantId) {
+        res.status(400).json({ message: 'Restaurant context required' });
+        return;
+    }
+    
     const userId = req.user.id;
 
     try {
@@ -149,19 +180,22 @@ export const updateUnit = async (req: Request, res: Response): Promise<void> => 
         const existingUnit = await prisma.unitOfMeasure.findUnique({
             where: {
                 id: unitId,
-                userId: userId, // Check ownership
             },
         });
 
         if (!existingUnit) {
-            res.status(404).json({ message: 'Unit not found or you do not have permission to update it.' });
+            res.status(404).json({ message: 'Unit not found.' });
+            return;
+        }
+        
+        if (existingUnit.userId !== userId || existingUnit.restaurantId !== req.restaurantId) {
+            res.status(403).json({ message: 'Not authorized to update this unit.' });
             return;
         }
 
         const updatedUnit = await prisma.unitOfMeasure.update({
             where: {
                 id: unitId,
-                // No need for userId here again as we checked ownership above
             },
             data: {
                 name,
@@ -193,6 +227,12 @@ export const deleteUnit = async (req: Request, res: Response): Promise<void> => 
         res.status(401).json({ message: 'Not authorized, user not found' });
         return;
     }
+    
+    if (!req.restaurantId) {
+        res.status(400).json({ message: 'Restaurant context required' });
+        return;
+    }
+    
     const userId = req.user.id;
 
     try {
@@ -207,19 +247,22 @@ export const deleteUnit = async (req: Request, res: Response): Promise<void> => 
         const existingUnit = await prisma.unitOfMeasure.findUnique({
              where: {
                  id: unitId,
-                 userId: userId, // Check ownership
              },
          });
 
         if (!existingUnit) {
-             res.status(404).json({ message: 'Unit not found or you do not have permission to delete it.' });
+             res.status(404).json({ message: 'Unit not found.' });
+            return;
+        }
+        
+        if (existingUnit.userId !== userId || existingUnit.restaurantId !== req.restaurantId) {
+            res.status(403).json({ message: 'Not authorized to delete this unit.' });
             return;
         }
 
         await prisma.unitOfMeasure.delete({
             where: {
                 id: unitId,
-                 // No need for userId here again as we checked ownership above
             },
         });
 

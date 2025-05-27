@@ -124,8 +124,19 @@ export const getReservationById = async (req: Request, res: Response): Promise<v
             return;
         }
 
-        // Admin/staff can view any reservation
-        // Remove user check since staff should see all reservations
+        // Check if user has access to the restaurant
+        const hasAccess = await prisma.restaurantStaff.findFirst({
+            where: {
+                userId: req.user.id,
+                restaurantId: reservation.restaurantId,
+                isActive: true
+            }
+        });
+
+        if (!hasAccess) {
+            res.status(403).json({ message: 'Not authorized to view this reservation' });
+            return;
+        }
 
         res.status(200).json(reservation);
     } catch (error) {
@@ -239,7 +250,7 @@ export const updateReservation = async (req: Request, res: Response): Promise<vo
             return;
         }
 
-        // Check if reservation exists and belongs to user
+        // Check if reservation exists
         const existingReservation = await prisma.reservation.findUnique({
             where: { id: reservationId }
         });
@@ -249,7 +260,19 @@ export const updateReservation = async (req: Request, res: Response): Promise<vo
             return;
         }
 
-        // Admin/staff can update any reservation
+        // Check if user has access to the restaurant
+        const hasAccess = await prisma.restaurantStaff.findFirst({
+            where: {
+                userId: req.user.id,
+                restaurantId: existingReservation.restaurantId,
+                isActive: true
+            }
+        });
+
+        if (!hasAccess) {
+            res.status(403).json({ message: 'Not authorized to update this reservation' });
+            return;
+        }
 
         const {
             customerName,
@@ -308,7 +331,7 @@ export const deleteReservation = async (req: Request, res: Response): Promise<vo
             return;
         }
 
-        // Check if reservation exists and belongs to user
+        // Check if reservation exists
         const existingReservation = await prisma.reservation.findUnique({
             where: { id: reservationId }
         });
@@ -318,7 +341,19 @@ export const deleteReservation = async (req: Request, res: Response): Promise<vo
             return;
         }
 
-        // Admin/staff can delete any reservation
+        // Check if user has access to the restaurant
+        const hasAccess = await prisma.restaurantStaff.findFirst({
+            where: {
+                userId: req.user.id,
+                restaurantId: existingReservation.restaurantId,
+                isActive: true
+            }
+        });
+
+        if (!hasAccess) {
+            res.status(403).json({ message: 'Not authorized to delete this reservation' });
+            return;
+        }
 
         await prisma.reservation.delete({
             where: { id: reservationId }

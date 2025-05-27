@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../config/db';
+import { getRestaurantFilter } from '../middleware/restaurantContext';
 
 // Controller functions mirroring CategoryController
 
@@ -9,11 +10,20 @@ export const getIngredientCategories = async (req: Request, res: Response): Prom
         res.status(401).json({ message: 'Not authorized, user not found' });
         return;
     }
+    
+    if (!req.restaurantId) {
+        res.status(400).json({ message: 'Restaurant context required' });
+        return;
+    }
+    
     const userId = req.user.id;
 
     try {
         const categories = await prisma.ingredientCategory.findMany({
-            where: { userId: userId }, // Filter by user ID
+            where: { 
+                userId: userId,
+                restaurantId: req.restaurantId // Filter by current restaurant
+            },
             orderBy: { name: 'asc' }
         });
         res.status(200).json(categories);
@@ -29,6 +39,12 @@ export const createIngredientCategory = async (req: Request, res: Response): Pro
         res.status(401).json({ message: 'Not authorized, user not found' });
         return;
     }
+    
+    if (!req.restaurantId) {
+        res.status(400).json({ message: 'Restaurant context required' });
+        return;
+    }
+    
     const userId = req.user.id;
 
     try {
@@ -41,7 +57,8 @@ export const createIngredientCategory = async (req: Request, res: Response): Pro
             data: {
                 name,
                 description: description || null,
-                userId: userId // Associate with the logged-in user
+                userId: userId,
+                restaurantId: req.restaurantId // Use restaurant from context
             },
         });
         res.status(201).json(newCategory);
@@ -61,6 +78,12 @@ export const updateIngredientCategory = async (req: Request, res: Response): Pro
         res.status(401).json({ message: 'Not authorized, user not found' });
         return;
     }
+    
+    if (!req.restaurantId) {
+        res.status(400).json({ message: 'Restaurant context required' });
+        return;
+    }
+    
     const userId = req.user.id;
 
    try {
@@ -80,19 +103,22 @@ export const updateIngredientCategory = async (req: Request, res: Response): Pro
         const existingCategory = await prisma.ingredientCategory.findUnique({
             where: {
                 id: categoryId,
-                userId: userId, // Check ownership
             },
         });
 
         if (!existingCategory) {
-            res.status(404).json({ message: 'Ingredient category not found or you do not have permission to update it.' });
+            res.status(404).json({ message: 'Ingredient category not found.' });
+            return;
+        }
+        
+        if (existingCategory.userId !== userId || existingCategory.restaurantId !== req.restaurantId) {
+            res.status(403).json({ message: 'Not authorized to update this ingredient category.' });
             return;
         }
 
         const updatedCategory = await prisma.ingredientCategory.update({
             where: {
                 id: categoryId,
-                // No need for userId here again as we checked ownership above
             },
             data: { name, description: description || null },
         });
@@ -117,6 +143,12 @@ export const deleteIngredientCategory = async (req: Request, res: Response): Pro
         res.status(401).json({ message: 'Not authorized, user not found' });
         return;
     }
+    
+    if (!req.restaurantId) {
+        res.status(400).json({ message: 'Restaurant context required' });
+        return;
+    }
+    
     const userId = req.user.id;
 
     try {
@@ -131,19 +163,22 @@ export const deleteIngredientCategory = async (req: Request, res: Response): Pro
         const existingCategory = await prisma.ingredientCategory.findUnique({
              where: {
                  id: categoryId,
-                 userId: userId, // Check ownership
              },
          });
 
         if (!existingCategory) {
-             res.status(404).json({ message: 'Ingredient category not found or you do not have permission to delete it.' });
+             res.status(404).json({ message: 'Ingredient category not found.' });
+             return;
+         }
+         
+         if (existingCategory.userId !== userId || existingCategory.restaurantId !== req.restaurantId) {
+             res.status(403).json({ message: 'Not authorized to delete this ingredient category.' });
              return;
          }
 
         await prisma.ingredientCategory.delete({
             where: {
                 id: categoryId,
-                // No need for userId here again as we checked ownership above
             }
         });
         res.status(200).json({ message: 'Ingredient category deleted successfully' });
@@ -163,6 +198,12 @@ export const getIngredientCategoryById = async (req: Request, res: Response): Pr
         res.status(401).json({ message: 'Not authorized, user not found' });
         return;
     }
+    
+    if (!req.restaurantId) {
+        res.status(400).json({ message: 'Restaurant context required' });
+        return;
+    }
+    
     const userId = req.user.id;
 
     try {
@@ -175,13 +216,18 @@ export const getIngredientCategoryById = async (req: Request, res: Response): Pr
         const category = await prisma.ingredientCategory.findUnique({
             where: {
                 id: categoryId,
-                userId: userId // Check ownership
             }
         });
         if (!category) {
             res.status(404).json({ message: 'Ingredient category not found' });
             return;
         }
+        
+        if (category.userId !== userId || category.restaurantId !== req.restaurantId) {
+            res.status(403).json({ message: 'Not authorized to access this ingredient category' });
+            return;
+        }
+        
         res.status(200).json(category);
     } catch (error) {
         console.error(error);

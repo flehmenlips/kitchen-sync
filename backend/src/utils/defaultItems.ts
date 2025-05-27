@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 
 // Common units with proper types
-export const defaultUnits: Omit<Prisma.UnitOfMeasureCreateInput, 'author'>[] = [
+export const defaultUnits: Omit<Prisma.UnitOfMeasureCreateInput, 'author' | 'restaurant'>[] = [
   { name: 'tablespoon', abbreviation: 'tbsp', type: 'VOLUME' },
   { name: 'teaspoon', abbreviation: 'tsp', type: 'VOLUME' },
   { name: 'cup', abbreviation: 'cup', type: 'VOLUME' },
@@ -29,7 +29,7 @@ export const defaultUnits: Omit<Prisma.UnitOfMeasureCreateInput, 'author'>[] = [
 ];
 
 // Common pantry ingredients
-export const defaultIngredients: Omit<Prisma.IngredientCreateInput, 'author'>[] = [
+export const defaultIngredients: Omit<Prisma.IngredientCreateInput, 'author' | 'restaurant'>[] = [
   // Baking ingredients
   { name: 'all-purpose flour', description: 'Standard wheat flour used for general baking' },
   { name: 'granulated sugar', description: 'Regular white sugar' },
@@ -87,7 +87,7 @@ export const defaultCategories: Omit<Prisma.CategoryCreateInput, 'author' | 'res
 ];
 
 // Define ingredient categories
-export const defaultIngredientCategories: Omit<Prisma.IngredientCategoryCreateInput, 'author'>[] = [
+export const defaultIngredientCategories: Omit<Prisma.IngredientCategoryCreateInput, 'author' | 'restaurant'>[] = [
   { name: 'Produce', description: 'Fresh fruits and vegetables' },
   { name: 'Meat', description: 'Beef, chicken, pork, etc.' },
   { name: 'Seafood', description: 'Fish, shellfish, etc.' },

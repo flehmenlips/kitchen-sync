@@ -12,13 +12,13 @@ export const setupRestaurantDefaults = async (restaurantId: number, userId: numb
     console.log(`Setting up default data for restaurant ${restaurantId}`);
     
     // 1. Create default units
-    const units = await createDefaultUnits(userId);
+    const units = await createDefaultUnits(userId, restaurantId);
     
     // 2. Create default ingredient categories
-    const ingredientCategories = await createDefaultIngredientCategories(userId);
+    const ingredientCategories = await createDefaultIngredientCategories(userId, restaurantId);
     
     // 3. Create default ingredients
-    const ingredients = await createDefaultIngredients(userId, ingredientCategories);
+    const ingredients = await createDefaultIngredients(userId, restaurantId, ingredientCategories);
     
     // 4. Create default recipe categories
     const recipeCategories = await createDefaultRecipeCategories(userId, restaurantId);
@@ -27,7 +27,7 @@ export const setupRestaurantDefaults = async (restaurantId: number, userId: numb
     const recipes = await createSampleRecipes(userId, restaurantId, recipeCategories, ingredients, units);
     
     // 6. Create sample menu
-    const menu = await createSampleMenu(userId, recipes);
+    const menu = await createSampleMenu(userId, restaurantId, recipes);
     
     // 7. Create sample reservations
     await createSampleReservations(restaurantId);
@@ -41,7 +41,7 @@ export const setupRestaurantDefaults = async (restaurantId: number, userId: numb
   }
 };
 
-async function createDefaultUnits(userId: number) {
+async function createDefaultUnits(userId: number, restaurantId: number) {
   const basicUnits = [
     { name: 'tablespoon', abbreviation: 'tbsp', type: UnitType.VOLUME },
     { name: 'teaspoon', abbreviation: 'tsp', type: UnitType.VOLUME },
@@ -62,7 +62,7 @@ async function createDefaultUnits(userId: number) {
   const units = await Promise.all(
     basicUnits.map(unit => 
       prisma.unitOfMeasure.create({
-        data: { ...unit, userId }
+        data: { ...unit, userId, restaurantId }
       })
     )
   );
@@ -70,7 +70,7 @@ async function createDefaultUnits(userId: number) {
   return units;
 }
 
-async function createDefaultIngredientCategories(userId: number) {
+async function createDefaultIngredientCategories(userId: number, restaurantId: number) {
   const categories = [
     'Proteins',
     'Dairy',
@@ -85,7 +85,7 @@ async function createDefaultIngredientCategories(userId: number) {
   const created = await Promise.all(
     categories.map(name =>
       prisma.ingredientCategory.create({
-        data: { name, userId }
+        data: { name, userId, restaurantId }
       })
     )
   );
@@ -93,7 +93,7 @@ async function createDefaultIngredientCategories(userId: number) {
   return created;
 }
 
-async function createDefaultIngredients(userId: number, categories: any[]) {
+async function createDefaultIngredients(userId: number, restaurantId: number, categories: any[]) {
   const ingredientsByCategory: Record<string, string[]> = {
     'Proteins': ['chicken breast', 'ground beef', 'salmon fillet', 'shrimp', 'bacon'],
     'Dairy': ['butter', 'milk', 'heavy cream', 'parmesan cheese', 'mozzarella cheese'],
@@ -114,7 +114,8 @@ async function createDefaultIngredients(userId: number, categories: any[]) {
         data: {
           name,
           ingredientCategoryId: category.id,
-          userId
+          userId,
+          restaurantId
         }
       });
       ingredients.push(ingredient);
@@ -170,6 +171,7 @@ async function createSampleRecipes(userId: number, restaurantId: number, categor
       ]),
       tags: ['salad', 'vegetarian'],
       userId,
+      restaurantId,
       categoryId: categories.find(c => c.name === 'Salads')?.id,
       recipeIngredients: {
         create: [
@@ -206,6 +208,7 @@ async function createSampleRecipes(userId: number, restaurantId: number, categor
       ]),
       tags: ['main', 'protein', 'gluten-free'],
       userId,
+      restaurantId,
       categoryId: categories.find(c => c.name === 'Main Courses')?.id,
       recipeIngredients: {
         create: [
@@ -248,6 +251,7 @@ async function createSampleRecipes(userId: number, restaurantId: number, categor
       ]),
       tags: ['dessert', 'chocolate'],
       userId,
+      restaurantId,
       categoryId: categories.find(c => c.name === 'Desserts')?.id,
       recipeIngredients: {
         create: [
@@ -275,13 +279,14 @@ async function createSampleRecipes(userId: number, restaurantId: number, categor
   return recipes;
 }
 
-async function createSampleMenu(userId: number, recipes: any[]) {
+async function createSampleMenu(userId: number, restaurantId: number, recipes: any[]) {
   const menu = await prisma.menu.create({
     data: {
       name: 'Main Menu',
       title: 'Our Signature Dishes',
       subtitle: 'Fresh, Local, Delicious',
       userId,
+      restaurantId,
       sections: {
         create: [
           {

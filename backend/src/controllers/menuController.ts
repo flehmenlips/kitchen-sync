@@ -3,6 +3,7 @@ import prisma from '../config/db';
 import { MulterRequest } from '../types';
 import cloudinaryService from '../services/cloudinaryService';
 import fs from 'fs';
+import { getRestaurantFilter } from '../middleware/restaurantContext';
 
 // Define types for menu items and sections to fix type errors
 type MenuItem = {
@@ -36,6 +37,11 @@ export const getMenus = async (req: Request, res: Response): Promise<void> => {
       res.status(401).json({ message: 'Not authorized, user ID missing' });
       return;
     }
+    
+    if (!req.restaurantId) {
+      res.status(400).json({ message: 'Restaurant context required' });
+      return;
+    }
 
     // Check if sections and items should be included
     const includeFull = req.query.include?.toString().includes('sections');
@@ -43,6 +49,7 @@ export const getMenus = async (req: Request, res: Response): Promise<void> => {
     const menus = await prisma.menu.findMany({
       where: {
         userId: req.user.id,
+        restaurantId: req.restaurantId,
         isArchived: false
       },
       orderBy: {
@@ -87,6 +94,11 @@ export const getMenuById = async (req: Request, res: Response): Promise<void> =>
       res.status(401).json({ message: 'Not authorized, user ID missing' });
       return;
     }
+    
+    if (!req.restaurantId) {
+      res.status(400).json({ message: 'Restaurant context required' });
+      return;
+    }
 
     const { id } = req.params;
     const menuId = parseInt(id);
@@ -124,7 +136,7 @@ export const getMenuById = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    if (menu.userId !== req.user.id) {
+    if (menu.userId !== req.user.id || menu.restaurantId !== req.restaurantId) {
       res.status(403).json({ message: 'Not authorized to access this menu' });
       return;
     }
@@ -145,6 +157,11 @@ export const createMenu = async (req: Request, res: Response): Promise<void> => 
   try {
     if (!req.user?.id) {
       res.status(401).json({ message: 'Not authorized, user ID missing' });
+      return;
+    }
+    
+    if (!req.restaurantId) {
+      res.status(400).json({ message: 'Restaurant context required' });
       return;
     }
 
@@ -189,6 +206,7 @@ export const createMenu = async (req: Request, res: Response): Promise<void> => 
         textColor: textColor || '#000000',
         accentColor: accentColor || '#333333',
         userId: req.user.id,
+        restaurantId: req.restaurantId,
         sections: {
           create: sections.map((section: any, index: number) => ({
             name: section.name,
@@ -607,7 +625,7 @@ export const duplicateMenu = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    if (existingMenu.userId !== req.user.id) {
+    if (existingMenu.userId !== req.user.id || existingMenu.restaurantId !== req.restaurantId) {
       res.status(403).json({ message: 'Not authorized to duplicate this menu' });
       return;
     }
@@ -631,6 +649,7 @@ export const duplicateMenu = async (req: Request, res: Response): Promise<void> 
         textColor: existingMenu.textColor,
         accentColor: existingMenu.accentColor,
         userId: req.user.id,
+        restaurantId: req.restaurantId!,
         sections: {
           create: existingMenu.sections.map(section => ({
             name: section.name,

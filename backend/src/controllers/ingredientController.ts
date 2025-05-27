@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../config/db'; // Using relative path
+import { getRestaurantFilter } from '../middleware/restaurantContext';
 
 // @desc    Get all ingredients for the authenticated user
 // @route   GET /api/ingredients
@@ -10,11 +11,20 @@ export const getIngredients = async (req: Request, res: Response): Promise<void>
         res.status(401).json({ message: 'Not authorized, user not found' });
         return;
     }
+    
+    if (!req.restaurantId) {
+        res.status(400).json({ message: 'Restaurant context required' });
+        return;
+    }
+    
     const userId = req.user.id;
 
     try {
         const ingredients = await prisma.ingredient.findMany({
-            where: { userId: userId }, // Filter by user ID
+            where: { 
+                userId: userId,
+                restaurantId: req.restaurantId // Filter by current restaurant
+            },
             include: { ingredientCategory: true }, // Include category
             orderBy: [ // Order by category, then name
                  { ingredientCategory: { name: 'asc' } },
@@ -37,6 +47,12 @@ export const createIngredient = async (req: Request, res: Response): Promise<voi
         res.status(401).json({ message: 'Not authorized, user not found' });
         return;
     }
+    
+    if (!req.restaurantId) {
+        res.status(400).json({ message: 'Restaurant context required' });
+        return;
+    }
+    
     const userId = req.user.id;
 
     try {
@@ -54,7 +70,8 @@ export const createIngredient = async (req: Request, res: Response): Promise<voi
                 name,
                 description: description || null,
                 ingredientCategoryId: categoryIdNum,
-                userId: userId, // Associate with the logged-in user
+                userId: userId,
+                restaurantId: req.restaurantId, // Use restaurant from context
             },
             include: { ingredientCategory: true }
         });
@@ -79,6 +96,12 @@ export const getIngredientById = async (req: Request, res: Response): Promise<vo
         res.status(401).json({ message: 'Not authorized, user not found' });
         return;
     }
+    
+    if (!req.restaurantId) {
+        res.status(400).json({ message: 'Restaurant context required' });
+        return;
+    }
+    
     const userId = req.user.id;
 
     try {
@@ -92,7 +115,6 @@ export const getIngredientById = async (req: Request, res: Response): Promise<vo
         const ingredient = await prisma.ingredient.findUnique({
             where: {
                 id: ingredientId,
-                userId: userId // Ensure the user owns this ingredient
             },
             include: { ingredientCategory: true }
         });
@@ -101,6 +123,12 @@ export const getIngredientById = async (req: Request, res: Response): Promise<vo
             res.status(404).json({ message: 'Ingredient not found' });
             return;
         }
+        
+        if (ingredient.userId !== userId || ingredient.restaurantId !== req.restaurantId) {
+            res.status(403).json({ message: 'Not authorized to access this ingredient' });
+            return;
+        }
+        
         res.status(200).json(ingredient);
     } catch (error) {
         console.error(error);
@@ -117,6 +145,12 @@ export const updateIngredient = async (req: Request, res: Response): Promise<voi
         res.status(401).json({ message: 'Not authorized, user not found' });
         return;
     }
+    
+    if (!req.restaurantId) {
+        res.status(400).json({ message: 'Restaurant context required' });
+        return;
+    }
+    
     const userId = req.user.id;
 
     try {
@@ -140,19 +174,22 @@ export const updateIngredient = async (req: Request, res: Response): Promise<voi
         const existingIngredient = await prisma.ingredient.findUnique({
             where: {
                 id: ingredientId,
-                userId: userId, // Check ownership
             },
         });
 
         if (!existingIngredient) {
-            res.status(404).json({ message: 'Ingredient not found or you do not have permission to update it.' });
+            res.status(404).json({ message: 'Ingredient not found.' });
+            return;
+        }
+        
+        if (existingIngredient.userId !== userId || existingIngredient.restaurantId !== req.restaurantId) {
+            res.status(403).json({ message: 'Not authorized to update this ingredient.' });
             return;
         }
 
         const updatedIngredient = await prisma.ingredient.update({
             where: {
                 id: ingredientId,
-                // No need for userId here again as we checked ownership above
             },
             data: {
                 name,
@@ -185,6 +222,12 @@ export const deleteIngredient = async (req: Request, res: Response): Promise<voi
         res.status(401).json({ message: 'Not authorized, user not found' });
         return;
     }
+    
+    if (!req.restaurantId) {
+        res.status(400).json({ message: 'Restaurant context required' });
+        return;
+    }
+    
     const userId = req.user.id;
 
     try {
@@ -199,19 +242,22 @@ export const deleteIngredient = async (req: Request, res: Response): Promise<voi
         const existingIngredient = await prisma.ingredient.findUnique({
              where: {
                  id: ingredientId,
-                 userId: userId, // Check ownership
              },
          });
 
         if (!existingIngredient) {
-             res.status(404).json({ message: 'Ingredient not found or you do not have permission to delete it.' });
+             res.status(404).json({ message: 'Ingredient not found.' });
+            return;
+        }
+        
+        if (existingIngredient.userId !== userId || existingIngredient.restaurantId !== req.restaurantId) {
+            res.status(403).json({ message: 'Not authorized to delete this ingredient.' });
             return;
         }
 
         await prisma.ingredient.delete({
             where: {
                 id: ingredientId,
-                // No need for userId here again as we checked ownership above
             },
         });
 
