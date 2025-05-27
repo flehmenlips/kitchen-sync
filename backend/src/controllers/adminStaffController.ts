@@ -2,10 +2,11 @@ import { Request, Response } from 'express';
 import { PrismaClient, UserRole } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { emailService } from '../services/emailService';
+import { getRestaurantFilter } from '../middleware/restaurantContext';
 
 const prisma = new PrismaClient();
 
-// @desc    Get all staff users
+// @desc    Get all staff users for the current restaurant
 // @route   GET /api/admin/staff
 // @access  Private (Admin/Manager)
 export const getStaffUsers = async (req: Request, res: Response): Promise<void> => {
@@ -23,8 +24,23 @@ export const getStaffUsers = async (req: Request, res: Response): Promise<void> 
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
 
-    // Build where clause - exclude customers
+    // Get restaurant filter - CRITICAL for multi-tenancy
+    const restaurantFilter = getRestaurantFilter(req);
+
+    // Get staff IDs for this restaurant
+    const restaurantStaff = await prisma.restaurantStaff.findMany({
+      where: {
+        ...restaurantFilter,
+        isActive: true
+      },
+      select: { userId: true }
+    });
+
+    const staffUserIds = restaurantStaff.map(rs => rs.userId);
+
+    // Build where clause - only users in this restaurant
     const where: any = {
+      id: { in: staffUserIds },
       isCustomer: false
     };
 

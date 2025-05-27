@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { protect } from '../middleware/authMiddleware';
+import { setRestaurantContext, requireRestaurantContext } from '../middleware/restaurantContext';
 import { UserRole } from '@prisma/client';
 import {
   getCustomers,
@@ -36,8 +37,10 @@ const requireRoles = (roles: UserRole[]) => {
   };
 };
 
-// All routes require authentication
+// All routes require authentication and restaurant context
 router.use(protect);
+router.use(setRestaurantContext);
+router.use(requireRestaurantContext);
 
 // Customer management routes - Admin and above can access
 router.get('/customers', requireRoles([UserRole.ADMIN, UserRole.SUPERADMIN]), getCustomers);

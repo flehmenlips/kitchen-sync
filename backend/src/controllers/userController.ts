@@ -160,5 +160,44 @@ export const getUserProfile = async (req: Request, res: Response): Promise<void>
     }
 };
 
+// @desc    Get user's restaurant assignments
+// @route   GET /api/user/restaurants
+// @access  Private
+export const getUserRestaurants = async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'Not authenticated' });
+      return;
+    }
+
+    const assignments = await prisma.restaurantStaff.findMany({
+      where: {
+        userId: req.user.id,
+        isActive: true,
+        restaurant: {
+          isActive: true
+        }
+      },
+      include: {
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            isActive: true
+          }
+        }
+      }
+    });
+
+    const restaurants = assignments.map(a => a.restaurant);
+
+    res.json({ restaurants });
+  } catch (error) {
+    console.error('Get user restaurants error:', error);
+    res.status(500).json({ error: 'Failed to fetch restaurants' });
+  }
+};
+
 // Potential future: Update user profile
 // export const updateUserProfile = async (req: Request, res: Response): Promise<void> => { ... }; 

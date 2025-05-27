@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useLocation, Link as RouterLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { UserProfile } from '../../types/user';
+import RestaurantSelector from '../common/RestaurantSelector';
 
 // MUI Components
 import {
@@ -330,6 +331,11 @@ const MainLayout: React.FC = () => {
                     <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
                         {getCurrentModule()?.name || 'Dashboard'}
                     </Typography>
+
+                    {/* Restaurant Selector */}
+                    <Box sx={{ mr: 2 }}>
+                        <RestaurantSelector />
+                    </Box>
 
                     {/* User Menu */}
                     {user && (

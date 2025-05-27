@@ -80,7 +80,7 @@ FROM (
     u.email
   FROM restaurant_staff rs
   JOIN users u ON u.id = rs.user_id
-  WHERE u.role = 'SUPERADMIN'
+  WHERE u.role = 'ADMIN' OR u.role = 'SUPERADMIN'
   ORDER BY rs.restaurant_id, rs.created_at ASC
 ) AS owner_data
 JOIN users u ON u.email = owner_data.email

@@ -56,13 +56,13 @@ export const registerRestaurant = async (req: Request, res: Response): Promise<v
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(data.password, salt);
 
-      // 2. Create the user as SuperAdmin (restaurant owner) - NOT verified yet
+      // 2. Create the user as ADMIN (restaurant owner) - NOT verified yet
       const user = await tx.user.create({
         data: {
           name: data.ownerName,
           email: data.email,
           password: hashedPassword,
-          role: 'SUPERADMIN' // Restaurant owner gets SUPERADMIN role
+          role: 'ADMIN' // Restaurant owner gets ADMIN role for their restaurant only
         }
       });
 

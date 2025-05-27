@@ -15,6 +15,7 @@ import { theme } from './theme'; // Import theme from a separate file
 // Layout and Context Providers
 import MainLayout from './components/layout/MainLayout';
 import { AuthProvider } from './context/AuthContext';
+import { RestaurantProvider } from './context/RestaurantContext';
 import { CustomerAuthProvider } from './context/CustomerAuthContext';
 import { SnackbarProvider } from './context/SnackbarContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -117,9 +118,10 @@ const App: React.FC = () => {
       <QueryClientProvider client={queryClient}>
         <Router>
           <AuthProvider>
-            <NotistackProvider maxSnack={3}>
-              <SnackbarProvider>
-                <Routes>
+            <RestaurantProvider>
+              <NotistackProvider maxSnack={3}>
+                <SnackbarProvider>
+                  <Routes>
                   {/* Landing page */}
                   <Route path="/" element={<LandingPage />} />
                   
@@ -241,6 +243,7 @@ const App: React.FC = () => {
                 </Routes>
               </SnackbarProvider>
             </NotistackProvider>
+            </RestaurantProvider>
           </AuthProvider>
         </Router>
       </QueryClientProvider>

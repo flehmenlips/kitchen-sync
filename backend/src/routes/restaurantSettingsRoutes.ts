@@ -6,6 +6,7 @@ import {
   getPublicRestaurantSettings
 } from '../controllers/restaurantSettingsController';
 import { protect } from '../middleware/authMiddleware';
+import { setRestaurantContext, requireRestaurantContext } from '../middleware/restaurantContext';
 const multer = require('multer');
 
 const router = express.Router();
@@ -27,10 +28,10 @@ const upload = multer({
   }
 });
 
-// Admin routes (protected)
-router.get('/settings', protect, getRestaurantSettings);
-router.put('/settings', protect, updateRestaurantSettings);
-router.post('/settings/image/:field', protect, upload.single('image'), uploadRestaurantImage);
+// Admin routes (protected) - require restaurant context
+router.get('/settings', protect, setRestaurantContext, requireRestaurantContext, getRestaurantSettings);
+router.put('/settings', protect, setRestaurantContext, requireRestaurantContext, updateRestaurantSettings);
+router.post('/settings/image/:field', protect, setRestaurantContext, requireRestaurantContext, upload.single('image'), uploadRestaurantImage);
 
 // Public routes
 router.get('/public/settings', getPublicRestaurantSettings);

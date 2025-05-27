@@ -24,6 +24,8 @@ import adminRoutes from './routes/adminRoutes'; // Import admin routes
 import platformRoutes from './routes/platformRoutes'; // Import platform routes
 import restaurantOnboardingRoutes from './routes/restaurantOnboardingRoutes'; // Import restaurant onboarding routes
 import { Request, Response, NextFunction } from 'express';
+import { protect } from './middleware/authMiddleware';
+import { setRestaurantContext } from './middleware/restaurantContext';
 
 // Load environment variables
 dotenv.config(); // Loads variables from .env file in the current directory (backend/)

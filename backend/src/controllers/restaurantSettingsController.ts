@@ -13,8 +13,13 @@ cloudinary.config({
 
 export const getRestaurantSettings = async (req: Request, res: Response) => {
   try {
-    // For MVP, we're using restaurant ID 1
-    const restaurantId = 1;
+    // Use restaurant context from middleware
+    const restaurantId = req.restaurantId;
+    
+    if (!restaurantId) {
+      res.status(400).json({ error: 'Restaurant context required' });
+      return;
+    }
     
     let settings = await prisma.restaurantSettings.findUnique({
       where: { restaurantId }
@@ -76,7 +81,12 @@ export const getRestaurantSettings = async (req: Request, res: Response) => {
 
 export const updateRestaurantSettings = async (req: Request, res: Response) => {
   try {
-    const restaurantId = 1;
+    const restaurantId = req.restaurantId;
+    
+    if (!restaurantId) {
+      res.status(400).json({ error: 'Restaurant context required' });
+      return;
+    }
     const updateData = req.body;
 
     // Remove restaurant relation from update data if present
@@ -117,7 +127,12 @@ export const updateRestaurantSettings = async (req: Request, res: Response) => {
 export const uploadRestaurantImage = async (req: Request, res: Response): Promise<void> => {
   try {
     const { field } = req.params; // hero, about, logo
-    const restaurantId = 1;
+    const restaurantId = req.restaurantId;
+    
+    if (!restaurantId) {
+      res.status(400).json({ error: 'Restaurant context required' });
+      return;
+    }
 
     if (!req.file) {
       res.status(400).json({ error: 'No file uploaded' });
