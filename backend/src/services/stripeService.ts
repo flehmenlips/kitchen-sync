@@ -186,13 +186,40 @@ export const stripeService = {
   // Webhook handling
   async constructWebhookEvent(payload: string | Buffer, signature: string) {
     checkStripeConfig();
-    try {
-      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
-      return stripe!.webhooks.constructEvent(payload, signature, webhookSecret);
-    } catch (error) {
-      console.error('Error constructing webhook event:', error);
-      throw error;
+    
+    // Try the primary webhook secret first
+    const primarySecret = process.env.STRIPE_WEBHOOK_SECRET;
+    const secondarySecret = process.env.STRIPE_WEBHOOK_SECRET_2;
+    
+    if (!primarySecret && !secondarySecret) {
+      throw new Error('No webhook secret configured');
     }
+    
+    // Try primary secret first
+    if (primarySecret) {
+      try {
+        return stripe!.webhooks.constructEvent(payload, signature, primarySecret);
+      } catch (error) {
+        // If primary fails and we have a secondary, try that
+        if (secondarySecret) {
+          console.log('Primary webhook secret failed, trying secondary...');
+          try {
+            return stripe!.webhooks.constructEvent(payload, signature, secondarySecret);
+          } catch (secondaryError) {
+            console.error('Both webhook secrets failed');
+            throw secondaryError;
+          }
+        }
+        throw error;
+      }
+    }
+    
+    // If only secondary secret exists, use it
+    if (secondarySecret) {
+      return stripe!.webhooks.constructEvent(payload, signature, secondarySecret);
+    }
+    
+    throw new Error('Webhook signature verification failed');
   },
 
   // Helper to get price ID for a plan
@@ -203,13 +230,31 @@ export const stripeService = {
   // Verify webhook signature
   verifyWebhookSignature(payload: string | Buffer, signature: string): boolean {
     checkStripeConfig();
-    try {
-      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
-      stripe!.webhooks.constructEvent(payload, signature, webhookSecret);
-      return true;
-    } catch (error) {
-      return false;
+    
+    const primarySecret = process.env.STRIPE_WEBHOOK_SECRET;
+    const secondarySecret = process.env.STRIPE_WEBHOOK_SECRET_2;
+    
+    // Try primary secret
+    if (primarySecret) {
+      try {
+        stripe!.webhooks.constructEvent(payload, signature, primarySecret);
+        return true;
+      } catch (error) {
+        // Continue to try secondary
+      }
     }
+    
+    // Try secondary secret
+    if (secondarySecret) {
+      try {
+        stripe!.webhooks.constructEvent(payload, signature, secondarySecret);
+        return true;
+      } catch (error) {
+        // Both failed
+      }
+    }
+    
+    return false;
   },
 
   // Get Stripe billing portal URL
