@@ -46,7 +46,7 @@ const planColors: Record<string, 'default' | 'primary' | 'secondary' | 'warning'
   TRIAL: 'default',
   STARTER: 'primary',
   PROFESSIONAL: 'secondary',
-  ENTERPRISE: 'warning',
+  HOME: 'warning',
 };
 
 const statusColors: Record<string, 'default' | 'success' | 'warning' | 'error' | 'info'> = {
@@ -61,7 +61,7 @@ const planPrices: Record<string, number> = {
   TRIAL: 0,
   STARTER: 49,
   PROFESSIONAL: 149,
-  ENTERPRISE: 299,
+  HOME: 299,
 };
 
 export const SubscriptionList: React.FC<SubscriptionListProps> = ({
@@ -258,7 +258,7 @@ export const SubscriptionList: React.FC<SubscriptionListProps> = ({
                   <MenuItem value="TRIAL">Trial</MenuItem>
                   <MenuItem value="STARTER">Starter</MenuItem>
                   <MenuItem value="PROFESSIONAL">Professional</MenuItem>
-                  <MenuItem value="ENTERPRISE">Enterprise</MenuItem>
+                  <MenuItem value="HOME">Home</MenuItem>
                 </Select>
               </FormControl>
             </Grid>

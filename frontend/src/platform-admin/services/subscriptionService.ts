@@ -27,7 +27,7 @@ export interface Subscription {
     ownerEmail: string;
     ownerName: string;
   };
-  plan: 'TRIAL' | 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE';
+  plan: 'TRIAL' | 'STARTER' | 'PROFESSIONAL' | 'HOME';
   status: 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'SUSPENDED';
   currentPeriodStart: string;
   currentPeriodEnd: string;

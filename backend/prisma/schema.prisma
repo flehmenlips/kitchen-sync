@@ -1306,7 +1306,7 @@ enum SubscriptionPlan {
   TRIAL
   STARTER      // $49/mo - 5 staff
   PROFESSIONAL // $149/mo - 20 staff
-  ENTERPRISE   // Custom
+  HOME         // Custom
 }
 
 enum SubscriptionStatus {

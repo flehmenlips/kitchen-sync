@@ -137,7 +137,7 @@ export const SubscriptionEditModal: React.FC<SubscriptionEditModalProps> = ({
               <MenuItem value="TRIAL">Trial</MenuItem>
               <MenuItem value="STARTER">Starter ($49/mo)</MenuItem>
               <MenuItem value="PROFESSIONAL">Professional ($149/mo)</MenuItem>
-              <MenuItem value="ENTERPRISE">Enterprise (Custom)</MenuItem>
+              <MenuItem value="HOME">Home (Custom)</MenuItem>
             </Select>
             <FormHelperText>
               Current: {subscription.plan}

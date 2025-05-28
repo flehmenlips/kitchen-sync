@@ -177,9 +177,16 @@ export const SubscriptionDetailModal: React.FC<SubscriptionDetailModalProps> = (
       TRIAL: 'default',
       STARTER: 'primary',
       PROFESSIONAL: 'secondary',
-      ENTERPRISE: 'warning',
+      HOME: 'warning',
     };
     return colors[plan] || 'default';
+  };
+
+  const planDetails = {
+    TRIAL: { label: 'Trial', color: 'default' },
+    STARTER: { label: 'Starter ($49/mo)', color: 'primary' },
+    PROFESSIONAL: { label: 'Professional ($149/mo)', color: 'secondary' },
+    HOME: { label: 'Home (Custom)', color: 'warning' },
   };
 
   if (!subscription && !loading) {

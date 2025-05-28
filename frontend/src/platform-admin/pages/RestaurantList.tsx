@@ -108,7 +108,7 @@ const RestaurantList: React.FC = () => {
       TRIAL: { color: 'info' },
       STARTER: { color: 'primary' },
       PROFESSIONAL: { color: 'secondary' },
-      ENTERPRISE: { color: 'success' },
+      HOME: { color: 'success' },
     };
 
     const config = planConfig[plan] || { color: 'default' };
@@ -170,7 +170,7 @@ const RestaurantList: React.FC = () => {
                   <MenuItem value="TRIAL">Trial</MenuItem>
                   <MenuItem value="STARTER">Starter</MenuItem>
                   <MenuItem value="PROFESSIONAL">Professional</MenuItem>
-                  <MenuItem value="ENTERPRISE">Enterprise</MenuItem>
+                  <MenuItem value="HOME">Home</MenuItem>
                 </Select>
               </FormControl>
             </Grid>

@@ -47,14 +47,13 @@ async function testStripeConnection() {
     
     // Check configured price IDs
     console.log('\n🔍 Checking configured price IDs:');
-    const configuredPrices = {
-      HOME: process.env.STRIPE_PRICE_HOME,
+    const priceIds = {
       STARTER: process.env.STRIPE_PRICE_STARTER,
       PROFESSIONAL: process.env.STRIPE_PRICE_PROFESSIONAL,
-      ENTERPRISE: process.env.STRIPE_PRICE_ENTERPRISE,
+      HOME: process.env.STRIPE_PRICE_HOME,
     };
     
-    for (const [plan, priceId] of Object.entries(configuredPrices)) {
+    for (const [plan, priceId] of Object.entries(priceIds)) {
       if (priceId) {
         try {
           const price = await stripe.prices.retrieve(priceId);

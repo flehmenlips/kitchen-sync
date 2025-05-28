@@ -12,7 +12,7 @@ const PRICE_IDS: Record<SubscriptionPlan, string | null> = {
   TRIAL: null, // No price for trial
   STARTER: process.env.STRIPE_PRICE_STARTER || 'price_starter',
   PROFESSIONAL: process.env.STRIPE_PRICE_PROFESSIONAL || 'price_professional',
-  ENTERPRISE: process.env.STRIPE_PRICE_ENTERPRISE || 'price_enterprise',
+  HOME: process.env.STRIPE_PRICE_HOME || 'price_home',
 };
 
 // Helper function to check if Stripe is configured

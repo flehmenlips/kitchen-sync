@@ -361,11 +361,12 @@ export const getSubscriptionAnalytics = async (req: PlatformAuthRequest, res: Re
       select: { plan: true, seats: true }
     });
 
-    const planPrices: Record<string, number> = {
+    // Calculate monthly price based on plan (for display)
+    const planPrices = {
       TRIAL: 0,
       STARTER: 49,
       PROFESSIONAL: 149,
-      ENTERPRISE: 299
+      HOME: 299
     };
 
     const mrr = activeSubscriptions.reduce((total, sub) => {

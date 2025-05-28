@@ -171,7 +171,7 @@ export const SubscriptionAnalytics: React.FC = () => {
     TRIAL: theme.palette.grey[400],
     STARTER: theme.palette.primary.main,
     PROFESSIONAL: theme.palette.secondary.main,
-    ENTERPRISE: theme.palette.warning.main,
+    HOME: theme.palette.warning.main,
   };
 
   const statusColors = {
@@ -189,6 +189,13 @@ export const SubscriptionAnalytics: React.FC = () => {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(value);
+  };
+
+  const planPrices = {
+    TRIAL: 0,
+    STARTER: 49,
+    PROFESSIONAL: 149,
+    HOME: 299,
   };
 
   if (loading) {
@@ -392,13 +399,7 @@ export const SubscriptionAnalytics: React.FC = () => {
                   </TableHead>
                   <TableBody>
                     {analytics?.byPlan.map((plan) => {
-                      const prices: Record<string, number> = {
-                        TRIAL: 0,
-                        STARTER: 49,
-                        PROFESSIONAL: 149,
-                        ENTERPRISE: 299,
-                      };
-                      const basePrice = prices[plan.plan] || 0;
+                      const basePrice = planPrices[plan.plan as keyof typeof planPrices] || 0;
                       const estimatedMRR = plan._count * basePrice;
                       const percentage = ((plan._count / analytics.totalActive) * 100).toFixed(1);
 
