@@ -102,27 +102,7 @@ export const createCheckoutSession = async (req: Request, res: Response): Promis
       return;
     }
 
-    // Check if Stripe is configured
-    if (!process.env.STRIPE_SECRET_KEY) {
-      res.status(503).json({ 
-        error: 'Payment processing is not configured yet',
-        message: 'Stripe integration is coming soon. For now, all features are available during the trial period.'
-      });
-      return;
-    }
-
     const { plan, successUrl, cancelUrl } = req.body;
-
-    // Check if price IDs are configured for the selected plan
-    const priceId = stripeService.getPriceId(plan);
-    if (!priceId || priceId.startsWith('price_')) {
-      // Default placeholder price IDs start with 'price_'
-      res.status(503).json({ 
-        error: 'Payment processing is not fully configured',
-        message: 'Stripe price IDs are not set up yet. Please contact support or continue with the trial.'
-      });
-      return;
-    }
 
     const restaurant = await prisma.restaurant.findUnique({
       where: { id: restaurantId },
@@ -133,6 +113,26 @@ export const createCheckoutSession = async (req: Request, res: Response): Promis
 
     if (!restaurant) {
       res.status(404).json({ error: 'Restaurant not found' });
+      return;
+    }
+
+    // Check if Stripe is configured only when we need to use it
+    if (!process.env.STRIPE_SECRET_KEY) {
+      res.status(503).json({ 
+        error: 'Payment processing is not configured yet',
+        message: 'Stripe integration is coming soon. For now, all features are available during the trial period.'
+      });
+      return;
+    }
+
+    // Check if price IDs are configured for the selected plan
+    const priceId = stripeService.getPriceId(plan);
+    if (!priceId || (priceId.startsWith('price_') && priceId.length < 30)) {
+      // Default placeholder price IDs start with 'price_' and are short
+      res.status(503).json({ 
+        error: 'Payment processing is not fully configured',
+        message: 'Stripe price IDs are not set up yet. Please contact support or continue with the trial.'
+      });
       return;
     }
 
@@ -273,5 +273,48 @@ export const cancelSubscription = async (req: Request, res: Response): Promise<v
   } catch (error) {
     console.error('Error canceling subscription:', error);
     res.status(500).json({ error: 'Failed to cancel subscription' });
+  }
+};
+
+// Debug endpoint to check Stripe configuration
+export const checkStripeConfig = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const config = {
+      hasSecretKey: !!process.env.STRIPE_SECRET_KEY,
+      secretKeyPrefix: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 7) : 'not set',
+      hasWebhookSecret: !!process.env.STRIPE_WEBHOOK_SECRET,
+      priceIds: {
+        HOME: process.env.STRIPE_PRICE_HOME || 'not set',
+        STARTER: process.env.STRIPE_PRICE_STARTER || 'not set',
+        PROFESSIONAL: process.env.STRIPE_PRICE_PROFESSIONAL || 'not set',
+        ENTERPRISE: process.env.STRIPE_PRICE_ENTERPRISE || 'not set'
+      },
+      isConfigured: false,
+      issues: [] as string[]
+    };
+
+    // Check for issues
+    if (!process.env.STRIPE_SECRET_KEY) {
+      config.issues.push('STRIPE_SECRET_KEY is not set');
+    }
+    
+    const priceIds = [
+      process.env.STRIPE_PRICE_HOME,
+      process.env.STRIPE_PRICE_STARTER,
+      process.env.STRIPE_PRICE_PROFESSIONAL,
+      process.env.STRIPE_PRICE_ENTERPRISE
+    ];
+    
+    const missingPrices = priceIds.filter(id => !id || id.startsWith('price_'));
+    if (missingPrices.length > 0) {
+      config.issues.push(`${missingPrices.length} price IDs are missing or using placeholders`);
+    }
+
+    config.isConfigured = config.hasSecretKey && missingPrices.length === 0;
+
+    res.json(config);
+  } catch (error) {
+    console.error('Error checking Stripe config:', error);
+    res.status(500).json({ error: 'Failed to check configuration' });
   }
 }; 

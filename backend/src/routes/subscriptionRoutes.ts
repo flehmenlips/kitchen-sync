@@ -4,7 +4,8 @@ import {
   getInvoices,
   createCheckoutSession,
   createBillingPortalSession,
-  cancelSubscription
+  cancelSubscription,
+  checkStripeConfig
 } from '../controllers/subscriptionController';
 import { protect } from '../middleware/authMiddleware';
 import { setRestaurantContext, requireRestaurantContext } from '../middleware/restaurantContext';
@@ -30,5 +31,8 @@ router.post('/billing-portal', createBillingPortalSession);
 
 // Cancel subscription
 router.post('/cancel', cancelSubscription);
+
+// Debug endpoint
+router.get('/debug-config', checkStripeConfig);
 
 export default router; 
