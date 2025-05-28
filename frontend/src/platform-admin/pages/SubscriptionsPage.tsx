@@ -4,6 +4,7 @@ import { SubscriptionList } from '../components/subscriptions/SubscriptionList';
 import { SubscriptionDetailModal } from '../components/subscriptions/SubscriptionDetailModal';
 import { SubscriptionEditModal } from '../components/subscriptions/SubscriptionEditModal';
 import { useSnackbar } from 'notistack';
+import { API_URL } from '../../config';
 
 export const SubscriptionsPage: React.FC = () => {
   const { enqueueSnackbar } = useSnackbar();
@@ -28,11 +29,13 @@ export const SubscriptionsPage: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`/api/platform/subscriptions/${subscription.id}/cancel`, {
+      const token = localStorage.getItem('platformToken');
+      const response = await fetch(`${API_URL}/platform/subscriptions/${subscription.id}/cancel`, {
         method: 'POST',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
         },
         body: JSON.stringify({
           immediately: false,
@@ -51,11 +54,13 @@ export const SubscriptionsPage: React.FC = () => {
   };
 
   const handleSaveSubscription = async (id: number, data: any) => {
-    const response = await fetch(`/api/platform/subscriptions/${id}`, {
+    const token = localStorage.getItem('platformToken');
+    const response = await fetch(`${API_URL}/platform/subscriptions/${id}`, {
       method: 'PUT',
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : '',
       },
       body: JSON.stringify(data),
     });

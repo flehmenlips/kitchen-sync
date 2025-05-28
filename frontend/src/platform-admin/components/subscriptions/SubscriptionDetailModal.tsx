@@ -38,6 +38,7 @@ import {
   CreditCard,
 } from '@mui/icons-material';
 import { format } from 'date-fns';
+import { API_URL } from '../../../config';
 
 interface SubscriptionDetail {
   id: number;
@@ -137,8 +138,12 @@ export const SubscriptionDetailModal: React.FC<SubscriptionDetailModalProps> = (
 
     try {
       setLoading(true);
-      const response = await fetch(`/api/platform/subscriptions/${subscriptionId}`, {
+      const token = localStorage.getItem('platformToken');
+      const response = await fetch(`${API_URL}/platform/subscriptions/${subscriptionId}`, {
         credentials: 'include',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
       });
 
       if (!response.ok) throw new Error('Failed to fetch subscription details');
