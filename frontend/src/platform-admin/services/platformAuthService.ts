@@ -9,7 +9,7 @@ const getApiUrl = () => {
   
   // If running in production (not localhost), use production API
   if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    return 'https://kitchen-sync-api.onrender.com/api';
+    return 'https://api.kitchensync.restaurant/api';
   }
   
   // Default to localhost for development
