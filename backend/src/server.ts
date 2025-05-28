@@ -38,7 +38,11 @@ const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:5174',
     'https://kitchen-sync-app.onrender.com',
-    'https://kitchensync.app' // Add your custom domain if you have one
+    'https://kitchensync.app', // Add your custom domain if you have one
+    // New domains
+    'https://kitchensync.restaurant',
+    'https://www.kitchensync.restaurant',
+    'https://api.kitchensync.restaurant'
 ];
 
 app.use(cors({ 

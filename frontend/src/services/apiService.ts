@@ -2,13 +2,12 @@ import axios from 'axios';
 import { RecipeFormData } from '../components/forms/RecipeForm';
 import { UserProfile, UserCredentials, AuthResponse } from '../types/user';
 import { Recipe as RecipeType, RecipeApiData } from '../types/recipe';
-import { Restaurant, Menu, ContentBlock, MenuSection, MenuItem } from '../types';
 import { API_URL } from '../config';
 
 // In production, use the production backend URL
 // In development, use the environment variable or localhost
 const API_BASE_URL = import.meta.env.PROD 
-  ? 'https://kitchen-sync-api.onrender.com/api'
+  ? 'https://api.kitchensync.restaurant/api'
   : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api');
 
 // Create an axios instance with auth interceptor
