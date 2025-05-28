@@ -3,7 +3,7 @@ import apiService from './apiService';
 export interface Subscription {
   id: number;
   restaurantId: number;
-  plan: 'TRIAL' | 'STARTER' | 'PROFESSIONAL' | 'HOME';
+  plan: 'TRIAL' | 'HOME' | 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE';
   status: 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'SUSPENDED';
   currentPeriodStart: string;
   currentPeriodEnd: string;
@@ -50,6 +50,18 @@ const PLAN_DETAILS: Record<string, PlanDetails> = {
       'No credit card required'
     ]
   },
+  HOME: {
+    plan: 'HOME',
+    name: 'Home',
+    price: 19,
+    features: [
+      'Perfect for home users',
+      'Up to 3 staff members',
+      'Recipe management',
+      'Basic prep lists',
+      'Email support'
+    ]
+  },
   STARTER: {
     plan: 'STARTER',
     name: 'Starter',
@@ -74,9 +86,9 @@ const PLAN_DETAILS: Record<string, PlanDetails> = {
       'Priority support'
     ]
   },
-  HOME: {
-    plan: 'HOME',
-    name: 'Home',
+  ENTERPRISE: {
+    plan: 'ENTERPRISE',
+    name: 'Enterprise',
     price: 299,
     features: [
       'Unlimited staff members',

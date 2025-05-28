@@ -361,12 +361,13 @@ export const getSubscriptionAnalytics = async (req: PlatformAuthRequest, res: Re
       select: { plan: true, seats: true }
     });
 
-    // Calculate monthly price based on plan (for display)
+    // Plan pricing (for MRR calculation and analytics)
     const planPrices = {
       TRIAL: 0,
+      HOME: 19,
       STARTER: 49,
       PROFESSIONAL: 149,
-      HOME: 299
+      ENTERPRISE: 299
     };
 
     const mrr = activeSubscriptions.reduce((total, sub) => {

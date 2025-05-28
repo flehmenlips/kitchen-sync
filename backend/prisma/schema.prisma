@@ -1304,9 +1304,10 @@ enum OnboardingStatus {
 
 enum SubscriptionPlan {
   TRIAL
+  HOME         // $19/mo - Home users
   STARTER      // $49/mo - 5 staff
   PROFESSIONAL // $149/mo - 20 staff
-  HOME         // Custom
+  ENTERPRISE   // $299/mo - Unlimited
 }
 
 enum SubscriptionStatus {

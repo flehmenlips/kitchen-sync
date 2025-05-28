@@ -102,6 +102,15 @@ export const createCheckoutSession = async (req: Request, res: Response): Promis
       return;
     }
 
+    // Check if Stripe is configured
+    if (!process.env.STRIPE_SECRET_KEY) {
+      res.status(503).json({ 
+        error: 'Payment processing is not configured yet',
+        message: 'Stripe integration is coming soon. For now, all features are available during the trial period.'
+      });
+      return;
+    }
+
     const { plan, successUrl, cancelUrl } = req.body;
 
     const restaurant = await prisma.restaurant.findUnique({

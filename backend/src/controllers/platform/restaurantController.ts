@@ -578,9 +578,10 @@ export const getPlatformAnalytics = async (req: PlatformAuthRequest, res: Respon
     // Calculate MRR based on plan
     const planPrices = {
       TRIAL: 0,
+      HOME: 19,
       STARTER: 49,
       PROFESSIONAL: 149,
-      HOME: 299 // placeholder
+      ENTERPRISE: 299
     };
 
     const activeSubscriptions = await prisma.subscription.findMany({

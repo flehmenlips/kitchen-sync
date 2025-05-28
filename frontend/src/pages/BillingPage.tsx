@@ -94,9 +94,14 @@ const BillingPage: React.FC = () => {
       setLoadingAction(true);
       const { url } = await billingService.createCheckoutSession(plan);
       window.location.href = url;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating checkout session:', error);
-      showSnackbar('Failed to start checkout process', 'error');
+      // Check if it's a Stripe configuration error
+      if (error.response?.status === 503) {
+        showSnackbar(error.response.data.message || 'Payment processing is not configured yet', 'info');
+      } else {
+        showSnackbar('Failed to start checkout process', 'error');
+      }
       setLoadingAction(false);
     }
   };
