@@ -25,6 +25,12 @@ import {
   cancelSubscription,
   getSubscriptionAnalytics,
 } from '../controllers/platform/subscriptionController';
+import {
+  createCheckoutSession,
+  createBillingPortalSession,
+  getStripeSubscription,
+  cancelStripeSubscription,
+} from '../controllers/platform/stripeController';
 import { handleStripeWebhook } from '../controllers/platform/webhookController';
 import { platformAuth, requirePlatformRole, logPlatformAction } from '../middleware/platformAuth';
 import express from 'express';
@@ -193,6 +199,40 @@ router.get(
     // TODO: Implement admin listing
     res.json({ message: 'Admin listing endpoint - to be implemented' });
   }
+);
+
+// ===== STRIPE INTEGRATION ROUTES =====
+
+// Create checkout session for subscription
+router.post(
+  '/stripe/checkout-session',
+  platformAuth,
+  requirePlatformRole(['SUPER_ADMIN', 'ADMIN']),
+  createCheckoutSession
+);
+
+// Create billing portal session
+router.post(
+  '/stripe/billing-portal',
+  platformAuth,
+  requirePlatformRole(['SUPER_ADMIN', 'ADMIN', 'BILLING']),
+  createBillingPortalSession
+);
+
+// Get Stripe subscription details
+router.get(
+  '/stripe/subscriptions/:subscriptionId',
+  platformAuth,
+  requirePlatformRole(['SUPER_ADMIN', 'ADMIN', 'BILLING']),
+  getStripeSubscription
+);
+
+// Cancel Stripe subscription
+router.post(
+  '/stripe/subscriptions/:subscriptionId/cancel',
+  platformAuth,
+  requirePlatformRole(['SUPER_ADMIN']),
+  cancelStripeSubscription
 );
 
 // ===== STRIPE WEBHOOK =====

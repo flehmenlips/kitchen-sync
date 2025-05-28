@@ -13,6 +13,7 @@ export const stripeConfig = {
   // Subscription prices (these should match your Stripe dashboard)
   prices: {
     TRIAL: null, // Free trial
+    HOME: process.env.STRIPE_PRICE_HOME || 'price_home_monthly',
     STARTER: process.env.STRIPE_PRICE_STARTER || 'price_starter_monthly',
     PROFESSIONAL: process.env.STRIPE_PRICE_PROFESSIONAL || 'price_professional_monthly',
     ENTERPRISE: process.env.STRIPE_PRICE_ENTERPRISE || 'price_enterprise_monthly',
