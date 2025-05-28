@@ -113,6 +113,17 @@ export const createCheckoutSession = async (req: Request, res: Response): Promis
 
     const { plan, successUrl, cancelUrl } = req.body;
 
+    // Check if price IDs are configured for the selected plan
+    const priceId = stripeService.getPriceId(plan);
+    if (!priceId || priceId.startsWith('price_')) {
+      // Default placeholder price IDs start with 'price_'
+      res.status(503).json({ 
+        error: 'Payment processing is not fully configured',
+        message: 'Stripe price IDs are not set up yet. Please contact support or continue with the trial.'
+      });
+      return;
+    }
+
     const restaurant = await prisma.restaurant.findUnique({
       where: { id: restaurantId },
       include: {
@@ -159,7 +170,7 @@ export const createCheckoutSession = async (req: Request, res: Response): Promis
     // Create checkout session
     const session = await stripeService.createCheckoutSession(
       customerId,
-      stripeService.getPriceId(plan) || '',
+      priceId,
       successUrl || `${process.env.FRONTEND_URL}/settings/billing?success=true`,
       cancelUrl || `${process.env.FRONTEND_URL}/settings/billing?canceled=true`,
       14, // trial days
@@ -170,8 +181,20 @@ export const createCheckoutSession = async (req: Request, res: Response): Promis
     );
 
     res.json({ url: session.url });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating checkout session:', error);
+    
+    // Check for specific Stripe errors
+    if (error.type === 'StripeInvalidRequestError') {
+      if (error.param === 'line_items[0][price]') {
+        res.status(503).json({ 
+          error: 'Invalid price configuration',
+          message: 'The subscription pricing is not properly configured. Please contact support.'
+        });
+        return;
+      }
+    }
+    
     res.status(500).json({ error: 'Failed to create checkout session' });
   }
 };
