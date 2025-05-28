@@ -53,7 +53,17 @@ app.use(cors({
     },
     credentials: true // Enable credentials for authentication
 })); 
-app.use(express.json()); // Middleware to parse JSON request bodies
+
+// Conditional JSON body parser - skip for Stripe webhooks
+app.use((req, res, next) => {
+  if (req.originalUrl === '/api/platform/webhooks/stripe') {
+    // Skip JSON body parser for Stripe webhooks
+    next();
+  } else {
+    express.json()(req, res, next);
+  }
+});
+
 app.use(express.urlencoded({ extended: true })); // Middleware to parse URL-encoded bodies
 
 // Serve static files from the public directory
