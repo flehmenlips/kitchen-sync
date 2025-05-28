@@ -1956,3 +1956,112 @@ The backend now properly enforces multi-tenant data isolation. Each restaurant's
 2. Start building the platform admin UI in React
 3. Create the diner authentication system
 4. Begin TableFarm consumer platform development
+
+# KitchenSync Domain Migration Plan: kitchensync.restaurant
+
+## Background and Motivation
+The KitchenSync platform is migrating from its current domain to the new premium domain `kitchensync.restaurant`. This migration requires careful coordination across multiple services, code updates, and documentation changes to ensure a smooth transition without service disruption.
+
+## Key Challenges and Analysis
+
+### 1. **Service Dependencies**
+- **Render.com**: Custom domains, SSL certificates, environment variables
+- **Cloudinary**: API URLs, webhook configurations, CORS settings
+- **SendGrid**: Domain authentication, sender verification, email templates
+- **Stripe**: Webhook endpoints, redirect URLs, domain verification
+- **GitHub**: Repository references, documentation links
+
+### 2. **Code References**
+- Hard-coded URLs in frontend and backend code
+- Environment variables containing domain references
+- API endpoints and CORS configurations
+- Email templates with domain links
+- Documentation and README files
+
+### 3. **SEO and User Impact**
+- Need proper redirects from old domain
+- Update all marketing materials
+- Notify existing users
+- Maintain SEO rankings
+
+## High-level Task Breakdown
+
+### Phase 1: Discovery and Documentation ✅
+- [x] Scan entire codebase for domain references
+- [x] Document all external service configurations
+- [x] List all environment variables with domain references
+- [x] Identify all email templates
+- [x] Review platform documentation
+
+### Phase 2: Infrastructure Preparation
+- [ ] Configure new domain in Render
+- [ ] Set up SSL certificates
+- [ ] Update DNS records
+- [ ] Configure domain in all external services
+- [ ] Set up proper redirects
+
+### Phase 3: Code Updates
+- [ ] Update all hard-coded URLs
+- [ ] Update environment variables
+- [ ] Update CORS configurations
+- [ ] Update email templates
+- [ ] Update documentation
+
+### Phase 4: Testing
+- [ ] Test all authentication flows
+- [ ] Test email delivery
+- [ ] Test payment processing
+- [ ] Test all API endpoints
+- [ ] Test customer portal access
+
+### Phase 5: Migration Execution
+- [ ] Deploy updated code
+- [ ] Update production environment variables
+- [ ] Switch DNS to new domain
+- [ ] Monitor for issues
+- [ ] Notify users
+
+## Project Status Board
+
+### TODO
+- [ ] Remove hard-coded API URLs from prepColumnService.ts and prepTaskService.ts
+- [ ] Update CORS origins in backend/src/server.ts
+- [ ] Update all email references from @kitchensync.app to @kitchensync.restaurant
+- [ ] Update environment variables in Render
+- [ ] Configure SendGrid for new domain
+- [ ] Update Stripe webhook URLs
+- [ ] Create comprehensive testing plan
+
+### In Progress
+- [x] Created DOMAIN_MIGRATION_PLAN.md with detailed migration steps
+
+### Done
+- [x] Run comprehensive domain search across codebase
+- [x] Create detailed inventory of all domain references
+- [x] Document all files requiring updates
+
+## Executor's Feedback or Assistance Requests
+
+### Findings from Domain Search:
+1. **Hard-coded URLs found in:**
+   - `frontend/src/services/prepColumnService.ts` - Contains hard-coded production URL
+   - `frontend/src/services/prepTaskService.ts` - Contains hard-coded production URL
+   - These should use environment variables instead
+
+2. **Email addresses to update:**
+   - `support@kitchensync.app` → `support@kitchensync.restaurant`
+   - Need to create new email addresses in SendGrid
+
+3. **Environment variable usage is good in:**
+   - Most controllers properly use `process.env.FRONTEND_URL`
+   - Email service uses environment variables for URLs
+
+4. **CORS configuration needs update in:**
+   - `backend/src/server.ts` - allowedOrigins array
+
+## Lessons
+- Always use environment variables for domain references
+- Maintain a central configuration for all external URLs
+- Document all external service dependencies
+- Create a staging environment for testing domain changes
+- Keep detailed migration checklist for complex operations
