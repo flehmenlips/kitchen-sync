@@ -75,6 +75,7 @@ import { TableFarmPage } from './pages/TableFarmPage';
 // Restaurant Settings
 import RestaurantSettingsPage from './pages/RestaurantSettingsPage';
 import ContentBlocksPage from './pages/ContentBlocksPage';
+import BillingPage from './pages/BillingPage';
 
 // Customer Portal Components
 import CustomerLayout from './components/customer/CustomerLayout';
@@ -225,6 +226,7 @@ const App: React.FC = () => {
 
                       {/* Restaurant Settings */}
                       <Route path="settings" element={<RestaurantSettingsPage />} />
+                      <Route path="settings/billing" element={<BillingPage />} />
                       <Route path="content-blocks" element={<ContentBlocksPage />} />
 
                       {/* AgileChef Module Routes */}

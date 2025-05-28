@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -30,22 +30,19 @@ import {
   InputLabel
 } from '@mui/material';
 import {
-  Save as SaveIcon,
-  Upload as UploadIcon,
-  Facebook as FacebookIcon,
-  Instagram as InstagramIcon,
-  Twitter as TwitterIcon,
+  Save,
+  CloudUpload as UploadIcon,
+  Palette as PaletteIcon,
   Phone as PhoneIcon,
   Email as EmailIcon,
   LocationOn as LocationIcon,
-  Schedule as ScheduleIcon,
-  Palette as PaletteIcon,
-  FormatSize as FormatSizeIcon,
-  Image as ImageIcon,
-  Edit as EditIcon
+  Instagram as InstagramIcon,
+  Facebook as FacebookIcon,
+  Twitter as TwitterIcon,
+  Payment as PaymentIcon
 } from '@mui/icons-material';
-import { useSnackbar } from '../context/SnackbarContext';
 import { restaurantSettingsService, RestaurantSettings } from '../services/restaurantSettingsService';
+import { useSnackbar } from '../context/SnackbarContext';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -74,6 +71,7 @@ const RestaurantSettingsPage: React.FC = () => {
   const [settings, setSettings] = useState<RestaurantSettings | null>(null);
   const [tabValue, setTabValue] = useState(0);
   const [hasChanges, setHasChanges] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchSettings();
@@ -195,7 +193,7 @@ const RestaurantSettingsPage: React.FC = () => {
         </Box>
       </Box>
 
-      <Paper sx={{ mb: 2 }}>
+      <Paper sx={{ borderBottom: 1, borderColor: 'divider' }}>
         <Tabs value={tabValue} onChange={handleTabChange}>
           <Tab label="Branding & Theme" />
           <Tab label="Hero & About" />
@@ -203,6 +201,15 @@ const RestaurantSettingsPage: React.FC = () => {
           <Tab label="Menu Display" />
           <Tab label="Social & Footer" />
           <Tab label="SEO" />
+          <Tab 
+            label="Billing" 
+            icon={<PaymentIcon />} 
+            iconPosition="start"
+            onClick={(e) => {
+              e.preventDefault();
+              navigate('/settings/billing');
+            }}
+          />
         </Tabs>
       </Paper>
 
@@ -824,7 +831,7 @@ const RestaurantSettingsPage: React.FC = () => {
           size="large"
           onClick={handleSave}
           disabled={!hasChanges || saving}
-          startIcon={saving ? <CircularProgress size={20} /> : <SaveIcon />}
+          startIcon={saving ? <CircularProgress size={20} /> : <Save />}
         >
           {saving ? 'Saving...' : 'Save Changes'}
         </Button>

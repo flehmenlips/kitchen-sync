@@ -23,6 +23,7 @@ import customerReservationRoutes from './routes/customerReservationRoutes'; // I
 import adminRoutes from './routes/adminRoutes'; // Import admin routes
 import platformRoutes from './routes/platformRoutes'; // Import platform routes
 import restaurantOnboardingRoutes from './routes/restaurantOnboardingRoutes'; // Import restaurant onboarding routes
+import subscriptionRoutes from './routes/subscriptionRoutes'; // Import subscription routes
 import { Request, Response, NextFunction } from 'express';
 import { protect } from './middleware/authMiddleware';
 import { setRestaurantContext } from './middleware/restaurantContext';
@@ -74,6 +75,7 @@ app.use('/api/users', userRoutes); // Mount user routes
 app.use('/api/auth/customer', customerAuthRoutes); // Mount customer auth routes
 app.use('/api/customer/reservations', customerReservationRoutes); // Mount customer reservation routes
 app.use('/api/restaurant-onboarding', restaurantOnboardingRoutes); // Mount restaurant onboarding routes
+app.use('/api/subscription', subscriptionRoutes); // Mount subscription routes
 app.use('/api/recipes', recipeRoutes);
 app.use('/api/units', unitRoutes); // Mount unit routes
 app.use('/api/ingredients', ingredientRoutes); // Mount ingredient routes

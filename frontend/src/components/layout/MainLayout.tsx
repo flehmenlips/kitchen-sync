@@ -55,6 +55,7 @@ import ViewListIcon from '@mui/icons-material/ViewList';
 import StraightenIcon from '@mui/icons-material/Straighten';
 import EventIcon from '@mui/icons-material/Event';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import PaymentIcon from '@mui/icons-material/Payment';
 
 // Constants
 const DRAWER_WIDTH = 280;
@@ -280,6 +281,14 @@ const MainLayout: React.FC = () => {
                                     <SettingsIcon />
                                 </ListItemIcon>
                                 <ListItemText primary="Restaurant Settings" />
+                            </ListItemButton>
+                        </ListItem>
+                        <ListItem disablePadding>
+                            <ListItemButton component={RouterLink} to="/settings/billing">
+                                <ListItemIcon>
+                                    <PaymentIcon />
+                                </ListItemIcon>
+                                <ListItemText primary="Billing & Subscription" />
                             </ListItemButton>
                         </ListItem>
                         <ListItem disablePadding>
