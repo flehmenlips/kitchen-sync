@@ -1,7 +1,6 @@
 import './App.css';
 
 const cloudName = 'dhaacekdd';
-const folder = 'Neverstill';
 
 // Use original and provided public IDs/URLs
 const heroImage = "https://res.cloudinary.com/dhaacekdd/image/upload/v1748505398/NeverstillRanchCowsMist_w2vqxy.jpg";
