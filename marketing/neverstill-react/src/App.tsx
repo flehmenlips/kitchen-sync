@@ -54,10 +54,17 @@ function App() {
       {/* Video Section */}
       <section className="video-section">
         <h2>Experience Neverstill</h2>
-        <video controls poster={heroImage} className="property-video">
-          <source src={videoUrl} type="video/mp4" />
-          Your browser does not support the video tag.
-        </video>
+        <div className="property-video" style={{width: '100%', maxWidth: 700, margin: '0 auto'}}>
+          <iframe
+            src="https://player.cloudinary.com/embed/?cloud_name=dhaacekdd&public_id=IMG_5765_w9errz&profile=cld-default"
+            allow="autoplay; fullscreen"
+            frameBorder="0"
+            width="100%"
+            height="400"
+            title="Neverstill Ranch Video"
+            style={{borderRadius: '1rem', boxShadow: '0 2px 12px rgba(0,0,0,0.12)'}}
+          ></iframe>
+        </div>
       </section>
 
       {/* Investment Section */}
