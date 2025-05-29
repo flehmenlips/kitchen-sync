@@ -3,17 +3,13 @@ import './App.css';
 const cloudName = 'dhaacekdd';
 const folder = 'Neverstill';
 
-// Best-guess image/video public IDs (replace as needed)
-const heroImage = `https://res.cloudinary.com/${cloudName}/image/upload/${folder}/hero1.jpg`;
+// Use actual public IDs provided by the user
+const heroImage = `https://res.cloudinary.com/${cloudName}/image/upload/${folder}/NeverstillRanchCowsMist_w2vqxy.jpg`;
 const galleryImages = [
-  `https://res.cloudinary.com/${cloudName}/image/upload/${folder}/aerial1.jpg`,
-  `https://res.cloudinary.com/${cloudName}/image/upload/${folder}/interior1.jpg`,
-  `https://res.cloudinary.com/${cloudName}/image/upload/${folder}/barn1.jpg`,
-  `https://res.cloudinary.com/${cloudName}/image/upload/${folder}/river1.jpg`,
-  `https://res.cloudinary.com/${cloudName}/image/upload/${folder}/landscape1.jpg`,
+  `https://res.cloudinary.com/${cloudName}/image/upload/${folder}/moonrise-farmhouse_jeo1ab.jpg`,
 ];
-const videoUrl = `https://res.cloudinary.com/${cloudName}/video/upload/${folder}/drone1.mp4`;
-const mapImage = `https://res.cloudinary.com/${cloudName}/image/upload/${folder}/map1.jpg`;
+const videoUrl = `https://res.cloudinary.com/${cloudName}/video/upload/${folder}/IMG_5765_w9errz.mp4`;
+const mapImage = `https://res.cloudinary.com/${cloudName}/image/upload/${folder}/Map_cnlhc9.jpg`;
 const logo = `https://res.cloudinary.com/${cloudName}/image/upload/400PX-newLOGO_xv5agk.jpg`;
 
 function App() {
