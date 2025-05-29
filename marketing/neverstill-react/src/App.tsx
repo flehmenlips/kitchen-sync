@@ -4,7 +4,7 @@ const cloudName = 'dhaacekdd';
 const folder = 'Neverstill';
 
 // Use actual public IDs provided by the user
-const heroImage = `https://res.cloudinary.com/${cloudName}/image/upload/${folder}/NeverstillRanchCowsMist_w2vqxy.jpg`;
+const heroImage = "https://res.cloudinary.com/dhaacekdd/image/upload/c_fill,g_auto,h_250,w_970/b_rgb:000000,e_gradient_fade,y_-0.50/c_scale,co_rgb:ffffff,fl_relative,l_text:montserrat_25_style_light_align_center:Shop%20Now,w_0.5,y_0.18/v1748505398/NeverstillRanchCowsMist_w2vqxy.jpg";
 const galleryImages = [
   `https://res.cloudinary.com/${cloudName}/image/upload/${folder}/moonrise-farmhouse_jeo1ab.jpg`,
 ];
