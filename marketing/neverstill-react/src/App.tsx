@@ -8,7 +8,6 @@ const heroImage = "https://res.cloudinary.com/dhaacekdd/image/upload/c_fill,g_au
 const galleryImages = [
   `https://res.cloudinary.com/${cloudName}/image/upload/${folder}/moonrise-farmhouse_jeo1ab.jpg`,
 ];
-const videoUrl = `https://res.cloudinary.com/${cloudName}/video/upload/${folder}/IMG_5765_w9errz.mp4`;
 const mapImage = `https://res.cloudinary.com/${cloudName}/image/upload/${folder}/Map_cnlhc9.jpg`;
 const logo = `https://res.cloudinary.com/${cloudName}/image/upload/400PX-newLOGO_xv5agk.jpg`;
 
