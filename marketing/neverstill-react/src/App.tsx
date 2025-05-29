@@ -6,6 +6,7 @@ const cloudName = 'dhaacekdd';
 const heroImage = "https://res.cloudinary.com/dhaacekdd/image/upload/v1748505398/NeverstillRanchCowsMist_w2vqxy.jpg";
 const galleryImages = [
   "https://res.cloudinary.com/dhaacekdd/image/upload/v1748505398/NeverstillRanchCowsMist_w2vqxy.jpg",
+  "https://res.cloudinary.com/dhaacekdd/image/upload/v1748506971/IMG_6064_ucmjzq.jpg",
 ];
 const mapImage = "https://res.cloudinary.com/dhaacekdd/image/upload/v1748506970/IMG_5633_ridx7u.jpg";
 const logo = `https://res.cloudinary.com/${cloudName}/image/upload/400PX-newLOGO_xv5agk.jpg`;
