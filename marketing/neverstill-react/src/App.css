@@ -5,6 +5,14 @@ body, html, #root, .brochure-root {
   background: #f7f9fa;
   color: #222;
   min-height: 100vh;
+  width: 100vw;
+}
+
+.brochure-root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100vw;
 }
 
 .hero {
@@ -15,6 +23,7 @@ body, html, #root, .brochure-root {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 100vw;
 }
 .hero-overlay {
   background: rgba(34, 34, 34, 0.55);
@@ -24,6 +33,7 @@ body, html, #root, .brochure-root {
   text-align: center;
   box-shadow: 0 8px 32px rgba(0,0,0,0.2);
   max-width: 600px;
+  margin: 0 auto;
 }
 .hero-logo {
   max-width: 120px;
@@ -66,6 +76,8 @@ section {
   border-radius: 1.2rem;
   box-shadow: 0 2px 12px rgba(0,0,0,0.07);
   padding: 2.5rem 2rem;
+  text-align: center;
+  width: 90vw;
 }
 section h2 {
   font-size: 2rem;
@@ -76,6 +88,8 @@ section h2 {
   margin: 1.5rem 0 0 0;
   padding-left: 1.5rem;
   font-size: 1.1rem;
+  text-align: left;
+  display: inline-block;
 }
 .features-list li, .investment-list li {
   margin-bottom: 0.5rem;
@@ -89,6 +103,7 @@ section h2 {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1.2rem;
   margin-top: 1.5rem;
+  justify-items: center;
 }
 .gallery-img {
   width: 100%;
@@ -97,6 +112,7 @@ section h2 {
   object-fit: cover;
   min-height: 180px;
   max-height: 260px;
+  max-width: 350px;
 }
 
 .video-section {
@@ -149,6 +165,7 @@ section h2 {
   }
   section {
     padding: 1.2rem 0.5rem;
+    width: 98vw;
   }
   .gallery-grid {
     grid-template-columns: 1fr;
