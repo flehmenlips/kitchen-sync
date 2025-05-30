@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -23,6 +23,9 @@ interface LegalDocumentModalProps {
   onAccept?: () => void;
   acceptText?: string;
   cancelText?: string;
+  requireScrollToBottom?: boolean;
+  acceptDisabled?: boolean;
+  onScroll?: (scrolledToBottom: boolean) => void;
 }
 
 export const LegalDocumentModal: React.FC<LegalDocumentModalProps> = ({
@@ -35,9 +38,21 @@ export const LegalDocumentModal: React.FC<LegalDocumentModalProps> = ({
   onAccept,
   acceptText = 'Accept',
   cancelText = 'Close',
+  requireScrollToBottom = false,
+  acceptDisabled = false,
+  onScroll,
 }) => {
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  const handleScroll = () => {
+    if (!requireScrollToBottom || !contentRef.current || !onScroll) return;
+    const { scrollTop, scrollHeight, clientHeight } = contentRef.current;
+    // Allow a small threshold for "at bottom"
+    const atBottom = scrollTop + clientHeight >= scrollHeight - 8;
+    onScroll(atBottom);
+  };
 
   return (
     <Dialog
@@ -70,6 +85,8 @@ export const LegalDocumentModal: React.FC<LegalDocumentModalProps> = ({
       <DialogContent
         id="legal-document-content"
         dividers
+        ref={contentRef}
+        onScroll={handleScroll}
         sx={{
           '&::-webkit-scrollbar': {
             width: '8px',
@@ -84,6 +101,7 @@ export const LegalDocumentModal: React.FC<LegalDocumentModalProps> = ({
           '&::-webkit-scrollbar-thumb:hover': {
             background: theme.palette.grey[500],
           },
+          maxHeight: fullScreen ? '100vh' : 500,
         }}
       >
         <Box sx={{ p: 1 }}>
@@ -99,6 +117,7 @@ export const LegalDocumentModal: React.FC<LegalDocumentModalProps> = ({
               variant="contained"
               color="primary"
               autoFocus
+              disabled={requireScrollToBottom ? acceptDisabled : false}
             >
               {acceptText}
             </Button>

@@ -15,12 +15,16 @@ import {
   Alert,
   MenuItem,
   Divider,
-  CircularProgress
+  CircularProgress,
+  FormControlLabel,
+  Checkbox
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import { useNavigate } from 'react-router-dom';
 import { registerRestaurant, checkEmailAvailability } from '../services/restaurantOnboardingService';
+import { LegalDocumentModal } from '../components/common/LegalDocumentModal';
+import { EULAContent } from '../components/legal/EULAContent';
 
 const steps = ['Personal Information', 'Restaurant Details', 'Business Information'];
 
@@ -37,7 +41,10 @@ const RestaurantRegisterPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [emailAvailable, setEmailAvailable] = useState<boolean | null>(null);
   const [eulaAccepted, setEulaAccepted] = useState(false);
+  const [eulaCheckbox, setEulaCheckbox] = useState(false);
+  const [eulaScrolledToBottom, setEulaScrolledToBottom] = useState(false);
   const [eulaError, setEulaError] = useState('');
+  const [eulaModalOpen, setEulaModalOpen] = useState(false);
   
   // Form data
   const [formData, setFormData] = useState({
@@ -130,7 +137,7 @@ const RestaurantRegisterPage: React.FC = () => {
   const handleSubmit = async () => {
     if (!validateStep(activeStep)) return;
     if (!eulaAccepted) {
-      setEulaError('You must agree to the End User License Agreement (EULA) to create an account.');
+      setEulaError('You must read and accept the EULA to create an account.');
       return;
     }
     setEulaError('');
@@ -173,6 +180,18 @@ const RestaurantRegisterPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOpenEulaModal = () => {
+    setEulaModalOpen(true);
+    setEulaCheckbox(false);
+    setEulaScrolledToBottom(false);
+  };
+
+  const handleAcceptEula = () => {
+    setEulaAccepted(true);
+    setEulaModalOpen(false);
+    setEulaError('');
   };
 
   const renderStepContent = (step: number) => {
@@ -422,19 +441,19 @@ const RestaurantRegisterPage: React.FC = () => {
         <Box sx={{ mb: 3 }}>
           {renderStepContent(activeStep)}
           {activeStep === steps.length - 1 && (
-            <div style={{ margin: '2em 0 1em 0' }}>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={eulaAccepted}
-                  onChange={e => setEulaAccepted(e.target.checked)}
-                  required
-                />
-                {' '}I have read and agree to the{' '}
-                <a href="/eula.html" target="_blank" rel="noopener noreferrer">End User License Agreement (EULA)</a>
-              </label>
-              {eulaError && <div style={{ color: 'red', marginTop: '0.5em' }}>{eulaError}</div>}
-            </div>
+            <Box sx={{ mt: 3, mb: 2 }}>
+              <Button
+                variant={eulaAccepted ? 'outlined' : 'contained'}
+                color={eulaAccepted ? 'success' : 'primary'}
+                onClick={handleOpenEulaModal}
+                disabled={eulaAccepted}
+              >
+                {eulaAccepted ? 'EULA Accepted' : 'Read and Accept EULA'}
+              </Button>
+              {eulaError && (
+                <Box sx={{ color: 'error.main', typography: 'body2', mt: 1 }}>{eulaError}</Box>
+              )}
+            </Box>
           )}
         </Box>
 
@@ -479,6 +498,36 @@ const RestaurantRegisterPage: React.FC = () => {
           </Typography>
         </Box>
       </Paper>
+
+      <LegalDocumentModal
+        open={eulaModalOpen}
+        onClose={() => setEulaModalOpen(false)}
+        title="End User License Agreement"
+        content={
+          <Box>
+            <EULAContent />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={eulaCheckbox}
+                  onChange={e => setEulaCheckbox(e.target.checked)}
+                  disabled={!eulaScrolledToBottom}
+                  color="primary"
+                />
+              }
+              label="I have read and agree to the EULA"
+              sx={{ mt: 2 }}
+            />
+          </Box>
+        }
+        showActions={true}
+        onAccept={handleAcceptEula}
+        acceptText="Accept and Continue"
+        cancelText="Cancel"
+        requireScrollToBottom={true}
+        acceptDisabled={!eulaCheckbox}
+        onScroll={setEulaScrolledToBottom}
+      />
     </Container>
   );
 };
