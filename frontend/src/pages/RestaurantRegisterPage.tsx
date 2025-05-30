@@ -36,6 +36,8 @@ const RestaurantRegisterPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [emailAvailable, setEmailAvailable] = useState<boolean | null>(null);
+  const [eulaAccepted, setEulaAccepted] = useState(false);
+  const [eulaError, setEulaError] = useState('');
   
   // Form data
   const [formData, setFormData] = useState({
@@ -127,7 +129,11 @@ const RestaurantRegisterPage: React.FC = () => {
 
   const handleSubmit = async () => {
     if (!validateStep(activeStep)) return;
-    
+    if (!eulaAccepted) {
+      setEulaError('You must agree to the End User License Agreement (EULA) to create an account.');
+      return;
+    }
+    setEulaError('');
     setLoading(true);
     setError(null);
     
@@ -415,6 +421,21 @@ const RestaurantRegisterPage: React.FC = () => {
 
         <Box sx={{ mb: 3 }}>
           {renderStepContent(activeStep)}
+          {activeStep === steps.length - 1 && (
+            <div style={{ margin: '2em 0 1em 0' }}>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={eulaAccepted}
+                  onChange={e => setEulaAccepted(e.target.checked)}
+                  required
+                />
+                {' '}I have read and agree to the{' '}
+                <a href="/eula.html" target="_blank" rel="noopener noreferrer">End User License Agreement (EULA)</a>
+              </label>
+              {eulaError && <div style={{ color: 'red', marginTop: '0.5em' }}>{eulaError}</div>}
+            </div>
+          )}
         </Box>
 
         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
