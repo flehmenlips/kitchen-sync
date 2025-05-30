@@ -1,8 +1,8 @@
 // frontend/src/components/forms/RegisterForm.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Box, TextField, Button, Stack } from '@mui/material';
-import { UserCredentials } from '../../services/apiService';
+import { UserCredentials } from '../../types/user';
 
 interface RegisterFormData extends UserCredentials {
     confirmPassword?: string;
@@ -21,10 +21,21 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSubmit, isSubmitting }) =
         formState: { errors },
     } = useForm<RegisterFormData>();
 
+    const [eulaAccepted, setEulaAccepted] = useState(false);
+    const [formError, setFormError] = useState('');
     const password = watch('password'); // Watch password field for confirmation
 
+    const handleFormSubmit = (data: RegisterFormData) => {
+        if (!eulaAccepted) {
+            setFormError('You must agree to the End User License Agreement (EULA) to create an account.');
+            return;
+        }
+        setFormError('');
+        onSubmit(data);
+    };
+
     return (
-        <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate sx={{ mt: 1 }}>
+        <Box component="form" onSubmit={handleSubmit(handleFormSubmit)} noValidate sx={{ mt: 1 }}>
             <Stack spacing={2}>
                  <TextField
                     {...register("name")}
@@ -62,6 +73,19 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSubmit, isSubmitting }) =
                     error={!!errors.confirmPassword}
                     helperText={errors.confirmPassword?.message}
                 />
+                <div style={{ margin: '1em 0' }}>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={eulaAccepted}
+                      onChange={e => setEulaAccepted(e.target.checked)}
+                      required
+                    />
+                    {' '}I have read and agree to the{' '}
+                    <a href="/eula.html" target="_blank" rel="noopener noreferrer">End User License Agreement (EULA)</a>
+                  </label>
+                </div>
+                {formError && <div style={{ color: 'red', marginBottom: '1em' }}>{formError}</div>}
             </Stack>
             <Button
               type="submit"
