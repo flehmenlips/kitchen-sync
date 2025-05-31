@@ -26,7 +26,7 @@ interface NavItem {
 }
 
 const mainNavItems: NavItem[] = [
-  { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
+  { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
   { text: 'Recipes', icon: <MenuBookIcon />, path: '/recipes' },
   { text: 'Categories', icon: <CategoryIcon />, path: '/categories' }, // Recipe Categories
   { text: 'Ingredients', icon: <BlenderIcon />, path: '/ingredients' },

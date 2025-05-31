@@ -168,7 +168,7 @@ const MainLayout: React.FC = () => {
             <Divider />
             <List>
                 <ListItem disablePadding>
-                    <ListItemButton component={RouterLink} to="/">
+                    <ListItemButton component={RouterLink} to="/dashboard">
                         <ListItemIcon>
                             <DashboardIcon />
                         </ListItemIcon>
