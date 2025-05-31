@@ -39,7 +39,8 @@ import {
   Instagram as InstagramIcon,
   Facebook as FacebookIcon,
   Twitter as TwitterIcon,
-  Payment as PaymentIcon
+  Payment as PaymentIcon,
+  Edit as EditIcon
 } from '@mui/icons-material';
 import { restaurantSettingsService, RestaurantSettings } from '../services/restaurantSettingsService';
 import { useSnackbar } from '../context/SnackbarContext';
