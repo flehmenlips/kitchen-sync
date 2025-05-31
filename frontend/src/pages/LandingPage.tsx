@@ -33,11 +33,14 @@ import {
   Star,
   AttachMoney,
 } from '@mui/icons-material';
+import { PLAN_DETAILS } from '../services/billingService';
+import { useAuth } from '../context/AuthContext'; // Adjust path as needed
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { user } = useAuth();
 
   const features = [
     {
@@ -96,6 +99,10 @@ const LandingPage: React.FC = () => {
     },
   ];
 
+  // Get plans in display order
+  const planOrder = ['HOME', 'STARTER', 'PROFESSIONAL', 'ENTERPRISE'];
+  const plans = planOrder.map((key) => PLAN_DETAILS[key]);
+
   return (
     <Box sx={{ flexGrow: 1 }}>
       {/* Navigation */}
@@ -104,12 +111,20 @@ const LandingPage: React.FC = () => {
           <Typography variant="h5" sx={{ flexGrow: 1, fontWeight: 'bold', color: 'primary.main' }}>
             KitchenSync
           </Typography>
-          <Button color="primary" onClick={() => navigate('/login')} sx={{ mr: 2 }}>
-            Sign In
-          </Button>
-          <Button variant="contained" color="primary" onClick={() => navigate('/register')}>
-            Start Free Trial
-          </Button>
+          {user ? (
+            <Button color="primary" onClick={() => navigate('/dashboard')} sx={{ mr: 2 }}>
+              Dashboard
+            </Button>
+          ) : (
+            <>
+              <Button color="primary" onClick={() => navigate('/login')} sx={{ mr: 2 }}>
+                Sign In
+              </Button>
+              <Button variant="contained" color="primary" onClick={() => navigate('/register')}>
+                Start Free Trial
+              </Button>
+            </>
+          )}
         </Toolbar>
       </AppBar>
 
@@ -165,15 +180,6 @@ const LandingPage: React.FC = () => {
               <Typography variant="body2" sx={{ mt: 2, opacity: 0.8 }}>
                 No credit card required • Setup in minutes • Cancel anytime
               </Typography>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Box sx={{ position: 'relative', textAlign: 'center' }}>
-                <img 
-                  src="/api/placeholder/600/400" 
-                  alt="KitchenSync Dashboard"
-                  style={{ width: '100%', borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}
-                />
-              </Box>
             </Grid>
           </Grid>
         </Container>
@@ -305,86 +311,59 @@ const LandingPage: React.FC = () => {
             Start with a 14-day free trial. No credit card required.
           </Typography>
           <Grid container spacing={4} justifyContent="center">
-            <Grid item xs={12} sm={6} md={4}>
-              <Card sx={{ textAlign: 'center', position: 'relative' }}>
-                <CardContent sx={{ p: 4 }}>
-                  <Typography variant="h5" gutterBottom fontWeight="bold">
-                    Starter
-                  </Typography>
-                  <Box sx={{ my: 3 }}>
-                    <Typography variant="h3" component="span" fontWeight="bold">
-                      $49
+            {plans.map((plan, idx) => (
+              <Grid item xs={12} sm={6} md={3} key={plan.plan}>
+                <Card sx={{ textAlign: 'center', position: 'relative', border: plan.plan === 'PROFESSIONAL' ? '2px solid' : undefined, borderColor: plan.plan === 'PROFESSIONAL' ? 'primary.main' : undefined }}>
+                  {plan.plan === 'PROFESSIONAL' && (
+                    <Box sx={{ 
+                      position: 'absolute', 
+                      top: -16, 
+                      left: '50%', 
+                      transform: 'translateX(-50%)',
+                      backgroundColor: 'primary.main',
+                      color: 'white',
+                      px: 3,
+                      py: 0.5,
+                      borderRadius: 1,
+                    }}>
+                      <Typography variant="body2" fontWeight="bold">
+                        MOST POPULAR
+                      </Typography>
+                    </Box>
+                  )}
+                  <CardContent sx={{ p: 4 }}>
+                    <Typography variant="h5" gutterBottom fontWeight="bold">
+                      {plan.name}
                     </Typography>
-                    <Typography variant="h6" component="span" color="text.secondary">
-                      /month
-                    </Typography>
-                  </Box>
-                  <List sx={{ mb: 3 }}>
-                    <ListItem sx={{ justifyContent: 'center' }}>
-                      <ListItemText primary="Up to 5 staff accounts" />
-                    </ListItem>
-                    <ListItem sx={{ justifyContent: 'center' }}>
-                      <ListItemText primary="All core modules" />
-                    </ListItem>
-                    <ListItem sx={{ justifyContent: 'center' }}>
-                      <ListItemText primary="Email support" />
-                    </ListItem>
-                  </List>
-                  <Button variant="outlined" fullWidth size="large" onClick={() => navigate('/register')}>
-                    Start Free Trial
-                  </Button>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} sm={6} md={4}>
-              <Card sx={{ textAlign: 'center', position: 'relative', border: '2px solid', borderColor: 'primary.main' }}>
-                <Box sx={{ 
-                  position: 'absolute', 
-                  top: -16, 
-                  left: '50%', 
-                  transform: 'translateX(-50%)',
-                  backgroundColor: 'primary.main',
-                  color: 'white',
-                  px: 3,
-                  py: 0.5,
-                  borderRadius: 1,
-                }}>
-                  <Typography variant="body2" fontWeight="bold">
-                    MOST POPULAR
-                  </Typography>
-                </Box>
-                <CardContent sx={{ p: 4 }}>
-                  <Typography variant="h5" gutterBottom fontWeight="bold">
-                    Professional
-                  </Typography>
-                  <Box sx={{ my: 3 }}>
-                    <Typography variant="h3" component="span" fontWeight="bold">
-                      $149
-                    </Typography>
-                    <Typography variant="h6" component="span" color="text.secondary">
-                      /month
-                    </Typography>
-                  </Box>
-                  <List sx={{ mb: 3 }}>
-                    <ListItem sx={{ justifyContent: 'center' }}>
-                      <ListItemText primary="Up to 20 staff accounts" />
-                    </ListItem>
-                    <ListItem sx={{ justifyContent: 'center' }}>
-                      <ListItemText primary="Advanced analytics" />
-                    </ListItem>
-                    <ListItem sx={{ justifyContent: 'center' }}>
-                      <ListItemText primary="Priority support" />
-                    </ListItem>
-                    <ListItem sx={{ justifyContent: 'center' }}>
-                      <ListItemText primary="API access" />
-                    </ListItem>
-                  </List>
-                  <Button variant="contained" fullWidth size="large" onClick={() => navigate('/register')}>
-                    Start Free Trial
-                  </Button>
-                </CardContent>
-              </Card>
-            </Grid>
+                    <Box sx={{ my: 3 }}>
+                      <Typography variant="h3" component="span" fontWeight="bold">
+                        {plan.price === 0 ? 'Free' : `$${plan.price}`}
+                      </Typography>
+                      {plan.price !== 0 && (
+                        <Typography variant="h6" component="span" color="text.secondary">
+                          /month
+                        </Typography>
+                      )}
+                    </Box>
+                    <List sx={{ mb: 3 }}>
+                      {plan.features.map((feature, i) => (
+                        <ListItem sx={{ justifyContent: 'center' }} key={i}>
+                          <ListItemText primary={feature} />
+                        </ListItem>
+                      ))}
+                    </List>
+                    <Button
+                      variant={plan.plan === 'PROFESSIONAL' ? 'contained' : 'outlined'}
+                      fullWidth
+                      size="large"
+                      onClick={() => navigate(`/register?plan=${plan.plan}`)}
+                    >
+                      {plan.price === 0 ? 'Start Free Trial' : 'Choose Plan'}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
           </Grid>
         </Container>
       </Box>

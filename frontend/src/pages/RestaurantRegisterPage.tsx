@@ -17,7 +17,9 @@ import {
   Divider,
   CircularProgress,
   FormControlLabel,
-  Checkbox
+  Checkbox,
+  ListItem,
+  ListItemText
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
@@ -25,6 +27,7 @@ import { useNavigate } from 'react-router-dom';
 import { registerRestaurant, checkEmailAvailability } from '../services/restaurantOnboardingService';
 import { LegalDocumentModal } from '../components/common/LegalDocumentModal';
 import { EULAContent } from '../components/legal/EULAContent';
+import { PLAN_DETAILS } from '../services/billingService';
 
 const steps = ['Personal Information', 'Restaurant Details', 'Business Information'];
 
@@ -312,7 +315,7 @@ const RestaurantRegisterPage: React.FC = () => {
                 helperText={formErrors.cuisineType}
                 required
               >
-                {cuisineTypes.map(type => (
+                {cuisineTypes.map((type: string) => (
                   <MenuItem key={type} value={type}>{type}</MenuItem>
                 ))}
               </TextField>

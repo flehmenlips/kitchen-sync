@@ -149,4 +149,5 @@ class BillingService {
   }
 }
 
-export const billingService = new BillingService(); 
+export const billingService = new BillingService();
+export { PLAN_DETAILS }; 

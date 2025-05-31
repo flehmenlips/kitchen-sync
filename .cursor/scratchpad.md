@@ -2065,3 +2065,97 @@ The KitchenSync platform is migrating from its current domain to the new premium
 - Document all external service dependencies
 - Create a staging environment for testing domain changes
 - Keep detailed migration checklist for complex operations
+
+## Current Task: EULA Modal and Privacy Policy Implementation
+
+### Background and Motivation
+- Currently, the EULA is shown as a separate page, requiring users to navigate away from the registration flow
+- Privacy Policy is referenced in the EULA but not yet implemented
+- Need to improve user experience by showing EULA in a modal dialog
+- Need to ensure legal compliance with both EULA and Privacy Policy
+
+### Key Challenges and Analysis
+1. Modal Implementation
+   - Need to create a reusable modal component for legal documents
+   - Must handle long-form content with proper scrolling
+   - Should maintain consistent styling with the rest of the application
+   - Must be accessible and responsive
+
+2. Privacy Policy Requirements
+   - Must comply with relevant privacy laws (GDPR, CCPA, etc.)
+   - Should cover data collection, usage, storage, and user rights
+   - Must be clear and understandable for restaurant owners
+   - Should be easily updatable as privacy laws evolve
+
+3. Integration Points
+   - Registration forms (RestaurantRegisterPage, CustomerRegisterForm)
+   - Landing page footer
+   - Platform admin dashboard
+   - Customer portal
+
+### High-level Task Breakdown
+
+1. Create Legal Document Modal Component
+   - [ ] Create new `LegalDocumentModal` component
+   - [ ] Implement proper scrolling for long content
+   - [ ] Add styling consistent with Material-UI
+   - [ ] Add accessibility features
+   - [ ] Test component with different content lengths
+
+2. Create Privacy Policy Content
+   - [ ] Draft comprehensive privacy policy
+   - [ ] Review for legal compliance
+   - [ ] Format for web display
+   - [ ] Add to public directory
+   - [ ] Create API endpoint for fetching policy content
+
+3. Update EULA Display
+   - [ ] Move EULA content to modal component
+   - [ ] Update all registration forms to use modal
+   - [ ] Add links to Privacy Policy within EULA
+   - [ ] Test all integration points
+   - [ ] Verify accessibility
+
+4. Update Navigation and Links
+   - [ ] Update footer links in LandingPage
+   - [ ] Add legal document links to platform admin
+   - [ ] Update customer portal links
+   - [ ] Test all navigation paths
+
+### Project Status Board
+- [ ] Create LegalDocumentModal component
+- [ ] Draft and implement Privacy Policy
+- [ ] Update EULA to use modal
+- [ ] Update all registration forms
+- [ ] Update navigation and links
+- [ ] Test all integration points
+- [ ] Verify accessibility
+- [ ] Final legal review
+
+### Success Criteria
+1. Legal Document Modal
+   - Modal opens smoothly without page navigation
+   - Content is properly formatted and scrollable
+   - Accessible via keyboard and screen readers
+   - Responsive on all device sizes
+   - Maintains consistent styling
+
+2. Privacy Policy
+   - Covers all required legal aspects
+   - Clear and understandable language
+   - Properly formatted for web display
+   - Links correctly from EULA
+   - Available in all necessary locations
+
+3. Integration
+   - All registration forms use modal
+   - All links work correctly
+   - No broken navigation
+   - Consistent user experience
+   - Proper error handling
+
+### Executor's Feedback or Assistance Requests
+*To be filled during implementation*
+
+### Lessons
+*To be filled during implementation*
