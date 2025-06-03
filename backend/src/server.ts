@@ -103,6 +103,12 @@ app.use(express.urlencoded({ extended: true })); // Middleware to parse URL-enco
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, '../public')));
 
+// Serve React app build files (if in production)
+if (process.env.NODE_ENV === 'production') {
+  // Serve static files from React build
+  app.use(express.static(path.join(__dirname, '../../frontend/dist')));
+}
+
 // Routes
 app.use('/api/users', userRoutes); // Mount user routes
 app.use('/api/auth/customer', customerAuthRoutes); // Mount customer auth routes
@@ -127,10 +133,22 @@ app.use('/api/content-blocks', contentBlockRoutes); // Mount content block route
 app.use('/api/admin', adminRoutes); // Mount admin routes
 app.use('/api/platform', platformRoutes); // Mount platform routes
 
-// Basic route for testing
-app.get('/', (req, res) => {
-  res.send('KitchenSync Backend API Running...');
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'healthy', timestamp: new Date().toISOString() });
 });
+
+// Serve React app for all other routes (must be after API routes)
+if (process.env.NODE_ENV === 'production') {
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../../frontend/dist/index.html'));
+  });
+} else {
+  // In development, just show a message for non-API routes
+  app.get('/', (req, res) => {
+    res.send('KitchenSync Backend API Running...');
+  });
+}
 
 // --- Error Handling Middleware --- 
 // Not found handler (if route doesn't exist)
