@@ -643,7 +643,66 @@ model RestaurantSettings {
   template               WebsiteTemplate? @relation(fields: [templateId], references: [id])
   customCss              String?      @db.Text
   
-  // ... rest of existing RestaurantSettings fields ...
+  // Website Content
+  websiteName            String?
+  tagline                String?
+  metaTitle              String?
+  metaDescription        String?
+  
+  // Hero Section
+  heroTitle              String?
+  heroSubtitle           String?
+  heroImageUrl           String?
+  heroImagePublicId      String?
+  heroCTAText            String?
+  heroCTALink            String?
+  
+  // About Section
+  aboutTitle             String?
+  aboutDescription       String?      @db.Text
+  aboutImageUrl          String?
+  aboutImagePublicId     String?
+  
+  // Logo
+  logoUrl                String?
+  logoPublicId           String?
+  
+  // Colors
+  primaryColor           String?      @default("#1976d2")
+  secondaryColor         String?      @default("#dc004e")
+  accentColor            String?      @default("#333333")
+  
+  // Fonts
+  fontPrimary            String?      @default("Roboto, sans-serif")
+  fontSecondary          String?      @default("Playfair Display, serif")
+  
+  // Contact Info
+  contactPhone           String?
+  contactEmail           String?
+  contactAddress         String?
+  contactCity            String?
+  contactState           String?
+  contactZip             String?
+  
+  // Operating Hours
+  openingHours           Json?        @default("{}")
+  
+  // Social Media
+  facebookUrl            String?
+  instagramUrl           String?
+  twitterUrl             String?
+  linkedinUrl            String?
+  
+  // Footer
+  footerText             String?
+  
+  // Menu Settings
+  activeMenuIds          Int[]        @default([])
+  menuDisplayMode        String?      @default("grid")
+  
+  // Timestamps
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
 }
 
 model WebsiteTemplate {
