@@ -2560,3 +2560,22 @@ interface SubscriptionContextType {
 - Use pg_dump for active database backups
 - Test migrations with production data backup
 - Keep existing data during schema updates
+
+## Current Status / Progress Tracking
+
+### Completed:
+1. **Database Schema Updates** ✅
+   - Added new fields to subscriptions table (enabledModules, moduleAccess, etc.)
+   - Added new fields to restaurants table (isChain, websiteBuilderEnabled, etc.)
+   - Successfully migrated production database
+   - Created migration guide with rollback plan
+
+2. **Module System Implementation** ✅
+   - Created module types and definitions (`frontend/src/types/modules.ts`)
+   - Implemented SubscriptionContext for managing subscription state
+   - Updated navigation to use module-based structure
+   - Added visual indicators for locked modules
+   - Module access control based on subscription tier
+
+3. **Navigation Reorganization** ✅
+   - Renamed "Restaurant Settings" to "Website Builder"
