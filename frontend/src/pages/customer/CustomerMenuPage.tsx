@@ -20,8 +20,10 @@ import {
   Timer as TimerIcon,
   LocalOffer as TagIcon
 } from '@mui/icons-material';
-import { getMenus, Menu } from '../../services/apiService';
+import { Menu } from '../../services/apiService';
 import { restaurantSettingsService, RestaurantSettings } from '../../services/restaurantSettingsService';
+import apiService from '../../services/apiService';
+import { getCurrentRestaurantSlug } from '../../utils/subdomain';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -59,28 +61,36 @@ const CustomerMenuPage: React.FC = () => {
     try {
       setLoading(true);
       
-      // Fetch both menus and settings
-      const [allMenus, settingsData] = await Promise.all([
-        getMenus(),
-        restaurantSettingsService.getPublicSettings()
-      ]);
+      // Get restaurant slug from subdomain
+      const slug = getCurrentRestaurantSlug();
       
+      if (!slug) {
+        setError('Restaurant not found.');
+        return;
+      }
+      
+      // Fetch settings first to get restaurant context
+      const settingsData = await restaurantSettingsService.getPublicSettings();
       setSettings(settingsData);
+      
+      // Fetch menus for this specific restaurant using the public endpoint
+      const response = await apiService.get(`/restaurant/public/slug/${slug}/menus`);
+      const allMenus = response.data;
       
       // Filter menus based on activeMenuIds from settings
       let activeMenus = allMenus;
       
       if (settingsData.activeMenuIds && settingsData.activeMenuIds.length > 0) {
         // Only show menus that are in the activeMenuIds list
-        activeMenus = allMenus.filter(menu => 
+        activeMenus = allMenus.filter((menu: Menu) => 
           settingsData.activeMenuIds!.includes(menu.id)
         );
       }
       
       // Further filter to only show non-archived menus with active sections
       const publicMenus = activeMenus
-        .filter(menu => !menu.isArchived)
-        .map(menu => ({
+        .filter((menu: Menu) => !menu.isArchived)
+        .map((menu: Menu) => ({
           ...menu,
           sections: menu.sections
             ?.filter(s => s.active && !s.deleted)
@@ -89,7 +99,7 @@ const CustomerMenuPage: React.FC = () => {
               items: section.items?.filter(i => i.active && !i.deleted) || []
             })) || []
         }))
-        .filter(menu => menu.sections.length > 0);
+        .filter((menu: Menu) => menu.sections && menu.sections.length > 0);
         
       setMenus(publicMenus);
     } catch (err) {

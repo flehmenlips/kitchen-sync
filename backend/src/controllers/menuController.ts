@@ -769,4 +769,79 @@ export const uploadMenuLogo = async (req: MulterRequest, res: Response): Promise
     console.error(`Error uploading menu logo: ${error}`);
     res.status(500).json({ message: 'Error uploading menu logo' });
   }
+};
+
+/**
+ * @desc    Get public menus for a restaurant by slug
+ * @route   GET /api/restaurant/public/slug/:slug/menus
+ * @access  Public
+ */
+export const getPublicMenusBySlug = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { slug } = req.params;
+
+    if (!slug) {
+      res.status(400).json({ message: 'Restaurant slug required' });
+      return;
+    }
+
+    // Find the restaurant by slug
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { slug },
+      select: { id: true }
+    });
+
+    if (!restaurant) {
+      res.status(404).json({ message: 'Restaurant not found' });
+      return;
+    }
+
+    // Get all non-archived menus for this restaurant
+    const menus = await prisma.menu.findMany({
+      where: {
+        restaurantId: restaurant.id,
+        isArchived: false
+      },
+      include: {
+        sections: {
+          where: {
+            active: true
+          },
+          orderBy: {
+            position: 'asc'
+          },
+          include: {
+            items: {
+              where: {
+                active: true
+              },
+              orderBy: {
+                position: 'asc'
+              },
+              include: {
+                recipe: {
+                  select: {
+                    id: true,
+                    name: true,
+                    photoUrl: true,
+                    description: true,
+                    prepTimeMinutes: true,
+                    cookTimeMinutes: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    res.status(200).json(menus);
+  } catch (error) {
+    console.error('Error fetching public menus:', error);
+    res.status(500).json({ message: 'Error fetching menus' });
+  }
 }; 

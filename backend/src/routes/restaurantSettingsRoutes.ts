@@ -5,6 +5,7 @@ import {
   uploadRestaurantImage,
   getPublicRestaurantSettings
 } from '../controllers/restaurantSettingsController';
+import { getPublicMenusBySlug } from '../controllers/menuController';
 import { protect } from '../middleware/authMiddleware';
 import { setRestaurantContext, requireRestaurantContext } from '../middleware/restaurantContext';
 const multer = require('multer');
@@ -36,5 +37,6 @@ router.post('/settings/image/:field', protect, setRestaurantContext, requireRest
 // Public routes
 router.get('/public/settings', getPublicRestaurantSettings);
 router.get('/public/slug/:slug/settings', getPublicRestaurantSettings);
+router.get('/public/slug/:slug/menus', getPublicMenusBySlug);
 
 export default router; 
