@@ -52,15 +52,18 @@ import IngredientListPage from './pages/IngredientListPage';
 import CreateIngredientPage from './pages/CreateIngredientPage';
 import EditIngredientPage from './pages/EditIngredientPage';
 
+// Ingredient Category Components
+import IngredientCategoryListPage from './pages/IngredientCategoryListPage';
+import CreateIngredientCategoryPage from './pages/CreateIngredientCategoryPage';
+import EditIngredientCategoryPage from './pages/EditIngredientCategoryPage';
+
 // Unit Components
 import UnitListPage from './pages/UnitListPage';
 import CreateUnitPage from './pages/CreateUnitPage';
 import EditUnitPage from './pages/EditUnitPage';
 
-// Issue Tracker Components
-import IssueListPage from './pages/IssueListPage';
-import IssueDetailPage from './pages/IssueDetailPage';
-import IssueFormPage from './pages/IssueFormPage';
+// CookBook Settings
+import CookBookSettingsPage from './pages/CookBookSettingsPage';
 
 // Prep Board Component
 import { PrepBoard } from './components/prep/PrepBoard';
@@ -201,6 +204,9 @@ const App: React.FC = () => {
                         } />
                         <Route path="recipes/:id/edit" element={<EditRecipePage />} />
 
+                        {/* CookBook Settings */}
+                        <Route path="cookbook/settings" element={<CookBookSettingsPage />} />
+
                         {/* Categories */}
                         <Route path="categories" element={<CategoryListPage />} />
                         <Route path="categories/new" element={<CreateCategoryPage />} />
@@ -210,6 +216,11 @@ const App: React.FC = () => {
                         <Route path="ingredients" element={<IngredientListPage />} />
                         <Route path="ingredients/new" element={<CreateIngredientPage />} />
                         <Route path="ingredients/:id/edit" element={<EditIngredientPage />} />
+
+                        {/* Ingredient Categories */}
+                        <Route path="ingredient-categories" element={<IngredientCategoryListPage />} />
+                        <Route path="ingredient-categories/new" element={<CreateIngredientCategoryPage />} />
+                        <Route path="ingredient-categories/:id/edit" element={<EditIngredientCategoryPage />} />
 
                         {/* Units */}
                         <Route path="units" element={<UnitListPage />} />
@@ -235,12 +246,6 @@ const App: React.FC = () => {
 
                         {/* AgileChef Module Routes */}
                         <Route path="prep" element={<PrepBoard />} />
-
-                        {/* Issue Tracker Routes */}
-                        <Route path="issues" element={<IssueListPage />} />
-                        <Route path="issues/new" element={<IssueFormPage />} />
-                        <Route path="issues/:id" element={<IssueDetailPage />} />
-                        <Route path="issues/:id/edit" element={<IssueFormPage />} />
 
                         {/* Profile Route */}
                         <Route path="profile" element={<ProfilePage />} />

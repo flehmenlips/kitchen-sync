@@ -1,97 +1,159 @@
 // frontend/src/pages/IngredientCategoryListPage.tsx
 import React, { useState, useEffect } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
-import { getIngredientCategories, IngredientCategory, deleteIngredientCategory } from '../services/apiService';
-import Container from '@mui/material/Container';
-import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
-import ListItemText from '@mui/material/ListItemText';
-import Typography from '@mui/material/Typography';
-import CircularProgress from '@mui/material/CircularProgress';
-import Alert from '@mui/material/Alert';
-import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
-import AddIcon from '@mui/icons-material/Add';
-import Breadcrumbs from '@mui/material/Breadcrumbs';
-import Link from '@mui/material/Link';
-import IconButton from '@mui/material/IconButton';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import Stack from '@mui/material/Stack';
-import { ConfirmationDialog } from '../components/common/ConfirmationDialog';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  Container,
+  Typography,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  IconButton,
+  Box,
+  CircularProgress,
+  Alert,
+  Chip
+} from '@mui/material';
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  ArrowBack
+} from '@mui/icons-material';
+import { ingredientCategoryService, IngredientCategory } from '../services/ingredientCategoryService';
 import { useSnackbar } from '../context/SnackbarContext';
-import ListItemButton from '@mui/material/ListItemButton';
 
 const IngredientCategoryListPage: React.FC = () => {
-  const [categories, setCategories] = useState<IngredientCategory[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [dialogError, setDialogError] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState<boolean>(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [categoryToDelete, setCategoryToDelete] = useState<IngredientCategory | null>(null);
+  const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
+  const [categories, setCategories] = useState<IngredientCategory[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => { fetchCategories(); }, []);
+  useEffect(() => {
+    fetchCategories();
+  }, []);
 
   const fetchCategories = async () => {
-      try {
-        setLoading(true);
-        const data = await getIngredientCategories();
-        setCategories(data);
-        setError(null);
-      } catch (err) { setError('Failed to fetch ingredient categories.'); }
-       finally { setLoading(false); }
-    };
-
-  const handleDeleteClick = (category: IngredientCategory) => {
-    setDialogError(null);
-    setCategoryToDelete(category);
-    setDialogOpen(true);
-  };
-
-  const handleCloseDialog = () => {
-    setDialogOpen(false);
-    setCategoryToDelete(null);
-    setDialogError(null);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!categoryToDelete) return;
-    setIsDeleting(true);
-    setDialogError(null);
     try {
-        await deleteIngredientCategory(categoryToDelete.id);
-        showSnackbar(`Ingredient Category "${categoryToDelete.name}" deleted.`, 'success');
-        setCategories(prev => prev.filter(c => c.id !== categoryToDelete.id));
-        handleCloseDialog(); 
-    } catch (err: any) {
-        const errorMsg = err.response?.data?.message || err.message || 'Failed to delete.';
-        // Deleting these also uses SetNull, so no dependency error expected
-        setDialogError(`Error: ${errorMsg}`);
+      setLoading(true);
+      const data = await ingredientCategoryService.getAll();
+      setCategories(data);
+    } catch (err) {
+      console.error('Error fetching ingredient categories:', err);
+      setError('Failed to load ingredient categories');
     } finally {
-        setIsDeleting(false);
+      setLoading(false);
     }
   };
 
-  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center'}}><CircularProgress /></Box>;
-  if (error) return <Alert severity="error">{error}</Alert>;
+  const handleDelete = async (id: number) => {
+    if (!window.confirm('Are you sure you want to delete this ingredient category?')) {
+      return;
+    }
+
+    try {
+      await ingredientCategoryService.delete(id);
+      showSnackbar('Ingredient category deleted successfully', 'success');
+      fetchCategories();
+    } catch (err) {
+      console.error('Error deleting ingredient category:', err);
+      showSnackbar('Failed to delete ingredient category', 'error');
+    }
+  };
+
+  if (loading) {
+    return (
+      <Container>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+          <CircularProgress />
+        </Box>
+      </Container>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container>
+        <Alert severity="error">{error}</Alert>
+      </Container>
+    );
+  }
 
   return (
-    <Container maxWidth="md" sx={{ mt: 2 }}>
-         <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
-            <Link component={RouterLink} underline="hover" color="inherit" to="/">KitchenSync</Link>
-            <Typography color="text.primary">Ingredient Categories</Typography>
-        </Breadcrumbs>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h4" component="h1">Ingredient Categories</Typography>
-            <Button variant="contained" startIcon={<AddIcon />} component={RouterLink} to="/ingredient-categories/new">Add Category</Button>
+    <Container>
+      <Box sx={{ mb: 4 }}>
+        <Box display="flex" justifyContent="space-between" alignItems="center">
+          <Box display="flex" alignItems="center" gap={2}>
+            <IconButton onClick={() => navigate('/cookbook/settings')}>
+              <ArrowBack />
+            </IconButton>
+            <Typography variant="h4">Ingredient Categories</Typography>
+          </Box>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            component={Link}
+            to="/ingredient-categories/new"
+          >
+            Add Category
+          </Button>
         </Box>
-        {categories.length === 0 ? <Typography>No categories found.</Typography> : (
-            <List>{categories.map((category) => ( <ListItem key={category.id} disablePadding secondaryAction={<Stack direction="row" spacing={0.5}><IconButton edge="end" component={RouterLink} to={`/ingredient-categories/${category.id}/edit`} size="small" title="Edit"><EditIcon fontSize="small"/></IconButton><IconButton edge="end" onClick={() => handleDeleteClick(category)} disabled={isDeleting && categoryToDelete?.id === category.id} color="error" size="small" title="Delete"><DeleteIcon fontSize="small"/></IconButton></Stack>}><ListItemButton component={RouterLink} to={`/ingredient-categories/${category.id}/edit`} sx={{ pr: 15 }}><ListItemText primary={category.name} secondary={category.description || ''} /></ListItemButton></ListItem> ))}</List>
-        )}
-        {categoryToDelete && <ConfirmationDialog open={dialogOpen} onClose={handleCloseDialog} onConfirm={handleConfirmDelete} title="Confirm Deletion" contentText={`Delete category "${categoryToDelete?.name || ''}"? Ingredients using it will become uncategorized.`} errorText={dialogError} isProcessing={isDeleting} confirmText="Delete"/>}
+      </Box>
+
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Name</TableCell>
+              <TableCell>Description</TableCell>
+              <TableCell align="center">Ingredients</TableCell>
+              <TableCell align="right">Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {categories.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} align="center">
+                  No ingredient categories found. Add your first category!
+                </TableCell>
+              </TableRow>
+            ) : (
+              categories.map((category) => (
+                <TableRow key={category.id}>
+                  <TableCell>{category.name}</TableCell>
+                  <TableCell>{category.description || '-'}</TableCell>
+                  <TableCell align="center">
+                    -
+                  </TableCell>
+                  <TableCell align="right">
+                    <IconButton
+                      component={Link}
+                      to={`/ingredient-categories/${category.id}/edit`}
+                      color="primary"
+                    >
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton
+                      onClick={() => handleDelete(category.id)}
+                      color="error"
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
     </Container>
   );
 };
+
 export default IngredientCategoryListPage; 

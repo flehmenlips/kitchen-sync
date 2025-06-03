@@ -38,7 +38,13 @@ export const getSubscription = async (req: Request, res: Response): Promise<void
           status: 'TRIAL',
           currentPeriodStart: new Date(),
           currentPeriodEnd: trialEnd,
-          trialEndsAt: trialEnd
+          trialEndsAt: trialEnd,
+          // Enable all modules for trial
+          enabledModules: ['cookbook', 'agilechef', 'menubuilder', 'tablefarm', 'chefrail', 'website'],
+          maxLocations: 1,
+          maxStaffAccounts: 5,
+          maxCustomerAccounts: 100,
+          prioritySupport: true
         },
         include: {
           restaurant: {

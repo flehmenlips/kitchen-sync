@@ -53,10 +53,7 @@ export const modules: Module[] = [
     path: '/recipes',
     subModules: [
       { id: 'recipes', name: 'Recipes', icon: MenuBookIcon, path: '/recipes' },
-      { id: 'categories', name: 'Categories', icon: CategoryIcon, path: '/categories' },
-      { id: 'ingredients', name: 'Ingredients', icon: BlenderIcon, path: '/ingredients' },
-      { id: 'ingredient-categories', name: 'Ingredient Categories', icon: ClassIcon, path: '/ingredient-categories' },
-      { id: 'units', name: 'Units', icon: ScaleIcon, path: '/units' }
+      { id: 'cookbook-settings', name: 'Settings', icon: SettingsIcon, path: '/cookbook/settings' }
     ]
   },
   {
@@ -121,14 +118,6 @@ export const modules: Module[] = [
       { id: 'content-blocks', name: 'Content Blocks', icon: WebIcon, path: '/website/content' },
       { id: 'website-settings', name: 'Settings', icon: SettingsIcon, path: '/website/settings' }
     ]
-  },
-  {
-    id: 'issues',
-    name: 'Issue Tracker',
-    type: 'core',
-    requiredTier: ['TRIAL', 'FREE', 'HOME', 'STARTER', 'PROFESSIONAL', 'ENTERPRISE'],
-    icon: BugReportIcon,
-    path: '/issues'
   }
 ];
 
@@ -138,6 +127,11 @@ export function getAccessibleModules(tier: SubscriptionTier, enabledModules?: st
     // Check if user's tier allows access
     if (!module.requiredTier.includes(tier)) {
       return false;
+    }
+    
+    // For TRIAL, all modules are accessible
+    if (tier === 'TRIAL') {
+      return true;
     }
     
     // For optional modules, check if they're enabled
@@ -156,6 +150,11 @@ export function canAccessModule(moduleId: string, tier: SubscriptionTier, enable
   // Check tier requirement
   if (!module.requiredTier.includes(tier)) {
     return false;
+  }
+  
+  // For TRIAL, all modules are accessible
+  if (tier === 'TRIAL') {
+    return true;
   }
   
   // For optional modules, check if enabled

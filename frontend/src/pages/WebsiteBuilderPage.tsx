@@ -40,7 +40,8 @@ import {
   Facebook as FacebookIcon,
   Twitter as TwitterIcon,
   Payment as PaymentIcon,
-  Edit as EditIcon
+  Edit as EditIcon,
+  Public as PublicIcon
 } from '@mui/icons-material';
 import { restaurantSettingsService, RestaurantSettings } from '../services/restaurantSettingsService';
 import { useSnackbar } from '../context/SnackbarContext';
@@ -183,14 +184,26 @@ const WebsiteBuilderPage: React.FC = () => {
               Manage all customer-facing content and settings for your website
             </Typography>
           </Box>
-          <Button
-            variant="outlined"
-            component={Link}
-            to="/website/content"
-            startIcon={<EditIcon />}
-          >
-            Manage Content Blocks
-          </Button>
+          <Box display="flex" gap={2}>
+            <Button
+              variant="contained"
+              component="a"
+              href="/customer"
+              target="_blank"
+              startIcon={<PublicIcon />}
+              color="primary"
+            >
+              View Customer Portal
+            </Button>
+            <Button
+              variant="outlined"
+              component={Link}
+              to="/website/content"
+              startIcon={<EditIcon />}
+            >
+              Manage Content Blocks
+            </Button>
+          </Box>
         </Box>
       </Box>
 

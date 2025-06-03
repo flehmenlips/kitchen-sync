@@ -36,7 +36,6 @@ import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import Logout from '@mui/icons-material/Logout';
 import PersonIcon from '@mui/icons-material/Person';
-import PublicIcon from '@mui/icons-material/Public';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import PaymentIcon from '@mui/icons-material/Payment';
 
@@ -99,30 +98,6 @@ const MainLayout: React.FC = () => {
             <Divider sx={{ my: 1 }} />
             
             <List>
-                {/* Customer Portal Link */}
-                <ListItem disablePadding>
-                    <ListItemButton 
-                        component="a" 
-                        href="/customer" 
-                        target="_blank"
-                        sx={{
-                            backgroundColor: 'primary.main',
-                            color: 'white',
-                            '&:hover': {
-                                backgroundColor: 'primary.dark',
-                            },
-                            mx: 1,
-                            borderRadius: 1,
-                            my: 1
-                        }}
-                    >
-                        <ListItemIcon sx={{ color: 'inherit' }}>
-                            <PublicIcon />
-                        </ListItemIcon>
-                        <ListItemText primary="View Customer Portal" />
-                    </ListItemButton>
-                </ListItem>
-
                 {/* Admin Dashboard - Only visible to admin/owner */}
                 {(user?.role === 'ADMIN' || user?.role === 'SUPERADMIN') && (
                     <>
