@@ -122,7 +122,7 @@ app.use('/api/categories', categoryRoutes); // Mount category routes
 app.use('/api/ingredient-categories', ingredientCategoryRoutes); // Mount ingredient category routes
 app.use('/api/dashboard', dashboardRoutes); // <-- Mount dashboard routes
 app.use('/api/issues', issueRoutes);
-app.use('/api/issues/:issueId/comments', commentRoutes);
+app.use('/api/issues', commentRoutes); // Mount comment routes under issues
 app.use('/api/prep-tasks', prepTaskRoutes);
 app.use('/api/prep-columns', prepColumnRoutes);
 app.use('/api/menus', menuRoutes); // Mount menu routes
