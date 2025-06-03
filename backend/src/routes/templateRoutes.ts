@@ -10,6 +10,9 @@ router.use(protect);
 router.use(setRestaurantContext);
 
 // Get all active templates
+router.get('/active', templateController.getTemplates);
+
+// Get all active templates
 router.get('/', templateController.getTemplates);
 
 // Get templates by category
