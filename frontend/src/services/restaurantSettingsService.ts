@@ -79,12 +79,12 @@ export interface RestaurantSettings {
 
 class RestaurantSettingsService {
   async getSettings(): Promise<RestaurantSettings> {
-    const response = await apiService.get<RestaurantSettings>('/restaurant-settings/settings');
+    const response = await apiService.get<RestaurantSettings>('/restaurant/settings');
     return response.data;
   }
 
   async updateSettings(settings: RestaurantSettings): Promise<RestaurantSettings> {
-    const response = await apiService.put<RestaurantSettings>('/restaurant-settings/settings', settings);
+    const response = await apiService.put<RestaurantSettings>('/restaurant/settings', settings);
     return response.data;
   }
 
@@ -93,7 +93,7 @@ class RestaurantSettingsService {
     formData.append('image', file);
     
     const response = await apiService.post<{ imageUrl: string; settings: RestaurantSettings }>(
-      `/restaurant-settings/settings/image/${field}`,
+      `/restaurant/settings/image/${field}`,
       formData,
       {
         headers: {
@@ -110,15 +110,15 @@ class RestaurantSettingsService {
     
     if (slug) {
       // Use slug-based endpoint
-      const response = await apiService.get<RestaurantSettings>(`/restaurant-settings/public/slug/${slug}/settings`);
+      const response = await apiService.get<RestaurantSettings>(`/restaurant/public/slug/${slug}/settings`);
       return response.data;
     } else if (restaurantId) {
       // Fall back to ID-based endpoint
-      const response = await apiService.get<RestaurantSettings>(`/restaurant-settings/public/settings?restaurantId=${restaurantId}`);
+      const response = await apiService.get<RestaurantSettings>(`/restaurant/public/settings?restaurantId=${restaurantId}`);
       return response.data;
     } else {
       // Default to restaurant ID 1 for backward compatibility
-      const response = await apiService.get<RestaurantSettings>('/restaurant-settings/public/settings');
+      const response = await apiService.get<RestaurantSettings>('/restaurant/public/settings');
       return response.data;
     }
   }
