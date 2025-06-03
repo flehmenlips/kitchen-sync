@@ -10,6 +10,7 @@ const stripe = stripeKey ? new Stripe(stripeKey, {
 // Price IDs for each plan (you'll need to create these in Stripe)
 const PRICE_IDS: Record<SubscriptionPlan, string | null> = {
   TRIAL: null, // No price for trial
+  FREE: null,
   HOME: process.env.STRIPE_PRICE_HOME || 'price_home',
   STARTER: process.env.STRIPE_PRICE_STARTER || 'price_starter',
   PROFESSIONAL: process.env.STRIPE_PRICE_PROFESSIONAL || 'price_professional',

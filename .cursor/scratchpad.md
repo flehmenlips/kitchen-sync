@@ -3,6 +3,60 @@
 ## Project Overview
 KitchenSync is a comprehensive restaurant management platform that integrates recipe management, kitchen prep workflows, menu creation, reservations, and order management into a single system.
 
+## Current Task: Schema Restructuring Review and Recovery
+
+### Background and Motivation
+We need to carefully review and potentially recover from recent schema changes that were attempting to implement a modular platform restructuring. The goal is to ensure data safety while properly implementing the necessary architectural changes.
+
+### Key Challenges and Analysis
+1. Multiple recent migrations that may have interdependencies
+2. Complex multi-tenant system with separate user types
+3. Need to maintain data integrity during any recovery
+4. Potential migration drift that needs to be addressed
+
+### High-level Task Breakdown
+1. **Audit Current State**
+   - [ ] Review all recent migrations (20250423 onwards)
+   - [ ] Compare schema.prisma with actual database state
+   - [ ] Document any migration drift
+   - [ ] Create backup of current database state
+
+2. **Analysis Phase**
+   - [ ] Map out dependencies between recent migrations
+   - [ ] Identify any failed or incomplete migrations
+   - [ ] Document current data relationships
+   - [ ] List any tables or columns that need recovery
+
+3. **Recovery Planning**
+   - [ ] Create detailed rollback plan if needed
+   - [ ] Document forward migration path
+   - [ ] Identify safe points for data backup
+   - [ ] Plan validation steps for each change
+
+4. **Implementation**
+   - [ ] Execute backup
+   - [ ] Apply recovery steps
+   - [ ] Validate data integrity
+   - [ ] Update schema documentation
+
+### Project Status Board
+- [ ] Complete audit of current state
+- [ ] Document migration dependencies
+- [ ] Create database backup
+- [ ] Review schema drift
+- [ ] Plan recovery steps
+- [ ] Execute recovery
+- [ ] Validate changes
+
+### Executor's Feedback or Assistance Requests
+*Awaiting initial audit results before proceeding with specific actions*
+
+### Lessons
+- Always create database backups before schema changes
+- Document migration dependencies clearly
+- Test migrations in staging environment first
+- Keep track of schema drift
+
 ## Current Version: 2.11.1
 
 ## Module Status
@@ -2159,3 +2213,350 @@ The KitchenSync platform is migrating from its current domain to the new premium
 
 ### Lessons
 *To be filled during implementation*
+
+# KitchenSync Project Strategy
+
+## Background and Motivation
+KitchenSync is evolving into a modular platform with core and optional features. The system needs to:
+- Clearly differentiate between core (CookBook, AgileChef) and optional modules
+- Implement proper subscription-based access control
+- Reorganize navigation for better user experience
+- Support trial users with appropriate feature visibility
+- Implement website builder as an optional module
+- Support custom domains and subdomains for restaurant websites
+
+## Key Challenges and Analysis
+
+### 1. Module Organization & Subscription Tiers
+- **Core Modules** (Available to all users):
+  - CookBook (Recipe Engine)
+  - AgileChef (Kitchen Prep Flow)
+
+- **Optional Modules**:
+  - MenuBuilder (Starter+ tier)
+  - TableFarm (Professional+ tier)
+  - ChefRail (Professional+ tier)
+  - Website & Marketing (Professional+ tier)
+
+- **Subscription Tiers**:
+  - **Free**: Core modules only (CookBook, AgileChef)
+  - **Starter**: Core + MenuBuilder
+  - **Professional**: All modules, standard scaling
+  - **Enterprise**: All modules, enhanced scaling for chains/franchises
+
+### 2. Navigation Structure
+```
+Dashboard
+CookBook (Core)
+  ├─ Recipes
+  └─ Settings
+     ├─ Categories
+     ├─ Ingredients
+     ├─ Ingredient Categories
+     └─ Units
+
+AgileChef (Core)
+  ├─ Prep Board
+  └─ Settings
+
+MenuBuilder (Starter+)
+  ├─ Menus
+  └─ Settings
+
+TableFarm (Professional+)
+  ├─ Tables
+  ├─ Reservations
+  └─ Settings
+
+ChefRail (Professional+)
+  ├─ Orders
+  ├─ Kitchen Display
+  └─ Settings
+
+Website & Marketing (Professional+)
+  ├─ Website Builder
+  │   ├─ Branding & Theme
+  │   ├─ Hero & About
+  │   ├─ Contact & Hours
+  │   ├─ Menu Display
+  │   ├─ Content Blocks
+  │   ├─ Social & Footer
+  │   └─ SEO
+  └─ Marketing Tools (future)
+
+Account
+  ├─ Settings
+  └─ Billing
+```
+
+### 3. Implementation Requirements
+
+#### Database Schema Updates
+```prisma
+model Subscription {
+  id          Int      @id @default(autoincrement())
+  restaurantId Int
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  tier        SubscriptionTier
+  isTrial     Boolean  @default(false)
+  trialEndsAt DateTime?
+  enabledModules String[] // Array of enabled module IDs
+  // Enterprise-specific fields
+  maxStaffSeats Int?    // null for non-enterprise
+  maxLocations Int?     // null for non-enterprise
+  customFeatures Json?  // Enterprise-specific features
+}
+
+enum SubscriptionTier {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+model Restaurant {
+  id          Int      @id @default(autoincrement())
+  // ... existing fields
+  hasWebsiteBuilder Boolean @default(false)
+  websiteSlug      String?  @unique
+  customDomain     String?
+  subscription Subscription?
+  // Enterprise-specific fields
+  isChain         Boolean  @default(false)
+  parentRestaurantId Int?  // For franchise locations
+  locationNumber   Int?    // For franchise locations
+}
+
+model WebsiteBuilderSubscription {
+  id          Int      @id @default(autoincrement())
+  restaurantId Int
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  isActive    Boolean  @default(false)
+  startDate   DateTime @default(now())
+  endDate     DateTime?
+}
+```
+
+#### Module System Implementation
+```typescript
+// types/modules.ts
+export type ModuleType = 'core' | 'optional';
+export type ModuleTier = 'free' | 'starter' | 'professional' | 'enterprise';
+
+export interface Module {
+  id: string;
+  name: string;
+  type: ModuleType;
+  requiredTier: ModuleTier;
+  isEnabled: boolean;
+  icon: React.ComponentType;
+  path: string;
+  submodules?: Module[];
+}
+
+// Module definitions
+export const modules: Module[] = [
+  {
+    id: 'cookbook',
+    name: 'CookBook',
+    type: 'core',
+    requiredTier: 'free',
+    isEnabled: true,
+    icon: BookIcon,
+    path: '/cookbook',
+    submodules: [/* ... */]
+  },
+  {
+    id: 'agilechef',
+    name: 'AgileChef',
+    type: 'core',
+    requiredTier: 'free',
+    isEnabled: true,
+    icon: KitchenIcon,
+    path: '/agilechef',
+    submodules: [/* ... */]
+  },
+  {
+    id: 'menubuilder',
+    name: 'MenuBuilder',
+    type: 'optional',
+    requiredTier: 'starter',
+    isEnabled: false,
+    icon: MenuBookIcon,
+    path: '/menubuilder',
+    submodules: [/* ... */]
+  },
+  {
+    id: 'tablefarm',
+    name: 'TableFarm',
+    type: 'optional',
+    requiredTier: 'professional',
+    isEnabled: false,
+    icon: TableRestaurantIcon,
+    path: '/tablefarm',
+    submodules: [/* ... */]
+  },
+  {
+    id: 'chefrail',
+    name: 'ChefRail',
+    type: 'optional',
+    requiredTier: 'professional',
+    isEnabled: false,
+    icon: RestaurantIcon,
+    path: '/chefrail',
+    submodules: [/* ... */]
+  },
+  {
+    id: 'website',
+    name: 'Website & Marketing',
+    type: 'optional',
+    requiredTier: 'professional',
+    isEnabled: false,
+    icon: WebIcon,
+    path: '/website',
+    submodules: [/* ... */]
+  }
+];
+```
+
+#### Subscription Context
+```typescript
+interface SubscriptionContextType {
+  subscription: {
+    tier: ModuleTier;
+    isTrial: boolean;
+    trialEndsAt?: Date;
+    enabledModules: string[];
+  };
+  hasAccessToModule: (moduleId: string) => boolean;
+}
+```
+
+## High-level Task Breakdown
+
+### Phase 1: Database & Core Structure
+1. Create Prisma migration for new subscription and module fields
+2. Implement module type definitions and access control
+3. Set up subscription context and hooks
+4. Update restaurant model with website builder fields
+
+### Phase 2: Navigation & UI
+1. Implement new navigation structure
+2. Create module-based access control components
+3. Update existing pages to use new module system
+4. Implement trial user experience
+
+### Phase 3: Website Builder Implementation
+1. Move website builder to optional module
+2. Implement subdomain routing
+3. Add website builder subscription management
+4. Update API routes to use slugs
+
+### Phase 4: Testing & Migration
+1. Test module access control
+2. Verify subscription-based features
+3. Test trial user experience
+4. Create migration plan for existing users
+
+## Project Status Board
+- [ ] Phase 1: Database & Core Structure
+  - [ ] Create Prisma migration
+  - [ ] Implement module system
+  - [ ] Set up subscription context
+  - [ ] Update restaurant model
+- [ ] Phase 2: Navigation & UI
+  - [ ] New navigation structure
+  - [ ] Module access control
+  - [ ] Update existing pages
+  - [ ] Trial user experience
+- [ ] Phase 3: Website Builder
+  - [ ] Module conversion
+  - [ ] Subdomain routing
+  - [ ] Subscription management
+  - [ ] API updates
+- [ ] Phase 4: Testing & Migration
+  - [ ] Access control testing
+  - [ ] Subscription testing
+  - [ ] Trial experience testing
+  - [ ] User migration
+
+## Executor's Feedback or Assistance Requests
+- Awaiting confirmation on which phase to start with
+- Need clarification on trial period duration
+- Need to define specific features for each subscription tier
+
+## Lessons
+- Keep core functionality (CookBook, AgileChef) accessible to all users
+- Use clear visual hierarchy in navigation
+- Implement proper access control from the start
+- Consider trial user experience in all feature implementations
+- Move configuration/settings into appropriate module sections
+- Use subdomain approach for website builder (e.g., restaurant.kitchensync.restaurant)
+
+## Modular Platform Restructuring Plan
+
+### Background and Motivation
+- Need to support modular access to platform features
+- Enable enterprise-level features for larger restaurants
+- Support multi-location restaurant chains
+- Implement subscription-based feature access
+
+### Key Challenges and Analysis
+1. **Data Model Changes**
+   - Add subscription plan types (FREE, STARTER, PROFESSIONAL, ENTERPRISE)
+   - Implement module access control
+   - Support multi-location restaurant chains
+   - Add enterprise features (website builder, chain management)
+
+2. **Migration Strategy**
+   - Safe migration with data preservation
+   - Backward compatibility for existing features
+   - Graceful handling of subscription changes
+   - Support for existing restaurant data
+
+### High-level Task Breakdown
+
+1. **Database Schema Updates**
+   - [ ] Update SubscriptionPlan enum
+   - [ ] Add module access fields to Subscription model
+   - [ ] Add enterprise features to Restaurant model
+   - [ ] Add chain management fields
+   - [ ] Create migration with data preservation
+
+2. **API Layer Updates**
+   - [ ] Add subscription plan endpoints
+   - [ ] Implement module access control middleware
+   - [ ] Update restaurant endpoints for chain support
+   - [ ] Add enterprise feature endpoints
+
+3. **Frontend Updates**
+   - [ ] Update subscription management UI
+   - [ ] Add module access controls
+   - [ ] Implement chain management interface
+   - [ ] Add enterprise feature toggles
+
+4. **Testing & Validation**
+   - [ ] Test migration with production data backup
+   - [ ] Verify module access controls
+   - [ ] Test chain management features
+   - [ ] Validate enterprise features
+
+### Project Status Board
+- [ ] Create and verify database backup
+- [ ] Update schema.prisma with new fields
+- [ ] Create and test migration
+- [ ] Update API endpoints
+- [ ] Update frontend components
+- [ ] Test all changes
+- [ ] Deploy to production
+
+### Executor's Feedback or Assistance Requests
+- Database backup completed and verified
+- Ready to proceed with schema changes
+- Will need to test migration with production data backup
+
+### Lessons
+- Always create and verify database backups before schema changes
+- Use pg_dump for active database backups
+- Test migrations with production data backup
+- Keep existing data during schema updates

@@ -1,0 +1,992 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model categories {
+  id            Int         @id @default(autoincrement())
+  name          String      @db.VarChar(150)
+  description   String?
+  created_at    DateTime    @default(now())
+  updated_at    DateTime
+  user_id       Int
+  restaurant_id Int
+  restaurants   restaurants @relation(fields: [restaurant_id], references: [id], onDelete: Cascade)
+  users         users       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  recipes       recipes[]
+
+  @@unique([name, user_id, restaurant_id])
+  @@index([restaurant_id])
+  @@index([user_id])
+}
+
+model comments {
+  id          Int      @id @default(autoincrement())
+  content     String
+  is_internal Boolean  @default(false)
+  issue_id    Int
+  user_id     Int
+  created_at  DateTime @default(now())
+  updated_at  DateTime
+  issues      issues   @relation(fields: [issue_id], references: [id], onDelete: Cascade)
+  users       users    @relation(fields: [user_id], references: [id])
+
+  @@index([issue_id])
+  @@index([user_id])
+}
+
+model content_blocks {
+  id              Int         @id @default(autoincrement())
+  restaurant_id   Int
+  page            String      @default("home") @db.VarChar(50)
+  block_type      String      @db.VarChar(50)
+  title           String?     @db.VarChar(255)
+  subtitle        String?     @db.VarChar(500)
+  content         String?
+  image_url       String?
+  image_public_id String?     @db.VarChar(255)
+  video_url       String?
+  button_text     String?     @db.VarChar(100)
+  button_link     String?     @db.VarChar(255)
+  button_style    String?     @default("primary") @db.VarChar(50)
+  settings        Json?       @default("{}") @db.Json
+  display_order   Int         @default(0)
+  is_active       Boolean     @default(true)
+  created_at      DateTime    @default(now())
+  updated_at      DateTime
+  restaurants     restaurants @relation(fields: [restaurant_id], references: [id], onDelete: Cascade)
+
+  @@index([display_order])
+  @@index([restaurant_id, page])
+}
+
+model customer_preferences {
+  id                       Int        @id @default(autoincrement())
+  customer_id              Int?       @unique
+  dietary_restrictions     String?
+  seating_preferences      String?
+  special_occasions        Json?
+  marketing_opt_in         Boolean?   @default(true)
+  sms_notifications        Boolean?   @default(false)
+  preferred_contact_method String?    @default("email") @db.VarChar(20)
+  notes                    String?
+  created_at               DateTime?  @default(now()) @db.Timestamp(6)
+  updated_at               DateTime?  @default(now()) @db.Timestamp(6)
+  customers                customers? @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([customer_id], map: "idx_customer_preferences_customer_id")
+}
+
+model customer_profiles {
+  id                       Int       @id @default(autoincrement())
+  user_id                  Int       @unique
+  phone_verified           Boolean   @default(false)
+  email_verified           Boolean   @default(false)
+  preferred_contact_method String?   @default("email") @db.VarChar(20)
+  dietary_restrictions     String?
+  special_requests         String?
+  vip_status               Boolean   @default(false)
+  tags                     String[]
+  notes                    String?
+  marketing_opt_in         Boolean   @default(true)
+  birthday                 DateTime? @db.Date
+  anniversary              DateTime? @db.Date
+  created_at               DateTime  @default(now())
+  updated_at               DateTime
+  users                    users     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([vip_status])
+}
+
+model customer_restaurants {
+  id            Int          @id @default(autoincrement())
+  customer_id   Int?
+  restaurant_id Int?
+  first_visit   DateTime?    @db.Date
+  visit_count   Int?         @default(0)
+  total_spent   Decimal?     @default(0) @db.Decimal(10, 2)
+  notes         String?
+  created_at    DateTime?    @default(now()) @db.Timestamp(6)
+  updated_at    DateTime?    @default(now()) @db.Timestamp(6)
+  last_visit    DateTime?    @default(now()) @db.Timestamp(6)
+  tags          String[]     @default([])
+  vip_status    Boolean?     @default(false)
+  preferences   Json?        @db.Json
+  customers     customers?   @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  restaurants   restaurants? @relation(fields: [restaurant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([customer_id, restaurant_id])
+  @@index([customer_id], map: "idx_customer_restaurants_customer_id")
+  @@index([restaurant_id], map: "idx_customer_restaurants_restaurant_id")
+}
+
+model customer_sessions {
+  id          Int        @id @default(autoincrement())
+  customer_id Int?
+  token       String     @unique @db.VarChar(255)
+  expires_at  DateTime   @db.Timestamp(6)
+  created_at  DateTime?  @default(now()) @db.Timestamp(6)
+  customers   customers? @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([customer_id], map: "idx_customer_sessions_customer_id")
+  @@index([token], map: "idx_customer_sessions_token")
+}
+
+model customers {
+  id                         Int                    @id @default(autoincrement())
+  email                      String                 @unique @db.VarChar(255)
+  password                   String                 @db.VarChar(255)
+  first_name                 String?                @db.VarChar(100)
+  last_name                  String?                @db.VarChar(100)
+  phone                      String?                @db.VarChar(20)
+  email_verified             Boolean?               @default(false)
+  verification_token         String?                @db.VarChar(255)
+  reset_token                String?                @db.VarChar(255)
+  reset_token_expires        DateTime?              @db.Timestamp(6)
+  created_at                 DateTime?              @default(now()) @db.Timestamp(6)
+  updated_at                 DateTime?              @default(now()) @db.Timestamp(6)
+  email_verification_token   String?                @db.VarChar(255)
+  email_verification_expires DateTime?              @db.Timestamp(6)
+  password_reset_token       String?                @db.VarChar(255)
+  password_reset_expires     DateTime?              @db.Timestamp(6)
+  last_login                 DateTime?              @db.Timestamp(6)
+  restaurant_id              Int?                   @default(1)
+  customer_preferences       customer_preferences?
+  customer_restaurants       customer_restaurants[]
+  customer_sessions          customer_sessions[]
+  reservations               reservations[]
+
+  @@index([email], map: "idx_customers_email")
+}
+
+model email_verification_tokens {
+  id         Int       @id @default(autoincrement())
+  user_id    Int
+  token      String    @unique @db.VarChar(255)
+  expires_at DateTime
+  used_at    DateTime?
+  created_at DateTime  @default(now())
+  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([user_id])
+}
+
+model guest_reservations {
+  id                   Int          @id @default(autoincrement())
+  reservation_id       Int          @unique
+  guest_email          String       @db.VarChar(255)
+  guest_phone          String?      @db.VarChar(50)
+  conversion_token     String?      @unique @db.VarChar(255)
+  converted_to_user_id Int?
+  created_at           DateTime     @default(now())
+  users                users?       @relation(fields: [converted_to_user_id], references: [id])
+  reservations         reservations @relation(fields: [reservation_id], references: [id], onDelete: Cascade)
+
+  @@index([conversion_token])
+  @@index([guest_email])
+}
+
+model ingredient_categories {
+  id            Int           @id @default(autoincrement())
+  name          String        @db.VarChar(150)
+  description   String?
+  created_at    DateTime      @default(now())
+  updated_at    DateTime
+  user_id       Int
+  restaurant_id Int
+  restaurants   restaurants   @relation(fields: [restaurant_id], references: [id], onDelete: Cascade)
+  users         users         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  ingredients   ingredients[]
+
+  @@unique([name, user_id])
+  @@index([restaurant_id])
+  @@index([user_id])
+}
+
+model ingredients {
+  id                     Int                    @id @default(autoincrement())
+  name                   String                 @db.VarChar(255)
+  description            String?
+  created_at             DateTime               @default(now())
+  updated_at             DateTime
+  ingredient_category_id Int?
+  user_id                Int
+  restaurant_id          Int
+  ingredient_categories  ingredient_categories? @relation(fields: [ingredient_category_id], references: [id])
+  restaurants            restaurants            @relation(fields: [restaurant_id], references: [id], onDelete: Cascade)
+  users                  users                  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  recipe_ingredients     recipe_ingredients[]
+
+  @@unique([name, user_id])
+  @@index([ingredient_category_id])
+  @@index([restaurant_id])
+  @@index([user_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model invoices {
+  id                 Int           @id @default(autoincrement())
+  subscription_id    Int
+  stripe_invoice_id  String?       @unique @db.VarChar(255)
+  amount             Decimal       @db.Decimal(10, 2)
+  status             String        @db.VarChar(50)
+  due_date           DateTime?     @db.Timestamp(6)
+  paid_at            DateTime?     @db.Timestamp(6)
+  created_at         DateTime?     @default(now()) @db.Timestamp(6)
+  invoice_number     String        @unique @db.VarChar(255)
+  tax                Decimal?      @db.Decimal(10, 2)
+  total              Decimal?      @db.Decimal(10, 2)
+  currency           String        @default("USD") @db.VarChar(3)
+  period_start       DateTime?     @db.Timestamp(6)
+  period_end         DateTime?     @db.Timestamp(6)
+  payment_method     String?       @db.VarChar(255)
+  payment_intent_id  String?       @db.VarChar(255)
+  invoice_url        String?
+  hosted_invoice_url String?
+  invoice_pdf        String?
+  metadata           Json?
+  subscriptions      subscriptions @relation(fields: [subscription_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([status], map: "idx_invoices_status")
+  @@index([subscription_id], map: "idx_invoices_subscription_id")
+  @@index([status])
+  @@index([subscription_id])
+}
+
+model issue_labels {
+  issue_id   Int
+  label_id   Int
+  created_at DateTime @default(now())
+  issues     issues   @relation(fields: [issue_id], references: [id], onDelete: Cascade)
+  labels     labels   @relation(fields: [label_id], references: [id], onDelete: Cascade)
+
+  @@id([issue_id, label_id])
+  @@index([issue_id])
+  @@index([label_id])
+}
+
+model issues {
+  id                                 Int            @id @default(autoincrement())
+  title                              String         @db.VarChar(255)
+  description                        String
+  type                               IssueType
+  status                             IssueStatus    @default(OPEN)
+  priority                           IssuePriority  @default(MEDIUM)
+  is_public                          Boolean        @default(false)
+  created_by_id                      Int
+  assigned_to_id                     Int?
+  created_at                         DateTime       @default(now())
+  updated_at                         DateTime
+  comments                           comments[]
+  issue_labels                       issue_labels[]
+  users_issues_assigned_to_idTousers users?         @relation("issues_assigned_to_idTousers", fields: [assigned_to_id], references: [id])
+  users_issues_created_by_idTousers  users          @relation("issues_created_by_idTousers", fields: [created_by_id], references: [id])
+
+  @@index([assigned_to_id])
+  @@index([created_by_id])
+  @@index([status])
+  @@index([type])
+}
+
+model labels {
+  id           Int            @id @default(autoincrement())
+  name         String         @unique @db.VarChar(50)
+  color        String         @db.VarChar(7)
+  description  String?
+  created_at   DateTime       @default(now())
+  updated_at   DateTime
+  issue_labels issue_labels[]
+}
+
+model menu_items {
+  id            Int           @id @default(autoincrement())
+  name          String        @db.VarChar(255)
+  description   String?
+  price         String?
+  position      Int           @default(0)
+  active        Boolean       @default(true)
+  recipe_id     Int?
+  section_id    Int
+  recipes       recipes?      @relation(fields: [recipe_id], references: [id])
+  menu_sections menu_sections @relation(fields: [section_id], references: [id], onDelete: Cascade)
+  order_items   order_items[]
+
+  @@index([position])
+  @@index([recipe_id])
+  @@index([section_id])
+}
+
+model menu_sections {
+  id         Int          @id @default(autoincrement())
+  name       String       @db.VarChar(255)
+  position   Int          @default(0)
+  active     Boolean      @default(true)
+  menu_id    Int
+  menu_items menu_items[]
+  menus      menus        @relation(fields: [menu_id], references: [id], onDelete: Cascade)
+
+  @@index([menu_id])
+  @@index([position])
+}
+
+model menus {
+  id                    Int             @id @default(autoincrement())
+  name                  String          @db.VarChar(255)
+  title                 String?
+  subtitle              String?
+  font                  String?         @default("Playfair Display")
+  layout                String?         @default("single")
+  show_dollar_sign      Boolean         @default(true)
+  show_decimals         Boolean         @default(true)
+  show_section_dividers Boolean         @default(true)
+  logo_path             String?
+  logo_position         String?         @default("top")
+  logo_size             String?         @default("200")
+  logo_offset           String?         @default("0")
+  background_color      String?         @default("#ffffff")
+  text_color            String?         @default("#000000")
+  accent_color          String?         @default("#333333")
+  is_archived           Boolean         @default(false)
+  created_at            DateTime        @default(now())
+  updated_at            DateTime
+  user_id               Int
+  logo_visible          Boolean         @default(true)
+  logo_alignment        String?         @default("center")
+  title_font_size       String?         @default("normal")
+  subtitle_font_size    String?         @default("normal")
+  section_font_size     String?         @default("normal")
+  item_name_font_size   String?         @default("normal")
+  item_desc_font_size   String?         @default("normal")
+  section_divider_style String?         @default("solid")
+  section_divider_width String?         @default("1px")
+  section_divider_color String?         @default("#333333")
+  rich_text_enabled     Boolean         @default(false)
+  restaurant_id         Int
+  menu_sections         menu_sections[]
+  restaurants           restaurants     @relation(fields: [restaurant_id], references: [id], onDelete: Cascade)
+  users                 users           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([restaurant_id])
+  @@index([user_id])
+}
+
+model order_items {
+  id           Int             @id @default(autoincrement())
+  order_id     Int
+  menu_item_id Int
+  quantity     Int             @default(1)
+  price        Decimal         @db.Decimal(10, 2)
+  modifiers    Json?           @db.Json
+  status       OrderItemStatus @default(PENDING)
+  notes        String?
+  created_at   DateTime        @default(now())
+  updated_at   DateTime
+  menu_items   menu_items      @relation(fields: [menu_item_id], references: [id])
+  orders       orders          @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  @@index([menu_item_id])
+  @@index([order_id])
+  @@index([status])
+}
+
+model orders {
+  id             Int           @id @default(autoincrement())
+  order_number   String        @unique @db.VarChar(50)
+  reservation_id Int?
+  restaurant_id  Int
+  customer_name  String?       @db.VarChar(255)
+  status         OrderStatus   @default(NEW)
+  order_type     OrderType     @default(DINE_IN)
+  notes          String?
+  total_amount   Decimal?      @db.Decimal(10, 2)
+  created_at     DateTime      @default(now())
+  updated_at     DateTime
+  user_id        Int
+  order_items    order_items[]
+  reservations   reservations? @relation(fields: [reservation_id], references: [id])
+  restaurants    restaurants   @relation(fields: [restaurant_id], references: [id], onDelete: Cascade)
+  users          users         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([created_at])
+  @@index([reservation_id])
+  @@index([restaurant_id])
+  @@index([status])
+  @@index([user_id])
+}
+
+model password_reset_tokens {
+  id         Int       @id @default(autoincrement())
+  user_id    Int
+  token      String    @unique @db.VarChar(255)
+  expires_at DateTime
+  used_at    DateTime?
+  created_at DateTime  @default(now())
+  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([user_id])
+}
+
+model platform_actions {
+  id              Int             @id @default(autoincrement())
+  admin_id        Int
+  action          String          @db.VarChar(100)
+  resource_type   String?         @db.VarChar(50)
+  resource_id     String?         @db.VarChar(100)
+  details         Json?
+  ip_address      String?         @db.VarChar(45)
+  user_agent      String?
+  created_at      DateTime?       @default(now()) @db.Timestamp(6)
+  entity_type     String?         @db.VarChar(50)
+  entity_id       Int?
+  metadata        Json?
+  platform_admins platform_admins @relation(fields: [admin_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([admin_id], map: "idx_platform_actions_admin_id")
+  @@index([created_at], map: "idx_platform_actions_created_at")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model platform_admins {
+  id               Int                @id @default(autoincrement())
+  email            String             @unique @db.VarChar(255)
+  name             String?            @db.VarChar(255)
+  password         String             @db.VarChar(255)
+  role             String             @default("ADMIN") @db.VarChar(50)
+  is_active        Boolean?           @default(true)
+  created_at       DateTime?          @default(now()) @db.Timestamp(6)
+  updated_at       DateTime?          @default(now()) @db.Timestamp(6)
+  last_login_at    DateTime?          @db.Timestamp(6)
+  platform_actions platform_actions[]
+  restaurant_notes restaurant_notes[]
+  support_tickets  support_tickets[]
+}
+
+model prep_columns {
+  id            String       @id
+  name          String       @db.VarChar(255)
+  order         Int          @default(0)
+  color         String       @default("#1976d2") @db.VarChar(7)
+  user_id       Int
+  created_at    DateTime     @default(now())
+  updated_at    DateTime
+  restaurant_id Int
+  restaurants   restaurants  @relation(fields: [restaurant_id], references: [id], onDelete: Cascade)
+  users         users        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  prep_tasks    prep_tasks[]
+
+  @@unique([name, user_id])
+  @@index([order])
+  @@index([user_id])
+}
+
+model prep_tasks {
+  id            String       @id
+  title         String       @db.VarChar(255)
+  description   String?
+  recipe_id     Int?
+  user_id       Int
+  order         Int          @default(0)
+  created_at    DateTime     @default(now())
+  updated_at    DateTime
+  column_id     String
+  restaurant_id Int
+  prep_columns  prep_columns @relation(fields: [column_id], references: [id])
+  recipes       recipes?     @relation(fields: [recipe_id], references: [id])
+  restaurants   restaurants  @relation(fields: [restaurant_id], references: [id], onDelete: Cascade)
+  users         users        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([column_id])
+  @@index([order])
+  @@index([recipe_id])
+  @@index([restaurant_id])
+  @@index([user_id])
+}
+
+model recipe_ingredients {
+  id                                                Int              @id @default(autoincrement())
+  recipe_id                                         Int
+  ingredient_id                                     Int?
+  sub_recipe_id                                     Int?
+  quantity                                          Decimal          @db.Decimal(10, 2)
+  unit_id                                           Int
+  order                                             Int              @default(0)
+  created_at                                        DateTime         @default(now())
+  updated_at                                        DateTime
+  ingredients                                       ingredients?     @relation(fields: [ingredient_id], references: [id], onDelete: Restrict)
+  recipes_recipe_ingredients_recipe_idTorecipes     recipes          @relation("recipe_ingredients_recipe_idTorecipes", fields: [recipe_id], references: [id], onDelete: Cascade)
+  recipes_recipe_ingredients_sub_recipe_idTorecipes recipes?         @relation("recipe_ingredients_sub_recipe_idTorecipes", fields: [sub_recipe_id], references: [id], onDelete: Restrict)
+  units_of_measure                                  units_of_measure @relation(fields: [unit_id], references: [id])
+
+  @@index([ingredient_id])
+  @@index([recipe_id])
+  @@index([sub_recipe_id])
+  @@index([unit_id])
+}
+
+model recipes {
+  id                                                           Int                  @id @default(autoincrement())
+  name                                                         String               @db.VarChar(255)
+  description                                                  String?
+  instructions                                                 String
+  yield_quantity                                               Decimal?             @db.Decimal(10, 2)
+  yield_unit_id                                                Int?
+  prep_time_minutes                                            Int?
+  cook_time_minutes                                            Int?
+  tags                                                         String[]
+  created_at                                                   DateTime             @default(now())
+  updated_at                                                   DateTime
+  category_id                                                  Int?
+  user_id                                                      Int
+  photo_url                                                    String?
+  photo_public_id                                              String?
+  menu_description                                             String?
+  menu_title                                                   String?              @db.VarChar(255)
+  restaurant_id                                                Int
+  menu_items                                                   menu_items[]
+  prep_tasks                                                   prep_tasks[]
+  recipe_ingredients_recipe_ingredients_recipe_idTorecipes     recipe_ingredients[] @relation("recipe_ingredients_recipe_idTorecipes")
+  recipe_ingredients_recipe_ingredients_sub_recipe_idTorecipes recipe_ingredients[] @relation("recipe_ingredients_sub_recipe_idTorecipes")
+  categories                                                   categories?          @relation(fields: [category_id], references: [id])
+  restaurants                                                  restaurants          @relation(fields: [restaurant_id], references: [id], onDelete: Cascade)
+  users                                                        users                @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  units_of_measure                                             units_of_measure?    @relation(fields: [yield_unit_id], references: [id])
+
+  @@index([category_id])
+  @@index([restaurant_id])
+  @@index([user_id])
+}
+
+model refresh_tokens {
+  id          Int      @id @default(autoincrement())
+  user_id     Int
+  token       String   @unique @db.VarChar(500)
+  expires_at  DateTime
+  device_info String?
+  created_at  DateTime @default(now())
+  users       users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([user_id])
+}
+
+model reservation_logs {
+  id             Int          @id @default(autoincrement())
+  reservation_id Int
+  user_id        Int?
+  action         String       @db.VarChar(50)
+  changes        Json?        @db.Json
+  notes          String?
+  created_at     DateTime     @default(now())
+  reservations   reservations @relation(fields: [reservation_id], references: [id], onDelete: Cascade)
+  users          users?       @relation(fields: [user_id], references: [id])
+
+  @@index([action])
+  @@index([reservation_id])
+  @@index([user_id])
+}
+
+model reservations {
+  id                    Int                 @id @default(autoincrement())
+  customer_name         String              @db.VarChar(255)
+  customer_phone        String?             @db.VarChar(50)
+  customer_email        String?             @db.VarChar(255)
+  customer_id           Int?
+  restaurant_id         Int
+  party_size            Int
+  reservation_date      DateTime
+  reservation_time      String              @db.VarChar(10)
+  status                ReservationStatus   @default(CONFIRMED)
+  notes                 String?
+  special_requests      String?
+  created_at            DateTime            @default(now())
+  updated_at            DateTime
+  user_id               Int?
+  actual_arrival_time   DateTime?
+  actual_departure_time DateTime?
+  confirmation_sent     Boolean             @default(false)
+  duration_minutes      Int                 @default(90)
+  guest_notes           String?
+  reminder_sent         Boolean             @default(false)
+  source                String              @default("website") @db.VarChar(20)
+  table_ids             Int[]
+  guest_reservations    guest_reservations?
+  orders                orders[]
+  reservation_logs      reservation_logs[]
+  customers             customers?          @relation(fields: [customer_id], references: [id], onUpdate: NoAction)
+  restaurants           restaurants         @relation(fields: [restaurant_id], references: [id], onDelete: Cascade)
+  users                 users?              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([customer_id])
+  @@index([reservation_date])
+  @@index([restaurant_id])
+  @@index([status])
+  @@index([user_id])
+}
+
+model restaurant_notes {
+  id              Int             @id @default(autoincrement())
+  restaurant_id   Int
+  admin_id        Int
+  note            String
+  is_internal     Boolean?        @default(false)
+  created_at      DateTime?       @default(now()) @db.Timestamp(6)
+  platform_admins platform_admins @relation(fields: [admin_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  restaurants     restaurants     @relation(fields: [restaurant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([restaurant_id], map: "idx_restaurant_notes_restaurant_id")
+}
+
+model restaurant_settings {
+  id                    Int         @id @default(autoincrement())
+  restaurant_id         Int         @unique
+  website_name          String?
+  tagline               String?
+  logo_url              String?
+  logo_public_id        String?
+  hero_title            String?
+  hero_subtitle         String?
+  hero_image_url        String?
+  hero_image_public_id  String?
+  hero_cta_text         String?
+  hero_cta_link         String?
+  about_title           String?
+  about_description     String?
+  about_image_url       String?
+  about_image_public_id String?
+  primary_color         String?     @default("#1976d2")
+  secondary_color       String?     @default("#dc004e")
+  accent_color          String?     @default("#333333")
+  font_primary          String?     @default("Roboto, sans-serif")
+  font_secondary        String?     @default("Playfair Display, serif")
+  contact_phone         String?
+  contact_email         String?
+  contact_address       String?
+  contact_city          String?
+  contact_state         String?
+  contact_zip           String?
+  opening_hours         Json?
+  facebook_url          String?
+  instagram_url         String?
+  twitter_url           String?
+  active_menu_ids       Int[]
+  menu_display_mode     String?     @default("tabs")
+  footer_text           String?
+  meta_title            String?
+  meta_description      String?
+  meta_keywords         String?
+  created_at            DateTime    @default(now())
+  updated_at            DateTime
+  restaurants           restaurants @relation(fields: [restaurant_id], references: [id], onDelete: Cascade)
+}
+
+model restaurant_staff {
+  id            Int         @id @default(autoincrement())
+  user_id       Int
+  restaurant_id Int
+  role          StaffRole   @default(STAFF)
+  is_active     Boolean     @default(true)
+  created_at    DateTime    @default(now())
+  updated_at    DateTime
+  restaurants   restaurants @relation(fields: [restaurant_id], references: [id], onDelete: Cascade)
+  users         users       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, restaurant_id])
+  @@index([restaurant_id])
+  @@index([user_id])
+}
+
+model restaurants {
+  id                    Int                     @id @default(autoincrement())
+  name                  String                  @db.VarChar(255)
+  slug                  String                  @unique @db.VarChar(255)
+  created_at            DateTime                @default(now())
+  updated_at            DateTime
+  address               String?
+  city                  String?                 @db.VarChar(100)
+  country               String?                 @db.VarChar(100)
+  cover_image_url       String?
+  cuisine               String?                 @db.VarChar(100)
+  description           String?
+  email                 String?                 @db.VarChar(255)
+  is_active             Boolean                 @default(true)
+  logo_url              String?
+  opening_hours         Json?
+  phone                 String?                 @db.VarChar(50)
+  state                 String?                 @db.VarChar(50)
+  website               String?
+  zip_code              String?                 @db.VarChar(20)
+  owner_email           String?                 @db.VarChar(255)
+  owner_name            String?                 @db.VarChar(255)
+  business_phone        String?                 @db.VarChar(50)
+  business_address      String?
+  tax_id                String?                 @db.VarChar(50)
+  onboarding_status     OnboardingStatus?       @default(PENDING)
+  verified_at           DateTime?               @db.Timestamp(6)
+  verified_by           Int?
+  suspended_at          DateTime?               @db.Timestamp(6)
+  suspended_reason      String?
+  onboarding_steps      Json?                   @default("{}") @db.Json
+  categories            categories[]
+  content_blocks        content_blocks[]
+  customer_restaurants  customer_restaurants[]
+  ingredient_categories ingredient_categories[]
+  ingredients           ingredients[]
+  menus                 menus[]
+  orders                orders[]
+  prep_columns          prep_columns[]
+  prep_tasks            prep_tasks[]
+  recipes               recipes[]
+  reservations          reservations[]
+  restaurant_notes      restaurant_notes[]
+  restaurant_settings   restaurant_settings?
+  restaurant_staff      restaurant_staff[]
+  subscriptions         subscriptions?
+  support_tickets       support_tickets[]
+  units_of_measure      units_of_measure[]
+
+  @@index([is_active])
+  @@index([slug])
+}
+
+model subscriptions {
+  id                     Int                @id @default(autoincrement())
+  restaurant_id          Int                @unique
+  plan                   SubscriptionPlan   @default(TRIAL)
+  status                 SubscriptionStatus @default(TRIAL)
+  stripe_customer_id     String?            @unique @db.VarChar(255)
+  stripe_subscription_id String?            @db.VarChar(255)
+  current_period_start   DateTime?          @db.Timestamp(6)
+  current_period_end     DateTime?          @db.Timestamp(6)
+  trial_ends_at          DateTime?          @db.Timestamp(6)
+  seats                  Int?               @default(5)
+  monthly_price          Decimal?           @db.Decimal(10, 2)
+  created_at             DateTime?          @default(now()) @db.Timestamp(6)
+  updated_at             DateTime?          @default(now()) @db.Timestamp(6)
+  stripe_sub_id          String?            @unique @db.VarChar(255)
+  stripe_price_id        String?            @db.VarChar(255)
+  cancel_at              DateTime?          @db.Timestamp(6)
+  canceled_at            DateTime?          @db.Timestamp(6)
+  billing_email          String?            @db.VarChar(255)
+  billing_name           String?            @db.VarChar(255)
+  billing_address        Json?
+  payment_method_id      String?            @db.VarChar(255)
+  last_payment_status    String?            @db.VarChar(255)
+  last_payment_date      DateTime?          @db.Timestamp(6)
+  metadata               Json?
+  invoices               invoices[]
+  restaurants            restaurants        @relation(fields: [restaurant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  usage_records          usage_records[]
+
+  @@index([restaurant_id], map: "idx_subscriptions_restaurant_id")
+  @@index([status], map: "idx_subscriptions_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model support_tickets {
+  id              Int               @id @default(autoincrement())
+  restaurant_id   Int
+  subject         String            @db.VarChar(255)
+  status          String            @default("OPEN") @db.VarChar(50)
+  priority        String            @default("MEDIUM") @db.VarChar(50)
+  assigned_to     Int?
+  created_at      DateTime?         @default(now()) @db.Timestamp(6)
+  updated_at      DateTime?         @default(now()) @db.Timestamp(6)
+  platform_admins platform_admins?  @relation(fields: [assigned_to], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  restaurants     restaurants       @relation(fields: [restaurant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  ticket_messages ticket_messages[]
+
+  @@index([restaurant_id], map: "idx_support_tickets_restaurant_id")
+  @@index([status], map: "idx_support_tickets_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model ticket_messages {
+  id              Int             @id @default(autoincrement())
+  ticket_id       Int
+  sender_type     String          @db.VarChar(50)
+  sender_id       Int
+  message         String
+  created_at      DateTime?       @default(now()) @db.Timestamp(6)
+  support_tickets support_tickets @relation(fields: [ticket_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([ticket_id], map: "idx_ticket_messages_ticket_id")
+}
+
+model units_of_measure {
+  id                 Int                  @id @default(autoincrement())
+  name               String               @db.VarChar(100)
+  abbreviation       String?              @db.VarChar(20)
+  type               UnitType?
+  created_at         DateTime             @default(now())
+  updated_at         DateTime
+  user_id            Int
+  restaurant_id      Int
+  recipe_ingredients recipe_ingredients[]
+  recipes            recipes[]
+  restaurants        restaurants          @relation(fields: [restaurant_id], references: [id], onDelete: Cascade)
+  users              users                @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([abbreviation, user_id])
+  @@unique([name, user_id])
+  @@index([restaurant_id])
+  @@index([user_id])
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model usage_records {
+  id                     Int           @id @default(autoincrement())
+  subscription_id        Int
+  metric                 String        @db.VarChar(50)
+  quantity               Int
+  unit_amount            Decimal?      @db.Decimal(10, 4)
+  total_amount           Decimal?      @db.Decimal(10, 2)
+  period_start           DateTime      @db.Timestamp(6)
+  period_end             DateTime      @db.Timestamp(6)
+  recorded_at            DateTime      @default(now()) @db.Timestamp(6)
+  stripe_usage_record_id String?       @unique @db.VarChar(255)
+  metadata               Json?
+  subscriptions          subscriptions @relation(fields: [subscription_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([period_start, period_end])
+  @@index([subscription_id, metric])
+}
+
+model users {
+  id                                  Int                         @id @default(autoincrement())
+  email                               String                      @unique
+  name                                String?
+  password                            String
+  created_at                          DateTime                    @default(now())
+  updated_at                          DateTime
+  role                                UserRole                    @default(USER)
+  is_customer                         Boolean                     @default(false)
+  phone                               String?                     @db.VarChar(50)
+  categories                          categories[]
+  comments                            comments[]
+  customer_profiles                   customer_profiles?
+  email_verification_tokens           email_verification_tokens[]
+  guest_reservations                  guest_reservations[]
+  ingredient_categories               ingredient_categories[]
+  ingredients                         ingredients[]
+  issues_issues_assigned_to_idTousers issues[]                    @relation("issues_assigned_to_idTousers")
+  issues_issues_created_by_idTousers  issues[]                    @relation("issues_created_by_idTousers")
+  menus                               menus[]
+  orders                              orders[]
+  password_reset_tokens               password_reset_tokens[]
+  prep_columns                        prep_columns[]
+  prep_tasks                          prep_tasks[]
+  recipes                             recipes[]
+  refresh_tokens                      refresh_tokens[]
+  reservation_logs                    reservation_logs[]
+  reservations                        reservations[]
+  restaurant_staff                    restaurant_staff[]
+  units_of_measure                    units_of_measure[]
+}
+
+enum IssuePriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum IssueStatus {
+  OPEN
+  IN_PROGRESS
+  REVIEW
+  DONE
+  CLOSED
+}
+
+enum IssueType {
+  FEATURE
+  BUG
+  ENHANCEMENT
+}
+
+enum OnboardingStatus {
+  PENDING
+  EMAIL_VERIFIED
+  INFO_SUBMITTED
+  PAYMENT_ADDED
+  VERIFIED
+  ACTIVE
+  REJECTED
+}
+
+enum OrderItemStatus {
+  PENDING
+  PREPARING
+  READY
+  SERVED
+  CANCELLED
+}
+
+enum OrderStatus {
+  NEW
+  IN_PROGRESS
+  READY
+  COMPLETED
+  CANCELLED
+}
+
+enum OrderType {
+  DINE_IN
+  TAKEOUT
+  DELIVERY
+}
+
+enum PrepTaskStatus {
+  TO_PREP
+  PREPPING
+  READY
+  COMPLETE
+}
+
+enum ReservationStatus {
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+enum StaffRole {
+  STAFF
+  MANAGER
+  OWNER
+}
+
+enum SubscriptionPlan {
+  TRIAL
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  SUSPENDED
+}
+
+enum UnitType {
+  WEIGHT
+  VOLUME
+  COUNT
+  OTHER
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  SUPERADMIN
+}

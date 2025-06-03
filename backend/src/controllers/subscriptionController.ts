@@ -38,8 +38,7 @@ export const getSubscription = async (req: Request, res: Response): Promise<void
           status: 'TRIAL',
           currentPeriodStart: new Date(),
           currentPeriodEnd: trialEnd,
-          trialEndsAt: trialEnd,
-          seats: 5
+          trialEndsAt: trialEnd
         },
         include: {
           restaurant: {
@@ -158,8 +157,7 @@ export const createCheckoutSession = async (req: Request, res: Response): Promis
           status: 'TRIAL',
           stripeCustomerId: customerId,
           currentPeriodStart: new Date(),
-          currentPeriodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
-          seats: 5
+          currentPeriodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
         },
         update: {
           stripeCustomerId: customerId

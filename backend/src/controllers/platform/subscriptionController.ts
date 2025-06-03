@@ -158,7 +158,7 @@ export const getSubscription = async (req: PlatformAuthRequest, res: Response): 
 export const updateSubscription = async (req: PlatformAuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { plan, status, seats, notes } = req.body;
+    const { plan, status, notes } = req.body;
 
     // Check permissions - only SUPER_ADMIN can modify subscriptions
     if (req.platformAdmin!.role !== 'SUPER_ADMIN') {
@@ -169,7 +169,6 @@ export const updateSubscription = async (req: PlatformAuthRequest, res: Response
     const updateData: any = {};
     if (plan) updateData.plan = plan;
     if (status) updateData.status = status;
-    if (seats) updateData.seats = seats;
 
     const subscription = await prisma.subscription.update({
       where: { id: Number(id) },
@@ -237,11 +236,10 @@ export const createTrialSubscription = async (req: PlatformAuthRequest, res: Res
         plan: 'TRIAL',
         status: 'TRIAL',
         currentPeriodStart: new Date(),
-        currentPeriodEnd: trialEndsAt,
-        trialEndsAt,
+        currentPeriodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days
+        trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
         billingEmail,
-        billingName,
-        seats: 5 // Default trial seats
+        billingName
       },
       include: {
         restaurant: true
@@ -358,12 +356,13 @@ export const getSubscriptionAnalytics = async (req: PlatformAuthRequest, res: Re
     // Calculate MRR
     const activeSubscriptions = await prisma.subscription.findMany({
       where: { status: 'ACTIVE' },
-      select: { plan: true, seats: true }
+      select: { plan: true }
     });
 
     // Plan pricing (for MRR calculation and analytics)
     const planPrices = {
       TRIAL: 0,
+      FREE: 0,
       HOME: 19,
       STARTER: 49,
       PROFESSIONAL: 149,
@@ -372,9 +371,7 @@ export const getSubscriptionAnalytics = async (req: PlatformAuthRequest, res: Re
 
     const mrr = activeSubscriptions.reduce((total, sub) => {
       const basePrice = planPrices[sub.plan] || 0;
-      // Add extra seats if applicable
-      const extraSeats = Math.max(0, sub.seats - 5) * 10; // $10 per extra seat
-      return total + basePrice + extraSeats;
+      return total + basePrice;
     }, 0);
 
     // Churn rate (last 30 days)

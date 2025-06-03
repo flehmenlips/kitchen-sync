@@ -61,6 +61,12 @@ export const getRestaurants = async (req: PlatformAuthRequest, res: Response): P
         where,
         include: {
           subscription: true,
+          restaurantNotes: {
+            orderBy: { createdAt: 'desc' },
+            include: {
+              admin: true
+            }
+          },
           _count: {
             select: {
               staff: true,
@@ -154,17 +160,11 @@ export const getRestaurant = async (req: PlatformAuthRequest, res: Response): Pr
             }
           }
         },
-        notes: {
+        restaurantNotes: {
+          orderBy: { createdAt: 'desc' },
           include: {
-            admin: {
-              select: {
-                id: true,
-                name: true,
-                email: true
-              }
-            }
-          },
-          orderBy: { createdAt: 'desc' }
+            admin: true
+          }
         },
         _count: {
           select: {
@@ -578,6 +578,7 @@ export const getPlatformAnalytics = async (req: PlatformAuthRequest, res: Respon
     // Calculate MRR based on plan
     const planPrices = {
       TRIAL: 0,
+      FREE: 0,
       HOME: 19,
       STARTER: 49,
       PROFESSIONAL: 149,

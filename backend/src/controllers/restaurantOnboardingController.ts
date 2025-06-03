@@ -116,12 +116,11 @@ export const registerRestaurant = async (req: Request, res: Response): Promise<v
       await tx.subscription.create({
         data: {
           restaurantId: restaurant.id,
-          plan: SubscriptionPlan.TRIAL,
-          status: SubscriptionStatus.SUSPENDED, // Suspended until verified
+          plan: 'TRIAL',
+          status: 'SUSPENDED', // Suspended until verified
           currentPeriodStart: new Date(),
           currentPeriodEnd: trialEndDate,
           trialEndsAt: trialEndDate,
-          seats: 5,
           billingEmail: data.email,
           billingName: data.ownerName
         }
