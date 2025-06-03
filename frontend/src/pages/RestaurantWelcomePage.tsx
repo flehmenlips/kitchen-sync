@@ -26,7 +26,8 @@ import {
   Settings,
   PlayCircle,
   Email,
-  Support
+  Support,
+  Launch
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -238,11 +239,12 @@ const RestaurantWelcomePage: React.FC = () => {
           Go to Dashboard
         </Button>
         <Button
-          variant="outlined"
-          size="large"
-          onClick={() => navigate('/restaurant/settings')}
+          variant="contained"
+          color="primary"
+          onClick={() => navigate('/website')}
+          startIcon={<Launch />}
         >
-          Customize Settings
+          Set Up Your Website
         </Button>
       </Box>
 
