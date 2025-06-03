@@ -12,6 +12,7 @@ import BlenderIcon from '@mui/icons-material/Blender';
 import ClassIcon from '@mui/icons-material/Class';
 import ScaleIcon from '@mui/icons-material/Scale';
 import AssignmentIcon from '@mui/icons-material/Assignment';
+import BugReportIcon from '@mui/icons-material/BugReport';
 
 export type ModuleType = 'core' | 'optional';
 export type SubscriptionTier = 'TRIAL' | 'FREE' | 'HOME' | 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE';
@@ -120,6 +121,14 @@ export const modules: Module[] = [
       { id: 'content-blocks', name: 'Content Blocks', icon: WebIcon, path: '/website/content' },
       { id: 'website-settings', name: 'Settings', icon: SettingsIcon, path: '/website/settings' }
     ]
+  },
+  {
+    id: 'issues',
+    name: 'Issue Tracker',
+    type: 'core',
+    requiredTier: ['TRIAL', 'FREE', 'HOME', 'STARTER', 'PROFESSIONAL', 'ENTERPRISE'],
+    icon: BugReportIcon,
+    path: '/issues'
   }
 ];
 

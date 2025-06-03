@@ -34,28 +34,9 @@ import {
 // MUI Icons
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import DashboardIcon from '@mui/icons-material/Dashboard';
-import MenuBookIcon from '@mui/icons-material/MenuBook';
-import RestaurantMenuIcon from '@mui/icons-material/RestaurantMenu';
-import TableRestaurantIcon from '@mui/icons-material/TableRestaurant';
-import KitchenIcon from '@mui/icons-material/Kitchen';
-import BugReportIcon from '@mui/icons-material/BugReport';
-import ExpandLess from '@mui/icons-material/ExpandLess';
-import ExpandMore from '@mui/icons-material/ExpandMore';
-import CategoryIcon from '@mui/icons-material/Category';
-import BlenderIcon from '@mui/icons-material/Blender';
-import ScaleIcon from '@mui/icons-material/Scale';
-import ListAltIcon from '@mui/icons-material/ListAlt';
 import Logout from '@mui/icons-material/Logout';
 import PersonIcon from '@mui/icons-material/Person';
-import SettingsIcon from '@mui/icons-material/Settings';
 import PublicIcon from '@mui/icons-material/Public';
-import BookIcon from '@mui/icons-material/Book';
-import ViewKanbanIcon from '@mui/icons-material/ViewKanban';
-import ViewAgendaIcon from '@mui/icons-material/ViewAgenda';
-import ViewListIcon from '@mui/icons-material/ViewList';
-import StraightenIcon from '@mui/icons-material/Straighten';
-import EventIcon from '@mui/icons-material/Event';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import PaymentIcon from '@mui/icons-material/Payment';
 
@@ -70,14 +51,10 @@ const MainLayout: React.FC = () => {
     
     // State
     const [mobileOpen, setMobileOpen] = useState(false);
-    const [expandedModule, setExpandedModule] = useState<string | null>('cookbook');
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
     // Handlers
     const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
-    const handleModuleClick = (moduleId: string) => {
-        setExpandedModule(expandedModule === moduleId ? null : moduleId);
-    };
     const handleProfileClick = (event: React.MouseEvent<HTMLElement>) => {
         setAnchorEl(event.currentTarget);
     };
@@ -143,19 +120,6 @@ const MainLayout: React.FC = () => {
                             <PublicIcon />
                         </ListItemIcon>
                         <ListItemText primary="View Customer Portal" />
-                    </ListItemButton>
-                </ListItem>
-
-                <Divider sx={{ my: 1 }} />
-                
-                <ListItem disablePadding>
-                    <ListItemButton component={RouterLink} to="/issues">
-                        <ListItemIcon>
-                            <Badge color="error" variant="dot">
-                                <BugReportIcon />
-                            </Badge>
-                        </ListItemIcon>
-                        <ListItemText primary="Issue Tracker" />
                     </ListItemButton>
                 </ListItem>
 
