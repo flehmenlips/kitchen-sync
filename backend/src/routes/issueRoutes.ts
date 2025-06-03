@@ -7,8 +7,13 @@ import {
     deleteIssue
 } from '../controllers/issueController';
 import { protect } from '../middleware/authMiddleware';
+import { setRestaurantContext } from '../middleware/restaurantContext';
+import commentRoutes from './commentRoutes';
 
 const router = express.Router();
+
+// Apply restaurant context to all issue routes
+router.use(setRestaurantContext);
 
 // All routes are protected
 router.use(protect);
@@ -23,5 +28,8 @@ router.route('/:id')
     .get(getIssueById)
     .put(updateIssue)
     .delete(deleteIssue);
+
+// Mount comment routes under /:issueId/comments
+router.use('/:issueId/comments', commentRoutes);
 
 export default router; 

@@ -10,7 +10,6 @@ import ingredientCategoryRoutes from './routes/ingredientCategoryRoutes'; // Imp
 import userRoutes from './routes/userRoutes'; // Import user routes
 import dashboardRoutes from './routes/dashboardRoutes'; // <-- Import dashboard routes
 import issueRoutes from './routes/issueRoutes';
-import commentRoutes from './routes/commentRoutes';
 import prepTaskRoutes from './routes/prepTaskRoutes';
 import prepColumnRoutes from './routes/prepColumnRoutes';
 import menuRoutes from './routes/menuRoutes'; // Import menu routes
@@ -122,7 +121,6 @@ app.use('/api/categories', categoryRoutes); // Mount category routes
 app.use('/api/ingredient-categories', ingredientCategoryRoutes); // Mount ingredient category routes
 app.use('/api/dashboard', dashboardRoutes); // <-- Mount dashboard routes
 app.use('/api/issues', issueRoutes);
-app.use('/api/issues', commentRoutes); // Mount comment routes under issues
 app.use('/api/prep-tasks', prepTaskRoutes);
 app.use('/api/prep-columns', prepColumnRoutes);
 app.use('/api/menus', menuRoutes); // Mount menu routes
