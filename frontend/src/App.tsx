@@ -73,8 +73,8 @@ import MenuDetailPage from './pages/MenuDetailPage';
 // TableFarm Component
 import { TableFarmPage } from './pages/TableFarmPage';
 
-// Restaurant Settings
-import RestaurantSettingsPage from './pages/RestaurantSettingsPage';
+// Website & Marketing Module
+import WebsiteBuilderPage from './pages/WebsiteBuilderPage';
 import ContentBlocksPage from './pages/ContentBlocksPage';
 import BillingPage from './pages/BillingPage';
 
@@ -226,10 +226,12 @@ const App: React.FC = () => {
                         <Route path="tablefarm" element={<TableFarmPage />} />
                         <Route path="reservations" element={<ReservationManagementPage />} />
 
-                        {/* Restaurant Settings */}
-                        <Route path="settings" element={<RestaurantSettingsPage />} />
+                        {/* Website & Marketing Module Routes */}
+                        <Route path="website" element={<WebsiteBuilderPage />} />
+                        <Route path="website/content" element={<ContentBlocksPage />} />
+                        
+                        {/* Billing Settings */}
                         <Route path="settings/billing" element={<BillingPage />} />
-                        <Route path="content-blocks" element={<ContentBlocksPage />} />
 
                         {/* AgileChef Module Routes */}
                         <Route path="prep" element={<PrepBoard />} />

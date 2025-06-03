@@ -3,6 +3,8 @@ import { useLocation, Link as RouterLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { UserProfile } from '../../types/user';
 import RestaurantSelector from '../common/RestaurantSelector';
+import { SidebarItems } from './SidebarItems';
+import { modules } from '../../types/modules';
 
 // MUI Components
 import {
@@ -60,59 +62,6 @@ import PaymentIcon from '@mui/icons-material/Payment';
 // Constants
 const DRAWER_WIDTH = 280;
 
-// Module definitions
-const KITCHEN_SYNC_MODULES = [
-    {
-        id: 'cookbook',
-        name: 'CookBook',
-        icon: <MenuBookIcon />,
-        description: 'Recipe Management System',
-        path: '/recipes',
-        subItems: [
-            { name: 'Recipes', icon: <ListAltIcon />, path: '/recipes' },
-            { name: 'Categories', icon: <CategoryIcon />, path: '/categories' },
-            { name: 'Ingredients', icon: <BlenderIcon />, path: '/ingredients' },
-            { name: 'Units', icon: <ScaleIcon />, path: '/units' },
-        ]
-    },
-    {
-        id: 'agilechef',
-        name: 'AgileChef',
-        icon: <KitchenIcon />,
-        description: 'Kitchen Prep Management',
-        path: '/prep',
-        subItems: [
-            { name: 'Prep Board', icon: <DashboardIcon />, path: '/prep' },
-        ]
-    },
-    {
-        id: 'menubuilder',
-        name: 'MenuBuilder',
-        icon: <RestaurantMenuIcon />,
-        description: 'Menu Design & Management',
-        path: '/menus'
-    },
-    {
-        id: 'tablefarm',
-        name: 'TableFarm',
-        icon: <TableRestaurantIcon />,
-        description: 'Reservation & Order System',
-        path: '/tablefarm',
-        subItems: [
-            { name: 'Calendar', icon: <DashboardIcon />, path: '/tablefarm' },
-            { name: 'Reservations', icon: <EventIcon />, path: '/reservations' }
-        ]
-    },
-    {
-        id: 'chefrail',
-        name: 'ChefRail',
-        icon: <KitchenIcon />,
-        description: 'Kitchen Display System',
-        path: '/rail',
-        comingSoon: true
-    }
-];
-
 const MainLayout: React.FC = () => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -140,9 +89,9 @@ const MainLayout: React.FC = () => {
 
     // Determine if current path is under a module
     const getCurrentModule = () => {
-        return KITCHEN_SYNC_MODULES.find(module => 
+        return modules.find(module => 
             location.pathname.startsWith(module.path) ||
-            module.subItems?.some(item => location.pathname.startsWith(item.path))
+            module.subModules?.some(item => location.pathname.startsWith(item.path))
         );
     };
 
@@ -166,66 +115,13 @@ const MainLayout: React.FC = () => {
                 )}
             </Toolbar>
             <Divider />
+            
+            {/* Module-based navigation */}
+            <SidebarItems />
+            
+            <Divider sx={{ my: 1 }} />
+            
             <List>
-                <ListItem disablePadding>
-                    <ListItemButton component={RouterLink} to="/dashboard">
-                        <ListItemIcon>
-                            <DashboardIcon />
-                        </ListItemIcon>
-                        <ListItemText primary="Dashboard" />
-                    </ListItemButton>
-                </ListItem>
-
-                <Divider sx={{ my: 1 }} />
-
-                {KITCHEN_SYNC_MODULES.map((module) => (
-                    <React.Fragment key={module.id}>
-                        <ListItem disablePadding>
-                            <ListItemButton
-                                onClick={() => module.subItems ? handleModuleClick(module.id) : undefined}
-                                {...(module.subItems ? {} : { 
-                                    component: RouterLink,
-                                    to: module.path 
-                                })}
-                                disabled={module.comingSoon}
-                            >
-                                <ListItemIcon>
-                                    {module.icon}
-                                </ListItemIcon>
-                                <ListItemText 
-                                    primary={module.name}
-                                    secondary={module.comingSoon ? 'Coming Soon' : ''}
-                                />
-                                {module.subItems && (
-                                    expandedModule === module.id ? <ExpandLess /> : <ExpandMore />
-                                )}
-                            </ListItemButton>
-                        </ListItem>
-                        {module.subItems && (
-                            <Collapse in={expandedModule === module.id} timeout="auto" unmountOnExit>
-                                <List component="div" disablePadding>
-                                    {module.subItems.map((item) => (
-                                        <ListItemButton
-                                            key={item.path}
-                                            component={RouterLink}
-                                            to={item.path}
-                                            sx={{ pl: 4 }}
-                                            selected={location.pathname === item.path}
-                                        >
-                                            <ListItemIcon>
-                                                {item.icon}
-                                            </ListItemIcon>
-                                            <ListItemText primary={item.name} />
-                                        </ListItemButton>
-                                    ))}
-                                </List>
-                            </Collapse>
-                        )}
-                    </React.Fragment>
-                ))}
-
-                <Divider sx={{ my: 1 }} />
-                
                 {/* Customer Portal Link */}
                 <ListItem disablePadding>
                     <ListItemButton 
@@ -263,7 +159,7 @@ const MainLayout: React.FC = () => {
                     </ListItemButton>
                 </ListItem>
 
-                {/* Restaurant Settings - Only visible to admin/owner */}
+                {/* Admin Dashboard - Only visible to admin/owner */}
                 {(user?.role === 'ADMIN' || user?.role === 'SUPERADMIN') && (
                     <>
                         <Divider sx={{ my: 1 }} />
@@ -276,14 +172,6 @@ const MainLayout: React.FC = () => {
                             </ListItemButton>
                         </ListItem>
                         <ListItem disablePadding>
-                            <ListItemButton component={RouterLink} to="/settings">
-                                <ListItemIcon>
-                                    <SettingsIcon />
-                                </ListItemIcon>
-                                <ListItemText primary="Restaurant Settings" />
-                            </ListItemButton>
-                        </ListItem>
-                        <ListItem disablePadding>
                             <ListItemButton component={RouterLink} to="/settings/billing">
                                 <ListItemIcon>
                                     <PaymentIcon />
@@ -291,22 +179,6 @@ const MainLayout: React.FC = () => {
                                 <ListItemText primary="Billing & Subscription" />
                             </ListItemButton>
                         </ListItem>
-                        <ListItem disablePadding>
-                            <ListItemButton component={RouterLink} to="/content-blocks">
-                                <ListItemIcon>
-                                    <DashboardIcon />
-                                </ListItemIcon>
-                                <ListItemText primary="Content Blocks" />
-                            </ListItemButton>
-                        </ListItem>
-                    </>
-                )}
-
-                {/* Admin Tools - Only visible to SuperAdmin */}
-                {user?.role === 'SUPERADMIN' && (
-                    <>
-                        <Divider sx={{ my: 1 }} />
-                        {/* Add any other admin-only tools here */}
                     </>
                 )}
             </List>

@@ -65,7 +65,7 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-const RestaurantSettingsPage: React.FC = () => {
+const WebsiteBuilderPage: React.FC = () => {
   const { showSnackbar } = useSnackbar();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -85,7 +85,7 @@ const RestaurantSettingsPage: React.FC = () => {
       setSettings(data);
     } catch (error) {
       console.error('Error fetching settings:', error);
-      showSnackbar('Failed to load restaurant settings', 'error');
+      showSnackbar('Failed to load website settings', 'error');
     } finally {
       setLoading(false);
     }
@@ -164,7 +164,7 @@ const RestaurantSettingsPage: React.FC = () => {
   if (!settings) {
     return (
       <Container maxWidth="lg">
-        <Alert severity="error">Failed to load restaurant settings</Alert>
+        <Alert severity="error">Failed to load website settings</Alert>
       </Container>
     );
   }
@@ -177,16 +177,16 @@ const RestaurantSettingsPage: React.FC = () => {
         <Box display="flex" justifyContent="space-between" alignItems="center">
           <Box>
             <Typography variant="h4" gutterBottom>
-              Restaurant Settings
+              Website Builder
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              Manage all customer-facing content and settings for your restaurant
+              Manage all customer-facing content and settings for your website
             </Typography>
           </Box>
           <Button
             variant="outlined"
             component={Link}
-            to="/content-blocks"
+            to="/website/content"
             startIcon={<EditIcon />}
           >
             Manage Content Blocks
@@ -202,15 +202,6 @@ const RestaurantSettingsPage: React.FC = () => {
           <Tab label="Menu Display" />
           <Tab label="Social & Footer" />
           <Tab label="SEO" />
-          <Tab 
-            label="Billing" 
-            icon={<PaymentIcon />} 
-            iconPosition="start"
-            onClick={(e) => {
-              e.preventDefault();
-              navigate('/settings/billing');
-            }}
-          />
         </Tabs>
       </Paper>
 
@@ -238,7 +229,7 @@ const RestaurantSettingsPage: React.FC = () => {
                 label="Tagline"
                 value={settings.tagline || ''}
                 onChange={(e) => handleFieldChange('tagline', e.target.value)}
-                helperText="Short description of your restaurant"
+                helperText="Short description of your website"
               />
             </Grid>
             
@@ -396,7 +387,7 @@ const RestaurantSettingsPage: React.FC = () => {
                         mb: 1
                       }}
                     >
-                      {settings.websiteName || 'Restaurant Name'}
+                      {settings.websiteName || 'Website Name'}
                     </Typography>
                     <Typography
                       variant="h6"
@@ -841,4 +832,4 @@ const RestaurantSettingsPage: React.FC = () => {
   );
 };
 
-export default RestaurantSettingsPage; 
+export default WebsiteBuilderPage; 
