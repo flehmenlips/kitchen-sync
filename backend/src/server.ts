@@ -45,19 +45,48 @@ const allowedOrigins = [
     'https://api.kitchensync.restaurant'
 ];
 
+// Helper function to check if origin is a valid subdomain
+const isValidSubdomain = (origin: string): boolean => {
+    // Pattern to match any subdomain of kitchensync.restaurant
+    const subdomainPattern = /^https:\/\/([a-z0-9-]+\.)?kitchensync\.restaurant$/;
+    return subdomainPattern.test(origin);
+};
+
 app.use(cors({ 
     origin: function(origin, callback) {
         // Allow requests with no origin (like mobile apps or Postman)
         if (!origin) return callback(null, true);
         
+        // Check static allowed origins
         if (allowedOrigins.includes(origin)) {
             callback(null, true);
-        } else {
+        } 
+        // Check if it's a valid subdomain
+        else if (isValidSubdomain(origin)) {
+            callback(null, true);
+        }
+        // Allow all origins in development
+        else if (process.env.NODE_ENV === 'development') {
+            callback(null, true);
+        }
+        else {
             callback(new Error('Not allowed by CORS'));
         }
     },
     credentials: true // Enable credentials for authentication
 })); 
+
+// Optional: Add subdomain logging middleware
+app.use((req, res, next) => {
+    const host = req.get('host');
+    if (host && process.env.NODE_ENV !== 'development') {
+        const subdomain = host.split('.')[0];
+        if (subdomain && subdomain !== 'kitchensync' && subdomain !== 'www' && subdomain !== 'api') {
+            console.log(`[Subdomain Request] Restaurant: ${subdomain}, Path: ${req.path}`);
+        }
+    }
+    next();
+});
 
 // Conditional JSON body parser - skip for Stripe webhooks
 app.use((req, res, next) => {
