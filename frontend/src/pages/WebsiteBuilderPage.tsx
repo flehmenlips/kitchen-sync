@@ -508,9 +508,18 @@ const WebsiteBuilderPage: React.FC = () => {
                   />
                 </Button>
                 {settings.heroImageUrl && (
-                  <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                    Current: {settings.heroImageUrl}
-                  </Typography>
+                  <Box sx={{ mt: 2 }}>
+                    <img
+                      src={settings.heroImageUrl}
+                      alt="Hero"
+                      style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
+                    />
+                    <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                      <a href={settings.heroImageUrl} target="_blank" rel="noopener noreferrer">
+                        {settings.heroImageUrl}
+                      </a>
+                    </Typography>
+                  </Box>
                 )}
               </Box>
             </Grid>
@@ -558,9 +567,18 @@ const WebsiteBuilderPage: React.FC = () => {
                   />
                 </Button>
                 {settings.aboutImageUrl && (
-                  <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                    Current: {settings.aboutImageUrl}
-                  </Typography>
+                  <Box sx={{ mt: 2 }}>
+                    <img
+                      src={settings.aboutImageUrl}
+                      alt="About"
+                      style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
+                    />
+                    <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                      <a href={settings.aboutImageUrl} target="_blank" rel="noopener noreferrer">
+                        {settings.aboutImageUrl}
+                      </a>
+                    </Typography>
+                  </Box>
                 )}
               </Box>
             </Grid>
