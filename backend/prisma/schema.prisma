@@ -648,6 +648,7 @@ model RestaurantSettings {
   tagline                String?
   metaTitle              String?
   metaDescription        String?
+  metaKeywords           String?
   
   // Hero Section
   heroTitle              String?
