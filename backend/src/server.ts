@@ -23,6 +23,7 @@ import adminRoutes from './routes/adminRoutes'; // Import admin routes
 import platformRoutes from './routes/platformRoutes'; // Import platform routes
 import restaurantOnboardingRoutes from './routes/restaurantOnboardingRoutes'; // Import restaurant onboarding routes
 import subscriptionRoutes from './routes/subscriptionRoutes'; // Import subscription routes
+import templateRoutes from './routes/templateRoutes'; // Import template routes
 import { Request, Response, NextFunction } from 'express';
 import { protect } from './middleware/authMiddleware';
 import { setRestaurantContext } from './middleware/restaurantContext';
@@ -130,6 +131,7 @@ app.use('/api/restaurant', restaurantSettingsRoutes); // Mount restaurant settin
 app.use('/api/content-blocks', contentBlockRoutes); // Mount content block routes
 app.use('/api/admin', adminRoutes); // Mount admin routes
 app.use('/api/platform', platformRoutes); // Mount platform routes
+app.use('/api/templates', templateRoutes); // Mount template routes
 
 // Health check endpoint
 app.get('/health', (req, res) => {

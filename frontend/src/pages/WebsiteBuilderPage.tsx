@@ -41,13 +41,15 @@ import {
   Twitter as TwitterIcon,
   Payment as PaymentIcon,
   Edit as EditIcon,
-  Public as PublicIcon
+  Public as PublicIcon,
+  ColorLens as ColorLensIcon
 } from '@mui/icons-material';
 import { restaurantSettingsService, RestaurantSettings } from '../services/restaurantSettingsService';
 import { useSnackbar } from '../context/SnackbarContext';
 import { useRestaurant } from '../context/RestaurantContext';
 import { buildRestaurantUrl } from '../utils/subdomain';
 import { SubdomainInfo } from '../components/SubdomainInfo';
+import TemplateSelector from '../components/TemplateSelector';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -76,6 +78,7 @@ const WebsiteBuilderPage: React.FC = () => {
   const [settings, setSettings] = useState<RestaurantSettings | null>(null);
   const [tabValue, setTabValue] = useState(0);
   const [hasChanges, setHasChanges] = useState(false);
+  const [templateSelectorOpen, setTemplateSelectorOpen] = useState(false);
   const navigate = useNavigate();
   const { currentRestaurant } = useRestaurant();
 
@@ -209,6 +212,13 @@ const WebsiteBuilderPage: React.FC = () => {
               startIcon={<EditIcon />}
             >
               Manage Content Blocks
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => setTemplateSelectorOpen(true)}
+              startIcon={<ColorLensIcon />}
+            >
+              Choose Template
             </Button>
           </Box>
         </Box>
@@ -829,25 +839,38 @@ const WebsiteBuilderPage: React.FC = () => {
         </TabPanel>
       </Paper>
 
-      {/* Floating Save Button */}
-      <Box
-        sx={{
-          position: 'fixed',
-          bottom: 24,
-          right: 24,
-          zIndex: 1000
+      {/* Save Button */}
+      {hasChanges && (
+        <Box sx={{ position: 'fixed', bottom: 16, right: 16, zIndex: 1000 }}>
+          <Button
+            variant="contained"
+            color="primary"
+            size="large"
+            onClick={handleSave}
+            disabled={saving}
+            startIcon={<Save />}
+            sx={{
+              boxShadow: 3,
+              '&:hover': {
+                boxShadow: 6,
+              },
+            }}
+          >
+            {saving ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </Box>
+      )}
+
+      {/* Template Selector Dialog */}
+      <TemplateSelector
+        open={templateSelectorOpen}
+        onClose={() => setTemplateSelectorOpen(false)}
+        onTemplateApplied={() => {
+          fetchSettings();
+          setTemplateSelectorOpen(false);
         }}
-      >
-        <Button
-          variant="contained"
-          size="large"
-          onClick={handleSave}
-          disabled={!hasChanges || saving}
-          startIcon={saving ? <CircularProgress size={20} /> : <Save />}
-        >
-          {saving ? 'Saving...' : 'Save Changes'}
-        </Button>
-      </Box>
+        isPremiumUser={true} // TODO: Get from subscription context
+      />
     </Container>
   );
 };

@@ -634,48 +634,65 @@ model Restaurant {
 }
 
 model RestaurantSettings {
-  id                 Int        @id @default(autoincrement())
-  restaurantId       Int        @unique @map("restaurant_id")
-  websiteName        String?    @map("website_name")
-  tagline            String?
-  logoUrl            String?    @map("logo_url")
-  logoPublicId       String?    @map("logo_public_id")
-  heroTitle          String?    @map("hero_title")
-  heroSubtitle       String?    @map("hero_subtitle")
-  heroImageUrl       String?    @map("hero_image_url")
-  heroImagePublicId  String?    @map("hero_image_public_id")
-  heroCTAText        String?    @map("hero_cta_text")
-  heroCTALink        String?    @map("hero_cta_link")
-  aboutTitle         String?    @map("about_title")
-  aboutDescription   String?    @map("about_description")
-  aboutImageUrl      String?    @map("about_image_url")
-  aboutImagePublicId String?    @map("about_image_public_id")
-  primaryColor       String?    @default("#1976d2") @map("primary_color")
-  secondaryColor     String?    @default("#dc004e") @map("secondary_color")
-  accentColor        String?    @default("#333333") @map("accent_color")
-  fontPrimary        String?    @default("Roboto, sans-serif") @map("font_primary")
-  fontSecondary      String?    @default("Playfair Display, serif") @map("font_secondary")
-  contactPhone       String?    @map("contact_phone")
-  contactEmail       String?    @map("contact_email")
-  contactAddress     String?    @map("contact_address")
-  contactCity        String?    @map("contact_city")
-  contactState       String?    @map("contact_state")
-  contactZip         String?    @map("contact_zip")
-  openingHours       Json?      @map("opening_hours")
-  facebookUrl        String?    @map("facebook_url")
-  instagramUrl       String?    @map("instagram_url")
-  twitterUrl         String?    @map("twitter_url")
-  activeMenuIds      Int[]      @map("active_menu_ids")
-  menuDisplayMode    String?    @default("tabs") @map("menu_display_mode")
-  footerText         String?    @map("footer_text")
-  metaTitle          String?    @map("meta_title")
-  metaDescription    String?    @map("meta_description")
-  metaKeywords       String?    @map("meta_keywords")
-  createdAt          DateTime   @default(now()) @map("created_at")
-  updatedAt          DateTime   @updatedAt @map("updated_at")
-  restaurant         Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  id                     Int          @id @default(autoincrement())
+  restaurantId           Int          @unique
+  restaurant             Restaurant   @relation(fields: [restaurantId], references: [id])
+  
+  // Template
+  templateId             Int?
+  template               WebsiteTemplate? @relation(fields: [templateId], references: [id])
+  customCss              String?      @db.Text
+  
+  // ... rest of existing RestaurantSettings fields ...
+}
 
-  @@map("restaurant_settings")
+model WebsiteTemplate {
+  id                     Int          @id @default(autoincrement())
+  name                   String       @unique
+  displayName            String
+  description            String?
+  category               String       // classic, modern, minimal, premium
+  thumbnail              String?      // Preview image URL
+  
+  // Layout Configuration
+  layoutConfig           Json         // Stores section order, grid layouts, etc.
+  
+  // Default Theme Settings
+  defaultColors          Json         // Primary, secondary, accent, etc.
+  defaultFonts           Json         // Heading, body, special fonts
+  defaultSpacing         Json         // Padding, margins, gaps
+  
+  // Component Styles
+  heroStyle              String       @default("standard") // standard, video, slideshow, parallax, minimal
+  menuStyle              String       @default("grid") // grid, list, tabs, carousel, elegant
+  aboutStyle             String       @default("side-by-side") // side-by-side, centered, alternating
+  navigationStyle        String       @default("standard") // standard, minimal, elegant, sticky
+  
+  // Typography Settings
+  headingStyle           String       @default("serif") // serif, sans-serif, mixed
+  bodyStyle              String       @default("sans-serif") // serif, sans-serif
+  letterSpacing          String       @default("normal") // normal, wide, tight
+  textTransform          String       @default("none") // none, uppercase, capitalize
+  
+  // Animation Settings
+  animationStyle         String       @default("none") // none, subtle, elegant, dynamic
+  transitionSpeed        String       @default("normal") // slow, normal, fast
+  
+  // Features
+  features               String[]     // List of included features/components
+  
+  // Metadata
+  isPremium              Boolean      @default(false)
+  isActive               Boolean      @default(true)
+  sortOrder              Int          @default(0)
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+  
+  // Relations
+  restaurantSettings     RestaurantSettings[]
+  
+  @@index([category])
+  @@index([isActive])
 }
 
 model ContentBlock {
