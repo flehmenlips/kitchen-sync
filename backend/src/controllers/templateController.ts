@@ -100,6 +100,7 @@ export const templateController = {
 
       const defaultColors = template.defaultColors as any;
       const defaultFonts = template.defaultFonts as any;
+      const now = new Date();
 
       // Apply template settings
       const updatedSettings = await prisma.restaurantSettings.upsert({
@@ -123,6 +124,7 @@ export const templateController = {
           heroImageUrl: existingSettings?.heroImageUrl,
           aboutImageUrl: existingSettings?.aboutImageUrl,
           logoUrl: existingSettings?.logoUrl,
+          updatedAt: now
         },
         update: {
           templateId: template.id,
@@ -131,6 +133,7 @@ export const templateController = {
           accentColor: defaultColors.accent || '#666666',
           fontPrimary: defaultFonts.heading || 'Playfair Display, serif',
           fontSecondary: defaultFonts.body || 'Inter, sans-serif',
+          updatedAt: now
         }
       });
 
