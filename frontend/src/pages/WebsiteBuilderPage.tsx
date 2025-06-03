@@ -45,6 +45,9 @@ import {
 } from '@mui/icons-material';
 import { restaurantSettingsService, RestaurantSettings } from '../services/restaurantSettingsService';
 import { useSnackbar } from '../context/SnackbarContext';
+import { useRestaurant } from '../context/RestaurantContext';
+import { buildRestaurantUrl } from '../utils/subdomain';
+import { SubdomainInfo } from '../components/SubdomainInfo';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -74,6 +77,7 @@ const WebsiteBuilderPage: React.FC = () => {
   const [tabValue, setTabValue] = useState(0);
   const [hasChanges, setHasChanges] = useState(false);
   const navigate = useNavigate();
+  const { currentRestaurant } = useRestaurant();
 
   useEffect(() => {
     fetchSettings();
@@ -174,6 +178,9 @@ const WebsiteBuilderPage: React.FC = () => {
 
   return (
     <Container maxWidth="lg">
+      {/* Show subdomain info in development */}
+      {process.env.NODE_ENV === 'development' && <SubdomainInfo />}
+      
       <Box sx={{ mb: 4 }}>
         <Box display="flex" justifyContent="space-between" alignItems="center">
           <Box>
@@ -188,7 +195,7 @@ const WebsiteBuilderPage: React.FC = () => {
             <Button
               variant="contained"
               component="a"
-              href="/customer"
+              href={buildRestaurantUrl(currentRestaurant?.slug || 'restaurant')}
               target="_blank"
               startIcon={<PublicIcon />}
               color="primary"
@@ -688,7 +695,7 @@ const WebsiteBuilderPage: React.FC = () => {
                 Select which menus to display on the customer portal
               </Typography>
               <Box sx={{ mt: 2 }}>
-                {settings.restaurant?.menus.map(menu => (
+                {(settings.restaurant?.menus || []).map(menu => (
                   <Chip
                     key={menu.id}
                     label={menu.name}

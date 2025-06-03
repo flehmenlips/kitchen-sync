@@ -1,9 +1,9 @@
-import { api } from './api';
-import { customerApi } from './customerApi';
+import apiService from './apiService';
+import { getCurrentRestaurantSlug } from '../utils/subdomain';
 
 export interface RestaurantSettings {
-  id: number;
-  restaurantId: number;
+  id?: number;
+  restaurantId?: number;
   
   // Website Branding
   websiteName?: string;
@@ -41,12 +41,7 @@ export interface RestaurantSettings {
   contactZip?: string;
   
   // Opening Hours
-  openingHours?: {
-    [key: string]: {
-      open: string;
-      close: string;
-    };
-  };
+  openingHours?: any;
   
   // Social Media
   facebookUrl?: string;
@@ -67,44 +62,66 @@ export interface RestaurantSettings {
   
   // Restaurant info (included in response)
   restaurant?: {
+    id?: number;
     name: string;
     slug: string;
-    description?: string;
-    menus: Array<{
+    description: string;
+    menus?: Array<{
       id: number;
       name: string;
       title?: string;
     }>;
   };
+  _count?: {
+    menus?: number;
+  };
 }
 
-export const restaurantSettingsService = {
-  // Admin endpoints
+class RestaurantSettingsService {
   async getSettings(): Promise<RestaurantSettings> {
-    const response = await api.get('/restaurant/settings');
+    const response = await apiService.get<RestaurantSettings>('/restaurant-settings/settings');
     return response.data;
-  },
+  }
 
-  async updateSettings(settings: Partial<RestaurantSettings>): Promise<RestaurantSettings> {
-    const response = await api.put('/restaurant/settings', settings);
+  async updateSettings(settings: RestaurantSettings): Promise<RestaurantSettings> {
+    const response = await apiService.put<RestaurantSettings>('/restaurant-settings/settings', settings);
     return response.data;
-  },
+  }
 
-  async uploadImage(field: 'hero' | 'about' | 'cover' | 'logo', file: File): Promise<{imageUrl: string; publicId: string; settings: RestaurantSettings}> {
+  async uploadImage(field: 'hero' | 'about' | 'cover' | 'logo', file: File): Promise<{ imageUrl: string; settings: RestaurantSettings }> {
     const formData = new FormData();
     formData.append('image', file);
     
-    const response = await api.post(`/restaurant/settings/image/${field}`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
+    const response = await apiService.post<{ imageUrl: string; settings: RestaurantSettings }>(
+      `/restaurant-settings/settings/image/${field}`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       }
-    });
-    return response.data;
-  },
-
-  // Get public restaurant settings (for customer portal)
-  async getPublicSettings(): Promise<RestaurantSettings> {
-    const response = await customerApi.get('/restaurant/public/settings');
+    );
     return response.data;
   }
-}; 
+
+  async getPublicSettings(restaurantId?: number): Promise<RestaurantSettings> {
+    // Check for restaurant slug from subdomain
+    const slug = getCurrentRestaurantSlug();
+    
+    if (slug) {
+      // Use slug-based endpoint
+      const response = await apiService.get<RestaurantSettings>(`/restaurant-settings/public/slug/${slug}/settings`);
+      return response.data;
+    } else if (restaurantId) {
+      // Fall back to ID-based endpoint
+      const response = await apiService.get<RestaurantSettings>(`/restaurant-settings/public/settings?restaurantId=${restaurantId}`);
+      return response.data;
+    } else {
+      // Default to restaurant ID 1 for backward compatibility
+      const response = await apiService.get<RestaurantSettings>('/restaurant-settings/public/settings');
+      return response.data;
+    }
+  }
+}
+
+export const restaurantSettingsService = new RestaurantSettingsService(); 

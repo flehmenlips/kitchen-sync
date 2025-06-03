@@ -234,25 +234,52 @@ export const uploadRestaurantImage = async (req: Request, res: Response): Promis
 // Public endpoint for customer portal
 export const getPublicRestaurantSettings = async (req: Request, res: Response): Promise<void> => {
   try {
-    // Get restaurantId from params or query, default to 1 for backward compatibility
-    let restaurantId = 1;
+    // Get restaurant by slug or ID
+    let restaurant;
     
-    if (req.params.restaurantId) {
-      restaurantId = parseInt(req.params.restaurantId, 10);
-      if (isNaN(restaurantId)) {
-        res.status(400).json({ error: 'Invalid restaurant ID' });
+    // First check for slug parameter
+    if (req.params.slug || req.query.slug) {
+      const slug = req.params.slug || req.query.slug as string;
+      restaurant = await prisma.restaurant.findUnique({
+        where: { slug },
+        select: { id: true, name: true, slug: true }
+      });
+      
+      if (!restaurant) {
+        res.status(404).json({ error: 'Restaurant not found' });
         return;
       }
-    } else if (req.query.restaurantId) {
-      restaurantId = parseInt(req.query.restaurantId as string, 10);
-      if (isNaN(restaurantId)) {
-        res.status(400).json({ error: 'Invalid restaurant ID' });
+    } else {
+      // Fall back to restaurantId for backward compatibility
+      let restaurantId = 1;
+      
+      if (req.params.restaurantId) {
+        restaurantId = parseInt(req.params.restaurantId, 10);
+        if (isNaN(restaurantId)) {
+          res.status(400).json({ error: 'Invalid restaurant ID' });
+          return;
+        }
+      } else if (req.query.restaurantId) {
+        restaurantId = parseInt(req.query.restaurantId as string, 10);
+        if (isNaN(restaurantId)) {
+          res.status(400).json({ error: 'Invalid restaurant ID' });
+          return;
+        }
+      }
+      
+      restaurant = await prisma.restaurant.findUnique({
+        where: { id: restaurantId },
+        select: { id: true, name: true, slug: true }
+      });
+      
+      if (!restaurant) {
+        res.status(404).json({ error: 'Restaurant not found' });
         return;
       }
     }
     
     const settings = await prisma.restaurantSettings.findUnique({
-      where: { restaurantId },
+      where: { restaurantId: restaurant.id },
       select: {
         websiteName: true,
         tagline: true,
@@ -293,18 +320,13 @@ export const getPublicRestaurantSettings = async (req: Request, res: Response): 
       return;
     }
 
-    // Get restaurant info
-    const restaurant = await prisma.restaurant.findUnique({
-      where: { id: restaurantId },
-      select: { name: true, slug: true }
-    });
-
     // Add restaurant info
     const result = {
       ...settings,
       restaurant: {
-        name: settings.websiteName || restaurant?.name || 'Restaurant',
-        slug: restaurant?.slug || 'restaurant',
+        id: restaurant.id,
+        name: settings.websiteName || restaurant.name || 'Restaurant',
+        slug: restaurant.slug || 'restaurant',
         description: settings.tagline || 'Fresh, local ingredients meet culinary excellence'
       }
     };

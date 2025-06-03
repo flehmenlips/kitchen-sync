@@ -35,5 +35,6 @@ router.post('/settings/image/:field', protect, setRestaurantContext, requireRest
 
 // Public routes
 router.get('/public/settings', getPublicRestaurantSettings);
+router.get('/public/slug/:slug/settings', getPublicRestaurantSettings);
 
 export default router; 
