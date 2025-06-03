@@ -9,22 +9,30 @@
 export function getSubdomain(): string | null {
   const hostname = window.location.hostname;
   
+  console.log('[Subdomain Detection] Hostname:', hostname);
+  
   // Handle localhost development
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     // In development, check for subdomain in query params
     const params = new URLSearchParams(window.location.search);
-    return params.get('restaurant') || null;
+    const subdomain = params.get('restaurant') || null;
+    console.log('[Subdomain Detection] Dev mode subdomain:', subdomain);
+    return subdomain;
   }
   
   // Handle production domains
   const parts = hostname.split('.');
+  console.log('[Subdomain Detection] Hostname parts:', parts);
   
   // Check if we have a subdomain (e.g., coqauvin.kitchensync.restaurant)
   if (parts.length >= 3) {
     // First part is the subdomain
-    return parts[0];
+    const subdomain = parts[0];
+    console.log('[Subdomain Detection] Found subdomain:', subdomain);
+    return subdomain;
   }
   
+  console.log('[Subdomain Detection] No subdomain found');
   return null;
 }
 

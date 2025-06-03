@@ -21,13 +21,17 @@ export const SubdomainRouter: React.FC<SubdomainRouterProps> = ({ children }) =>
     const checkSubdomain = async () => {
       try {
         const subdomain = getSubdomain();
+        console.log('[SubdomainRouter] Detected subdomain:', subdomain);
+        console.log('[SubdomainRouter] Current pathname:', window.location.pathname);
         
         // If we have a subdomain, validate it exists
         if (subdomain) {
           // In a real implementation, you might want to validate the subdomain
           // by making an API call to check if the restaurant exists
+          console.log('[SubdomainRouter] Setting shouldShowCustomerPortal to true');
           setShouldShowCustomerPortal(true);
         } else {
+          console.log('[SubdomainRouter] No subdomain, showing main app');
           setShouldShowCustomerPortal(false);
         }
       } catch (err) {
@@ -79,11 +83,13 @@ export const SubdomainRouter: React.FC<SubdomainRouterProps> = ({ children }) =>
 
   // If on restaurant subdomain, redirect to customer portal
   if (shouldShowCustomerPortal && !window.location.pathname.startsWith('/customer')) {
+    console.log('[SubdomainRouter] Redirecting to /customer');
     return <Navigate to="/customer" replace />;
   }
 
   // If on main domain but trying to access customer portal, redirect to main app
   if (!shouldShowCustomerPortal && window.location.pathname.startsWith('/customer')) {
+    console.log('[SubdomainRouter] On main domain but accessing /customer - allowing for backward compatibility');
     // In production, you might want to redirect to the main app login
     // For now, we'll allow it for backward compatibility
   }
