@@ -3,18 +3,27 @@ import apiService from './apiService';
 export interface Subscription {
   id: number;
   restaurantId: number;
-  plan: 'TRIAL' | 'HOME' | 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE';
+  plan: 'TRIAL' | 'FREE' | 'HOME' | 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE';
   status: 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'SUSPENDED';
+  enabledModules?: string[];
+  moduleAccess?: any;
+  maxLocations?: number;
+  maxStaffAccounts?: number;
+  maxCustomerAccounts?: number;
+  customDomain?: boolean;
+  prioritySupport?: boolean;
+  apiAccess?: boolean;
+  whiteLabel?: boolean;
   currentPeriodStart: string;
   currentPeriodEnd: string;
-  cancelAt?: string;
-  canceledAt?: string;
-  trialEndsAt?: string;
-  seats: number;
+  cancelAt?: string | null;
+  canceledAt?: string | null;
+  trialEndsAt?: string | null;
   billingEmail?: string;
   billingName?: string;
   lastPaymentStatus?: string;
   lastPaymentDate?: string;
+  metadata?: any | null;
 }
 
 export interface Invoice {
@@ -50,6 +59,18 @@ const PLAN_DETAILS: Record<string, PlanDetails> = {
       'No credit card required'
     ]
   },
+  FREE: {
+    plan: 'FREE',
+    name: 'Free',
+    price: 0,
+    features: [
+      'Core modules only',
+      'Up to 2 staff members',
+      'Recipe management (CookBook)',
+      'Kitchen prep flow (AgileChef)',
+      'Community support'
+    ]
+  },
   HOME: {
     plan: 'HOME',
     name: 'Home',
@@ -67,10 +88,10 @@ const PLAN_DETAILS: Record<string, PlanDetails> = {
     name: 'Starter',
     price: 49,
     features: [
+      'Core modules + MenuBuilder',
       'Up to 5 staff members',
       'Recipe management',
-      'Prep lists',
-      'Basic analytics',
+      'Menu design & publishing',
       'Email support'
     ]
   },
@@ -79,10 +100,11 @@ const PLAN_DETAILS: Record<string, PlanDetails> = {
     name: 'Professional',
     price: 149,
     features: [
+      'All modules included',
       'Up to 20 staff members',
-      'Everything in Starter',
-      'Advanced analytics',
-      'Customer portal',
+      'TableFarm reservations',
+      'ChefRail order management',
+      'Website builder',
       'Priority support'
     ]
   },
@@ -91,11 +113,12 @@ const PLAN_DETAILS: Record<string, PlanDetails> = {
     name: 'Enterprise',
     price: 299,
     features: [
-      'Unlimited staff members',
       'Everything in Professional',
+      'Unlimited staff members',
+      'Multiple locations',
       'Custom integrations',
       'Dedicated support',
-      'Custom training'
+      'White label options'
     ]
   }
 };
