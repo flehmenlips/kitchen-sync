@@ -22,6 +22,7 @@ import { SnackbarProvider } from './context/SnackbarContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import PublicRoute from './components/common/PublicRoute';
 import CustomerProtectedRoute from './components/common/CustomerProtectedRoute';
+import { SubdomainRouter } from './components/common/SubdomainRouter';
 
 // Pages
 import LandingPage from './pages/LandingPage';
@@ -130,138 +131,140 @@ const App: React.FC = () => {
               <SubscriptionProvider>
                 <NotistackProvider maxSnack={3}>
                   <SnackbarProvider>
-                    <Routes>
-                    {/* Landing page */}
-                    <Route path="/" element={<LandingPage />} />
-                    
-                    {/* Public routes */}
-                    <Route path="/login" element={
-                      <PublicRoute>
-                        <LoginPage />
-                      </PublicRoute>
-                    } />
-                    <Route path="/register" element={
-                      <PublicRoute>
-                        <RestaurantRegisterPage />
-                      </PublicRoute>
-                    } />
-                    <Route path="/welcome" element={<RestaurantWelcomePage />} />
-                    <Route path="/verify-email-sent" element={<VerifyEmailSentPage />} />
-                    <Route path="/verify-email" element={<VerifyEmailPage />} />
-
-                    {/* Platform Admin Routes - Separate from main app */}
-                    <Route path="/platform-admin/login" element={<PlatformLogin />} />
-                    <Route path="/platform-admin" element={<PlatformAdminLayout />}>
-                      <Route path="dashboard" element={<PlatformDashboard />} />
-                      <Route path="restaurants" element={<RestaurantList />} />
-                      <Route path="restaurants/:id" element={<RestaurantDetail />} />
-                      <Route path="restaurants/:id/edit" element={<RestaurantEdit />} />
-                      <Route path="analytics" element={<PlatformAnalytics />} />
-                      <Route path="subscriptions" element={<SubscriptionsPage />} />
-                      <Route path="subscriptions/analytics" element={<SubscriptionAnalytics />} />
-                      <Route index element={<Navigate to="/platform-admin/dashboard" replace />} />
-                    </Route>
-
-                    {/* Customer Portal Routes - Public Access */}
-                    <Route path="/customer" element={
-                      <CustomerAuthProvider>
-                        <CustomerLayout />
-                      </CustomerAuthProvider>
-                    }>
-                      <Route index element={<CustomerHomePage />} />
-                      <Route path="reservations/new" element={<CustomerReservationPage />} />
-                      <Route path="menu" element={<CustomerMenuPage />} />
-                      <Route path="register" element={<CustomerRegisterPage />} />
-                      <Route path="login" element={<CustomerLoginPage />} />
-                      <Route path="verify-email-sent" element={<CustomerVerifyEmailSentPage />} />
-                      <Route path="verify-email" element={<CustomerVerifyEmailPage />} />
-                      {/* Protected customer routes */}
-                      <Route path="dashboard" element={
-                        <CustomerProtectedRoute>
-                          <CustomerDashboardPage />
-                        </CustomerProtectedRoute>
+                    <SubdomainRouter>
+                      <Routes>
+                      {/* Landing page */}
+                      <Route path="/" element={<LandingPage />} />
+                      
+                      {/* Public routes */}
+                      <Route path="/login" element={
+                        <PublicRoute>
+                          <LoginPage />
+                        </PublicRoute>
                       } />
-                      {/* Future customer routes */}
-                      {/* <Route path="reservations" element={<CustomerReservationsListPage />} /> */}
-                      {/* <Route path="profile" element={<CustomerProfilePage />} /> */}
-                    </Route>
+                      <Route path="/register" element={
+                        <PublicRoute>
+                          <RestaurantRegisterPage />
+                        </PublicRoute>
+                      } />
+                      <Route path="/welcome" element={<RestaurantWelcomePage />} />
+                      <Route path="/verify-email-sent" element={<VerifyEmailSentPage />} />
+                      <Route path="/verify-email" element={<VerifyEmailPage />} />
 
-                    {/* Protected routes */}
-                    <Route element={<ProtectedRoute />}>
-                      <Route element={<MainLayout />}>
-                        {/* Dashboard */}
-                        <Route path="/dashboard" element={<DashboardPage />} />
-
-                        {/* CookBook Module Routes */}
-                        {/* Recipes */}
-                        <Route path="recipes" element={<RecipeList />} />
-                        <Route path="recipes/new" element={<CreateRecipePage />} />
-                        <Route path="recipes/import" element={<RecipeImportPage />} />
-                        <Route path="recipes/:id" element={
-                          <Suspense fallback={<div>Loading...</div>}>
-                            <RecipeDetail />
-                          </Suspense>
-                        } />
-                        <Route path="recipes/:id/edit" element={<EditRecipePage />} />
-
-                        {/* CookBook Settings */}
-                        <Route path="cookbook/settings" element={<CookBookSettingsPage />} />
-
-                        {/* Categories */}
-                        <Route path="categories" element={<CategoryListPage />} />
-                        <Route path="categories/new" element={<CreateCategoryPage />} />
-                        <Route path="categories/:id/edit" element={<EditCategoryPage />} />
-
-                        {/* Ingredients */}
-                        <Route path="ingredients" element={<IngredientListPage />} />
-                        <Route path="ingredients/new" element={<CreateIngredientPage />} />
-                        <Route path="ingredients/:id/edit" element={<EditIngredientPage />} />
-
-                        {/* Ingredient Categories */}
-                        <Route path="ingredient-categories" element={<IngredientCategoryListPage />} />
-                        <Route path="ingredient-categories/new" element={<CreateIngredientCategoryPage />} />
-                        <Route path="ingredient-categories/:id/edit" element={<EditIngredientCategoryPage />} />
-
-                        {/* Units */}
-                        <Route path="units" element={<UnitListPage />} />
-                        <Route path="units/new" element={<CreateUnitPage />} />
-                        <Route path="units/:id/edit" element={<EditUnitPage />} />
-
-                        {/* Menu Builder */}
-                        <Route path="menus" element={<MenusPage />} />
-                        <Route path="menus/new" element={<MenuFormPage />} />
-                        <Route path="menus/:id" element={<MenuDetailPage />} />
-                        <Route path="menus/:id/edit" element={<MenuFormPage />} />
-
-                        {/* TableFarm Module Routes */}
-                        <Route path="tablefarm" element={<TableFarmPage />} />
-                        <Route path="reservations" element={<ReservationManagementPage />} />
-
-                        {/* Website & Marketing Module Routes */}
-                        <Route path="website" element={<WebsiteBuilderPage />} />
-                        <Route path="website/content" element={<ContentBlocksPage />} />
-                        
-                        {/* Billing Settings */}
-                        <Route path="settings/billing" element={<BillingPage />} />
-
-                        {/* AgileChef Module Routes */}
-                        <Route path="prep" element={<PrepBoard />} />
-
-                        {/* Profile Route */}
-                        <Route path="profile" element={<ProfilePage />} />
-
-                        {/* Admin Dashboard */}
-                        <Route path="admin-dashboard" element={<AdminDashboard />} />
-
-                        {/* Redirect any unknown routes to dashboard */}
-                        <Route path="*" element={<Navigate to="/" replace />} />
+                      {/* Platform Admin Routes - Separate from main app */}
+                      <Route path="/platform-admin/login" element={<PlatformLogin />} />
+                      <Route path="/platform-admin" element={<PlatformAdminLayout />}>
+                        <Route path="dashboard" element={<PlatformDashboard />} />
+                        <Route path="restaurants" element={<RestaurantList />} />
+                        <Route path="restaurants/:id" element={<RestaurantDetail />} />
+                        <Route path="restaurants/:id/edit" element={<RestaurantEdit />} />
+                        <Route path="analytics" element={<PlatformAnalytics />} />
+                        <Route path="subscriptions" element={<SubscriptionsPage />} />
+                        <Route path="subscriptions/analytics" element={<SubscriptionAnalytics />} />
+                        <Route index element={<Navigate to="/platform-admin/dashboard" replace />} />
                       </Route>
-                    </Route>
-                  </Routes>
-                </SnackbarProvider>
-              </NotistackProvider>
-            </SubscriptionProvider>
-          </RestaurantProvider>
+
+                      {/* Customer Portal Routes - Public Access */}
+                      <Route path="/customer" element={
+                        <CustomerAuthProvider>
+                          <CustomerLayout />
+                        </CustomerAuthProvider>
+                      }>
+                        <Route index element={<CustomerHomePage />} />
+                        <Route path="reservations/new" element={<CustomerReservationPage />} />
+                        <Route path="menu" element={<CustomerMenuPage />} />
+                        <Route path="register" element={<CustomerRegisterPage />} />
+                        <Route path="login" element={<CustomerLoginPage />} />
+                        <Route path="verify-email-sent" element={<CustomerVerifyEmailSentPage />} />
+                        <Route path="verify-email" element={<CustomerVerifyEmailPage />} />
+                        {/* Protected customer routes */}
+                        <Route path="dashboard" element={
+                          <CustomerProtectedRoute>
+                            <CustomerDashboardPage />
+                          </CustomerProtectedRoute>
+                        } />
+                        {/* Future customer routes */}
+                        {/* <Route path="reservations" element={<CustomerReservationsListPage />} /> */}
+                        {/* <Route path="profile" element={<CustomerProfilePage />} /> */}
+                      </Route>
+
+                      {/* Protected routes */}
+                      <Route element={<ProtectedRoute />}>
+                        <Route element={<MainLayout />}>
+                          {/* Dashboard */}
+                          <Route path="/dashboard" element={<DashboardPage />} />
+
+                          {/* CookBook Module Routes */}
+                          {/* Recipes */}
+                          <Route path="recipes" element={<RecipeList />} />
+                          <Route path="recipes/new" element={<CreateRecipePage />} />
+                          <Route path="recipes/import" element={<RecipeImportPage />} />
+                          <Route path="recipes/:id" element={
+                            <Suspense fallback={<div>Loading...</div>}>
+                              <RecipeDetail />
+                            </Suspense>
+                          } />
+                          <Route path="recipes/:id/edit" element={<EditRecipePage />} />
+
+                          {/* CookBook Settings */}
+                          <Route path="cookbook/settings" element={<CookBookSettingsPage />} />
+
+                          {/* Categories */}
+                          <Route path="categories" element={<CategoryListPage />} />
+                          <Route path="categories/new" element={<CreateCategoryPage />} />
+                          <Route path="categories/:id/edit" element={<EditCategoryPage />} />
+
+                          {/* Ingredients */}
+                          <Route path="ingredients" element={<IngredientListPage />} />
+                          <Route path="ingredients/new" element={<CreateIngredientPage />} />
+                          <Route path="ingredients/:id/edit" element={<EditIngredientPage />} />
+
+                          {/* Ingredient Categories */}
+                          <Route path="ingredient-categories" element={<IngredientCategoryListPage />} />
+                          <Route path="ingredient-categories/new" element={<CreateIngredientCategoryPage />} />
+                          <Route path="ingredient-categories/:id/edit" element={<EditIngredientCategoryPage />} />
+
+                          {/* Units */}
+                          <Route path="units" element={<UnitListPage />} />
+                          <Route path="units/new" element={<CreateUnitPage />} />
+                          <Route path="units/:id/edit" element={<EditUnitPage />} />
+
+                          {/* Menu Builder */}
+                          <Route path="menus" element={<MenusPage />} />
+                          <Route path="menus/new" element={<MenuFormPage />} />
+                          <Route path="menus/:id" element={<MenuDetailPage />} />
+                          <Route path="menus/:id/edit" element={<MenuFormPage />} />
+
+                          {/* TableFarm Module Routes */}
+                          <Route path="tablefarm" element={<TableFarmPage />} />
+                          <Route path="reservations" element={<ReservationManagementPage />} />
+
+                          {/* Website & Marketing Module Routes */}
+                          <Route path="website" element={<WebsiteBuilderPage />} />
+                          <Route path="website/content" element={<ContentBlocksPage />} />
+                          
+                          {/* Billing Settings */}
+                          <Route path="settings/billing" element={<BillingPage />} />
+
+                          {/* AgileChef Module Routes */}
+                          <Route path="prep" element={<PrepBoard />} />
+
+                          {/* Profile Route */}
+                          <Route path="profile" element={<ProfilePage />} />
+
+                          {/* Admin Dashboard */}
+                          <Route path="admin-dashboard" element={<AdminDashboard />} />
+
+                          {/* Redirect any unknown routes to dashboard */}
+                          <Route path="*" element={<Navigate to="/" replace />} />
+                        </Route>
+                      </Route>
+                    </Routes>
+                    </SubdomainRouter>
+                  </SnackbarProvider>
+                </NotistackProvider>
+              </SubscriptionProvider>
+            </RestaurantProvider>
           </AuthProvider>
         </Router>
       </QueryClientProvider>
