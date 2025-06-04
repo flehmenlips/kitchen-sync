@@ -27,7 +27,16 @@ import {
   CardMedia,
   Select,
   MenuItem,
-  InputLabel
+  InputLabel,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemButton,
+  ListItemIcon,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import {
   Save,
@@ -42,9 +51,24 @@ import {
   Payment as PaymentIcon,
   Edit as EditIcon,
   Public as PublicIcon,
-  ColorLens as ColorLensIcon
+  ColorLens as ColorLensIcon,
+  Pages as PagesIcon,
+  Settings as SettingsIcon,
+  Search as SeoIcon,
+  Add as AddIcon,
+  Delete as DeleteIcon,
+  Home as HomeIcon,
+  Info as InfoIcon,
+  Restaurant as RestaurantIcon,
+  Contacts as ContactIcon
 } from '@mui/icons-material';
 import { restaurantSettingsService, RestaurantSettings } from '../services/restaurantSettingsService';
+import { 
+  websiteBuilderService, 
+  WebsiteBuilderData, 
+  WebsiteBuilderPage as WBPage,
+  PageCreationData 
+} from '../services/websiteBuilderService';
 import { useSnackbar } from '../context/SnackbarContext';
 import { useRestaurant } from '../context/RestaurantContext';
 import { buildRestaurantUrl } from '../utils/subdomain';
@@ -75,37 +99,47 @@ const WebsiteBuilderPage: React.FC = () => {
   const { showSnackbar } = useSnackbar();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [settings, setSettings] = useState<RestaurantSettings | null>(null);
-  const [tabValue, setTabValue] = useState(0);
+  const [websiteData, setWebsiteData] = useState<WebsiteBuilderData | null>(null);
+  const [selectedPage, setSelectedPage] = useState<WBPage | null>(null);
+  const [tabValue, setTabValue] = useState(0); // 0: Settings, 1: Pages, 2: Branding, 3: SEO
   const [hasChanges, setHasChanges] = useState(false);
   const [templateSelectorOpen, setTemplateSelectorOpen] = useState(false);
+  const [pageDialogOpen, setPageDialogOpen] = useState(false);
+  const [newPageData, setNewPageData] = useState<PageCreationData>({
+    name: '',
+    slug: '',
+    template: 'default'
+  });
   const navigate = useNavigate();
   const { currentRestaurant } = useRestaurant();
 
   useEffect(() => {
-    fetchSettings();
+    fetchWebsiteData();
   }, []);
 
-  const fetchSettings = async () => {
+  const fetchWebsiteData = async () => {
     try {
       setLoading(true);
-      const data = await restaurantSettingsService.getSettings();
-      setSettings(data);
+      const data = await websiteBuilderService.getWebsiteBuilderData();
+      setWebsiteData(data);
+      // Select the first page by default
+      if (data.pages.length > 0) {
+        setSelectedPage(data.pages[0]);
+      }
     } catch (error) {
-      console.error('Error fetching settings:', error);
-      showSnackbar('Failed to load website settings', 'error');
+      console.error('Error fetching website data:', error);
+      showSnackbar('Failed to load website data', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSave = async () => {
-    if (!settings) return;
+  const handleSaveSettings = async () => {
+    if (!websiteData) return;
 
     try {
       setSaving(true);
-      const updatedSettings = await restaurantSettingsService.updateSettings(settings);
-      setSettings(updatedSettings);
+      await websiteBuilderService.updateSettings(websiteData.settings);
       setHasChanges(false);
       showSnackbar('Settings saved successfully', 'success');
     } catch (error) {
@@ -116,14 +150,14 @@ const WebsiteBuilderPage: React.FC = () => {
     }
   };
 
-  const handleFieldChange = (field: keyof RestaurantSettings | string, value: any) => {
-    setSettings(prev => {
+  const handleSettingsChange = (field: string, value: any) => {
+    setWebsiteData(prev => {
       if (!prev) return null;
       
       // Handle nested fields like openingHours.monday.open
       if (field.includes('.')) {
         const parts = field.split('.');
-        const newSettings = { ...prev };
+        const newSettings = { ...prev.settings };
         let current: any = newSettings;
         
         for (let i = 0; i < parts.length - 1; i++) {
@@ -136,18 +170,69 @@ const WebsiteBuilderPage: React.FC = () => {
         }
         
         current[parts[parts.length - 1]] = value;
-        return newSettings;
+        return { ...prev, settings: newSettings };
       }
       
-      return { ...prev, [field]: value };
+      return { 
+        ...prev, 
+        settings: { ...prev.settings, [field]: value }
+      };
     });
     setHasChanges(true);
+  };
+
+  const handleCreatePage = async () => {
+    try {
+      const newPage = await websiteBuilderService.createPage(newPageData);
+      setWebsiteData(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          pages: [...prev.pages, newPage].sort((a, b) => a.displayOrder - b.displayOrder)
+        };
+      });
+      setSelectedPage(newPage);
+      setPageDialogOpen(false);
+      setNewPageData({ name: '', slug: '', template: 'default' });
+      showSnackbar('Page created successfully', 'success');
+    } catch (error) {
+      console.error('Error creating page:', error);
+      showSnackbar('Failed to create page', 'error');
+    }
+  };
+
+  const handleDeletePage = async (pageSlug: string) => {
+    try {
+      await websiteBuilderService.deletePage(pageSlug);
+      setWebsiteData(prev => {
+        if (!prev) return null;
+        const updatedPages = prev.pages.filter(p => p.slug !== pageSlug);
+        return { ...prev, pages: updatedPages };
+      });
+      
+      // If deleted page was selected, select first remaining page
+      if (selectedPage?.slug === pageSlug && websiteData) {
+        const remainingPages = websiteData.pages.filter(p => p.slug !== pageSlug);
+        setSelectedPage(remainingPages.length > 0 ? remainingPages[0] : null);
+      }
+      
+      showSnackbar('Page deleted successfully', 'success');
+    } catch (error) {
+      console.error('Error deleting page:', error);
+      showSnackbar('Failed to delete page', 'error');
+    }
   };
 
   const handleImageUpload = async (field: 'hero' | 'about' | 'cover' | 'logo', file: File) => {
     try {
       const result = await restaurantSettingsService.uploadImage(field, file);
-      setSettings(result.settings);
+      setWebsiteData(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          settings: result.settings
+        };
+      });
       showSnackbar(`${field} image uploaded successfully`, 'success');
     } catch (error) {
       console.error('Error uploading image:', error);
@@ -169,10 +254,10 @@ const WebsiteBuilderPage: React.FC = () => {
     );
   }
 
-  if (!settings) {
+  if (!websiteData) {
     return (
       <Container maxWidth="lg">
-        <Alert severity="error">Failed to load website settings</Alert>
+        <Alert severity="error">Failed to load website data</Alert>
       </Container>
     );
   }
@@ -226,18 +311,266 @@ const WebsiteBuilderPage: React.FC = () => {
 
       <Paper sx={{ borderBottom: 1, borderColor: 'divider' }}>
         <Tabs value={tabValue} onChange={handleTabChange}>
-          <Tab label="Branding & Theme" />
-          <Tab label="Hero & About" />
-          <Tab label="Contact & Hours" />
-          <Tab label="Menu Display" />
-          <Tab label="Social & Footer" />
-          <Tab label="SEO" />
+          <Tab icon={<SettingsIcon />} label="Settings" />
+          <Tab icon={<PagesIcon />} label="Pages" />
+          <Tab icon={<PaletteIcon />} label="Branding" />
+          <Tab icon={<SeoIcon />} label="SEO" />
         </Tabs>
       </Paper>
 
       <Paper>
-        {/* Branding & Theme Tab */}
+        {/* Settings Tab - Contact & Hours, Menu Display */}
         <TabPanel value={tabValue} index={0}>
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom>Contact Information</Typography>
+              <Divider sx={{ mb: 2 }} />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Phone"
+                value={websiteData.settings.contactPhone || ''}
+                onChange={(e) => handleSettingsChange('contactPhone', e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <PhoneIcon />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Email"
+                value={websiteData.settings.contactEmail || ''}
+                onChange={(e) => handleSettingsChange('contactEmail', e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <EmailIcon />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Address"
+                value={websiteData.settings.contactAddress || ''}
+                onChange={(e) => handleSettingsChange('contactAddress', e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <LocationIcon />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                label="City"
+                value={websiteData.settings.contactCity || ''}
+                onChange={(e) => handleSettingsChange('contactCity', e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                label="State"
+                value={websiteData.settings.contactState || ''}
+                onChange={(e) => handleSettingsChange('contactState', e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                label="ZIP Code"
+                value={websiteData.settings.contactZip || ''}
+                onChange={(e) => handleSettingsChange('contactZip', e.target.value)}
+              />
+            </Grid>
+
+            <Grid item xs={12} sx={{ mt: 3 }}>
+              <Typography variant="h6" gutterBottom>Opening Hours</Typography>
+              <Divider sx={{ mb: 2 }} />
+            </Grid>
+            
+            {days.map(day => (
+              <Grid item xs={12} key={day}>
+                <Box display="flex" alignItems="center" gap={2}>
+                  <Typography variant="body1" sx={{ minWidth: 120, textTransform: 'capitalize' }}>
+                    {day}
+                  </Typography>
+                  <TextField
+                    size="small"
+                    label="Open"
+                    value={websiteData.settings.openingHours?.[day]?.open || ''}
+                    onChange={(e) => handleSettingsChange(`openingHours.${day}.open`, e.target.value)}
+                    sx={{ width: 150 }}
+                  />
+                  <Typography variant="body2">to</Typography>
+                  <TextField
+                    size="small"
+                    label="Close"
+                    value={websiteData.settings.openingHours?.[day]?.close || ''}
+                    onChange={(e) => handleSettingsChange(`openingHours.${day}.close`, e.target.value)}
+                    sx={{ width: 150 }}
+                  />
+                </Box>
+              </Grid>
+            ))}
+
+            <Grid item xs={12} sx={{ mt: 3 }}>
+              <Typography variant="h6" gutterBottom>Menu Display</Typography>
+              <Divider sx={{ mb: 2 }} />
+            </Grid>
+
+            <Grid item xs={12}>
+              <FormControl component="fieldset">
+                <FormLabel component="legend">Menu Display Mode</FormLabel>
+                <RadioGroup
+                  value={websiteData.settings.menuDisplayMode || 'tabs'}
+                  onChange={(e) => handleSettingsChange('menuDisplayMode', e.target.value)}
+                >
+                  <FormControlLabel value="tabs" control={<Radio />} label="Tabs (Multiple menus as tabs)" />
+                  <FormControlLabel value="sections" control={<Radio />} label="Sections (All menus on one page)" />
+                </RadioGroup>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12}>
+              <Typography variant="body2" gutterBottom>
+                Active Menus
+              </Typography>
+              <Box sx={{ mt: 2 }}>
+                {/* Note: Restaurant menus will be fetched separately when needed */}
+                <Typography variant="body2" color="text.secondary">
+                  Menu management integration to be added
+                </Typography>
+              </Box>
+            </Grid>
+          </Grid>
+        </TabPanel>
+
+        {/* Pages Tab - Hero & About + Custom Pages */}
+        <TabPanel value={tabValue} index={1}>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={4}>
+              {/* Page Sidebar */}
+              <Paper sx={{ p: 2, height: 'fit-content' }}>
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                  <Typography variant="h6">Pages</Typography>
+                  <Button
+                    size="small"
+                    startIcon={<AddIcon />}
+                    onClick={() => setPageDialogOpen(true)}
+                  >
+                    Add Page
+                  </Button>
+                </Box>
+                <List>
+                  {websiteData.pages.map(page => (
+                    <ListItem key={page.slug} disablePadding>
+                      <ListItemButton
+                        selected={selectedPage?.slug === page.slug}
+                        onClick={() => setSelectedPage(page)}
+                      >
+                        <ListItemIcon>
+                          {page.slug === 'home' && <HomeIcon />}
+                          {page.slug === 'about' && <InfoIcon />}
+                          {page.slug === 'contact' && <ContactIcon />}
+                          {!['home', 'about', 'contact'].includes(page.slug) && <PagesIcon />}
+                        </ListItemIcon>
+                        <ListItemText 
+                          primary={page.name}
+                          secondary={page.isActive ? 'Published' : 'Draft'}
+                        />
+                        {!page.isSystem && (
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeletePage(page.slug);
+                            }}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        )}
+                      </ListItemButton>
+                    </ListItem>
+                  ))}
+                </List>
+              </Paper>
+            </Grid>
+            
+            <Grid item xs={12} md={8}>
+              {/* Page Content Editor */}
+              {selectedPage ? (
+                <Paper sx={{ p: 3 }}>
+                  <Typography variant="h6" gutterBottom>
+                    Editing: {selectedPage.name}
+                  </Typography>
+                  <Divider sx={{ mb: 3 }} />
+                  
+                  <Alert severity="info" sx={{ mb: 3 }}>
+                    Page content editing will be enhanced with rich content blocks in Phase 2.2.
+                    For now, this shows the page structure and basic information.
+                  </Alert>
+                  
+                  <Grid container spacing={3}>
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label="Page Title"
+                        value={selectedPage.name}
+                        InputProps={{ readOnly: true }}
+                        helperText="Page title from ContentBlocks system"
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label="URL Slug"
+                        value={selectedPage.slug}
+                        InputProps={{ readOnly: true }}
+                        helperText="URL path for this page"
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="body2" color="text.secondary">
+                        This page has {selectedPage.blocks.length} content block(s):
+                      </Typography>
+                      {selectedPage.blocks.map((block, index) => (
+                        <Chip
+                          key={index}
+                          label={`${block.blockType}: ${block.title || 'Untitled'}`}
+                          size="small"
+                          sx={{ m: 0.5 }}
+                        />
+                      ))}
+                    </Grid>
+                  </Grid>
+                </Paper>
+              ) : (
+                <Paper sx={{ p: 3, textAlign: 'center' }}>
+                  <Typography variant="h6" color="text.secondary">
+                    Select a page from the sidebar to edit its content
+                  </Typography>
+                </Paper>
+              )}
+            </Grid>
+          </Grid>
+        </TabPanel>
+
+        {/* Branding Tab - Website Branding, Theme Colors, Typography */}
+        <TabPanel value={tabValue} index={2}>
           <Grid container spacing={3}>
             <Grid item xs={12}>
               <Typography variant="h6" gutterBottom>Website Branding</Typography>
@@ -248,8 +581,8 @@ const WebsiteBuilderPage: React.FC = () => {
               <TextField
                 fullWidth
                 label="Website Name"
-                value={settings.websiteName || ''}
-                onChange={(e) => handleFieldChange('websiteName', e.target.value)}
+                value={websiteData.settings.websiteName || ''}
+                onChange={(e) => handleSettingsChange('websiteName', e.target.value)}
                 helperText="The name displayed in the header and browser tab"
               />
             </Grid>
@@ -257,8 +590,8 @@ const WebsiteBuilderPage: React.FC = () => {
               <TextField
                 fullWidth
                 label="Tagline"
-                value={settings.tagline || ''}
-                onChange={(e) => handleFieldChange('tagline', e.target.value)}
+                value={websiteData.settings.tagline || ''}
+                onChange={(e) => handleSettingsChange('tagline', e.target.value)}
                 helperText="Short description of your website"
               />
             </Grid>
@@ -283,10 +616,10 @@ const WebsiteBuilderPage: React.FC = () => {
                       }}
                     />
                   </Button>
-                  {settings.logoUrl && (
+                  {websiteData.settings.logoUrl && (
                     <Box
                       component="img"
-                      src={settings.logoUrl}
+                      src={websiteData.settings.logoUrl}
                       alt="Logo"
                       sx={{ height: 60, objectFit: 'contain' }}
                     />
@@ -305,8 +638,8 @@ const WebsiteBuilderPage: React.FC = () => {
                 fullWidth
                 label="Primary Color"
                 type="color"
-                value={settings.primaryColor || '#1976d2'}
-                onChange={(e) => handleFieldChange('primaryColor', e.target.value)}
+                value={websiteData.settings.primaryColor || '#1976d2'}
+                onChange={(e) => handleSettingsChange('primaryColor', e.target.value)}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -322,8 +655,8 @@ const WebsiteBuilderPage: React.FC = () => {
                 fullWidth
                 label="Secondary Color"
                 type="color"
-                value={settings.secondaryColor || '#dc004e'}
-                onChange={(e) => handleFieldChange('secondaryColor', e.target.value)}
+                value={websiteData.settings.secondaryColor || '#dc004e'}
+                onChange={(e) => handleSettingsChange('secondaryColor', e.target.value)}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -339,8 +672,8 @@ const WebsiteBuilderPage: React.FC = () => {
                 fullWidth
                 label="Text/Accent Color"
                 type="color"
-                value={settings.accentColor || '#333333'}
-                onChange={(e) => handleFieldChange('accentColor', e.target.value)}
+                value={websiteData.settings.accentColor || '#333333'}
+                onChange={(e) => handleSettingsChange('accentColor', e.target.value)}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -361,8 +694,8 @@ const WebsiteBuilderPage: React.FC = () => {
               <FormControl fullWidth>
                 <InputLabel>Primary Font</InputLabel>
                 <Select
-                  value={settings.fontPrimary || 'Roboto, sans-serif'}
-                  onChange={(e) => handleFieldChange('fontPrimary', e.target.value)}
+                  value={websiteData.settings.fontPrimary || 'Roboto, sans-serif'}
+                  onChange={(e) => handleSettingsChange('fontPrimary', e.target.value)}
                   label="Primary Font"
                 >
                   <MenuItem value="Roboto, sans-serif">Roboto</MenuItem>
@@ -379,372 +712,69 @@ const WebsiteBuilderPage: React.FC = () => {
               <FormControl fullWidth>
                 <InputLabel>Secondary Font</InputLabel>
                 <Select
-                  value={settings.fontSecondary || 'Playfair Display, serif'}
-                  onChange={(e) => handleFieldChange('fontSecondary', e.target.value)}
+                  value={websiteData.settings.fontSecondary || 'Playfair Display, serif'}
+                  onChange={(e) => handleSettingsChange('fontSecondary', e.target.value)}
                   label="Secondary Font"
                 >
+                  <MenuItem value="Playfair Display, serif">Playfair Display</MenuItem>
+                  <MenuItem value="Georgia, serif">Georgia</MenuItem>
+                  <MenuItem value="Merriweather, serif">Merriweather</MenuItem>
                   <MenuItem value="Roboto, sans-serif">Roboto</MenuItem>
                   <MenuItem value="Open Sans, sans-serif">Open Sans</MenuItem>
                   <MenuItem value="Lato, sans-serif">Lato</MenuItem>
                   <MenuItem value="Montserrat, sans-serif">Montserrat</MenuItem>
-                  <MenuItem value="Playfair Display, serif">Playfair Display</MenuItem>
-                  <MenuItem value="Georgia, serif">Georgia</MenuItem>
-                  <MenuItem value="Merriweather, serif">Merriweather</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
 
             <Grid item xs={12} sx={{ mt: 3 }}>
-              <Card>
+              <Typography variant="h6" gutterBottom>Preview</Typography>
+              <Divider sx={{ mb: 2 }} />
+            </Grid>
+
+            <Grid item xs={12}>
+              <Card sx={{ p: 3, backgroundColor: '#f5f5f5' }}>
                 <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Preview
-                  </Typography>
-                  <Box
+                  <Typography
+                    variant="h4"
                     sx={{
-                      p: 3,
-                      border: '1px solid',
-                      borderColor: 'divider',
-                      borderRadius: 1,
-                      backgroundColor: '#fff'
+                      fontFamily: websiteData.settings.fontPrimary || 'Roboto, sans-serif',
+                      color: websiteData.settings.primaryColor || '#1976d2',
+                      mb: 1
                     }}
                   >
-                    <Typography
-                      variant="h4"
-                      sx={{
-                        fontFamily: settings.fontPrimary || 'Roboto, sans-serif',
-                        color: settings.primaryColor || '#1976d2',
-                        mb: 1
-                      }}
-                    >
-                      {settings.websiteName || 'Website Name'}
-                    </Typography>
-                    <Typography
-                      variant="h6"
-                      sx={{
-                        fontFamily: settings.fontSecondary || 'Playfair Display, serif',
-                        color: settings.accentColor || '#333333',
-                        mb: 2
-                      }}
-                    >
-                      {settings.tagline || 'Your tagline here'}
-                    </Typography>
-                    <Button
-                      variant="contained"
-                      sx={{
-                        backgroundColor: settings.primaryColor || '#1976d2',
-                        color: '#fff',
-                        '&:hover': {
-                          backgroundColor: settings.secondaryColor || '#dc004e'
-                        }
-                      }}
-                    >
-                      Sample Button
-                    </Button>
-                  </Box>
+                    {websiteData.settings.websiteName || 'Website Name'}
+                  </Typography>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      fontFamily: websiteData.settings.fontSecondary || 'Playfair Display, serif',
+                      color: websiteData.settings.accentColor || '#333333',
+                      mb: 2
+                    }}
+                  >
+                    {websiteData.settings.tagline || 'Your tagline here'}
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    sx={{
+                      backgroundColor: websiteData.settings.primaryColor || '#1976d2',
+                      color: '#fff',
+                      '&:hover': {
+                        backgroundColor: websiteData.settings.secondaryColor || '#dc004e'
+                      }
+                    }}
+                  >
+                    Sample Button
+                  </Button>
                 </CardContent>
               </Card>
             </Grid>
           </Grid>
         </TabPanel>
 
-        {/* Hero & About Tab */}
-        <TabPanel value={tabValue} index={1}>
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom>Hero Section</Typography>
-              <Divider sx={{ mb: 2 }} />
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Hero Title"
-                value={settings.heroTitle || ''}
-                onChange={(e) => handleFieldChange('heroTitle', e.target.value)}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Hero Subtitle"
-                value={settings.heroSubtitle || ''}
-                onChange={(e) => handleFieldChange('heroSubtitle', e.target.value)}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="CTA Button Text"
-                value={settings.heroCTAText || ''}
-                onChange={(e) => handleFieldChange('heroCTAText', e.target.value)}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="CTA Button Link"
-                value={settings.heroCTALink || ''}
-                onChange={(e) => handleFieldChange('heroCTALink', e.target.value)}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <Box>
-                <Typography variant="body2" gutterBottom>Hero Image</Typography>
-                <Button
-                  variant="outlined"
-                  component="label"
-                  startIcon={<UploadIcon />}
-                >
-                  Upload Hero Image
-                  <input
-                    type="file"
-                    hidden
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleImageUpload('hero', file);
-                    }}
-                  />
-                </Button>
-                {settings.heroImageUrl && (
-                  <Box sx={{ mt: 2 }}>
-                    <img
-                      src={settings.heroImageUrl}
-                      alt="Hero"
-                      style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
-                    />
-                    <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                      <a href={settings.heroImageUrl} target="_blank" rel="noopener noreferrer">
-                        {settings.heroImageUrl}
-                      </a>
-                    </Typography>
-                  </Box>
-                )}
-              </Box>
-            </Grid>
-
-            <Grid item xs={12} sx={{ mt: 3 }}>
-              <Typography variant="h6" gutterBottom>About Section</Typography>
-              <Divider sx={{ mb: 2 }} />
-            </Grid>
-
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="About Title"
-                value={settings.aboutTitle || ''}
-                onChange={(e) => handleFieldChange('aboutTitle', e.target.value)}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                multiline
-                rows={4}
-                label="About Description"
-                value={settings.aboutDescription || ''}
-                onChange={(e) => handleFieldChange('aboutDescription', e.target.value)}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <Box>
-                <Typography variant="body2" gutterBottom>About Image</Typography>
-                <Button
-                  variant="outlined"
-                  component="label"
-                  startIcon={<UploadIcon />}
-                >
-                  Upload About Image
-                  <input
-                    type="file"
-                    hidden
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleImageUpload('about', file);
-                    }}
-                  />
-                </Button>
-                {settings.aboutImageUrl && (
-                  <Box sx={{ mt: 2 }}>
-                    <img
-                      src={settings.aboutImageUrl}
-                      alt="About"
-                      style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
-                    />
-                    <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                      <a href={settings.aboutImageUrl} target="_blank" rel="noopener noreferrer">
-                        {settings.aboutImageUrl}
-                      </a>
-                    </Typography>
-                  </Box>
-                )}
-              </Box>
-            </Grid>
-          </Grid>
-        </TabPanel>
-
-        {/* Contact & Hours Tab */}
-        <TabPanel value={tabValue} index={2}>
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom>Contact Information</Typography>
-              <Divider sx={{ mb: 2 }} />
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Phone"
-                value={settings.contactPhone || ''}
-                onChange={(e) => handleFieldChange('contactPhone', e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <PhoneIcon />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Email"
-                value={settings.contactEmail || ''}
-                onChange={(e) => handleFieldChange('contactEmail', e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <EmailIcon />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Address"
-                value={settings.contactAddress || ''}
-                onChange={(e) => handleFieldChange('contactAddress', e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <LocationIcon />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <TextField
-                fullWidth
-                label="City"
-                value={settings.contactCity || ''}
-                onChange={(e) => handleFieldChange('contactCity', e.target.value)}
-              />
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <TextField
-                fullWidth
-                label="State"
-                value={settings.contactState || ''}
-                onChange={(e) => handleFieldChange('contactState', e.target.value)}
-              />
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <TextField
-                fullWidth
-                label="ZIP Code"
-                value={settings.contactZip || ''}
-                onChange={(e) => handleFieldChange('contactZip', e.target.value)}
-              />
-            </Grid>
-
-            <Grid item xs={12} sx={{ mt: 3 }}>
-              <Typography variant="h6" gutterBottom>Opening Hours</Typography>
-              <Divider sx={{ mb: 2 }} />
-            </Grid>
-
-            {days.map(day => (
-              <Grid item xs={12} key={day}>
-                <Box display="flex" alignItems="center" gap={2}>
-                  <Typography sx={{ width: 100, textTransform: 'capitalize' }}>
-                    {day}:
-                  </Typography>
-                  <TextField
-                    size="small"
-                    label="Open"
-                    value={settings.openingHours?.[day]?.open || ''}
-                    onChange={(e) => handleFieldChange(`openingHours.${day}.open`, e.target.value)}
-                    sx={{ width: 150 }}
-                  />
-                  <Typography>to</Typography>
-                  <TextField
-                    size="small"
-                    label="Close"
-                    value={settings.openingHours?.[day]?.close || ''}
-                    onChange={(e) => handleFieldChange(`openingHours.${day}.close`, e.target.value)}
-                    sx={{ width: 150 }}
-                  />
-                </Box>
-              </Grid>
-            ))}
-          </Grid>
-        </TabPanel>
-
-        {/* Menu Display Tab */}
+        {/* SEO Tab - Social Media, Footer, SEO Settings */}
         <TabPanel value={tabValue} index={3}>
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom>Menu Display Settings</Typography>
-              <Divider sx={{ mb: 2 }} />
-            </Grid>
-
-            <Grid item xs={12}>
-              <FormControl component="fieldset">
-                <FormLabel component="legend">Menu Display Mode</FormLabel>
-                <RadioGroup
-                  value={settings.menuDisplayMode || 'tabs'}
-                  onChange={(e) => handleFieldChange('menuDisplayMode', e.target.value)}
-                >
-                  <FormControlLabel value="tabs" control={<Radio />} label="Tabs (Multiple menus as tabs)" />
-                  <FormControlLabel value="accordion" control={<Radio />} label="Accordion (Expandable sections)" />
-                  <FormControlLabel value="single" control={<Radio />} label="Single Page (All menus on one page)" />
-                </RadioGroup>
-              </FormControl>
-            </Grid>
-
-            <Grid item xs={12}>
-              <Typography variant="subtitle1" gutterBottom>Active Menus</Typography>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                Select which menus to display on the customer portal
-              </Typography>
-              <Box sx={{ mt: 2 }}>
-                {(settings.restaurant?.menus || []).map(menu => (
-                  <Chip
-                    key={menu.id}
-                    label={menu.name}
-                    onClick={() => {
-                      const activeIds = settings.activeMenuIds || [];
-                      const newIds = activeIds.includes(menu.id)
-                        ? activeIds.filter(id => id !== menu.id)
-                        : [...activeIds, menu.id];
-                      handleFieldChange('activeMenuIds', newIds);
-                    }}
-                    color={settings.activeMenuIds?.includes(menu.id) ? 'primary' : 'default'}
-                    sx={{ m: 0.5 }}
-                  />
-                ))}
-              </Box>
-            </Grid>
-          </Grid>
-        </TabPanel>
-
-        {/* Social & Footer Tab */}
-        <TabPanel value={tabValue} index={4}>
           <Grid container spacing={3}>
             <Grid item xs={12}>
               <Typography variant="h6" gutterBottom>Social Media</Typography>
@@ -755,8 +785,8 @@ const WebsiteBuilderPage: React.FC = () => {
               <TextField
                 fullWidth
                 label="Facebook URL"
-                value={settings.facebookUrl || ''}
-                onChange={(e) => handleFieldChange('facebookUrl', e.target.value)}
+                value={websiteData.settings.facebookUrl || ''}
+                onChange={(e) => handleSettingsChange('facebookUrl', e.target.value)}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -770,8 +800,8 @@ const WebsiteBuilderPage: React.FC = () => {
               <TextField
                 fullWidth
                 label="Instagram URL"
-                value={settings.instagramUrl || ''}
-                onChange={(e) => handleFieldChange('instagramUrl', e.target.value)}
+                value={websiteData.settings.instagramUrl || ''}
+                onChange={(e) => handleSettingsChange('instagramUrl', e.target.value)}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -785,8 +815,8 @@ const WebsiteBuilderPage: React.FC = () => {
               <TextField
                 fullWidth
                 label="Twitter URL"
-                value={settings.twitterUrl || ''}
-                onChange={(e) => handleFieldChange('twitterUrl', e.target.value)}
+                value={websiteData.settings.twitterUrl || ''}
+                onChange={(e) => handleSettingsChange('twitterUrl', e.target.value)}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -808,19 +838,14 @@ const WebsiteBuilderPage: React.FC = () => {
                 multiline
                 rows={2}
                 label="Footer Text"
-                value={settings.footerText || ''}
-                onChange={(e) => handleFieldChange('footerText', e.target.value)}
+                value={websiteData.settings.footerText || ''}
+                onChange={(e) => handleSettingsChange('footerText', e.target.value)}
                 helperText="Use {year} to automatically insert the current year"
               />
             </Grid>
-          </Grid>
-        </TabPanel>
 
-        {/* SEO Tab */}
-        <TabPanel value={tabValue} index={5}>
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom>Search Engine Optimization</Typography>
+            <Grid item xs={12} sx={{ mt: 3 }}>
+              <Typography variant="h6" gutterBottom>SEO Settings</Typography>
               <Divider sx={{ mb: 2 }} />
             </Grid>
 
@@ -828,8 +853,8 @@ const WebsiteBuilderPage: React.FC = () => {
               <TextField
                 fullWidth
                 label="Meta Title"
-                value={settings.metaTitle || ''}
-                onChange={(e) => handleFieldChange('metaTitle', e.target.value)}
+                value={websiteData.settings.metaTitle || ''}
+                onChange={(e) => handleSettingsChange('metaTitle', e.target.value)}
                 helperText="Title that appears in search results"
               />
             </Grid>
@@ -839,8 +864,8 @@ const WebsiteBuilderPage: React.FC = () => {
                 multiline
                 rows={3}
                 label="Meta Description"
-                value={settings.metaDescription || ''}
-                onChange={(e) => handleFieldChange('metaDescription', e.target.value)}
+                value={websiteData.settings.metaDescription || ''}
+                onChange={(e) => handleSettingsChange('metaDescription', e.target.value)}
                 helperText="Description that appears in search results (150-160 characters recommended)"
               />
             </Grid>
@@ -848,8 +873,8 @@ const WebsiteBuilderPage: React.FC = () => {
               <TextField
                 fullWidth
                 label="Meta Keywords"
-                value={settings.metaKeywords || ''}
-                onChange={(e) => handleFieldChange('metaKeywords', e.target.value)}
+                value={websiteData.settings.metaKeywords || ''}
+                onChange={(e) => handleSettingsChange('metaKeywords', e.target.value)}
                 helperText="Comma-separated keywords for search engines"
               />
             </Grid>
@@ -858,36 +883,83 @@ const WebsiteBuilderPage: React.FC = () => {
       </Paper>
 
       {/* Save Button */}
-      {hasChanges && (
-        <Box sx={{ position: 'fixed', bottom: 16, right: 16, zIndex: 1000 }}>
-          <Button
-            variant="contained"
-            color="primary"
-            size="large"
-            onClick={handleSave}
-            disabled={saving}
-            startIcon={<Save />}
-            sx={{
-              boxShadow: 3,
-              '&:hover': {
-                boxShadow: 6,
-              },
-            }}
-          >
-            {saving ? 'Saving...' : 'Save Changes'}
-          </Button>
-        </Box>
-      )}
+      <Box sx={{ mt: 3, textAlign: 'center' }}>
+        <Button
+          variant="contained"
+          color="primary"
+          size="large"
+          onClick={handleSaveSettings}
+          disabled={saving || !hasChanges}
+          startIcon={<Save />}
+        >
+          {saving ? 'Saving...' : hasChanges ? 'Save Changes' : 'No Changes'}
+        </Button>
+      </Box>
 
-      {/* Template Selector Dialog */}
+      {/* Page Creation Dialog */}
+      <Dialog open={pageDialogOpen} onClose={() => setPageDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Create New Page</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ pt: 2 }}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Page Name"
+                value={newPageData.name}
+                onChange={(e) => {
+                  const name = e.target.value;
+                  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+                  setNewPageData(prev => ({ ...prev, name, slug }));
+                }}
+                placeholder="e.g., Services, Events, Catering"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="URL Slug"
+                value={newPageData.slug}
+                onChange={(e) => setNewPageData(prev => ({ ...prev, slug: e.target.value }))}
+                helperText="URL path for this page (auto-generated from name)"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel>Template</InputLabel>
+                <Select
+                  value={newPageData.template || 'default'}
+                  onChange={(e) => setNewPageData(prev => ({ ...prev, template: e.target.value }))}
+                  label="Template"
+                >
+                  <MenuItem value="default">Default Page</MenuItem>
+                  <MenuItem value="services">Services Page</MenuItem>
+                  <MenuItem value="events">Events Page</MenuItem>
+                  <MenuItem value="gallery">Photo Gallery</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPageDialogOpen(false)}>Cancel</Button>
+          <Button 
+            onClick={handleCreatePage} 
+            variant="contained"
+            disabled={!newPageData.name.trim() || !newPageData.slug.trim()}
+          >
+            Create Page
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Template Selector */}
       <TemplateSelector
         open={templateSelectorOpen}
         onClose={() => setTemplateSelectorOpen(false)}
         onTemplateApplied={() => {
-          fetchSettings();
+          fetchWebsiteData();
           setTemplateSelectorOpen(false);
         }}
-        isPremiumUser={true} // TODO: Get from subscription context
       />
     </Container>
   );

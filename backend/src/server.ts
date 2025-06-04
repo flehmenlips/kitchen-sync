@@ -25,6 +25,7 @@ import restaurantOnboardingRoutes from './routes/restaurantOnboardingRoutes'; //
 import subscriptionRoutes from './routes/subscriptionRoutes'; // Import subscription routes
 import templateRoutes from './routes/templateRoutes'; // Import template routes
 import pageRoutes from './routes/pageRoutes'; // Import page routes
+import websiteBuilderRoutes from './routes/websiteBuilderRoutes'; // Import website builder routes
 import { Request, Response, NextFunction } from 'express';
 import { protect } from './middleware/authMiddleware';
 import { setRestaurantContext } from './middleware/restaurantContext';
@@ -131,6 +132,7 @@ app.use('/api/orders', orderRoutes); // Mount order routes
 app.use('/api/restaurant', restaurantSettingsRoutes); // Mount restaurant settings routes
 app.use('/api/content-blocks', contentBlockRoutes); // Mount content block routes
 app.use('/api/pages', pageRoutes); // Mount page routes
+app.use('/api/website-builder', websiteBuilderRoutes); // Mount website builder routes
 app.use('/api/admin', adminRoutes); // Mount admin routes
 app.use('/api/platform', platformRoutes); // Mount platform routes
 app.use('/api/templates', templateRoutes); // Mount template routes
