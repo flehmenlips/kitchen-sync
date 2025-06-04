@@ -67,37 +67,70 @@ During schema changes in Phase 3, the ContentBlock model was accidentally remove
 
 ## Executor's Feedback or Assistance Requests
 
-**🔧 CRITICAL HOTFIX SUCCESSFULLY APPLIED 🔧**
+**🔧 CRITICAL PAGE ASSOCIATION ISSUES IDENTIFIED & FIXED 🔧**
 
-**Issue Summary:**
-The v3.2.0 deployment failed due to a **critical Prisma schema validation error** (P1012). During the development process when I was reverting database changes to avoid production risks, I accidentally removed the entire `ContentBlock` model definition while keeping the reference to it in the `Restaurant` model.
+**User Feedback Received:**
+1. **Content blocks not correctly tied to pages** - Filtering not working despite correct tags
+2. **Poor button layout** - "Preview Site", "Add Page", "Add Block" buttons crowded and unprofessional
+3. **Page association anomalies** - Virtual page system integration problems
 
-**Rapid Response:**
-1. **Identified Root Cause** (5 min): Missing ContentBlock model in schema
-2. **Applied Fix** (5 min): Restored complete ContentBlock model definition
-3. **Validated Solution** (3 min): Prisma validation + TypeScript compilation
-4. **Deployed Hotfix** (2 min): Committed and pushed to production
+**Root Cause Analysis:**
+The virtual page system had **inconsistent pageId mapping** between `pageController.ts` and `contentBlockController.ts`:
+- **pageController**: Used `index + 1` for virtual page IDs
+- **contentBlockController**: Used hash-based virtual IDs for custom pages
+- **Result**: Page filtering failed because pageIds didn't match between systems
+
+**Fixes Applied (Commit 6b40605):**
+1. **✅ Virtual Page System Consistency**:
+   - Both controllers now use identical hash-based pageId mapping
+   - System pages: home=1, about=2, menu=3, contact=4
+   - Custom pages: Hash-based virtual IDs using same algorithm
+   - Page-to-content-block association now works correctly
+
+2. **✅ UI Layout Improvements**:
+   - Fixed button spacing with proper `gap={1}` and `alignItems="center"`
+   - Consistent button sizing with `size="small"`
+   - Professional responsive layout for action buttons
+
+3. **✅ Debug Logging Added**:
+   - Console logging to track page filtering behavior
+   - Helps identify any remaining association issues
+   - Shows pageId mapping for troubleshooting
 
 **Technical Details:**
-- **Error**: `Type "ContentBlock" is neither a built-in type, nor refers to another model`
-- **Location**: Line 624 in Restaurant model relation `contentBlocks ContentBlock[]`
-- **Fix**: Added complete ContentBlock model with all required fields and indexes
-- **Validation**: Schema validated ✅, TypeScript compiled ✅
+```typescript
+// Consistent pageId mapping function (now in both controllers)
+const getPageId = (pageSlug: string): number => {
+  const pageMap: Record<string, number> = {
+    'home': 1, 'about': 2, 'menu': 3, 'contact': 4
+  };
+  return pageMap[pageSlug] || Math.abs(pageSlug.split('').reduce((a, b) => {
+    a = ((a << 5) - a) + b.charCodeAt(0);
+    return a & a;
+  }, 0));
+};
+```
 
 **Current Status:**
-- ✅ **Hotfix Deployed**: New deployment triggered automatically
-- ⏳ **Monitoring**: Waiting for deployment completion  
-- 🎯 **Expected Result**: Page Manager v3.2.0 fully operational
+- ✅ **Backend Consistency**: Both controllers use identical pageId mapping
+- ✅ **UI Improvements**: Professional button layout implemented
+- ✅ **Build Validation**: TypeScript compilation successful
+- ✅ **Production Deployed**: Commit 6b40605 pushed to main branch
+- 🔄 **Testing Required**: Need user validation of page filtering functionality
 
-**Lessons Learned:**
-- Always validate schema after making changes, even when reverting
-- Test build process locally before pushing to production
-- Consider using feature flags for major schema changes
-- Schema validation should be part of pre-commit hooks
+**Expected Results:**
+- Content blocks should now correctly filter by selected page
+- Page tabs should show accurate content block counts
+- Button layout should appear professional and well-spaced
+- Debug console should show correct pageId associations
 
-**Ready for Testing:** Once the new deployment completes, the Page Manager system should be fully operational in production with all planned features working correctly.
+**Next Steps:**
+1. User testing of page filtering functionality
+2. Verify content block creation associates with correct pages
+3. Confirm UI improvements meet design standards
+4. Remove debug logging once functionality confirmed
 
-**Recommendation:** After successful deployment, we should implement the security vulnerability fixes that GitHub detected and establish better schema change management practices.
+**Ready for User Testing:** The page association issues should now be resolved. Please test the page filtering and content block management to confirm the fixes are working correctly.
 
 ---
 

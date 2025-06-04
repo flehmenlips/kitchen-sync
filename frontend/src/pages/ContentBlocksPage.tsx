@@ -50,6 +50,8 @@ import {
   Settings as SettingsIcon
 } from '@mui/icons-material';
 import { useSnackbar } from '../context/SnackbarContext';
+import { useRestaurant } from '../context/RestaurantContext';
+import { buildRestaurantUrl } from '../utils/subdomain';
 import { 
   contentBlockService, 
   ContentBlock, 
@@ -212,6 +214,7 @@ const SortableBlockCard: React.FC<{ block: ContentBlock; onEdit: () => void; onD
 
 const ContentBlocksPage: React.FC = () => {
   const { showSnackbar } = useSnackbar();
+  const { currentRestaurant } = useRestaurant();
   const [blocks, setBlocks] = useState<ContentBlock[]>([]);
   const [pages, setPages] = useState<Page[]>([]);
   const [loading, setLoading] = useState(true);
@@ -444,15 +447,6 @@ const ContentBlocksPage: React.FC = () => {
     return page?.name || 'Unknown Page';
   };
 
-  // Debug logging
-  console.log('Debug - Current state:', {
-    selectedPageId,
-    totalBlocks: blocks.length,
-    filteredBlocks: filteredBlocks.length,
-    pages: pages.map(p => ({ id: p.id, name: p.name, slug: p.slug })),
-    blockPageIds: blocks.map(b => ({ id: b.id, pageId: b.pageId, title: b.title }))
-  });
-
   if (loading) {
     return (
       <Container maxWidth="lg">
@@ -471,7 +465,7 @@ const ContentBlocksPage: React.FC = () => {
           <Box display="flex" gap={1} alignItems="center">
             <Button
               startIcon={<PreviewIcon />}
-              href="/customer"
+              href={buildRestaurantUrl(currentRestaurant?.slug || 'restaurant')}
               target="_blank"
               variant="outlined"
               size="small"
