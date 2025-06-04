@@ -26,9 +26,16 @@ export function getSubdomain(): string | null {
   
   // Check if we have a subdomain (e.g., coqauvin.kitchensync.restaurant)
   if (parts.length >= 3) {
-    // First part is the subdomain
     const subdomain = parts[0];
-    console.log('[Subdomain Detection] Found subdomain:', subdomain);
+    
+    // Exclude main app subdomains
+    if (subdomain === 'app' || subdomain === 'www' || subdomain === 'admin' || subdomain === 'platform-admin') {
+      console.log('[Subdomain Detection] Main app subdomain, treating as main domain');
+      return null;
+    }
+    
+    // First part is the restaurant subdomain
+    console.log('[Subdomain Detection] Found restaurant subdomain:', subdomain);
     return subdomain;
   }
   
@@ -67,7 +74,7 @@ export function getMainAppUrl(): string {
 }
 
 /**
- * Build a restaurant subdomain URL
+ * Build a restaurant subdomain URL with clean URLs (no /customer prefix)
  */
 export function buildRestaurantUrl(slug: string): string {
   const protocol = window.location.protocol;
@@ -75,7 +82,8 @@ export function buildRestaurantUrl(slug: string): string {
   
   // Handle localhost development
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return `${protocol}//${hostname}:${window.location.port}/customer?restaurant=${slug}`;
+    // In development, use clean URL with restaurant query parameter
+    return `${protocol}//${hostname}:${window.location.port}/?restaurant=${slug}`;
   }
   
   // Handle production
@@ -91,6 +99,62 @@ export function buildRestaurantUrl(slug: string): string {
   }
   
   return `${protocol}//${slug}.${baseDomain}`;
+}
+
+/**
+ * Build a restaurant page URL with clean paths
+ */
+export function buildRestaurantPageUrl(slug: string, path: string = ''): string {
+  const protocol = window.location.protocol;
+  const hostname = window.location.hostname;
+  
+  // Remove leading slash from path for consistency
+  const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+  
+  // Handle localhost development
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    // In development, use clean URL structure with restaurant query parameter
+    const port = window.location.port ? `:${window.location.port}` : '';
+    const fullPath = cleanPath ? `/${cleanPath}` : '/';
+    return `${protocol}//${hostname}${port}${fullPath}?restaurant=${slug}`;
+  }
+  
+  // Handle production
+  const parts = hostname.split('.');
+  let baseDomain: string;
+  
+  if (parts.length >= 3) {
+    // Already on a subdomain, replace it
+    baseDomain = parts.slice(1).join('.');
+  } else {
+    // On main domain
+    baseDomain = hostname;
+  }
+  
+  // Build clean restaurant URL without /customer prefix
+  const fullPath = cleanPath ? `/${cleanPath}` : '';
+  return `${protocol}//${slug}.${baseDomain}${fullPath}`;
+}
+
+/**
+ * Build conditional customer portal URLs based on subdomain context
+ * - On restaurant subdomains: clean URLs like '/menu'
+ * - On main domain: legacy URLs like '/customer/menu'
+ */
+export function buildCustomerUrl(path: string = ''): string {
+  const subdomain = getSubdomain();
+  const isRestaurantSubdomain = Boolean(subdomain);
+  
+  // Remove leading slash from path for consistency
+  const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+  
+  if (isRestaurantSubdomain) {
+    // Restaurant subdomain: use clean URLs
+    return cleanPath ? `/${cleanPath}` : '/';
+  } else {
+    // Main domain: use legacy /customer prefix
+    return cleanPath ? `/customer/${cleanPath}` : '/customer';
+  }
 }
 
 /**

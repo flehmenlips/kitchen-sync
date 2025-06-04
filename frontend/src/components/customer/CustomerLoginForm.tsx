@@ -23,6 +23,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useCustomerAuth } from '../../context/CustomerAuthContext';
 import { LoginData } from '../../services/customerAuthService';
+import { buildCustomerUrl } from '../../utils/subdomain';
 
 interface CustomerLoginFormProps {
   onSuccess?: () => void;
@@ -31,7 +32,7 @@ interface CustomerLoginFormProps {
 
 export const CustomerLoginForm: React.FC<CustomerLoginFormProps> = ({ 
   onSuccess, 
-  redirectTo = '/customer' 
+  redirectTo = buildCustomerUrl()
 }) => {
   const navigate = useNavigate();
   const { login: contextLogin } = useCustomerAuth();
@@ -162,7 +163,7 @@ export const CustomerLoginForm: React.FC<CustomerLoginFormProps> = ({
             variant="body2"
             onClick={(e) => {
               e.preventDefault();
-              navigate('/customer/forgot-password');
+              navigate(buildCustomerUrl('forgot-password'));
             }}
           >
             Forgot password?
@@ -186,7 +187,7 @@ export const CustomerLoginForm: React.FC<CustomerLoginFormProps> = ({
           fullWidth
           variant="outlined"
           size="large"
-          onClick={() => navigate('/customer/reservations/new')}
+          onClick={() => navigate(buildCustomerUrl('reservations/new'))}
           sx={{ mb: 2 }}
         >
           Continue as Guest
@@ -199,7 +200,7 @@ export const CustomerLoginForm: React.FC<CustomerLoginFormProps> = ({
             variant="body2"
             onClick={(e) => {
               e.preventDefault();
-              navigate('/customer/register');
+              navigate(buildCustomerUrl('register'));
             }}
           >
             Create Account

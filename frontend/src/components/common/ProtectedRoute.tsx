@@ -1,12 +1,15 @@
 import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { getSubdomain } from '../../utils/subdomain';
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
 
 const ProtectedRoute: React.FC = () => {
   const { user, isLoading } = useAuth();
   const location = useLocation();
+  const subdomain = getSubdomain();
+  const isRestaurantSubdomain = Boolean(subdomain);
 
   if (isLoading) {
     // Show loading indicator while checking auth status
@@ -31,7 +34,8 @@ const ProtectedRoute: React.FC = () => {
       const parsed = JSON.parse(userInfo);
       // If this is a customer user (has isCustomer flag), redirect to customer portal
       if (parsed.user?.isCustomer) {
-        return <Navigate to="/customer" replace />;
+        const customerPortalPath = isRestaurantSubdomain ? '/' : '/customer';
+        return <Navigate to={customerPortalPath} replace />;
       }
     } catch (e) {
       console.error('Error checking user type:', e);

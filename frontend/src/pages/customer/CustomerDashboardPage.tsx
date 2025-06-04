@@ -33,6 +33,7 @@ import { useCustomerAuth } from '../../context/CustomerAuthContext';
 import { customerAuthService, CustomerProfile } from '../../services/customerAuthService';
 import { customerReservationService, Reservation } from '../../services/customerReservationService';
 import { format } from 'date-fns';
+import { buildCustomerUrl } from '../../utils/subdomain';
 
 // Using Reservation type from customerReservationService
 
@@ -160,7 +161,7 @@ const CustomerDashboardPage: React.FC = () => {
                 My Profile
               </Typography>
               <Tooltip title="Edit Profile">
-                <IconButton onClick={() => navigate('/customer/profile')}>
+                <IconButton onClick={() => navigate(buildCustomerUrl('profile'))}>
                   <EditIcon />
                 </IconButton>
               </Tooltip>
@@ -201,7 +202,7 @@ const CustomerDashboardPage: React.FC = () => {
                 variant="outlined"
                 fullWidth
                 startIcon={<EditIcon />}
-                onClick={() => navigate('/customer/profile')}
+                onClick={() => navigate(buildCustomerUrl('profile'))}
               >
                 Edit Profile
               </Button>
@@ -222,14 +223,14 @@ const CustomerDashboardPage: React.FC = () => {
                   <Button
                     variant="contained"
                     startIcon={<EventSeatIcon />}
-                    onClick={() => navigate('/customer/reservations/new')}
+                    onClick={() => navigate(buildCustomerUrl('reservations/new'))}
                   >
                     Make Reservation
                   </Button>
                   <Button
                     variant="outlined"
                     startIcon={<RestaurantIcon />}
-                    onClick={() => navigate('/customer/menu')}
+                    onClick={() => navigate(buildCustomerUrl('menu'))}
                   >
                     View Menu
                   </Button>
@@ -247,7 +248,7 @@ const CustomerDashboardPage: React.FC = () => {
                   <Button
                     variant="text"
                     startIcon={<AddIcon />}
-                    onClick={() => navigate('/customer/reservations/new')}
+                    onClick={() => navigate(buildCustomerUrl('reservations/new'))}
                   >
                     New Reservation
                   </Button>

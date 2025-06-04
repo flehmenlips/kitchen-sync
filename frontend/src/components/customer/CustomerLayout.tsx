@@ -37,6 +37,7 @@ import {
 import { useCustomerAuth } from '../../context/CustomerAuthContext';
 import { restaurantSettingsService, RestaurantSettings } from '../../services/restaurantSettingsService';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { buildCustomerUrl } from '../../utils/subdomain';
 
 const CustomerLayout: React.FC = () => {
   const theme = useTheme();
@@ -118,13 +119,13 @@ const CustomerLayout: React.FC = () => {
   const handleLogout = async () => {
     await logout();
     handleUserMenuClose();
-    navigate('/customer');
+    navigate(buildCustomerUrl());
   };
 
   const navigationItems = [
-    { text: 'Home', path: '/customer', icon: <HomeIcon /> },
-    { text: 'Menu', path: '/customer/menu', icon: <MenuBookIcon /> },
-    { text: 'Make Reservation', path: '/customer/reservations/new', icon: <EventSeatIcon /> },
+    { text: 'Home', path: buildCustomerUrl(), icon: <HomeIcon /> },
+    { text: 'Menu', path: buildCustomerUrl('menu'), icon: <MenuBookIcon /> },
+    { text: 'Make Reservation', path: buildCustomerUrl('reservations/new'), icon: <EventSeatIcon /> },
   ];
 
   const formatFooterText = (text: string) => {
@@ -220,19 +221,19 @@ const CustomerLayout: React.FC = () => {
                 >
                   <MenuItem onClick={() => {
                     handleUserMenuClose();
-                    navigate('/customer/dashboard');
+                    navigate(buildCustomerUrl('dashboard'));
                   }}>
                     Dashboard
                   </MenuItem>
                   <MenuItem onClick={() => {
                     handleUserMenuClose();
-                    navigate('/customer/profile');
+                    navigate(buildCustomerUrl('profile'));
                   }}>
                     My Profile
                   </MenuItem>
                   <MenuItem onClick={() => {
                     handleUserMenuClose();
-                    navigate('/customer/reservations');
+                    navigate(buildCustomerUrl('reservations'));
                   }}>
                     My Reservations
                   </MenuItem>
@@ -246,13 +247,13 @@ const CustomerLayout: React.FC = () => {
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <Button
                   variant="outlined"
-                  onClick={() => navigate('/customer/login')}
+                  onClick={() => navigate(buildCustomerUrl('login'))}
                 >
                   Sign In
                 </Button>
                 <Button
                   variant="contained"
-                  onClick={() => navigate('/customer/register')}
+                  onClick={() => navigate(buildCustomerUrl('register'))}
                 >
                   Sign Up
                 </Button>

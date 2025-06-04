@@ -9,8 +9,8 @@ interface SubdomainRouterProps {
 
 /**
  * Routes users based on subdomain
- * - If on restaurant subdomain -> show customer portal
- * - If on main domain -> show main app
+ * - If on restaurant subdomain -> show customer portal with clean URLs (no /customer prefix)
+ * - If on main domain -> show main app or customer portal with /customer prefix (backward compatibility)
  */
 export const SubdomainRouter: React.FC<SubdomainRouterProps> = ({ children }) => {
   const location = useLocation();
@@ -44,11 +44,30 @@ export const SubdomainRouter: React.FC<SubdomainRouterProps> = ({ children }) =>
     checkSubdomain();
   }, [location.pathname]);
 
-  // If on restaurant subdomain but not on customer path, immediately redirect
   const subdomain = getSubdomain();
-  if (subdomain && !location.pathname.startsWith('/customer')) {
-    console.log('[SubdomainRouter] Immediate redirect to /customer');
-    return <Navigate to="/customer" replace />;
+  
+  // Handle restaurant subdomain routing
+  if (subdomain) {
+    // On restaurant subdomain, we use clean URLs without /customer prefix
+    // If someone tries to access /customer/* on a subdomain, redirect to clean URL
+    if (location.pathname.startsWith('/customer')) {
+      console.log('[SubdomainRouter] On restaurant subdomain with /customer prefix - redirecting to clean URL');
+      const cleanPath = location.pathname.replace('/customer', '') || '/';
+      const searchParams = location.search;
+      return <Navigate to={`${cleanPath}${searchParams}`} replace />;
+    }
+    
+    // Allow access to restaurant portal routes and platform admin
+    const allowedPaths = ['/', '/menu', '/reservations', '/register', '/login', '/verify-email', '/verify-email-sent', '/dashboard', '/platform-admin'];
+    const isAllowedPath = allowedPaths.some(path => 
+      location.pathname === path || location.pathname.startsWith(path + '/')
+    );
+    
+    if (!isAllowedPath) {
+      console.log('[SubdomainRouter] On restaurant subdomain with invalid path - redirecting to home');
+      const searchParams = location.search;
+      return <Navigate to={`/${searchParams}`} replace />;
+    }
   }
 
   if (loading) {
@@ -87,7 +106,7 @@ export const SubdomainRouter: React.FC<SubdomainRouterProps> = ({ children }) =>
     );
   }
 
-  // If on main domain but trying to access customer portal, allow for backward compatibility
+  // On main domain, allow backward compatibility for /customer routes
   if (!shouldShowCustomerPortal && location.pathname.startsWith('/customer')) {
     console.log('[SubdomainRouter] On main domain but accessing /customer - allowing for backward compatibility');
   }
