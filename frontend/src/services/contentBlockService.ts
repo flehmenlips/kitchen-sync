@@ -4,7 +4,7 @@ import { customerApi } from './customerApi';
 export interface ContentBlock {
   id: number;
   restaurantId: number;
-  page: string;
+  pageId: number;
   blockType: string;
   title?: string;
   subtitle?: string;
@@ -20,6 +20,11 @@ export interface ContentBlock {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  page?: {
+    id: number;
+    name: string;
+    slug: string;
+  };
 }
 
 export const BLOCK_TYPES = {

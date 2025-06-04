@@ -58,7 +58,34 @@ export const getAllContentBlocks = async (req: Request, res: Response) => {
       ]
     });
 
-    res.json(blocks);
+    // Convert blocks to include pageId and page object for frontend compatibility
+    const convertedBlocks = blocks.map(block => {
+      // Create a virtual pageId based on page string
+      const pageMap: Record<string, number> = {
+        'home': 1,
+        'about': 2, 
+        'menu': 3,
+        'contact': 4
+      };
+      
+      // For custom pages, use a hash of the page name as ID
+      const pageId = pageMap[block.page] || Math.abs(block.page.split('').reduce((a, b) => {
+        a = ((a << 5) - a) + b.charCodeAt(0);
+        return a & a;
+      }, 0));
+
+      return {
+        ...block,
+        pageId, // Add virtual pageId for frontend compatibility
+        page: {
+          id: pageId,
+          name: block.page.charAt(0).toUpperCase() + block.page.slice(1),
+          slug: block.page
+        }
+      };
+    });
+
+    res.json(convertedBlocks);
   } catch (error) {
     console.error('Error fetching all content blocks:', error);
     res.status(500).json({ error: 'Failed to fetch content blocks' });
@@ -69,17 +96,54 @@ export const getAllContentBlocks = async (req: Request, res: Response) => {
 export const createContentBlock = async (req: Request, res: Response) => {
   try {
     const restaurantId = 1;
-    const blockData = {
+    let blockData = {
       ...req.body,
       restaurantId,
       settings: req.body.settings || {}
     };
 
+    // Convert pageId to page string for database storage
+    if (blockData.pageId && !blockData.page) {
+      // Get virtual pages to find the page slug by ID
+      const pageMap: Record<number, string> = {
+        1: 'home',
+        2: 'about',
+        3: 'menu', 
+        4: 'contact'
+      };
+      
+      blockData.page = pageMap[blockData.pageId] || 'custom';
+      delete blockData.pageId; // Remove pageId as it doesn't exist in current schema
+    }
+
     const block = await prisma.contentBlock.create({
       data: blockData
     });
 
-    res.status(201).json(block);
+    // Convert response back to include pageId for frontend
+    const pageMap: Record<string, number> = {
+      'home': 1,
+      'about': 2,
+      'menu': 3,
+      'contact': 4
+    };
+    
+    const pageId = pageMap[block.page] || Math.abs(block.page.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0));
+
+    const responseBlock = {
+      ...block,
+      pageId,
+      page: {
+        id: pageId,
+        name: block.page.charAt(0).toUpperCase() + block.page.slice(1),
+        slug: block.page
+      }
+    };
+
+    res.status(201).json(responseBlock);
   } catch (error) {
     console.error('Error creating content block:', error);
     res.status(500).json({ error: 'Failed to create content block' });

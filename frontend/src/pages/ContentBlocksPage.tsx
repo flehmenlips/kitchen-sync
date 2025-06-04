@@ -30,7 +30,9 @@ import {
   Tooltip,
   Menu,
   ListItemIcon,
-  ListItemText
+  ListItemText,
+  Divider,
+  Badge
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -43,7 +45,9 @@ import {
   Image as ImageIcon,
   Upload as UploadIcon,
   MoreVert as MoreIcon,
-  Preview as PreviewIcon
+  Preview as PreviewIcon,
+  Pages as PagesIcon,
+  Settings as SettingsIcon
 } from '@mui/icons-material';
 import { useSnackbar } from '../context/SnackbarContext';
 import { 
@@ -52,6 +56,12 @@ import {
   BLOCK_TYPES, 
   BLOCK_TYPE_LABELS 
 } from '../services/contentBlockService';
+import { 
+  pageService,
+  Page,
+  PAGE_TEMPLATE_LABELS
+} from '../services/pageService';
+import PageManagementDialog from '../components/PageManagementDialog';
 import { 
   DndContext, 
   DragEndEvent, 
@@ -73,7 +83,7 @@ import { CSS } from '@dnd-kit/utilities';
 const PAGES = ['home', 'about', 'menu', 'contact'];
 
 interface BlockFormData {
-  page: string;
+  pageId: number;
   blockType: string;
   title: string;
   subtitle: string;
@@ -129,7 +139,7 @@ const SortableBlockCard: React.FC<{ block: ContentBlock; onEdit: () => void; onD
                 sx={{ mr: 1 }}
               />
               <Chip 
-                label={block.page} 
+                label={block.page?.name || getPageName(block.pageId)} 
                 size="small" 
                 variant="outlined"
                 sx={{ mr: 1 }}
@@ -203,14 +213,17 @@ const SortableBlockCard: React.FC<{ block: ContentBlock; onEdit: () => void; onD
 const ContentBlocksPage: React.FC = () => {
   const { showSnackbar } = useSnackbar();
   const [blocks, setBlocks] = useState<ContentBlock[]>([]);
+  const [pages, setPages] = useState<Page[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPage, setSelectedPage] = useState('home');
+  const [selectedPageId, setSelectedPageId] = useState<number | 'all'>('all');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [pageDialogOpen, setPageDialogOpen] = useState(false);
   const [editingBlock, setEditingBlock] = useState<ContentBlock | null>(null);
+  const [editingPage, setEditingPage] = useState<Page | null>(null);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [uploadingBlockId, setUploadingBlockId] = useState<number | null>(null);
   const [formData, setFormData] = useState<BlockFormData>({
-    page: 'home',
+    pageId: 1,
     blockType: BLOCK_TYPES.TEXT,
     title: '',
     subtitle: '',
@@ -230,17 +243,27 @@ const ContentBlocksPage: React.FC = () => {
   );
 
   useEffect(() => {
-    fetchBlocks();
+    fetchData();
   }, []);
 
-  const fetchBlocks = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
-      const data = await contentBlockService.getAllBlocks();
-      setBlocks(data);
+      const [blocksData, pagesData] = await Promise.all([
+        contentBlockService.getAllBlocks(),
+        pageService.getPages()
+      ]);
+      setBlocks(blocksData);
+      setPages(pagesData.pages);
+      
+      // Set default page if we don't have one selected
+      if (selectedPageId === 'all' && pagesData.pages.length > 0) {
+        setSelectedPageId(pagesData.pages[0].id);
+        setFormData(prev => ({ ...prev, pageId: pagesData.pages[0].id }));
+      }
     } catch (error) {
-      console.error('Error fetching blocks:', error);
-      showSnackbar('Failed to load content blocks', 'error');
+      console.error('Error fetching data:', error);
+      showSnackbar('Failed to load data', 'error');
     } finally {
       setLoading(false);
     }
@@ -256,7 +279,7 @@ const ContentBlocksPage: React.FC = () => {
         showSnackbar('Block created successfully', 'success');
       }
       setDialogOpen(false);
-      fetchBlocks();
+      fetchData();
     } catch (error) {
       console.error('Error saving block:', error);
       showSnackbar('Failed to save block', 'error');
@@ -269,7 +292,7 @@ const ContentBlocksPage: React.FC = () => {
     try {
       await contentBlockService.deleteBlock(id);
       showSnackbar('Block deleted successfully', 'success');
-      fetchBlocks();
+      fetchData();
     } catch (error) {
       console.error('Error deleting block:', error);
       showSnackbar('Failed to delete block', 'error');
@@ -280,7 +303,7 @@ const ContentBlocksPage: React.FC = () => {
     try {
       await contentBlockService.duplicateBlock(id);
       showSnackbar('Block duplicated successfully', 'success');
-      fetchBlocks();
+      fetchData();
     } catch (error) {
       console.error('Error duplicating block:', error);
       showSnackbar('Failed to duplicate block', 'error');
@@ -291,7 +314,7 @@ const ContentBlocksPage: React.FC = () => {
     try {
       await contentBlockService.updateBlock(block.id, { isActive: !block.isActive });
       showSnackbar(`Block ${block.isActive ? 'deactivated' : 'activated'} successfully`, 'success');
-      fetchBlocks();
+      fetchData();
     } catch (error) {
       console.error('Error toggling block status:', error);
       showSnackbar('Failed to update block status', 'error');
@@ -323,7 +346,7 @@ const ContentBlocksPage: React.FC = () => {
         } catch (error) {
           console.error('Error reordering blocks:', error);
           showSnackbar('Failed to reorder blocks', 'error');
-          fetchBlocks(); // Refresh to get correct order
+          fetchData(); // Refresh to get correct order
         }
       }
     }
@@ -336,7 +359,7 @@ const ContentBlocksPage: React.FC = () => {
       const result = await contentBlockService.uploadImage(uploadingBlockId, file);
       showSnackbar('Image uploaded successfully', 'success');
       setUploadDialogOpen(false);
-      fetchBlocks();
+      fetchData();
     } catch (error) {
       console.error('Error uploading image:', error);
       showSnackbar('Failed to upload image', 'error');
@@ -346,7 +369,7 @@ const ContentBlocksPage: React.FC = () => {
   const openEditDialog = (block: ContentBlock) => {
     setEditingBlock(block);
     setFormData({
-      page: block.page,
+      pageId: block.pageId,
       blockType: block.blockType,
       title: block.title || '',
       subtitle: block.subtitle || '',
@@ -362,8 +385,9 @@ const ContentBlocksPage: React.FC = () => {
 
   const openCreateDialog = () => {
     setEditingBlock(null);
+    const currentPageId = selectedPageId === 'all' ? (pages[0]?.id || 1) : selectedPageId as number;
     setFormData({
-      page: selectedPage,
+      pageId: currentPageId,
       blockType: BLOCK_TYPES.TEXT,
       title: '',
       subtitle: '',
@@ -377,9 +401,48 @@ const ContentBlocksPage: React.FC = () => {
     setDialogOpen(true);
   };
 
+  const openCreatePageDialog = () => {
+    setEditingPage(null);
+    setPageDialogOpen(true);
+  };
+
+  const openEditPageDialog = (page: Page) => {
+    setEditingPage(page);
+    setPageDialogOpen(true);
+  };
+
+  const handlePageSave = (savedPage: Page) => {
+    fetchData(); // Refresh all data
+  };
+
+  const handleDeletePage = async (page: Page) => {
+    if (page.isSystem) {
+      showSnackbar('Cannot delete system pages', 'error');
+      return;
+    }
+
+    if (page._count?.contentBlocks && page._count.contentBlocks > 0) {
+      showSnackbar(`Cannot delete page with ${page._count.contentBlocks} content blocks`, 'error');
+      return;
+    }
+
+    try {
+      await pageService.deletePage(page.id);
+      showSnackbar('Page deleted successfully', 'success');
+      fetchData();
+    } catch (error: any) {
+      showSnackbar(error.response?.data?.error || 'Failed to delete page', 'error');
+    }
+  };
+
   const filteredBlocks = blocks.filter(block => 
-    selectedPage === 'all' || block.page === selectedPage
+    selectedPageId === 'all' || block.pageId === selectedPageId
   );
+
+  const getPageName = (pageId: number) => {
+    const page = pages.find(p => p.id === pageId);
+    return page?.name || 'Unknown Page';
+  };
 
   if (loading) {
     return (
@@ -395,7 +458,7 @@ const ContentBlocksPage: React.FC = () => {
     <Container maxWidth="lg">
       <Box mb={4}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          <Typography variant="h4">Content Blocks</Typography>
+          <Typography variant="h4">Content & Page Management</Typography>
           <Box>
             <Button
               startIcon={<PreviewIcon />}
@@ -404,6 +467,14 @@ const ContentBlocksPage: React.FC = () => {
               sx={{ mr: 2 }}
             >
               Preview Site
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<PagesIcon />}
+              onClick={openCreatePageDialog}
+              sx={{ mr: 1 }}
+            >
+              Add Page
             </Button>
             <Button
               variant="contained"
@@ -415,34 +486,100 @@ const ContentBlocksPage: React.FC = () => {
           </Box>
         </Box>
         <Typography variant="body1" color="text.secondary">
-          Manage dynamic content blocks for your customer-facing website
+          Manage pages and their content blocks for your customer-facing website
         </Typography>
       </Box>
 
       <Paper sx={{ mb: 3 }}>
-        <Tabs value={selectedPage} onChange={(e, v) => setSelectedPage(v)}>
+        <Tabs value={selectedPageId} onChange={(e, v) => setSelectedPageId(v)}>
           <Tab label="All Pages" value="all" />
-          {PAGES.map(page => (
-            <Tab key={page} label={page.charAt(0).toUpperCase() + page.slice(1)} value={page} />
+          {pages.map(page => (
+            <Tab 
+              key={page.id} 
+              label={
+                <Box display="flex" alignItems="center">
+                  {page.name}
+                  {page._count?.contentBlocks && page._count.contentBlocks > 0 && (
+                    <Badge 
+                      badgeContent={page._count.contentBlocks} 
+                      color="primary" 
+                      size="small"
+                      sx={{ ml: 1 }}
+                    />
+                  )}
+                  {page.isSystem && (
+                    <Chip 
+                      label="System" 
+                      size="small" 
+                      variant="outlined" 
+                      sx={{ ml: 1, fontSize: '0.7rem', height: 20 }} 
+                    />
+                  )}
+                  {!page.isActive && (
+                    <Chip 
+                      label="Inactive" 
+                      size="small" 
+                      color="warning" 
+                      sx={{ ml: 1, fontSize: '0.7rem', height: 20 }} 
+                    />
+                  )}
+                </Box>
+              } 
+              value={page.id}
+            />
           ))}
         </Tabs>
       </Paper>
 
+      {/* Page Management Section */}
+      {selectedPageId !== 'all' && (
+        <Paper sx={{ mb: 3, p: 2 }}>
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Box>
+              <Typography variant="h6">
+                {pages.find(p => p.id === selectedPageId)?.name} Page
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Template: {PAGE_TEMPLATE_LABELS[pages.find(p => p.id === selectedPageId)?.template as keyof typeof PAGE_TEMPLATE_LABELS] || 'Unknown'}
+                {' • '}
+                URL: /{pages.find(p => p.id === selectedPageId)?.slug}
+              </Typography>
+            </Box>
+            <Box>
+              <IconButton 
+                onClick={() => {
+                  const page = pages.find(p => p.id === selectedPageId);
+                  if (page) openEditPageDialog(page);
+                }}
+                title="Edit Page Settings"
+              >
+                <SettingsIcon />
+              </IconButton>
+              {!pages.find(p => p.id === selectedPageId)?.isSystem && (
+                <IconButton 
+                  color="error"
+                  onClick={() => {
+                    const page = pages.find(p => p.id === selectedPageId);
+                    if (page) handleDeletePage(page);
+                  }}
+                  title="Delete Page"
+                >
+                  <DeleteIcon />
+                </IconButton>
+              )}
+            </Box>
+          </Box>
+        </Paper>
+      )}
+
       {filteredBlocks.length === 0 ? (
         <Alert severity="info">
-          No content blocks found{selectedPage !== 'all' && ` for ${selectedPage} page`}. 
+          No content blocks found{selectedPageId !== 'all' && ` for selected page`}. 
           Click "Add Block" to create one.
         </Alert>
       ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={filteredBlocks.map(b => b.id)}
-            strategy={verticalListSortingStrategy}
-          >
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={filteredBlocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
             {filteredBlocks.map(block => (
               <SortableBlockCard
                 key={block.id}
@@ -468,13 +605,13 @@ const ContentBlocksPage: React.FC = () => {
               <FormControl fullWidth>
                 <InputLabel>Page</InputLabel>
                 <Select
-                  value={formData.page}
-                  onChange={(e) => setFormData({ ...formData, page: e.target.value })}
+                  value={formData.pageId}
+                  onChange={(e) => setFormData({ ...formData, pageId: parseInt(e.target.value) })}
                   label="Page"
                 >
-                  {PAGES.map(page => (
-                    <MenuItem key={page} value={page}>
-                      {page.charAt(0).toUpperCase() + page.slice(1)}
+                  {pages.map(page => (
+                    <MenuItem key={page.id} value={page.id}>
+                      {page.name}
                     </MenuItem>
                   ))}
                 </Select>
