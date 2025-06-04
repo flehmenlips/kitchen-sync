@@ -247,7 +247,6 @@ function mapStripePlanToPlan(priceId?: string): SubscriptionPlan | null {
   
   // This should match your actual Stripe price IDs
   const planMap: Record<string, SubscriptionPlan> = {
-    [process.env.STRIPE_PRICE_HOME || 'price_home']: 'HOME',
     [process.env.STRIPE_PRICE_STARTER || 'price_starter']: 'STARTER',
     [process.env.STRIPE_PRICE_PROFESSIONAL || 'price_professional']: 'PROFESSIONAL',
     [process.env.STRIPE_PRICE_ENTERPRISE || 'price_enterprise']: 'ENTERPRISE',

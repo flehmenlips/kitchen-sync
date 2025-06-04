@@ -18,7 +18,7 @@ export interface CustomerAuthRequest extends Request {
     firstName: string | null;
     lastName: string | null;
     phone: string | null;
-    restaurantId: number;
+    restaurantId: number | null;
   };
 }
 

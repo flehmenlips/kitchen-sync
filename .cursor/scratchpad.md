@@ -118,6 +118,91 @@ Security fixes will be applied in next phase after deployment verification.
 
 ## Executor's Feedback or Assistance Requests
 
+**🚨 CRITICAL WEBSITE BUILDER CONFLICT ANALYSIS COMPLETE 🚨**
+
+**Problem Identified: Hybrid Content System Causing Data Conflicts**
+
+After comprehensive codebase analysis, I've identified the root cause of the "hybrid mess" the user is experiencing. The issue is NOT with our schema design, but with overlapping data sources creating conflicting display behavior:
+
+**The Conflict:**
+1. **CustomerHomePage.tsx** (customer portal): Still reading from `RestaurantSettings` table (lines 102-250)
+2. **WebsiteBuilderPage.tsx** (admin interface): Reading from `ContentBlocks` table via websiteBuilderContentService  
+3. **Data exists in both tables**: Migration script populated ContentBlocks, but customer portal still uses RestaurantSettings
+
+**Detailed Analysis:**
+
+**Frontend Data Flow Issues:**
+- 🔴 **CustomerHomePage.tsx**: Uses `restaurantSettingsService.getPublicSettings()` for hero/about display
+- 🔴 **WebsiteBuilderPage.tsx Hero & About tab**: Uses `websiteBuilderContentService.getContent()` (ContentBlocks API)
+- 🔴 **Result**: User edits in Website Builder (ContentBlocks) but customer portal shows RestaurantSettings data
+
+**Backend API Conflicts:**
+- 🔴 **GET /restaurant/public/settings**: Returns RestaurantSettings data (controller line 232-339)
+- 🔴 **GET /content-blocks/website-builder**: Returns ContentBlocks data (controller line 363-400)  
+- 🔴 **Both endpoints serve identical content types** but from different database tables
+
+**Content Display Conflicts:**
+```
+CustomerHomePage.tsx (lines 124-155):
+- heroTitle: settings?.heroTitle (RestaurantSettings)
+- heroSubtitle: settings?.heroSubtitle (RestaurantSettings)
+- heroImageUrl: settings?.heroImageUrl (RestaurantSettings)
+
+WebsiteBuilderPage.tsx (lines 519-540):
+- heroTitle: heroAboutContent.heroTitle (ContentBlocks)
+- heroSubtitle: heroAboutContent.heroSubtitle (ContentBlocks)  
+- heroImageUrl: heroAboutContent.heroImageUrl (ContentBlocks)
+```
+
+**Schema Analysis - No Issues Found:**
+✅ ContentBlocks table structure is sound
+✅ RestaurantSettings table structure is sound
+✅ No compound unique constraint issues (resolved in migration)
+✅ Backend API endpoints working correctly
+
+**Root Cause: Incomplete Migration Strategy**
+The issue is we implemented ContentBlocks synchronization for the admin interface but never updated the customer portal to use the same data source. This creates:
+
+1. **User Experience Confusion**: User edits in Website Builder but changes don't appear on customer site
+2. **Data Inconsistency**: Two tables storing identical information with different edit interfaces
+3. **Maintenance Burden**: Changes must be synced between two systems
+
+**Recommended Solution Paths:**
+
+**Option 1: Complete Migration to ContentBlocks (Recommended)**
+- Update CustomerHomePage.tsx to use contentBlockService instead of restaurantSettingsService
+- Deprecate hero/about fields in RestaurantSettings
+- Single source of truth: ContentBlocks
+
+**Option 2: Revert to RestaurantSettings Only**  
+- Remove Website Builder Hero & About tab ContentBlocks integration
+- Keep all hero/about content in RestaurantSettings
+- Simpler but reduces Page Manager synchronization benefits
+
+**Option 3: Real-time Synchronization**
+- Keep both systems but add real-time sync between RestaurantSettings ↔ ContentBlocks
+- Complex but maintains backward compatibility
+
+**Assessment of User's Preference:**
+User stated: "I actually like the old implementation and the new implementation seems to be causing more problems than it is solving."
+
+This suggests **Option 2 (Revert to RestaurantSettings)** might be preferred for simplicity.
+
+**Critical Decision Needed:**
+The user needs to decide which approach to take:
+1. **Complete the migration** to ContentBlocks (more work but better long-term architecture)
+2. **Revert to RestaurantSettings** only (simpler, user's preference, but loses Page Manager sync)
+3. **Implement bidirectional sync** (complex but maintains both systems)
+
+**Current State:**
+- Website Builder shows migrated ContentBlocks data (working correctly)
+- Customer portal shows original RestaurantSettings data (working correctly)
+- User sees "Welcome to Coq au Vin" on customer site but empty fields in Website Builder
+- This is NOT a bug but a feature of having two separate data sources
+
+**Immediate Action Required:**
+User needs to specify preferred solution path before I proceed with implementation.
+
 **🎉 COMPREHENSIVE PLATFORM DOCUMENTATION COMPLETED 🎉**
 
 **Documentation Achievement:**

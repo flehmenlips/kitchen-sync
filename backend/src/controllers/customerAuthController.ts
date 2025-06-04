@@ -441,7 +441,7 @@ export const customerAuthController = {
         include: { customer: true }
       });
 
-      if (!session || session.token !== refreshToken) {
+      if (!session || session.token !== refreshToken || !session.customer) {
         return res.status(401).json({ 
           error: 'Invalid refresh token' 
         });
