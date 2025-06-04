@@ -114,23 +114,33 @@ const getPageId = (pageSlug: string): number => {
 **Current Status:**
 - ✅ **Backend Consistency**: Both controllers use identical pageId mapping
 - ✅ **UI Improvements**: Professional button layout implemented
+- ✅ **Preview Site Button**: Now uses dynamic restaurant subdomain routing
 - ✅ **Build Validation**: TypeScript compilation successful
-- ✅ **Production Deployed**: Commit 6b40605 pushed to main branch
+- ✅ **Production Deployed**: Commit 6690fcf pushed to main branch
+- ✅ **Debug Logging**: Removed after successful testing
 - 🔄 **Testing Required**: Need user validation of page filtering functionality
 
 **Expected Results:**
 - Content blocks should now correctly filter by selected page
-- Page tabs should show accurate content block counts
+- Page tabs should show accurate content block counts  
 - Button layout should appear professional and well-spaced
-- Debug console should show correct pageId associations
+- Preview Site button should route to correct restaurant subdomain
+- Debug console should show correct pageId associations (logging removed)
+
+**Latest Fix (Commit 6690fcf):**
+- ✅ **Preview Site Button**: Fixed hardcoded `/customer` URL 
+- ✅ **Dynamic Routing**: Now uses `buildRestaurantUrl(currentRestaurant?.slug || 'restaurant')`
+- ✅ **Consistency**: Matches "View Customer Portal" button behavior from Website Builder
+- ✅ **Restaurant Context**: Added `useRestaurant` hook for current restaurant data
+- ✅ **Safety**: Handles null restaurant with fallback to 'restaurant'
 
 **Next Steps:**
 1. User testing of page filtering functionality
 2. Verify content block creation associates with correct pages
-3. Confirm UI improvements meet design standards
-4. Remove debug logging once functionality confirmed
+3. Confirm Preview Site button routes to correct subdomain
+4. Test UI improvements meet design standards
 
-**Ready for User Testing:** The page association issues should now be resolved. Please test the page filtering and content block management to confirm the fixes are working correctly.
+**Ready for User Testing:** Both the page association issues and Preview Site button routing should now be resolved. Please test the complete Page Manager functionality to confirm all fixes are working correctly.
 
 ---
 
