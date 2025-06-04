@@ -116,8 +116,14 @@ const WebsiteBuilderPage: React.FC = () => {
   const [hasChanges, setHasChanges] = useState(false);
   const [templateSelectorOpen, setTemplateSelectorOpen] = useState(false);
   const [pageDialogOpen, setPageDialogOpen] = useState(false);
+  const [editPageDialogOpen, setEditPageDialogOpen] = useState(false);
   const [addBlockDialogOpen, setAddBlockDialogOpen] = useState(false);
   const [newPageData, setNewPageData] = useState<PageCreationData>({
+    name: '',
+    slug: '',
+    template: 'default'
+  });
+  const [editPageData, setEditPageData] = useState<PageCreationData>({
     name: '',
     slug: '',
     template: 'default'
@@ -139,6 +145,7 @@ const WebsiteBuilderPage: React.FC = () => {
       setLoading(true);
       const data = await websiteBuilderService.getWebsiteBuilderData();
       setWebsiteData(data);
+      setHasChanges(false); // Reset changes state when data is loaded
       // Select the first page by default
       if (data.pages.length > 0) {
         setSelectedPage(data.pages[0]);
@@ -237,6 +244,45 @@ const WebsiteBuilderPage: React.FC = () => {
     } catch (error) {
       console.error('Error deleting page:', error);
       showSnackbar('Failed to delete page', 'error');
+    }
+  };
+
+  const handleEditPage = (page: WBPage) => {
+    setEditPageData({
+      name: page.name,
+      slug: page.slug,
+      template: 'default', // We'll need to add template to WBPage interface if needed
+      metaTitle: page.metaTitle || '',
+      metaDescription: page.metaDescription || ''
+    });
+    setEditPageDialogOpen(true);
+  };
+
+  const handleUpdatePage = async () => {
+    if (!selectedPage) return;
+    
+    try {
+      const updatedPage = await websiteBuilderService.updatePage(selectedPage.slug, editPageData);
+      
+      // Update local state
+      setWebsiteData(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          pages: prev.pages.map(page =>
+            page.slug === selectedPage.slug ? updatedPage : page
+          )
+        };
+      });
+      
+      // Update selected page
+      setSelectedPage(updatedPage);
+      setEditPageDialogOpen(false);
+      setEditPageData({ name: '', slug: '', template: 'default' });
+      showSnackbar('Page updated successfully', 'success');
+    } catch (error) {
+      console.error('Error updating page:', error);
+      showSnackbar('Failed to update page', 'error');
     }
   };
 
@@ -472,7 +518,7 @@ const WebsiteBuilderPage: React.FC = () => {
               Manage all customer-facing content and settings for your website
             </Typography>
           </Box>
-          <Box display="flex" gap={2}>
+          <Box display="flex" gap={2} flexDirection={{ xs: 'column', sm: 'row' }}>
             <Button
               variant="contained"
               component="a"
@@ -480,8 +526,9 @@ const WebsiteBuilderPage: React.FC = () => {
               target="_blank"
               startIcon={<PublicIcon />}
               color="primary"
+              size="large"
             >
-              View Customer Portal
+              🌐 Preview Live Website
             </Button>
             <Button
               variant="outlined"
@@ -501,6 +548,24 @@ const WebsiteBuilderPage: React.FC = () => {
           </Box>
         </Box>
       </Box>
+
+      {/* Website Deployment Info */}
+      <Paper sx={{ p: 2, mb: 3, bgcolor: 'primary.lighter', border: '1px solid', borderColor: 'primary.light' }}>
+        <Box display="flex" alignItems="center" gap={2}>
+          <PublicIcon color="primary" />
+          <Box>
+            <Typography variant="subtitle1" color="primary.main" fontWeight="bold">
+              Your Website is Live! 🎉
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Your restaurant website is automatically deployed at:{' '}
+              <strong>{buildRestaurantUrl(currentRestaurant?.slug || 'restaurant')}</strong>
+              <br />
+              Changes you make here are instantly reflected on your live website. No manual deployment needed!
+            </Typography>
+          </Box>
+        </Box>
+      </Paper>
 
       <Paper sx={{ borderBottom: 1, borderColor: 'divider' }}>
         <Tabs value={tabValue} onChange={handleTabChange}>
@@ -668,6 +733,9 @@ const WebsiteBuilderPage: React.FC = () => {
                     Add Page
                   </Button>
                 </Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Click on a page to edit its content
+                </Typography>
                 <List>
                   {websiteData.pages.map(page => (
                     <ListItem key={page.slug} disablePadding>
@@ -708,23 +776,37 @@ const WebsiteBuilderPage: React.FC = () => {
               {selectedPage ? (
                 <Box>
                   {/* Page Header */}
-                  <Paper sx={{ p: 3, mb: 3 }}>
+                  <Paper sx={{ p: 3, mb: 3, bgcolor: 'success.lighter', border: '1px solid', borderColor: 'success.light' }}>
                     <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
                       <Box>
-                        <Typography variant="h6">
-                          Editing: {selectedPage.name}
+                        <Typography variant="h6" color="success.main">
+                          ✏️ Editing: {selectedPage.name}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
                           {selectedPage.blocks.length} content block(s) • {selectedPage.isActive ? 'Published' : 'Draft'}
                         </Typography>
+                        <Typography variant="body2" color="success.dark" sx={{ mt: 1 }}>
+                          💡 Click on any content block below to edit it, or add new blocks
+                        </Typography>
                       </Box>
-                      <Button
-                        variant="contained"
-                        startIcon={<AddIcon />}
-                        onClick={() => setAddBlockDialogOpen(true)}
-                      >
-                        Add Block
-                      </Button>
+                      <Box display="flex" gap={1}>
+                        <Button
+                          variant="outlined"
+                          startIcon={<SettingsIcon />}
+                          onClick={() => handleEditPage(selectedPage)}
+                          disabled={selectedPage?.isSystem}
+                        >
+                          Edit Page
+                        </Button>
+                        <Button
+                          variant="contained"
+                          startIcon={<AddIcon />}
+                          onClick={() => setAddBlockDialogOpen(true)}
+                          color="success"
+                        >
+                          Add Block
+                        </Button>
+                      </Box>
                     </Box>
                     <Divider />
                   </Paper>
@@ -1180,6 +1262,82 @@ const WebsiteBuilderPage: React.FC = () => {
             disabled={!newPageData.name.trim() || !newPageData.slug.trim()}
           >
             Create Page
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit Page Dialog */}
+      <Dialog open={editPageDialogOpen} onClose={() => setEditPageDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Edit Page Settings</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ pt: 2 }}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Page Name"
+                value={editPageData.name}
+                onChange={(e) => {
+                  const name = e.target.value;
+                  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+                  setEditPageData(prev => ({ ...prev, name, slug }));
+                }}
+                placeholder="e.g., Services, Events, Catering"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="URL Slug"
+                value={editPageData.slug}
+                onChange={(e) => setEditPageData(prev => ({ ...prev, slug: e.target.value }))}
+                helperText="URL path for this page (auto-generated from name)"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Meta Title"
+                value={editPageData.metaTitle || ''}
+                onChange={(e) => setEditPageData(prev => ({ ...prev, metaTitle: e.target.value }))}
+                helperText="Title for search engines (optional)"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                multiline
+                rows={2}
+                label="Meta Description"
+                value={editPageData.metaDescription || ''}
+                onChange={(e) => setEditPageData(prev => ({ ...prev, metaDescription: e.target.value }))}
+                helperText="Description for search engines (optional)"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel>Template</InputLabel>
+                <Select
+                  value={editPageData.template || 'default'}
+                  onChange={(e) => setEditPageData(prev => ({ ...prev, template: e.target.value }))}
+                  label="Template"
+                >
+                  <MenuItem value="default">Default Page</MenuItem>
+                  <MenuItem value="services">Services Page</MenuItem>
+                  <MenuItem value="events">Events Page</MenuItem>
+                  <MenuItem value="gallery">Photo Gallery</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditPageDialogOpen(false)}>Cancel</Button>
+          <Button 
+            onClick={handleUpdatePage} 
+            variant="contained"
+            disabled={!editPageData.name.trim() || !editPageData.slug.trim()}
+          >
+            Update Page
           </Button>
         </DialogActions>
       </Dialog>

@@ -54,6 +54,25 @@ export const createWebsiteBuilderPage = async (req: Request, res: Response) => {
   }
 };
 
+export const updateWebsiteBuilderPage = async (req: Request, res: Response) => {
+  try {
+    const restaurantId = req.restaurantId;
+    const { slug } = req.params;
+    
+    if (!restaurantId) {
+      res.status(400).json({ error: 'Restaurant context required' });
+      return;
+    }
+
+    const pageData: Partial<PageCreationData> = req.body;
+    const updatedPage = await websiteBuilderService.updatePage(restaurantId, slug, pageData);
+    res.json(updatedPage);
+  } catch (error) {
+    console.error('Error updating website builder page:', error);
+    res.status(500).json({ error: 'Failed to update page' });
+  }
+};
+
 export const deleteWebsiteBuilderPage = async (req: Request, res: Response) => {
   try {
     const restaurantId = req.restaurantId;

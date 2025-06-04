@@ -193,6 +193,57 @@ export const websiteBuilderService = {
       throw error;
     }
   },
+
+  // Update a page
+  async updatePage(restaurantId: number | undefined, slug: string, pageData: Partial<PageCreationData>): Promise<WebsiteBuilderPage> {
+    try {
+      // Find the page ContentBlock
+      const pageBlock = await prisma.contentBlock.findFirst({
+        where: {
+          restaurantId: restaurantId!,
+          page: slug,
+          blockType: 'page'
+        }
+      });
+
+      if (!pageBlock) {
+        throw new Error(`Page with slug '${slug}' not found`);
+      }
+
+      // Parse existing settings
+      let existingSettings = {};
+      try {
+        if (typeof pageBlock.settings === 'string') {
+          existingSettings = JSON.parse(pageBlock.settings);
+        } else if (pageBlock.settings && typeof pageBlock.settings === 'object') {
+          existingSettings = pageBlock.settings;
+        }
+      } catch (e) {
+        console.warn('Could not parse existing settings:', pageBlock.settings);
+        existingSettings = {};
+      }
+
+      // Update the page ContentBlock
+      const updatedBlock = await prisma.contentBlock.update({
+        where: { id: pageBlock.id },
+        data: {
+          title: pageData.name || pageBlock.title,
+          page: pageData.slug || pageBlock.page,
+          settings: JSON.stringify({
+            ...existingSettings,
+            metaTitle: pageData.metaTitle,
+            metaDescription: pageData.metaDescription,
+            template: pageData.template,
+          })
+        }
+      });
+
+      return this.transformContentBlockToPage(updatedBlock);
+    } catch (error) {
+      console.error('Error in updatePage:', error);
+      throw error;
+    }
+  },
   
   // Delete a page
   async deletePage(restaurantId: number | undefined, slug: string): Promise<void> {

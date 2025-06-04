@@ -3,6 +3,7 @@ import {
   getWebsiteBuilderData,
   updateWebsiteBuilderSettings,
   createWebsiteBuilderPage,
+  updateWebsiteBuilderPage,
   deleteWebsiteBuilderPage,
   getPageTemplates,
   updateContentBlock,
@@ -23,6 +24,7 @@ router.put('/settings', protect, setRestaurantContext, requireRestaurantContext,
 
 // Page management
 router.post('/pages', protect, setRestaurantContext, requireRestaurantContext, createWebsiteBuilderPage);
+router.put('/pages/:slug', protect, setRestaurantContext, requireRestaurantContext, updateWebsiteBuilderPage);
 router.delete('/pages/:slug', protect, setRestaurantContext, requireRestaurantContext, deleteWebsiteBuilderPage);
 
 // Content block management

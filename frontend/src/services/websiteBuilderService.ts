@@ -120,6 +120,12 @@ export const websiteBuilderService = {
     return response.data;
   },
 
+  // Update page metadata
+  async updatePage(slug: string, pageData: Partial<PageCreationData>): Promise<WBPage> {
+    const response = await api.put(`/website-builder/pages/${slug}`, pageData);
+    return response.data;
+  },
+
   // Delete page
   async deletePage(slug: string): Promise<void> {
     await api.delete(`/website-builder/pages/${slug}`);
