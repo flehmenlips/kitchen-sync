@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   Box,
   Paper,
@@ -110,6 +110,7 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
   const [autoSaving, setAutoSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
   const [formData, setFormData] = useState<Partial<WBBlock>>({
     title: block.title || '',
     subtitle: block.subtitle || '',
@@ -737,6 +738,186 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
     );
   };
 
+  // Live preview rendering - shows how content will look on customer portal
+  const renderLivePreview = useMemo(() => {
+    const currentData = { ...block, ...formData };
+    
+    return (
+      <Box sx={{ 
+        p: 3, 
+        border: '2px solid #e3f2fd', 
+        borderRadius: 2, 
+        backgroundColor: '#fafafa',
+        '& .preview-content': {
+          '& h1, & h2, & h3, & h4, & h5, & h6': {
+            margin: '0.5em 0',
+            color: '#1976d2'
+          },
+          '& p': {
+            margin: '0.5em 0',
+            lineHeight: 1.6
+          },
+          '& ul, & ol': {
+            margin: '0.5em 0',
+            paddingLeft: '1.5em'
+          },
+          '& blockquote': {
+            borderLeft: '4px solid #1976d2',
+            paddingLeft: '1em',
+            margin: '1em 0',
+            fontStyle: 'italic',
+            backgroundColor: '#f5f5f5'
+          }
+        }
+      }}>
+        <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
+          🔍 Live Preview - How this will look on your website
+        </Typography>
+        
+        {/* Render based on block type */}
+        {block.blockType === 'hero' && (
+          <Box sx={{ textAlign: 'center', py: 4 }}>
+            {currentData.imageUrl && (
+              <Box sx={{ mb: 3 }}>
+                <img
+                  src={currentData.imageUrl}
+                  alt={currentData.title || 'Hero image'}
+                  style={{ 
+                    maxWidth: '100%', 
+                    height: 'auto', 
+                    borderRadius: 8,
+                    maxHeight: '300px',
+                    objectFit: 'cover'
+                  }}
+                />
+              </Box>
+            )}
+            <Typography variant="h3" component="h1" gutterBottom sx={{ color: '#1976d2' }}>
+              {currentData.title || 'Hero Title'}
+            </Typography>
+            {currentData.subtitle && (
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                {currentData.subtitle}
+              </Typography>
+            )}
+            {currentData.content && (
+              <Box 
+                className="preview-content"
+                sx={{ mt: 2, maxWidth: 600, mx: 'auto' }}
+                dangerouslySetInnerHTML={{ __html: currentData.content }}
+              />
+            )}
+            {currentData.buttonText && (
+              <Button 
+                variant="contained" 
+                size="large" 
+                sx={{ mt: 3 }}
+                href={currentData.buttonLink || '#'}
+              >
+                {currentData.buttonText}
+              </Button>
+            )}
+          </Box>
+        )}
+
+        {block.blockType === 'text' && (
+          <Box>
+            {currentData.title && (
+              <Typography variant="h4" component="h2" gutterBottom sx={{ color: '#1976d2' }}>
+                {currentData.title}
+              </Typography>
+            )}
+            {currentData.content && (
+              <Box 
+                className="preview-content"
+                dangerouslySetInnerHTML={{ __html: currentData.content }}
+              />
+            )}
+          </Box>
+        )}
+
+        {block.blockType === 'image' && (
+          <Box sx={{ textAlign: 'center' }}>
+            {currentData.imageUrl && (
+              <Box sx={{ mb: 2 }}>
+                <img
+                  src={currentData.imageUrl}
+                  alt={currentData.title || 'Content image'}
+                  style={{ 
+                    maxWidth: '100%', 
+                    height: 'auto', 
+                    borderRadius: 8 
+                  }}
+                />
+              </Box>
+            )}
+            {currentData.title && (
+              <Typography variant="h6" gutterBottom>
+                {currentData.title}
+              </Typography>
+            )}
+            {currentData.content && (
+              <Typography variant="body1" color="text.secondary">
+                {currentData.content}
+              </Typography>
+            )}
+          </Box>
+        )}
+
+        {(block.blockType === 'button' || block.blockType === 'cta') && (
+          <Box sx={{ textAlign: 'center', py: 3 }}>
+            {currentData.title && (
+              <Typography variant="h4" component="h2" gutterBottom sx={{ color: '#1976d2' }}>
+                {currentData.title}
+              </Typography>
+            )}
+            {currentData.content && (
+              <Typography variant="body1" sx={{ mb: 3, maxWidth: 600, mx: 'auto' }}>
+                {currentData.content}
+              </Typography>
+            )}
+            {currentData.buttonText && (
+              <Button 
+                variant={currentData.buttonStyle === 'outlined' ? 'outlined' : 'contained'}
+                color={currentData.buttonStyle === 'secondary' ? 'secondary' : 'primary'}
+                size="large"
+                href={currentData.buttonLink || '#'}
+              >
+                {currentData.buttonText}
+              </Button>
+            )}
+          </Box>
+        )}
+
+        {/* Generic fallback for other block types */}
+        {!['hero', 'text', 'image', 'button', 'cta'].includes(block.blockType) && (
+          <Box>
+            {currentData.title && (
+              <Typography variant="h5" component="h2" gutterBottom sx={{ color: '#1976d2' }}>
+                {currentData.title}
+              </Typography>
+            )}
+            {currentData.content && (
+              <Box 
+                className="preview-content"
+                dangerouslySetInnerHTML={{ __html: currentData.content }}
+              />
+            )}
+            {currentData.imageUrl && (
+              <Box sx={{ mt: 2 }}>
+                <img
+                  src={currentData.imageUrl}
+                  alt={currentData.title || 'Content'}
+                  style={{ maxWidth: '100%', height: 'auto', borderRadius: 4 }}
+                />
+              </Box>
+            )}
+          </Box>
+        )}
+      </Box>
+    );
+  }, [block, formData]);
+
   if (!editMode) {
     return (
       <Paper sx={{ p: 3, mb: 2, opacity: formData.isActive ? 1 : 0.6 }}>
@@ -768,6 +949,14 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
             startIcon={<CancelIcon />}
           >
             Cancel
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={() => setShowPreview(!showPreview)}
+            startIcon={<PreviewIcon />}
+          >
+            {showPreview ? 'Edit' : 'Preview'}
           </Button>
           <Button
             size="small"
@@ -813,7 +1002,13 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
           />
         </Grid>
         
-        {renderBlockFields()}
+        {showPreview ? (
+          <Grid item xs={12}>
+            {renderLivePreview}
+          </Grid>
+        ) : (
+          renderBlockFields()
+        )}
       </Grid>
     </Paper>
   );
