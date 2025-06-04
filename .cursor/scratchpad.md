@@ -125,22 +125,35 @@ const getPageId = (pageSlug: string): number => {
 - Page tabs should show accurate content block counts  
 - Button layout should appear professional and well-spaced
 - Preview Site button should route to correct restaurant subdomain
-- Debug console should show correct pageId associations (logging removed)
+- Page-to-content-block associations should work correctly
 
-**Latest Fix (Commit 6690fcf):**
-- ✅ **Preview Site Button**: Fixed hardcoded `/customer` URL 
-- ✅ **Dynamic Routing**: Now uses `buildRestaurantUrl(currentRestaurant?.slug || 'restaurant')`
-- ✅ **Consistency**: Matches "View Customer Portal" button behavior from Website Builder
-- ✅ **Restaurant Context**: Added `useRestaurant` hook for current restaurant data
-- ✅ **Safety**: Handles null restaurant with fallback to 'restaurant'
+**Latest Fix (Commit 5fa2c7a):**
+- ✅ **System Pages Restored**: Created missing Home, About, Menu, Contact pages
+- ✅ **Content Blocks Added**: Each system page now has placeholder content blocks
+- ✅ **Virtual Page System**: Now has data to work with (was empty before)
+- ✅ **Page Protection**: System pages marked as non-deletable
+- ✅ **Page Manager**: Should now show all 4 system pages with proper badges
+
+**Root Cause of Missing System Pages:**
+The database had **zero content blocks**, so the virtual page system had no data to create pages from. The Page Manager depends on existing content blocks to generate virtual pages.
+
+**Solution Applied:**
+- Created placeholder content blocks for each system page:
+  - **Home**: Hero block with welcome message
+  - **About**: Text block with restaurant story
+  - **Menu**: Text block with menu description  
+  - **Contact**: Contact block with contact information
+- All blocks marked as active and properly ordered
+- System pages now appear with "SYSTEM" badges and delete protection
 
 **Next Steps:**
 1. User testing of page filtering functionality
 2. Verify content block creation associates with correct pages
 3. Confirm Preview Site button routes to correct subdomain
 4. Test UI improvements meet design standards
+5. **NEW**: Verify system pages appear with proper protection
 
-**Ready for User Testing:** Both the page association issues and Preview Site button routing should now be resolved. Please test the complete Page Manager functionality to confirm all fixes are working correctly.
+**Ready for User Testing:** The Page Manager should now show all system pages (Home, About, Menu, Contact) with proper system badges and delete protection. Please refresh the page and confirm all fixes are working correctly.
 
 ---
 

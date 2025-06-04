@@ -357,4 +357,126 @@ export const duplicateContentBlock = async (req: Request, res: Response): Promis
     console.error('Error duplicating content block:', error);
     res.status(500).json({ error: 'Failed to duplicate content block' });
   }
+};
+
+// Get content blocks formatted for Website Builder compatibility
+export const getWebsiteBuilderContent = async (req: Request, res: Response) => {
+  try {
+    const restaurantId = 1; // MVP: single restaurant
+    
+    // Get home and about content blocks
+    const blocks = await prisma.contentBlock.findMany({
+      where: {
+        restaurantId,
+        page: { in: ['home', 'about'] },
+        isActive: true
+      },
+      orderBy: {
+        displayOrder: 'asc'
+      }
+    });
+    
+    // Format for Website Builder compatibility
+    const homeBlock = blocks.find(b => b.page === 'home');
+    const aboutBlock = blocks.find(b => b.page === 'about');
+    
+    const websiteBuilderData = {
+      // Hero section data from home page content block
+      heroTitle: homeBlock?.title || '',
+      heroSubtitle: homeBlock?.subtitle || homeBlock?.content || '',
+      heroImageUrl: homeBlock?.imageUrl || null,
+      heroCTAText: homeBlock?.buttonText || null,
+      heroCTALink: homeBlock?.buttonLink || null,
+      
+      // About section data from about page content block
+      aboutTitle: aboutBlock?.title || '',
+      aboutDescription: aboutBlock?.content || '',
+      aboutImageUrl: aboutBlock?.imageUrl || null
+    };
+    
+    res.json(websiteBuilderData);
+  } catch (error) {
+    console.error('Error fetching website builder content:', error);
+    res.status(500).json({ error: 'Failed to fetch website builder content' });
+  }
+};
+
+// Update content blocks from Website Builder
+export const updateWebsiteBuilderContent = async (req: Request, res: Response) => {
+  try {
+    const restaurantId = 1;
+    const { 
+      heroTitle, 
+      heroSubtitle, 
+      heroImageUrl, 
+      heroCTAText, 
+      heroCTALink,
+      aboutTitle, 
+      aboutDescription, 
+      aboutImageUrl 
+    } = req.body;
+    
+    // Update home page content block
+    if (heroTitle || heroSubtitle) {
+      await prisma.contentBlock.updateMany({
+        where: {
+          restaurantId,
+          page: 'home'
+        },
+        data: {
+          title: heroTitle || null,
+          subtitle: heroSubtitle || null,
+          content: heroSubtitle || null, // Use subtitle as content for display
+          imageUrl: heroImageUrl || null,
+          buttonText: heroCTAText || null,
+          buttonLink: heroCTALink || null,
+          blockType: 'hero'
+        }
+      });
+    }
+    
+    // Update about page content block
+    if (aboutTitle || aboutDescription) {
+      await prisma.contentBlock.updateMany({
+        where: {
+          restaurantId,
+          page: 'about'
+        },
+        data: {
+          title: aboutTitle || null,
+          content: aboutDescription || null,
+          imageUrl: aboutImageUrl || null,
+          blockType: 'text'
+        }
+      });
+    }
+    
+    // Return updated data in Website Builder format
+    const blocks = await prisma.contentBlock.findMany({
+      where: {
+        restaurantId,
+        page: { in: ['home', 'about'] },
+        isActive: true
+      }
+    });
+    
+    const homeBlock = blocks.find(b => b.page === 'home');
+    const aboutBlock = blocks.find(b => b.page === 'about');
+    
+    const updatedData = {
+      heroTitle: homeBlock?.title || '',
+      heroSubtitle: homeBlock?.subtitle || homeBlock?.content || '',
+      heroImageUrl: homeBlock?.imageUrl || null,
+      heroCTAText: homeBlock?.buttonText || null,
+      heroCTALink: homeBlock?.buttonLink || null,
+      aboutTitle: aboutBlock?.title || '',
+      aboutDescription: aboutBlock?.content || '',
+      aboutImageUrl: aboutBlock?.imageUrl || null
+    };
+    
+    res.json(updatedData);
+  } catch (error) {
+    console.error('Error updating website builder content:', error);
+    res.status(500).json({ error: 'Failed to update website builder content' });
+  }
 }; 

@@ -7,7 +7,9 @@ import {
   deleteContentBlock,
   reorderContentBlocks,
   uploadContentBlockImage,
-  duplicateContentBlock
+  duplicateContentBlock,
+  getWebsiteBuilderContent,
+  updateWebsiteBuilderContent
 } from '../controllers/contentBlockController';
 import { protect } from '../middleware/authMiddleware';
 const multer = require('multer');
@@ -41,5 +43,9 @@ router.delete('/:id', protect, deleteContentBlock);
 router.post('/reorder', protect, reorderContentBlocks);
 router.post('/:id/upload', protect, upload.single('image'), uploadContentBlockImage);
 router.post('/:id/duplicate', protect, duplicateContentBlock);
+
+// Website Builder integration routes
+router.get('/website-builder', protect, getWebsiteBuilderContent);
+router.put('/website-builder', protect, updateWebsiteBuilderContent);
 
 export default router; 
