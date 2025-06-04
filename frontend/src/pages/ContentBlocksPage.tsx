@@ -139,7 +139,7 @@ const SortableBlockCard: React.FC<{ block: ContentBlock; onEdit: () => void; onD
                 sx={{ mr: 1 }}
               />
               <Chip 
-                label={block.page?.name || getPageName(block.pageId)} 
+                label={block.page?.name || `Page ${block.pageId}`} 
                 size="small" 
                 variant="outlined"
                 sx={{ mr: 1 }}
@@ -502,8 +502,7 @@ const ContentBlocksPage: React.FC = () => {
                   {page._count?.contentBlocks && page._count.contentBlocks > 0 && (
                     <Badge 
                       badgeContent={page._count.contentBlocks} 
-                      color="primary" 
-                      size="small"
+                      color="primary"
                       sx={{ ml: 1 }}
                     />
                   )}
@@ -606,7 +605,7 @@ const ContentBlocksPage: React.FC = () => {
                 <InputLabel>Page</InputLabel>
                 <Select
                   value={formData.pageId}
-                  onChange={(e) => setFormData({ ...formData, pageId: parseInt(e.target.value) })}
+                  onChange={(e) => setFormData({ ...formData, pageId: Number(e.target.value) })}
                   label="Page"
                 >
                   {pages.map(page => (
@@ -747,6 +746,14 @@ const ContentBlocksPage: React.FC = () => {
           <Button onClick={() => setUploadDialogOpen(false)}>Cancel</Button>
         </DialogActions>
       </Dialog>
+      
+      {/* Page Management Dialog */}
+      <PageManagementDialog
+        open={pageDialogOpen}
+        onClose={() => setPageDialogOpen(false)}
+        page={editingPage}
+        onSave={handlePageSave}
+      />
     </Container>
   );
 };
