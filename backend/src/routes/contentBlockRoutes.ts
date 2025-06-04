@@ -9,7 +9,8 @@ import {
   uploadContentBlockImage,
   duplicateContentBlock,
   getWebsiteBuilderContent,
-  updateWebsiteBuilderContent
+  updateWebsiteBuilderContent,
+  uploadWebsiteBuilderImage
 } from '../controllers/contentBlockController';
 import { protect } from '../middleware/authMiddleware';
 const multer = require('multer');
@@ -47,5 +48,6 @@ router.post('/:id/duplicate', protect, duplicateContentBlock);
 // Website Builder integration routes
 router.get('/website-builder', protect, getWebsiteBuilderContent);
 router.put('/website-builder', protect, updateWebsiteBuilderContent);
+router.post('/website-builder/image/:field', protect, upload.single('image'), uploadWebsiteBuilderImage);
 
 export default router; 

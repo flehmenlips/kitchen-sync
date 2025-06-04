@@ -29,10 +29,9 @@ class WebsiteBuilderContentService {
     const formData = new FormData();
     formData.append('image', file);
     
-    // We'll need to upload to content blocks and then return the updated content
-    // For now, we'll use the existing restaurant settings upload and then sync
-    const response = await apiService.post<{ imageUrl: string; settings: any }>(
-      `/restaurant/settings/image/${field}`,
+    // Use the dedicated Website Builder image upload endpoint
+    const response = await apiService.post<{ imageUrl: string; content: WebsiteBuilderContent }>(
+      `/content-blocks/website-builder/image/${field}`,
       formData,
       {
         headers: {
@@ -41,13 +40,7 @@ class WebsiteBuilderContentService {
       }
     );
     
-    // After uploading to restaurant settings, get the updated content from content blocks
-    const updatedContent = await this.getContent();
-    
-    return {
-      imageUrl: response.data.imageUrl,
-      content: updatedContent
-    };
+    return response.data;
   }
 }
 

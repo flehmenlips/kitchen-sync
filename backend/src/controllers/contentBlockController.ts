@@ -479,4 +479,115 @@ export const updateWebsiteBuilderContent = async (req: Request, res: Response) =
     console.error('Error updating website builder content:', error);
     res.status(500).json({ error: 'Failed to update website builder content' });
   }
+};
+
+// Upload image for Website Builder hero/about sections
+export const uploadWebsiteBuilderImage = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { field } = req.params; // 'hero' or 'about'
+    const restaurantId = 1; // MVP: single restaurant
+
+    if (!req.file) {
+      res.status(400).json({ error: 'No file uploaded' });
+      return;
+    }
+
+    if (field !== 'hero' && field !== 'about') {
+      res.status(400).json({ error: 'Invalid field. Must be "hero" or "about"' });
+      return;
+    }
+
+    // Determine which page to update
+    const page = field === 'hero' ? 'home' : 'about';
+
+    // Get current content block
+    const block = await prisma.contentBlock.findFirst({
+      where: {
+        restaurantId,
+        page,
+        isActive: true
+      }
+    });
+
+    if (!block) {
+      res.status(404).json({ error: `${field} content block not found` });
+      return;
+    }
+
+    // Delete old image if exists
+    if (block.imagePublicId) {
+      try {
+        await cloudinary.uploader.destroy(block.imagePublicId);
+      } catch (error) {
+        console.error('Error deleting old image:', error);
+      }
+    }
+
+    // Upload new image to Cloudinary
+    const result = await new Promise<any>((resolve, reject) => {
+      cloudinary.uploader.upload_stream(
+        {
+          folder: 'website-builder',
+          transformation: [
+            { width: 1920, height: 1080, crop: 'limit', quality: 'auto' }
+          ]
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      ).end(req.file!.buffer);
+    });
+
+    // Update content block with new image info
+    await prisma.contentBlock.updateMany({
+      where: {
+        restaurantId,
+        page
+      },
+      data: {
+        imageUrl: result.secure_url,
+        imagePublicId: result.public_id
+      }
+    });
+
+    // Get updated content in Website Builder format
+    const updatedContent = await getWebsiteBuilderContentData(restaurantId);
+
+    res.json({
+      imageUrl: result.secure_url,
+      content: updatedContent
+    });
+  } catch (error) {
+    console.error('Error uploading website builder image:', error);
+    res.status(500).json({ error: 'Failed to upload image' });
+  }
+};
+
+// Helper function to get website builder content data
+const getWebsiteBuilderContentData = async (restaurantId: number) => {
+  const blocks = await prisma.contentBlock.findMany({
+    where: {
+      restaurantId,
+      page: { in: ['home', 'about'] },
+      isActive: true
+    },
+    orderBy: {
+      displayOrder: 'asc'
+    }
+  });
+  
+  const homeBlock = blocks.find(b => b.page === 'home');
+  const aboutBlock = blocks.find(b => b.page === 'about');
+  
+  return {
+    heroTitle: homeBlock?.title || '',
+    heroSubtitle: homeBlock?.subtitle || homeBlock?.content || '',
+    heroImageUrl: homeBlock?.imageUrl || null,
+    heroCTAText: homeBlock?.buttonText || null,
+    heroCTALink: homeBlock?.buttonLink || null,
+    aboutTitle: aboutBlock?.title || '',
+    aboutDescription: aboutBlock?.content || '',
+    aboutImageUrl: aboutBlock?.imageUrl || null
+  };
 }; 
