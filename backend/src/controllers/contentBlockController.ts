@@ -104,15 +104,44 @@ export const createContentBlock = async (req: Request, res: Response) => {
 
     // Convert pageId to page string for database storage
     if (blockData.pageId && !blockData.page) {
-      // Get virtual pages to find the page slug by ID
-      const pageMap: Record<number, string> = {
-        1: 'home',
-        2: 'about',
-        3: 'menu', 
-        4: 'contact'
+      // Create getPageSlug function that reverses the pageId mapping
+      const getPageSlug = async (pageId: number): Promise<string> => {
+        const pageMap: Record<number, string> = {
+          1: 'home',
+          2: 'about',
+          3: 'menu', 
+          4: 'contact'
+        };
+        
+        // If it's a system page, return the slug
+        if (pageMap[pageId]) {
+          return pageMap[pageId];
+        }
+        
+        // For custom pages, we need to find the page by its virtual ID
+        // Get all unique pages and find the one that generates this pageId
+        const uniquePages = await prisma.contentBlock.findMany({
+          where: { restaurantId },
+          select: { page: true },
+          distinct: ['page']
+        });
+        
+        for (const pageItem of uniquePages) {
+          const generatedId = Math.abs(pageItem.page.split('').reduce((a, b) => {
+            a = ((a << 5) - a) + b.charCodeAt(0);
+            return a & a;
+          }, 0));
+          
+          if (generatedId === pageId) {
+            return pageItem.page;
+          }
+        }
+        
+        // Fallback - shouldn't happen but just in case
+        return 'custom';
       };
       
-      blockData.page = pageMap[blockData.pageId] || 'custom';
+      blockData.page = await getPageSlug(blockData.pageId);
       delete blockData.pageId; // Remove pageId as it doesn't exist in current schema
     }
 

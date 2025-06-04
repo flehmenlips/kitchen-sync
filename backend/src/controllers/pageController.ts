@@ -32,17 +32,33 @@ const getVirtualPages = async (restaurantId: number) => {
     return acc;
   }, {} as Record<string, number>);
 
+  // Consistent pageId mapping with contentBlockController
+  const getPageId = (pageSlug: string): number => {
+    const pageMap: Record<string, number> = {
+      'home': 1,
+      'about': 2,
+      'menu': 3,
+      'contact': 4
+    };
+    
+    // For custom pages, use a hash of the page name as ID (same as contentBlockController)
+    return pageMap[pageSlug] || Math.abs(pageSlug.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0));
+  };
+
   // Create virtual page objects
   const systemPages = ['home', 'about', 'menu', 'contact'];
-  const virtualPages = uniquePages.map((item, index) => ({
-    id: index + 1, // Virtual ID
+  const virtualPages = uniquePages.map((item) => ({
+    id: getPageId(item.page), // Use consistent virtual ID mapping
     restaurantId,
     name: item.page.charAt(0).toUpperCase() + item.page.slice(1),
     slug: item.page,
     title: null,
     description: null,
     template: 'default',
-    displayOrder: systemPages.indexOf(item.page) !== -1 ? systemPages.indexOf(item.page) : 100 + index,
+    displayOrder: systemPages.indexOf(item.page) !== -1 ? systemPages.indexOf(item.page) : 100,
     isActive: true,
     isSystem: systemPages.includes(item.page),
     metaTitle: null,
@@ -106,9 +122,24 @@ export const createPage = async (req: Request, res: Response) => {
       }
     });
 
+    // Use consistent pageId mapping
+    const getPageId = (pageSlug: string): number => {
+      const pageMap: Record<string, number> = {
+        'home': 1,
+        'about': 2,
+        'menu': 3,
+        'contact': 4
+      };
+      
+      return pageMap[pageSlug] || Math.abs(pageSlug.split('').reduce((a, b) => {
+        a = ((a << 5) - a) + b.charCodeAt(0);
+        return a & a;
+      }, 0));
+    };
+
     // Return virtual page object
     const virtualPage = {
-      id: Date.now(), // Temporary ID
+      id: getPageId(finalSlug), // Use consistent virtual ID
       restaurantId,
       name,
       slug: finalSlug,

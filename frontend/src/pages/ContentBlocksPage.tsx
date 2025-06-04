@@ -444,6 +444,15 @@ const ContentBlocksPage: React.FC = () => {
     return page?.name || 'Unknown Page';
   };
 
+  // Debug logging
+  console.log('Debug - Current state:', {
+    selectedPageId,
+    totalBlocks: blocks.length,
+    filteredBlocks: filteredBlocks.length,
+    pages: pages.map(p => ({ id: p.id, name: p.name, slug: p.slug })),
+    blockPageIds: blocks.map(b => ({ id: b.id, pageId: b.pageId, title: b.title }))
+  });
+
   if (loading) {
     return (
       <Container maxWidth="lg">
@@ -459,12 +468,13 @@ const ContentBlocksPage: React.FC = () => {
       <Box mb={4}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
           <Typography variant="h4">Content & Page Management</Typography>
-          <Box>
+          <Box display="flex" gap={1} alignItems="center">
             <Button
               startIcon={<PreviewIcon />}
               href="/customer"
               target="_blank"
-              sx={{ mr: 2 }}
+              variant="outlined"
+              size="small"
             >
               Preview Site
             </Button>
@@ -472,7 +482,7 @@ const ContentBlocksPage: React.FC = () => {
               variant="outlined"
               startIcon={<PagesIcon />}
               onClick={openCreatePageDialog}
-              sx={{ mr: 1 }}
+              size="small"
             >
               Add Page
             </Button>
@@ -480,6 +490,7 @@ const ContentBlocksPage: React.FC = () => {
               variant="contained"
               startIcon={<AddIcon />}
               onClick={openCreateDialog}
+              size="small"
             >
               Add Block
             </Button>
