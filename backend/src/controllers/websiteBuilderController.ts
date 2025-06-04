@@ -80,4 +80,102 @@ export const getPageTemplates = async (req: Request, res: Response) => {
     console.error('Error fetching page templates:', error);
     res.status(500).json({ error: 'Failed to fetch page templates' });
   }
+};
+
+export const updateContentBlock = async (req: Request, res: Response) => {
+  try {
+    const restaurantId = req.restaurantId;
+    const { slug, blockId } = req.params;
+    
+    if (!restaurantId) {
+      return res.status(400).json({ message: 'Restaurant not found' });
+    }
+
+    const updatedBlock = await websiteBuilderService.updateContentBlock(
+      restaurantId, 
+      slug, 
+      parseInt(blockId), 
+      req.body
+    );
+    res.json(updatedBlock);
+  } catch (error) {
+    console.error('Error updating content block:', error);
+    res.status(500).json({ 
+      message: 'Failed to update content block',
+      error: process.env.NODE_ENV === 'development' ? error : undefined
+    });
+  }
+};
+
+export const createContentBlock = async (req: Request, res: Response) => {
+  try {
+    const restaurantId = req.restaurantId;
+    const { slug } = req.params;
+    
+    if (!restaurantId) {
+      return res.status(400).json({ message: 'Restaurant not found' });
+    }
+
+    const newBlock = await websiteBuilderService.createContentBlock(
+      restaurantId, 
+      slug, 
+      req.body
+    );
+    res.status(201).json(newBlock);
+  } catch (error) {
+    console.error('Error creating content block:', error);
+    res.status(500).json({ 
+      message: 'Failed to create content block',
+      error: process.env.NODE_ENV === 'development' ? error : undefined
+    });
+  }
+};
+
+export const deleteContentBlock = async (req: Request, res: Response) => {
+  try {
+    const restaurantId = req.restaurantId;
+    const { slug, blockId } = req.params;
+    
+    if (!restaurantId) {
+      return res.status(400).json({ message: 'Restaurant not found' });
+    }
+
+    await websiteBuilderService.deleteContentBlock(
+      restaurantId, 
+      slug, 
+      parseInt(blockId)
+    );
+    res.status(204).send();
+  } catch (error) {
+    console.error('Error deleting content block:', error);
+    res.status(500).json({ 
+      message: 'Failed to delete content block',
+      error: process.env.NODE_ENV === 'development' ? error : undefined
+    });
+  }
+};
+
+export const reorderContentBlocks = async (req: Request, res: Response) => {
+  try {
+    const restaurantId = req.restaurantId;
+    const { slug } = req.params;
+    const { blockOrder } = req.body; // Array of block IDs in new order
+    
+    if (!restaurantId) {
+      return res.status(400).json({ message: 'Restaurant not found' });
+    }
+
+    if (!Array.isArray(blockOrder)) {
+      return res.status(400).json({ message: 'blockOrder must be an array' });
+    }
+
+    await websiteBuilderService.reorderContentBlocks(restaurantId, slug, blockOrder);
+    res.status(204).send();
+  } catch (error) {
+    console.error('Error reordering content blocks:', error);
+    res.status(500).json({ 
+      message: 'Failed to reorder content blocks',
+      error: process.env.NODE_ENV === 'development' ? error : undefined
+    });
+  }
 }; 

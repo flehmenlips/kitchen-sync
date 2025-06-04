@@ -1,25 +1,37 @@
-import { Router } from 'express';
+import express from 'express';
 import {
   getWebsiteBuilderData,
   updateWebsiteBuilderSettings,
   createWebsiteBuilderPage,
   deleteWebsiteBuilderPage,
-  getPageTemplates
+  getPageTemplates,
+  updateContentBlock,
+  createContentBlock,
+  deleteContentBlock,
+  reorderContentBlocks
 } from '../controllers/websiteBuilderController';
 import { protect } from '../middleware/authMiddleware';
 import { setRestaurantContext, requireRestaurantContext } from '../middleware/restaurantContext';
 
-const router = Router();
+const router = express.Router();
 
-// Website Builder data endpoints
+// Get unified website builder data
 router.get('/data', protect, setRestaurantContext, requireRestaurantContext, getWebsiteBuilderData);
+
+// Update website settings
 router.put('/settings', protect, setRestaurantContext, requireRestaurantContext, updateWebsiteBuilderSettings);
 
-// Page management endpoints
+// Page management
 router.post('/pages', protect, setRestaurantContext, requireRestaurantContext, createWebsiteBuilderPage);
 router.delete('/pages/:slug', protect, setRestaurantContext, requireRestaurantContext, deleteWebsiteBuilderPage);
 
-// Template endpoints
+// Content block management
+router.put('/pages/:slug/blocks/:blockId', protect, setRestaurantContext, requireRestaurantContext, updateContentBlock);
+router.post('/pages/:slug/blocks', protect, setRestaurantContext, requireRestaurantContext, createContentBlock);
+router.delete('/pages/:slug/blocks/:blockId', protect, setRestaurantContext, requireRestaurantContext, deleteContentBlock);
+router.put('/pages/:slug/blocks/reorder', protect, setRestaurantContext, requireRestaurantContext, reorderContentBlocks);
+
+// Get page templates (public endpoint)
 router.get('/templates', getPageTemplates);
 
 export default router; 

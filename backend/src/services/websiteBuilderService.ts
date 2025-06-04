@@ -83,292 +83,262 @@ export interface PageCreationData {
   metaDescription?: string;
 }
 
+export interface PageTemplate {
+  id: string;
+  name: string;
+  description: string;
+  blocks: string[];
+}
+
 export const websiteBuilderService = {
   // Get all website builder data (settings + pages)
-  async getWebsiteBuilderData(restaurantId: number = 1): Promise<WebsiteBuilderData> {
+  async getWebsiteBuilderData(restaurantId?: number): Promise<WebsiteBuilderData> {
     try {
       // Get restaurant settings
-      let settingsData = await prisma.restaurantSettings.findUnique({
-        where: { restaurantId }
-      });
-
-      // If no settings exist, create default ones
-      if (!settingsData) {
-        const restaurant = await prisma.restaurant.findUnique({
-          where: { id: restaurantId },
-          select: { name: true }
-        });
-        
-        const restaurantName = restaurant?.name || 'Your Restaurant';
-        
-        settingsData = await prisma.restaurantSettings.create({
-          data: {
-            restaurantId,
-            websiteName: restaurantName,
-            tagline: 'Fresh, local ingredients meet culinary excellence',
-            heroTitle: `Welcome to ${restaurantName}`,
-            heroSubtitle: 'Experience culinary excellence',
-            heroCTAText: 'Make a Reservation',
-            heroCTALink: '/customer/reservations/new',
-            primaryColor: '#1976d2',
-            secondaryColor: '#dc004e',
-            accentColor: '#333333',
-            fontPrimary: 'Roboto, sans-serif',
-            fontSecondary: 'Playfair Display, serif',
-            openingHours: {
-              monday: { open: '11:00 AM', close: '9:00 PM' },
-              tuesday: { open: '11:00 AM', close: '9:00 PM' },
-              wednesday: { open: '11:00 AM', close: '9:00 PM' },
-              thursday: { open: '11:00 AM', close: '9:00 PM' },
-              friday: { open: '11:00 AM', close: '10:00 PM' },
-              saturday: { open: '11:00 AM', close: '10:00 PM' },
-              sunday: { open: '10:00 AM', close: '9:00 PM' }
-            }
-          }
-        });
-      }
+      const settings = await this.getRestaurantSettings(restaurantId);
       
-      // Get content blocks grouped by page
-      const contentBlocks = await prisma.contentBlock.findMany({
-        where: {
-          restaurantId,
-          isActive: true
-        },
-        orderBy: [
-          { page: 'asc' },
-          { displayOrder: 'asc' }
-        ]
-      });
-      
-      // Group blocks by page
-      const pageBlocks = contentBlocks.reduce((acc, block) => {
-        if (!acc[block.page]) {
-          acc[block.page] = [];
-        }
-        acc[block.page].push({
-          id: block.id,
-          blockType: block.blockType,
-          title: block.title || undefined,
-          subtitle: block.subtitle || undefined,
-          content: block.content || undefined,
-          imageUrl: block.imageUrl || undefined,
-          imagePublicId: block.imagePublicId || undefined,
-          videoUrl: block.videoUrl || undefined,
-          buttonText: block.buttonText || undefined,
-          buttonLink: block.buttonLink || undefined,
-          buttonStyle: block.buttonStyle || undefined,
-          settings: block.settings || undefined,
-          displayOrder: block.displayOrder,
-          isActive: block.isActive
-        });
-        return acc;
-      }, {} as Record<string, WebsiteBuilderBlock[]>);
-      
-      // Get unique pages
-      const uniquePages = await prisma.contentBlock.findMany({
-        where: { restaurantId },
-        select: { page: true },
-        distinct: ['page']
-      });
-      
-      // Create page list with system and custom pages
-      const pages: WebsiteBuilderPage[] = [];
-      
-      // System pages (always present)
-      const systemPages = [
-        { id: 'home', name: 'Home', slug: 'home', url: '/', order: 0 },
-        { id: 'about', name: 'About', slug: 'about', url: '/about', order: 1 },
-        { id: 'menu', name: 'Menu', slug: 'menu', url: '/menu', order: 2 },
-        { id: 'contact', name: 'Contact', slug: 'contact', url: '/contact', order: 3 }
-      ];
-      
-      systemPages.forEach(sysPage => {
-        pages.push({
-          id: sysPage.id,
-          name: sysPage.name,
-          slug: sysPage.slug,
-          url: sysPage.url,
-          isSystem: true,
-          isActive: true,
-          displayOrder: sysPage.order,
-          blocks: pageBlocks[sysPage.slug] || []
-        });
-      });
-      
-      // Custom pages
-      uniquePages.forEach((page, index) => {
-        if (!['home', 'about', 'menu', 'contact'].includes(page.page)) {
-          // Generate virtual ID for custom pages
-          const virtualId = Math.abs(page.page.split('').reduce((a, b) => {
-            a = ((a << 5) - a) + b.charCodeAt(0);
-            return a & a;
-          }, 0)).toString();
-          
-          pages.push({
-            id: virtualId,
-            name: this.formatPageName(page.page),
-            slug: page.page,
-            url: `/${page.page}`,
-            isSystem: false,
-            isActive: true,
-            displayOrder: 10 + index, // Custom pages after system pages
-            blocks: pageBlocks[page.page] || []
-          });
-        }
-      });
+      // Get pages from ContentBlocks
+      const pages = await this.getPages(restaurantId);
       
       return {
-        settings: {
-          // Branding
-          websiteName: settingsData.websiteName || undefined,
-          tagline: settingsData.tagline || undefined,
-          primaryColor: settingsData.primaryColor || undefined,
-          secondaryColor: settingsData.secondaryColor || undefined,
-          accentColor: settingsData.accentColor || undefined,
-          fontPrimary: settingsData.fontPrimary || undefined,
-          fontSecondary: settingsData.fontSecondary || undefined,
-          logoUrl: settingsData.logoUrl || undefined,
-          logoPublicId: settingsData.logoPublicId || undefined,
-          
-          // Contact & Hours
-          contactPhone: settingsData.contactPhone || undefined,
-          contactEmail: settingsData.contactEmail || undefined,
-          contactAddress: settingsData.contactAddress || undefined,
-          contactCity: settingsData.contactCity || undefined,
-          contactState: settingsData.contactState || undefined,
-          contactZip: settingsData.contactZip || undefined,
-          openingHours: settingsData.openingHours,
-          
-          // Menu Display
-          menuDisplayMode: settingsData.menuDisplayMode || undefined,
-          activeMenuIds: settingsData.activeMenuIds || undefined,
-          
-          // Social & Footer
-          facebookUrl: settingsData.facebookUrl || undefined,
-          instagramUrl: settingsData.instagramUrl || undefined,
-          twitterUrl: settingsData.twitterUrl || undefined,
-          footerText: settingsData.footerText || undefined,
-          
-          // SEO
-          metaTitle: settingsData.metaTitle || undefined,
-          metaDescription: settingsData.metaDescription || undefined,
-          metaKeywords: settingsData.metaKeywords || undefined
-        },
-        pages: pages.sort((a, b) => a.displayOrder - b.displayOrder)
+        settings: settings ? {
+          websiteName: settings.websiteName || undefined,
+          tagline: settings.tagline || undefined,
+          primaryColor: settings.primaryColor || undefined,
+          secondaryColor: settings.secondaryColor || undefined,
+          accentColor: settings.accentColor || undefined,
+          fontPrimary: settings.fontPrimary || undefined,
+          fontSecondary: settings.fontSecondary || undefined,
+          logoUrl: settings.logoUrl || undefined,
+          logoPublicId: settings.logoPublicId || undefined,
+          contactPhone: settings.contactPhone || undefined,
+          contactEmail: settings.contactEmail || undefined,
+          contactAddress: settings.contactAddress || undefined,
+          contactCity: settings.contactCity || undefined,
+          contactState: settings.contactState || undefined,
+          contactZip: settings.contactZip || undefined,
+          openingHours: settings.openingHours,
+          menuDisplayMode: settings.menuDisplayMode || undefined,
+          activeMenuIds: settings.activeMenuIds || undefined,
+          facebookUrl: settings.facebookUrl || undefined,
+          instagramUrl: settings.instagramUrl || undefined,
+          twitterUrl: settings.twitterUrl || undefined,
+          footerText: settings.footerText || undefined,
+          metaTitle: settings.metaTitle || undefined,
+          metaDescription: settings.metaDescription || undefined,
+          metaKeywords: settings.metaKeywords || undefined
+        } : {},
+        pages
       };
     } catch (error) {
-      console.error('Error fetching website builder data:', error);
+      console.error('Error in getWebsiteBuilderData:', error);
       throw error;
     }
   },
   
-  // Update restaurant settings
-  async updateSettings(restaurantId: number = 1, settings: Partial<WebsiteBuilderData['settings']>) {
+  // Get restaurant settings
+  async getRestaurantSettings(restaurantId?: number) {
     try {
-      return await prisma.restaurantSettings.update({
-        where: { restaurantId },
-        data: settings
+      const settings = await prisma.restaurantSettings.findUnique({
+        where: { restaurantId: restaurantId || 1 }
+      });
+      return settings;
+    } catch (error) {
+      console.error('Error getting restaurant settings:', error);
+      return null;
+    }
+  },
+  
+  // Update restaurant settings
+  async updateSettings(restaurantId: number | undefined, settings: Partial<WebsiteBuilderData['settings']>) {
+    try {
+      return await prisma.restaurantSettings.upsert({
+        where: { restaurantId: restaurantId || 1 },
+        update: settings,
+        create: {
+          restaurantId: restaurantId || 1,
+          ...settings
+        }
       });
     } catch (error) {
-      console.error('Error updating website builder settings:', error);
+      console.error('Error in updateSettings:', error);
       throw error;
     }
   },
   
   // Create a new page
-  async createPage(restaurantId: number = 1, pageData: PageCreationData): Promise<WebsiteBuilderPage> {
+  async createPage(restaurantId: number | undefined, pageData: PageCreationData): Promise<WebsiteBuilderPage> {
     try {
-      // Validate slug is unique
-      const existingPage = await prisma.contentBlock.findFirst({
-        where: {
-          restaurantId,
-          page: pageData.slug
-        }
-      });
-      
-      if (existingPage) {
-        throw new Error(`Page with slug '${pageData.slug}' already exists`);
-      }
-      
-      // Create initial hero block for the page
-      const heroBlock = await prisma.contentBlock.create({
+      // Create a new ContentBlock entry for the page
+      const contentBlock = await prisma.contentBlock.create({
         data: {
-          restaurantId,
-          page: pageData.slug,
-          blockType: 'hero',
+          restaurantId: restaurantId!,
+          blockType: 'page',
           title: pageData.name,
-          subtitle: `Welcome to our ${pageData.name.toLowerCase()} page`,
           content: '',
-          displayOrder: 0,
+          page: pageData.slug,
           isActive: true,
-          settings: {
-            template: pageData.template || 'default'
-          }
+          displayOrder: 999, // Place at end by default
+          settings: JSON.stringify({
+            metaTitle: pageData.metaTitle,
+            metaDescription: pageData.metaDescription,
+            template: pageData.template || 'default',
+          })
         }
       });
-      
-      // Generate virtual ID
-      const virtualId = Math.abs(pageData.slug.split('').reduce((a, b) => {
-        a = ((a << 5) - a) + b.charCodeAt(0);
-        return a & a;
-      }, 0)).toString();
-      
-      return {
-        id: virtualId,
-        name: pageData.name,
-        slug: pageData.slug,
-        url: `/${pageData.slug}`,
-        isSystem: false,
-        isActive: true,
-        displayOrder: 100, // New pages at end
-        metaTitle: pageData.metaTitle,
-        metaDescription: pageData.metaDescription,
-        blocks: [{
-          id: heroBlock.id,
-          blockType: heroBlock.blockType,
-          title: heroBlock.title || undefined,
-          subtitle: heroBlock.subtitle || undefined,
-          content: heroBlock.content || undefined,
-          imageUrl: heroBlock.imageUrl || undefined,
-          imagePublicId: heroBlock.imagePublicId || undefined,
-          videoUrl: heroBlock.videoUrl || undefined,
-          buttonText: heroBlock.buttonText || undefined,
-          buttonLink: heroBlock.buttonLink || undefined,
-          buttonStyle: heroBlock.buttonStyle || undefined,
-          settings: heroBlock.settings || undefined,
-          displayOrder: heroBlock.displayOrder,
-          isActive: heroBlock.isActive
-        }]
-      };
+
+      return this.transformContentBlockToPage(contentBlock);
     } catch (error) {
-      console.error('Error creating page:', error);
+      console.error('Error in createPage:', error);
       throw error;
     }
   },
   
-  // Delete a page (and all its blocks)
-  async deletePage(restaurantId: number = 1, pageSlug: string): Promise<void> {
+  // Delete a page
+  async deletePage(restaurantId: number | undefined, slug: string): Promise<void> {
     try {
-      // Don't allow deletion of system pages
-      if (['home', 'about', 'menu', 'contact'].includes(pageSlug)) {
-        throw new Error('Cannot delete system pages');
-      }
-      
-      // Delete all blocks for this page
+      // Delete all content blocks for this page
       await prisma.contentBlock.deleteMany({
         where: {
-          restaurantId,
+          restaurantId: restaurantId!,
+          page: slug
+        }
+      });
+    } catch (error) {
+      console.error('Error in deletePage:', error);
+      throw error;
+    }
+  },
+  
+  // Update a content block
+  async updateContentBlock(
+    restaurantId: number, 
+    pageSlug: string, 
+    blockId: number, 
+    blockData: Partial<WebsiteBuilderBlock>
+  ): Promise<WebsiteBuilderBlock> {
+    try {
+      const updatedBlock = await prisma.contentBlock.update({
+        where: {
+          id: blockId,
+          restaurantId: restaurantId,
+          page: pageSlug
+        },
+        data: {
+          title: blockData.title,
+          subtitle: blockData.subtitle,
+          content: blockData.content,
+          imageUrl: blockData.imageUrl,
+          videoUrl: blockData.videoUrl,
+          buttonText: blockData.buttonText,
+          buttonLink: blockData.buttonLink,
+          buttonStyle: blockData.buttonStyle,
+          isActive: blockData.isActive,
+          settings: blockData.settings ? JSON.stringify(blockData.settings) : undefined
+        }
+      });
+
+      return this.transformContentBlockToBuilderBlock(updatedBlock);
+    } catch (error) {
+      console.error('Error in updateContentBlock:', error);
+      throw error;
+    }
+  },
+  
+  // Create a new content block
+  async createContentBlock(
+    restaurantId: number, 
+    pageSlug: string, 
+    blockData: Partial<WebsiteBuilderBlock>
+  ): Promise<WebsiteBuilderBlock> {
+    try {
+      // Get the highest display order for this page
+      const lastBlock = await prisma.contentBlock.findFirst({
+        where: {
+          restaurantId: restaurantId,
+          page: pageSlug
+        },
+        orderBy: { displayOrder: 'desc' }
+      });
+
+      const displayOrder = (lastBlock?.displayOrder || 0) + 1;
+
+      const newBlock = await prisma.contentBlock.create({
+        data: {
+          restaurantId: restaurantId,
+          page: pageSlug,
+          blockType: blockData.blockType || 'text',
+          title: blockData.title || '',
+          subtitle: blockData.subtitle,
+          content: blockData.content || '',
+          imageUrl: blockData.imageUrl,
+          videoUrl: blockData.videoUrl,
+          buttonText: blockData.buttonText,
+          buttonLink: blockData.buttonLink,
+          buttonStyle: blockData.buttonStyle,
+          isActive: blockData.isActive ?? true,
+          displayOrder: displayOrder,
+          settings: blockData.settings ? JSON.stringify(blockData.settings) : undefined
+        }
+      });
+
+      return this.transformContentBlockToBuilderBlock(newBlock);
+    } catch (error) {
+      console.error('Error in createContentBlock:', error);
+      throw error;
+    }
+  },
+  
+  // Delete a content block
+  async deleteContentBlock(
+    restaurantId: number, 
+    pageSlug: string, 
+    blockId: number
+  ): Promise<void> {
+    try {
+      await prisma.contentBlock.delete({
+        where: {
+          id: blockId,
+          restaurantId: restaurantId,
           page: pageSlug
         }
       });
     } catch (error) {
-      console.error('Error deleting page:', error);
+      console.error('Error in deleteContentBlock:', error);
+      throw error;
+    }
+  },
+  
+  // Reorder content blocks
+  async reorderContentBlocks(
+    restaurantId: number, 
+    pageSlug: string, 
+    blockOrder: number[]
+  ): Promise<void> {
+    try {
+      // Update display order for each block
+      const updatePromises = blockOrder.map((blockId, index) => 
+        prisma.contentBlock.update({
+          where: {
+            id: blockId,
+            restaurantId: restaurantId,
+            page: pageSlug
+          },
+          data: {
+            displayOrder: index + 1
+          }
+        })
+      );
+
+      await Promise.all(updatePromises);
+    } catch (error) {
+      console.error('Error in reorderContentBlocks:', error);
       throw error;
     }
   },
   
   // Get page templates
-  async getPageTemplates() {
+  async getPageTemplates(): Promise<PageTemplate[]> {
     return [
       {
         id: 'default',
@@ -397,10 +367,109 @@ export const websiteBuilderService = {
     ];
   },
   
-  // Helper function to format page names
-  formatPageName(slug: string): string {
-    return slug.split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
+  // Helper method to get pages from ContentBlocks
+  async getPages(restaurantId?: number): Promise<WebsiteBuilderPage[]> {
+    try {
+      // Get page-level ContentBlocks (where blockType = 'page')
+      const pageBlocks = await prisma.contentBlock.findMany({
+        where: {
+          restaurantId: restaurantId,
+          blockType: 'page'
+        },
+        orderBy: { displayOrder: 'asc' }
+      });
+
+      // Get content blocks for each page
+      const pages: WebsiteBuilderPage[] = [];
+      
+      for (const pageBlock of pageBlocks) {
+        const contentBlocks = await prisma.contentBlock.findMany({
+          where: {
+            restaurantId: restaurantId,
+            page: pageBlock.page
+          },
+          orderBy: { displayOrder: 'asc' }
+        });
+
+        pages.push({
+          id: pageBlock.page!,
+          name: pageBlock.title || 'Untitled Page',
+          slug: pageBlock.page!,
+          url: `/${pageBlock.page}`,
+          isSystem: ['home', 'about', 'contact'].includes(pageBlock.page!),
+          isActive: pageBlock.isActive || false,
+          displayOrder: pageBlock.displayOrder || 0,
+          metaTitle: (pageBlock.settings as any)?.metaTitle,
+          metaDescription: (pageBlock.settings as any)?.metaDescription,
+          blocks: contentBlocks.map(block => this.transformContentBlockToBuilderBlock(block))
+        });
+      }
+
+      // Add system pages if they don't exist
+      const existingSlugs = pages.map(p => p.slug);
+      
+      if (!existingSlugs.includes('home')) {
+        pages.unshift(this.createSystemPage('home', 'Home', 1));
+      }
+      
+      if (!existingSlugs.includes('about')) {
+        pages.push(this.createSystemPage('about', 'About', 2));
+      }
+
+      return pages.sort((a, b) => a.displayOrder - b.displayOrder);
+    } catch (error) {
+      console.error('Error in getPages:', error);
+      throw error;
+    }
+  },
+  
+  // Helper method to transform ContentBlock to WebsiteBuilderBlock
+  transformContentBlockToBuilderBlock(block: any): WebsiteBuilderBlock {
+    return {
+      id: block.id,
+      blockType: block.blockType || 'text',
+      title: block.title,
+      subtitle: block.subtitle,
+      content: block.content,
+      imageUrl: block.imageUrl,
+      imagePublicId: block.imagePublicId,
+      videoUrl: block.videoUrl,
+      buttonText: block.buttonText,
+      buttonLink: block.buttonLink,
+      buttonStyle: block.buttonStyle,
+      settings: block.settings ? JSON.parse(block.settings) : {},
+      displayOrder: block.displayOrder || 0,
+      isActive: block.isActive || false
+    };
+  },
+  
+  // Helper method to transform ContentBlock to WebsiteBuilderPage
+  transformContentBlockToPage(block: any): WebsiteBuilderPage {
+    return {
+      id: block.page!,
+      name: block.title || 'Untitled Page',
+      slug: block.page!,
+      url: `/${block.page}`,
+      isSystem: false,
+      isActive: block.isActive || false,
+      displayOrder: block.displayOrder || 0,
+      metaTitle: block.settings?.metaTitle,
+      metaDescription: block.settings?.metaDescription,
+      blocks: []
+    };
+  },
+  
+  // Helper method to create system pages
+  createSystemPage(slug: string, name: string, order: number): WebsiteBuilderPage {
+    return {
+      id: slug,
+      name: name,
+      slug: slug,
+      url: `/${slug}`,
+      isSystem: true,
+      isActive: true,
+      displayOrder: order,
+      blocks: [] // Will be populated from actual ContentBlocks
+    };
   }
 }; 

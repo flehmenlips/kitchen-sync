@@ -36,7 +36,10 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  Menu,
+  ListItemIcon as MuiListItemIcon,
+  Fab
 } from '@mui/material';
 import {
   Save,
@@ -60,15 +63,20 @@ import {
   Home as HomeIcon,
   Info as InfoIcon,
   Restaurant as RestaurantIcon,
-  Contacts as ContactIcon
+  Contacts as ContactIcon,
+  MoreVert as MoreIcon,
+  DragIndicator as DragIcon
 } from '@mui/icons-material';
 import { restaurantSettingsService, RestaurantSettings } from '../services/restaurantSettingsService';
 import { 
   websiteBuilderService, 
   WebsiteBuilderData, 
-  WebsiteBuilderPage as WBPage,
-  PageCreationData 
+  WBPage,
+  WBBlock,
+  PageCreationData,
+  BlockCreationData 
 } from '../services/websiteBuilderService';
+import ContentBlockEditor from '../components/ContentBlockEditor';
 import { useSnackbar } from '../context/SnackbarContext';
 import { useRestaurant } from '../context/RestaurantContext';
 import { buildRestaurantUrl } from '../utils/subdomain';
@@ -101,14 +109,23 @@ const WebsiteBuilderPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [websiteData, setWebsiteData] = useState<WebsiteBuilderData | null>(null);
   const [selectedPage, setSelectedPage] = useState<WBPage | null>(null);
+  const [editingBlockId, setEditingBlockId] = useState<number | null>(null);
+  const [blockMenuAnchor, setBlockMenuAnchor] = useState<null | HTMLElement>(null);
+  const [selectedBlockId, setSelectedBlockId] = useState<number | null>(null);
   const [tabValue, setTabValue] = useState(0); // 0: Settings, 1: Pages, 2: Branding, 3: SEO
   const [hasChanges, setHasChanges] = useState(false);
   const [templateSelectorOpen, setTemplateSelectorOpen] = useState(false);
   const [pageDialogOpen, setPageDialogOpen] = useState(false);
+  const [addBlockDialogOpen, setAddBlockDialogOpen] = useState(false);
   const [newPageData, setNewPageData] = useState<PageCreationData>({
     name: '',
     slug: '',
     template: 'default'
+  });
+  const [newBlockData, setNewBlockData] = useState<BlockCreationData>({
+    blockType: 'text',
+    title: '',
+    content: ''
   });
   const navigate = useNavigate();
   const { currentRestaurant } = useRestaurant();
@@ -221,6 +238,145 @@ const WebsiteBuilderPage: React.FC = () => {
       console.error('Error deleting page:', error);
       showSnackbar('Failed to delete page', 'error');
     }
+  };
+
+  // Content Block Management Handlers
+  const handleSaveBlock = async (blockData: Partial<WBBlock>) => {
+    if (!selectedPage || editingBlockId === null) return;
+
+    try {
+      const updatedBlock = await websiteBuilderService.updateContentBlock(
+        selectedPage.slug,
+        editingBlockId,
+        blockData
+      );
+
+      // Update the block in local state
+      setWebsiteData(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          pages: prev.pages.map(page =>
+            page.slug === selectedPage.slug
+              ? {
+                  ...page,
+                  blocks: page.blocks.map(block =>
+                    block.id === editingBlockId ? updatedBlock : block
+                  )
+                }
+              : page
+          )
+        };
+      });
+
+      // Update selected page
+      setSelectedPage(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          blocks: prev.blocks.map(block =>
+            block.id === editingBlockId ? updatedBlock : block
+          )
+        };
+      });
+
+      setEditingBlockId(null);
+      showSnackbar('Block updated successfully', 'success');
+    } catch (error) {
+      console.error('Error updating block:', error);
+      showSnackbar('Failed to update block', 'error');
+    }
+  };
+
+  const handleDeleteBlock = async (blockId: number) => {
+    if (!selectedPage) return;
+
+    try {
+      await websiteBuilderService.deleteContentBlock(selectedPage.slug, blockId);
+
+      // Update local state
+      setWebsiteData(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          pages: prev.pages.map(page =>
+            page.slug === selectedPage.slug
+              ? {
+                  ...page,
+                  blocks: page.blocks.filter(block => block.id !== blockId)
+                }
+              : page
+          )
+        };
+      });
+
+      // Update selected page
+      setSelectedPage(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          blocks: prev.blocks.filter(block => block.id !== blockId)
+        };
+      });
+
+      showSnackbar('Block deleted successfully', 'success');
+    } catch (error) {
+      console.error('Error deleting block:', error);
+      showSnackbar('Failed to delete block', 'error');
+    }
+  };
+
+  const handleAddBlock = async () => {
+    if (!selectedPage) return;
+
+    try {
+      const newBlock = await websiteBuilderService.createContentBlock(
+        selectedPage.slug,
+        newBlockData
+      );
+
+      // Update local state
+      setWebsiteData(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          pages: prev.pages.map(page =>
+            page.slug === selectedPage.slug
+              ? {
+                  ...page,
+                  blocks: [...page.blocks, newBlock].sort((a, b) => a.displayOrder - b.displayOrder)
+                }
+              : page
+          )
+        };
+      });
+
+      // Update selected page
+      setSelectedPage(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          blocks: [...prev.blocks, newBlock].sort((a, b) => a.displayOrder - b.displayOrder)
+        };
+      });
+
+      setAddBlockDialogOpen(false);
+      setNewBlockData({ blockType: 'text', title: '', content: '' });
+      showSnackbar('Block added successfully', 'success');
+    } catch (error) {
+      console.error('Error adding block:', error);
+      showSnackbar('Failed to add block', 'error');
+    }
+  };
+
+  const handleBlockMenuClick = (event: React.MouseEvent<HTMLButtonElement>, blockId: number) => {
+    setBlockMenuAnchor(event.currentTarget);
+    setSelectedBlockId(blockId);
+  };
+
+  const handleBlockMenuClose = () => {
+    setBlockMenuAnchor(null);
+    setSelectedBlockId(null);
   };
 
   const handleImageUpload = async (field: 'hero' | 'about' | 'cover' | 'logo', file: File) => {
@@ -511,57 +667,95 @@ const WebsiteBuilderPage: React.FC = () => {
             </Grid>
             
             <Grid item xs={12} md={8}>
-              {/* Page Content Editor */}
+              {/* Enhanced Page Content Editor */}
               {selectedPage ? (
-                <Paper sx={{ p: 3 }}>
-                  <Typography variant="h6" gutterBottom>
-                    Editing: {selectedPage.name}
-                  </Typography>
-                  <Divider sx={{ mb: 3 }} />
-                  
-                  <Alert severity="info" sx={{ mb: 3 }}>
-                    Page content editing will be enhanced with rich content blocks in Phase 2.2.
-                    For now, this shows the page structure and basic information.
-                  </Alert>
-                  
-                  <Grid container spacing={3}>
-                    <Grid item xs={12}>
-                      <TextField
-                        fullWidth
-                        label="Page Title"
-                        value={selectedPage.name}
-                        InputProps={{ readOnly: true }}
-                        helperText="Page title from ContentBlocks system"
-                      />
-                    </Grid>
-                    <Grid item xs={12}>
-                      <TextField
-                        fullWidth
-                        label="URL Slug"
-                        value={selectedPage.slug}
-                        InputProps={{ readOnly: true }}
-                        helperText="URL path for this page"
-                      />
-                    </Grid>
-                    <Grid item xs={12}>
-                      <Typography variant="body2" color="text.secondary">
-                        This page has {selectedPage.blocks.length} content block(s):
-                      </Typography>
-                      {selectedPage.blocks.map((block, index) => (
-                        <Chip
-                          key={index}
-                          label={`${block.blockType}: ${block.title || 'Untitled'}`}
-                          size="small"
-                          sx={{ m: 0.5 }}
-                        />
-                      ))}
-                    </Grid>
-                  </Grid>
-                </Paper>
+                <Box>
+                  {/* Page Header */}
+                  <Paper sx={{ p: 3, mb: 3 }}>
+                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                      <Box>
+                        <Typography variant="h6">
+                          Editing: {selectedPage.name}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {selectedPage.blocks.length} content block(s) • {selectedPage.isActive ? 'Published' : 'Draft'}
+                        </Typography>
+                      </Box>
+                      <Button
+                        variant="contained"
+                        startIcon={<AddIcon />}
+                        onClick={() => setAddBlockDialogOpen(true)}
+                      >
+                        Add Block
+                      </Button>
+                    </Box>
+                    <Divider />
+                  </Paper>
+
+                  {/* Content Blocks List */}
+                  <Box>
+                    {selectedPage.blocks.length === 0 ? (
+                      <Paper sx={{ p: 4, textAlign: 'center' }}>
+                        <Typography variant="h6" color="text.secondary" gutterBottom>
+                          No content blocks yet
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                          Add your first content block to start building this page
+                        </Typography>
+                        <Button
+                          variant="contained"
+                          startIcon={<AddIcon />}
+                          onClick={() => setAddBlockDialogOpen(true)}
+                        >
+                          Add Your First Block
+                        </Button>
+                      </Paper>
+                    ) : (
+                      selectedPage.blocks
+                        .sort((a, b) => a.displayOrder - b.displayOrder)
+                        .map((block) => (
+                          <ContentBlockEditor
+                            key={block.id}
+                            block={block}
+                            onSave={handleSaveBlock}
+                            onDelete={() => handleDeleteBlock(block.id)}
+                            isEditing={editingBlockId === block.id}
+                            setIsEditing={(editing) => {
+                              if (editing) {
+                                setEditingBlockId(block.id);
+                              } else {
+                                setEditingBlockId(null);
+                              }
+                            }}
+                          />
+                        ))
+                    )}
+                  </Box>
+
+                  {/* Add Block FAB (Floating Action Button) */}
+                  {selectedPage.blocks.length > 0 && (
+                    <Fab
+                      color="primary"
+                      sx={{ 
+                        position: 'fixed', 
+                        bottom: 16, 
+                        right: 16,
+                        zIndex: 1000
+                      }}
+                      onClick={() => setAddBlockDialogOpen(true)}
+                    >
+                      <AddIcon />
+                    </Fab>
+                  )}
+                </Box>
               ) : (
-                <Paper sx={{ p: 3, textAlign: 'center' }}>
-                  <Typography variant="h6" color="text.secondary">
-                    Select a page from the sidebar to edit its content
+                <Paper sx={{ p: 4, textAlign: 'center' }}>
+                  <PagesIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                  <Typography variant="h6" color="text.secondary" gutterBottom>
+                    Select a page to start editing
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Choose a page from the sidebar to edit its content blocks
                   </Typography>
                 </Paper>
               )}
@@ -948,6 +1142,64 @@ const WebsiteBuilderPage: React.FC = () => {
             disabled={!newPageData.name.trim() || !newPageData.slug.trim()}
           >
             Create Page
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Add Block Dialog */}
+      <Dialog open={addBlockDialogOpen} onClose={() => setAddBlockDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Add Content Block</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ pt: 2 }}>
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel>Block Type</InputLabel>
+                <Select
+                  value={newBlockData.blockType}
+                  onChange={(e) => setNewBlockData(prev => ({ ...prev, blockType: e.target.value }))}
+                  label="Block Type"
+                >
+                  <MenuItem value="text">Text Block</MenuItem>
+                  <MenuItem value="hero">Hero Section</MenuItem>
+                  <MenuItem value="image">Image Block</MenuItem>
+                  <MenuItem value="button">Button/CTA</MenuItem>
+                  <MenuItem value="gallery">Image Gallery</MenuItem>
+                  <MenuItem value="contact">Contact Info</MenuItem>
+                  <MenuItem value="features">Features Grid</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Block Title"
+                value={newBlockData.title}
+                onChange={(e) => setNewBlockData(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="e.g., Welcome Message, Our Services, Contact Us"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                label="Initial Content"
+                value={newBlockData.content}
+                onChange={(e) => setNewBlockData(prev => ({ ...prev, content: e.target.value }))}
+                placeholder="Add some initial content for this block..."
+                helperText="You can edit this content further after creating the block"
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAddBlockDialogOpen(false)}>Cancel</Button>
+          <Button 
+            onClick={handleAddBlock} 
+            variant="contained"
+            disabled={!newBlockData.blockType || !newBlockData.title?.trim()}
+          >
+            Add Block
           </Button>
         </DialogActions>
       </Dialog>
