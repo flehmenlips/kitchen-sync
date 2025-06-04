@@ -1,7 +1,7 @@
 {
   "name": "KitchenSync Restaurant Management",
   "short_name": "KitchenSync",
-  "description": "Professional restaurant management platform",
+  "description": "Complete restaurant management platform with recipes, prep, menus, reservations, and customer portals",
   "theme_color": "#1976d2",
   "background_color": "#ffffff",
   "display": "standalone",
@@ -10,25 +10,21 @@
   "start_url": "/",
   "icons": [
     {
-      "src": "/kitchen-sync-icon.svg",
+      "src": "/icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "/favicon-16x16.png",
-      "sizes": "16x16",
-      "type": "image/png"
+      "src": "/logo.svg",
+      "sizes": "200x240",
+      "type": "image/svg+xml",
+      "purpose": "any"
     },
     {
-      "src": "/favicon-32x32.png",
+      "src": "/favicon.svg",
       "sizes": "32x32",
-      "type": "image/png"
-    },
-    {
-      "src": "/apple-touch-icon.png",
-      "sizes": "180x180",
-      "type": "image/png"
+      "type": "image/svg+xml"
     }
   ]
 } 
