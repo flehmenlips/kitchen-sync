@@ -263,28 +263,44 @@ export const websiteBuilderService = {
 
       const displayOrder = (lastBlock?.displayOrder || 0) + 1;
 
+      console.log('Creating content block with data:', {
+        restaurantId,
+        pageSlug,
+        blockData,
+        displayOrder
+      });
+
       const newBlock = await prisma.contentBlock.create({
         data: {
           restaurantId: restaurantId,
           page: pageSlug,
           blockType: blockData.blockType || 'text',
           title: blockData.title || '',
-          subtitle: blockData.subtitle,
+          subtitle: blockData.subtitle || null,
           content: blockData.content || '',
-          imageUrl: blockData.imageUrl,
-          videoUrl: blockData.videoUrl,
-          buttonText: blockData.buttonText,
-          buttonLink: blockData.buttonLink,
-          buttonStyle: blockData.buttonStyle,
+          imageUrl: blockData.imageUrl || null,
+          imagePublicId: blockData.imagePublicId || null,
+          videoUrl: blockData.videoUrl || null,
+          buttonText: blockData.buttonText || null,
+          buttonLink: blockData.buttonLink || null,
+          buttonStyle: blockData.buttonStyle || 'primary',
           isActive: blockData.isActive ?? true,
           displayOrder: displayOrder,
-          settings: blockData.settings ? JSON.stringify(blockData.settings) : undefined
+          settings: blockData.settings ? JSON.stringify(blockData.settings) : "{}"
         }
       });
 
+      console.log('Content block created successfully:', newBlock.id);
       return this.transformContentBlockToBuilderBlock(newBlock);
     } catch (error) {
       console.error('Error in createContentBlock:', error);
+      console.error('Error details:', {
+        restaurantId,
+        pageSlug,
+        blockData,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorStack: error instanceof Error ? error.stack : undefined
+      });
       throw error;
     }
   },
