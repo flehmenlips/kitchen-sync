@@ -382,17 +382,54 @@ const WebsiteBuilderPage: React.FC = () => {
   const handleImageUpload = async (field: 'hero' | 'about' | 'cover' | 'logo', file: File) => {
     try {
       const result = await restaurantSettingsService.uploadImage(field, file);
-      setWebsiteData(prev => {
-        if (!prev) return null;
+      
+      setWebsiteData(prevData => {
+        if (!prevData) return null;
         return {
-          ...prev,
-          settings: result.settings
+          ...prevData,
+          settings: {
+            ...prevData.settings,
+            ...result.settings
+          }
         };
       });
-      showSnackbar(`${field} image uploaded successfully`, 'success');
+      
+      showSnackbar('Image uploaded successfully', 'success');
     } catch (error) {
       console.error('Error uploading image:', error);
       showSnackbar('Failed to upload image', 'error');
+    }
+  };
+
+  const handlePostCreateImageUpload = async (blockId: number, file: File): Promise<{ imageUrl: string; publicId: string }> => {
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const response = await fetch(`/api/content-blocks/${blockId}/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to upload image');
+      }
+      
+      const data = await response.json();
+      
+      // Refresh the website data to show the updated block
+      await fetchWebsiteData();
+      
+      return {
+        imageUrl: data.imageUrl,
+        publicId: data.publicId
+      };
+    } catch (error) {
+      console.error('Error uploading image after block creation:', error);
+      throw error;
     }
   };
 
@@ -719,6 +756,7 @@ const WebsiteBuilderPage: React.FC = () => {
                             block={block}
                             onSave={handleSaveBlock}
                             onDelete={() => handleDeleteBlock(block.id)}
+                            onPostCreateImageUpload={handlePostCreateImageUpload}
                             isEditing={editingBlockId === block.id}
                             setIsEditing={(editing) => {
                               if (editing) {

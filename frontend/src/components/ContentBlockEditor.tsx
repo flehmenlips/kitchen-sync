@@ -39,6 +39,7 @@ interface ContentBlockEditorProps {
   isEditing?: boolean;
   setIsEditing?: (editing: boolean) => void;
   dragHandleProps?: any;
+  onPostCreateImageUpload?: (blockId: number, file: File) => Promise<{ imageUrl: string; publicId: string }>;
 }
 
 // Rich text editor modules configuration - Enhanced for professional content editing
@@ -102,7 +103,8 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
   onCancel,
   isEditing = false,
   setIsEditing,
-  dragHandleProps
+  dragHandleProps,
+  onPostCreateImageUpload
 }) => {
   const [editMode, setEditMode] = useState(isEditing);
   const [saving, setSaving] = useState(false);
@@ -111,6 +113,7 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
   const [formData, setFormData] = useState<Partial<WBBlock>>({
     title: block.title || '',
     subtitle: block.subtitle || '',
@@ -169,6 +172,33 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
     try {
       setSaving(true);
       await onSave(formData);
+      
+      // If this is a new block and we have a pending image file, upload it
+      if (pendingImageFile && onPostCreateImageUpload && block.id) {
+        try {
+          setUploadingImage(true);
+          const result = await onPostCreateImageUpload(block.id, pendingImageFile);
+          
+          // Update form data with the real image URL
+          setFormData(prev => ({
+            ...prev,
+            imageUrl: result.imageUrl,
+            imagePublicId: result.publicId
+          }));
+          
+          // Clear pending file
+          setPendingImageFile(null);
+          
+          console.log('Post-creation image upload successful:', result.imageUrl);
+        } catch (error) {
+          console.error('Error uploading image after block creation:', error);
+          // Show error but don't fail the whole save operation
+          alert('Block created successfully, but image upload failed. Please try uploading the image again.');
+        } finally {
+          setUploadingImage(false);
+        }
+      }
+      
       setEditMode(false);
       setIsEditing?.(false);
     } catch (error) {
@@ -221,31 +251,42 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
           throw new Error('Image must be smaller than 5MB');
         }
         
-        // Upload image using the existing restaurantSettingsService
-        // For content blocks, we'll use a generic 'content' field
-        const result = await fetch('/api/restaurant/upload-image', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          },
-          body: (() => {
-            const formData = new FormData();
-            formData.append('image', file);
-            formData.append('field', 'content'); // Generic field for content blocks
-            return formData;
-          })(),
-        });
-        
-        if (!result.ok) {
-          throw new Error('Failed to upload image');
+        // Check if we have a block ID (for existing blocks)
+        if (block.id) {
+          // Use the content block upload endpoint for existing blocks
+          const formData = new FormData();
+          formData.append('image', file);
+          
+          const result = await fetch(`/api/content-blocks/${block.id}/upload`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            },
+            body: formData,
+          });
+          
+          if (!result.ok) {
+            throw new Error('Failed to upload image');
+          }
+          
+          const data = await result.json();
+          
+          // Update the form data with the uploaded image URL
+          handleFieldChange('imageUrl', data.imageUrl);
+          handleFieldChange('imagePublicId', data.publicId);
+          
+          console.log('Image uploaded successfully:', data.imageUrl);
+        } else {
+          // For new blocks, we'll store the file temporarily and upload after block creation
+          // Create a temporary URL for preview
+          const tempUrl = URL.createObjectURL(file);
+          handleFieldChange('imageUrl', tempUrl);
+          
+          // Store the file for later upload
+          setPendingImageFile(file);
+          
+          console.log('Image prepared for upload after block creation');
         }
-        
-        const data = await result.json();
-        
-        // Update the form data with the uploaded image URL
-        handleFieldChange('imageUrl', data.imageUrl);
-        
-        console.log('Image uploaded successfully:', data.imageUrl);
       } catch (error) {
         console.error('Error uploading image:', error);
         // In a real app, you would show this error to the user
