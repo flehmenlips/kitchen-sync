@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box,
   Paper,
@@ -15,7 +15,8 @@ import {
   Chip,
   Switch,
   FormControlLabel,
-  Alert
+  Alert,
+  CircularProgress
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -40,21 +41,58 @@ interface ContentBlockEditorProps {
   dragHandleProps?: any;
 }
 
-// Rich text editor modules configuration
+// Rich text editor modules configuration - Enhanced for professional content editing
 const quillModules = {
   toolbar: [
-    [{ 'header': [1, 2, 3, false] }],
+    // Text formatting
+    [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+    [{ 'font': [] }],
+    [{ 'size': ['small', false, 'large', 'huge'] }],
+    
+    // Text styles
     ['bold', 'italic', 'underline', 'strike'],
-    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-    ['link', 'image'],
     [{ 'color': [] }, { 'background': [] }],
+    
+    // Text alignment and direction
+    [{ 'align': [] }],
+    [{ 'direction': 'rtl' }],
+    
+    // Lists and indentation
+    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+    [{ 'indent': '-1'}, { 'indent': '+1' }],
+    
+    // Links and media
+    ['link', 'image', 'video'],
+    
+    // Advanced formatting
+    ['blockquote', 'code-block'],
+    [{ 'script': 'sub'}, { 'script': 'super' }],
+    
+    // Cleanup
     ['clean']
   ],
+  // Enhanced clipboard handling
+  clipboard: {
+    matchVisual: false,
+  },
+  // History module for undo/redo
+  history: {
+    delay: 1000,
+    maxStack: 50,
+    userOnly: true
+  }
 };
 
 const quillFormats = [
-  'header', 'bold', 'italic', 'underline', 'strike',
-  'list', 'bullet', 'link', 'image', 'color', 'background'
+  'header', 'font', 'size',
+  'bold', 'italic', 'underline', 'strike', 
+  'color', 'background',
+  'align', 'direction',
+  'list', 'bullet', 'indent',
+  'link', 'image', 'video',
+  'blockquote', 'code-block',
+  'script',
+  'clean'
 ];
 
 const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
@@ -68,6 +106,10 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
 }) => {
   const [editMode, setEditMode] = useState(isEditing);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [autoSaving, setAutoSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [formData, setFormData] = useState<Partial<WBBlock>>({
     title: block.title || '',
     subtitle: block.subtitle || '',
@@ -83,6 +125,44 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
   useEffect(() => {
     setEditMode(isEditing);
   }, [isEditing]);
+
+  // Auto-save functionality with debouncing
+  const triggerAutoSave = useCallback(async (data: Partial<WBBlock>) => {
+    if (!editMode || saving) return; // Don't auto-save if not in edit mode or already saving
+
+    try {
+      setAutoSaving(true);
+      await onSave(data);
+      setLastSaved(new Date());
+    } catch (error) {
+      console.error('Auto-save failed:', error);
+      // Don't show error for auto-save failures to avoid interrupting user
+    } finally {
+      setAutoSaving(false);
+    }
+  }, [editMode, saving, onSave]);
+
+  // Debounced auto-save
+  const scheduleAutoSave = useCallback((data: Partial<WBBlock>) => {
+    // Clear existing timeout
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+
+    // Schedule new auto-save after 3 seconds of inactivity
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      triggerAutoSave(data);
+    }, 3000);
+  }, [triggerAutoSave]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleSave = async () => {
     try {
@@ -115,17 +195,65 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
   };
 
   const handleFieldChange = (field: keyof WBBlock, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    const newFormData = { ...formData, [field]: value };
+    setFormData(newFormData);
+    
+    // Trigger auto-save for content changes (but not for settings like isActive)
+    if (editMode && ['title', 'subtitle', 'content', 'buttonText', 'buttonLink'].includes(field)) {
+      scheduleAutoSave(newFormData);
+    }
   };
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // TODO: Implement actual image upload
-      console.log('Image upload:', file);
-      // For now, create a placeholder URL
-      const placeholderUrl = URL.createObjectURL(file);
-      handleFieldChange('imageUrl', placeholderUrl);
+      try {
+        setUploadingImage(true);
+        
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          throw new Error('Please select an image file');
+        }
+        
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          throw new Error('Image must be smaller than 5MB');
+        }
+        
+        // Upload image using the existing restaurantSettingsService
+        // For content blocks, we'll use a generic 'content' field
+        const result = await fetch('/api/restaurant/upload-image', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          },
+          body: (() => {
+            const formData = new FormData();
+            formData.append('image', file);
+            formData.append('field', 'content'); // Generic field for content blocks
+            return formData;
+          })(),
+        });
+        
+        if (!result.ok) {
+          throw new Error('Failed to upload image');
+        }
+        
+        const data = await result.json();
+        
+        // Update the form data with the uploaded image URL
+        handleFieldChange('imageUrl', data.imageUrl);
+        
+        console.log('Image uploaded successfully:', data.imageUrl);
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        // In a real app, you would show this error to the user
+        alert(error instanceof Error ? error.message : 'Failed to upload image');
+      } finally {
+        setUploadingImage(false);
+        // Clear the input value so the same file can be selected again
+        event.target.value = '';
+      }
     }
   };
 
@@ -167,12 +295,62 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
             </Grid>
             <Grid item xs={12}>
               <Typography variant="body2" gutterBottom>Hero Content</Typography>
-              <Box sx={{ '& .ql-editor': { minHeight: '150px', backgroundColor: 'white' } }}>
+              <Box sx={{ 
+                '& .ql-editor': { 
+                  minHeight: '150px', 
+                  backgroundColor: 'white',
+                  fontSize: '14px',
+                  lineHeight: '1.6',
+                  fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+                  '@media (max-width: 768px)': {
+                    fontSize: '16px', // Prevents zoom on iOS
+                    minHeight: '120px'
+                  }
+                },
+                '& .ql-toolbar': {
+                  border: '1px solid #e0e0e0',
+                  borderRadius: '4px 4px 0 0',
+                  backgroundColor: '#fafafa',
+                  '@media (max-width: 768px)': {
+                    fontSize: '12px',
+                    padding: '8px'
+                  }
+                },
+                '& .ql-container': {
+                  border: '1px solid #e0e0e0',
+                  borderTop: 'none',
+                  borderRadius: '0 0 4px 4px'
+                },
+                '& .ql-toolbar .ql-stroke': {
+                  fill: 'none',
+                  stroke: '#444'
+                },
+                '& .ql-toolbar .ql-fill': {
+                  fill: '#444',
+                  stroke: 'none'
+                },
+                '& .ql-toolbar button': {
+                  '@media (max-width: 768px)': {
+                    width: '28px',
+                    height: '28px',
+                    padding: '4px'
+                  }
+                },
+                '& .ql-toolbar button:hover': {
+                  backgroundColor: '#e3f2fd'
+                },
+                '& .ql-toolbar button.ql-active': {
+                  backgroundColor: '#1976d2',
+                  color: 'white'
+                }
+              }}>
                 <ReactQuill
                   value={formData.content || ''}
                   onChange={(value) => handleFieldChange('content', value)}
                   modules={quillModules}
                   formats={quillFormats}
+                  theme="snow"
+                  placeholder="Enter your hero section content..."
                 />
               </Box>
             </Grid>
@@ -183,9 +361,10 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
                   <Button
                     variant="outlined"
                     component="label"
-                    startIcon={<UploadIcon />}
+                    startIcon={uploadingImage ? <CircularProgress size={16} /> : <UploadIcon />}
+                    disabled={uploadingImage}
                   >
-                    Upload Image
+                    {uploadingImage ? 'Uploading...' : 'Upload Image'}
                     <input
                       type="file"
                       hidden
@@ -236,12 +415,62 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
             </Grid>
             <Grid item xs={12}>
               <Typography variant="body2" gutterBottom>Content</Typography>
-              <Box sx={{ '& .ql-editor': { minHeight: '200px', backgroundColor: 'white' } }}>
+              <Box sx={{ 
+                '& .ql-editor': { 
+                  minHeight: '200px', 
+                  backgroundColor: 'white',
+                  fontSize: '14px',
+                  lineHeight: '1.6',
+                  fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+                  '@media (max-width: 768px)': {
+                    fontSize: '16px', // Prevents zoom on iOS
+                    minHeight: '120px'
+                  }
+                },
+                '& .ql-toolbar': {
+                  border: '1px solid #e0e0e0',
+                  borderRadius: '4px 4px 0 0',
+                  backgroundColor: '#fafafa',
+                  '@media (max-width: 768px)': {
+                    fontSize: '12px',
+                    padding: '8px'
+                  }
+                },
+                '& .ql-container': {
+                  border: '1px solid #e0e0e0',
+                  borderTop: 'none',
+                  borderRadius: '0 0 4px 4px'
+                },
+                '& .ql-toolbar .ql-stroke': {
+                  fill: 'none',
+                  stroke: '#444'
+                },
+                '& .ql-toolbar .ql-fill': {
+                  fill: '#444',
+                  stroke: 'none'
+                },
+                '& .ql-toolbar button': {
+                  '@media (max-width: 768px)': {
+                    width: '28px',
+                    height: '28px',
+                    padding: '4px'
+                  }
+                },
+                '& .ql-toolbar button:hover': {
+                  backgroundColor: '#e3f2fd'
+                },
+                '& .ql-toolbar button.ql-active': {
+                  backgroundColor: '#1976d2',
+                  color: 'white'
+                }
+              }}>
                 <ReactQuill
                   value={formData.content || ''}
                   onChange={(value) => handleFieldChange('content', value)}
                   modules={quillModules}
                   formats={quillFormats}
+                  theme="snow"
+                  placeholder="Enter your content here..."
                 />
               </Box>
             </Grid>
@@ -266,9 +495,10 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
                   <Button
                     variant="outlined"
                     component="label"
-                    startIcon={<UploadIcon />}
+                    startIcon={uploadingImage ? <CircularProgress size={16} /> : <UploadIcon />}
+                    disabled={uploadingImage}
                   >
-                    Upload Image
+                    {uploadingImage ? 'Uploading...' : 'Upload Image'}
                     <input
                       type="file"
                       hidden
@@ -368,12 +598,62 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
             </Grid>
             <Grid item xs={12}>
               <Typography variant="body2" gutterBottom>Content</Typography>
-              <Box sx={{ '& .ql-editor': { minHeight: '200px', backgroundColor: 'white' } }}>
+              <Box sx={{ 
+                '& .ql-editor': { 
+                  minHeight: '200px', 
+                  backgroundColor: 'white',
+                  fontSize: '14px',
+                  lineHeight: '1.6',
+                  fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+                  '@media (max-width: 768px)': {
+                    fontSize: '16px', // Prevents zoom on iOS
+                    minHeight: '120px'
+                  }
+                },
+                '& .ql-toolbar': {
+                  border: '1px solid #e0e0e0',
+                  borderRadius: '4px 4px 0 0',
+                  backgroundColor: '#fafafa',
+                  '@media (max-width: 768px)': {
+                    fontSize: '12px',
+                    padding: '8px'
+                  }
+                },
+                '& .ql-container': {
+                  border: '1px solid #e0e0e0',
+                  borderTop: 'none',
+                  borderRadius: '0 0 4px 4px'
+                },
+                '& .ql-toolbar .ql-stroke': {
+                  fill: 'none',
+                  stroke: '#444'
+                },
+                '& .ql-toolbar .ql-fill': {
+                  fill: '#444',
+                  stroke: 'none'
+                },
+                '& .ql-toolbar button': {
+                  '@media (max-width: 768px)': {
+                    width: '28px',
+                    height: '28px',
+                    padding: '4px'
+                  }
+                },
+                '& .ql-toolbar button:hover': {
+                  backgroundColor: '#e3f2fd'
+                },
+                '& .ql-toolbar button.ql-active': {
+                  backgroundColor: '#1976d2',
+                  color: 'white'
+                }
+              }}>
                 <ReactQuill
                   value={formData.content || ''}
                   onChange={(value) => handleFieldChange('content', value)}
                   modules={quillModules}
                   formats={quillFormats}
+                  theme="snow"
+                  placeholder="Enter your block content..."
                 />
               </Box>
             </Grid>
@@ -493,13 +773,32 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
             size="small"
             variant="contained"
             onClick={handleSave}
-            disabled={saving}
-            startIcon={<SaveIcon />}
+            disabled={saving || autoSaving}
+            startIcon={saving ? <CircularProgress size={16} /> : <SaveIcon />}
           >
-            {saving ? 'Saving...' : 'Save'}
+            {saving ? 'Saving...' : autoSaving ? 'Auto-saving...' : 'Save'}
           </Button>
         </Box>
       </Box>
+
+      {/* Auto-save status indicator */}
+      {editMode && (
+        <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+          {autoSaving && (
+            <>
+              <CircularProgress size={12} />
+              <Typography variant="caption" color="text.secondary">
+                Auto-saving...
+              </Typography>
+            </>
+          )}
+          {lastSaved && !autoSaving && (
+            <Typography variant="caption" color="text.secondary">
+              Last saved: {lastSaved.toLocaleTimeString()}
+            </Typography>
+          )}
+        </Box>
+      )}
 
       <Grid container spacing={3}>
         <Grid item xs={12}>
