@@ -45,7 +45,6 @@ import {
   ColorLens as ColorLensIcon
 } from '@mui/icons-material';
 import { restaurantSettingsService, RestaurantSettings } from '../services/restaurantSettingsService';
-import { websiteBuilderContentService, WebsiteBuilderContent } from '../services/websiteBuilderContentService';
 import { useSnackbar } from '../context/SnackbarContext';
 import { useRestaurant } from '../context/RestaurantContext';
 import { buildRestaurantUrl } from '../utils/subdomain';
@@ -77,11 +76,6 @@ const WebsiteBuilderPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<RestaurantSettings | null>(null);
-  
-  // New state for hero/about synchronization
-  const [heroAboutContent, setHeroAboutContent] = useState<WebsiteBuilderContent | null>(null);
-  const [heroAboutLoading, setHeroAboutLoading] = useState(false);
-  
   const [tabValue, setTabValue] = useState(0);
   const [hasChanges, setHasChanges] = useState(false);
   const [templateSelectorOpen, setTemplateSelectorOpen] = useState(false);
@@ -89,15 +83,7 @@ const WebsiteBuilderPage: React.FC = () => {
   const { currentRestaurant } = useRestaurant();
 
   useEffect(() => {
-    const initializeData = async () => {
-      // Fetch both data sources in parallel
-      await Promise.all([
-        fetchSettings(),
-        fetchHeroAboutContent()
-      ]);
-    };
-    
-    initializeData();
+    fetchSettings();
   }, []);
 
   const fetchSettings = async () => {
@@ -110,19 +96,6 @@ const WebsiteBuilderPage: React.FC = () => {
       showSnackbar('Failed to load website settings', 'error');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchHeroAboutContent = async () => {
-    try {
-      setHeroAboutLoading(true);
-      const content = await websiteBuilderContentService.getContent();
-      setHeroAboutContent(content);
-    } catch (error) {
-      console.error('Error fetching hero/about content:', error);
-      showSnackbar('Failed to load hero/about content', 'error');
-    } finally {
-      setHeroAboutLoading(false);
     }
   };
 
@@ -179,42 +152,6 @@ const WebsiteBuilderPage: React.FC = () => {
     } catch (error) {
       console.error('Error uploading image:', error);
       showSnackbar('Failed to upload image', 'error');
-    }
-  };
-
-  // New handlers for hero/about synchronization
-  const handleHeroAboutFieldChange = (field: keyof WebsiteBuilderContent, value: any) => {
-    setHeroAboutContent(prev => {
-      if (!prev) return null;
-      return { ...prev, [field]: value };
-    });
-    setHasChanges(true);
-  };
-
-  const handleHeroAboutImageUpload = async (field: 'hero' | 'about', file: File) => {
-    try {
-      const result = await websiteBuilderContentService.uploadImage(field, file);
-      setHeroAboutContent(result.content);
-      showSnackbar(`${field} image uploaded successfully`, 'success');
-    } catch (error) {
-      console.error('Error uploading hero/about image:', error);
-      showSnackbar('Failed to upload image', 'error');
-    }
-  };
-
-  const handleHeroAboutSave = async () => {
-    if (!heroAboutContent) return;
-
-    try {
-      setSaving(true);
-      const updatedContent = await websiteBuilderContentService.updateContent(heroAboutContent);
-      setHeroAboutContent(updatedContent);
-      showSnackbar('Hero & About content saved successfully', 'success');
-    } catch (error) {
-      console.error('Error saving hero/about content:', error);
-      showSnackbar('Failed to save hero/about content', 'error');
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -513,161 +450,139 @@ const WebsiteBuilderPage: React.FC = () => {
 
         {/* Hero & About Tab */}
         <TabPanel value={tabValue} index={1}>
-          {heroAboutLoading ? (
-            <Box display="flex" justifyContent="center" alignItems="center" minHeight="300px">
-              <CircularProgress />
-            </Box>
-          ) : !heroAboutContent ? (
-            <Alert severity="warning">Failed to load hero/about content</Alert>
-          ) : (
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                <Typography variant="h6" gutterBottom>Hero Section</Typography>
-                <Divider sx={{ mb: 2 }} />
-              </Grid>
-
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Hero Title"
-                  value={heroAboutContent.heroTitle || ''}
-                  onChange={(e) => handleHeroAboutFieldChange('heroTitle', e.target.value)}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Hero Subtitle"
-                  value={heroAboutContent.heroSubtitle || ''}
-                  onChange={(e) => handleHeroAboutFieldChange('heroSubtitle', e.target.value)}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="CTA Button Text"
-                  value={heroAboutContent.heroCTAText || ''}
-                  onChange={(e) => handleHeroAboutFieldChange('heroCTAText', e.target.value)}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="CTA Button Link"
-                  value={heroAboutContent.heroCTALink || ''}
-                  onChange={(e) => handleHeroAboutFieldChange('heroCTALink', e.target.value)}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Box>
-                  <Typography variant="body2" gutterBottom>Hero Image</Typography>
-                  <Button
-                    variant="outlined"
-                    component="label"
-                    startIcon={<UploadIcon />}
-                  >
-                    Upload Hero Image
-                    <input
-                      type="file"
-                      hidden
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleHeroAboutImageUpload('hero', file);
-                      }}
-                    />
-                  </Button>
-                  {heroAboutContent.heroImageUrl && (
-                    <Box sx={{ mt: 2 }}>
-                      <img
-                        src={heroAboutContent.heroImageUrl}
-                        alt="Hero"
-                        style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
-                      />
-                      <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                        <a href={heroAboutContent.heroImageUrl} target="_blank" rel="noopener noreferrer">
-                          {heroAboutContent.heroImageUrl}
-                        </a>
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
-              </Grid>
-
-              <Grid item xs={12} sx={{ mt: 3 }}>
-                <Typography variant="h6" gutterBottom>About Section</Typography>
-                <Divider sx={{ mb: 2 }} />
-              </Grid>
-
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="About Title"
-                  value={heroAboutContent.aboutTitle || ''}
-                  onChange={(e) => handleHeroAboutFieldChange('aboutTitle', e.target.value)}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={4}
-                  label="About Description"
-                  value={heroAboutContent.aboutDescription || ''}
-                  onChange={(e) => handleHeroAboutFieldChange('aboutDescription', e.target.value)}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Box>
-                  <Typography variant="body2" gutterBottom>About Image</Typography>
-                  <Button
-                    variant="outlined"
-                    component="label"
-                    startIcon={<UploadIcon />}
-                  >
-                    Upload About Image
-                    <input
-                      type="file"
-                      hidden
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleHeroAboutImageUpload('about', file);
-                      }}
-                    />
-                  </Button>
-                  {heroAboutContent.aboutImageUrl && (
-                    <Box sx={{ mt: 2 }}>
-                      <img
-                        src={heroAboutContent.aboutImageUrl}
-                        alt="About"
-                        style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
-                      />
-                      <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                        <a href={heroAboutContent.aboutImageUrl} target="_blank" rel="noopener noreferrer">
-                          {heroAboutContent.aboutImageUrl}
-                        </a>
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
-              </Grid>
-
-              {/* Save button for Hero & About content */}
-              <Grid item xs={12}>
-                <Box display="flex" justifyContent="flex-start" gap={2} sx={{ mt: 2 }}>
-                  <Button
-                    variant="contained"
-                    onClick={handleHeroAboutSave}
-                    disabled={saving}
-                    startIcon={<Save />}
-                  >
-                    {saving ? 'Saving...' : 'Save Hero & About'}
-                  </Button>
-                </Box>
-              </Grid>
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom>Hero Section</Typography>
+              <Divider sx={{ mb: 2 }} />
             </Grid>
-          )}
+
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Hero Title"
+                value={settings.heroTitle || ''}
+                onChange={(e) => handleFieldChange('heroTitle', e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Hero Subtitle"
+                value={settings.heroSubtitle || ''}
+                onChange={(e) => handleFieldChange('heroSubtitle', e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="CTA Button Text"
+                value={settings.heroCTAText || ''}
+                onChange={(e) => handleFieldChange('heroCTAText', e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="CTA Button Link"
+                value={settings.heroCTALink || ''}
+                onChange={(e) => handleFieldChange('heroCTALink', e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Box>
+                <Typography variant="body2" gutterBottom>Hero Image</Typography>
+                <Button
+                  variant="outlined"
+                  component="label"
+                  startIcon={<UploadIcon />}
+                >
+                  Upload Hero Image
+                  <input
+                    type="file"
+                    hidden
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleImageUpload('hero', file);
+                    }}
+                  />
+                </Button>
+                {settings.heroImageUrl && (
+                  <Box sx={{ mt: 2 }}>
+                    <img
+                      src={settings.heroImageUrl}
+                      alt="Hero"
+                      style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
+                    />
+                    <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                      <a href={settings.heroImageUrl} target="_blank" rel="noopener noreferrer">
+                        {settings.heroImageUrl}
+                      </a>
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            </Grid>
+
+            <Grid item xs={12} sx={{ mt: 3 }}>
+              <Typography variant="h6" gutterBottom>About Section</Typography>
+              <Divider sx={{ mb: 2 }} />
+            </Grid>
+
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="About Title"
+                value={settings.aboutTitle || ''}
+                onChange={(e) => handleFieldChange('aboutTitle', e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                multiline
+                rows={4}
+                label="About Description"
+                value={settings.aboutDescription || ''}
+                onChange={(e) => handleFieldChange('aboutDescription', e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Box>
+                <Typography variant="body2" gutterBottom>About Image</Typography>
+                <Button
+                  variant="outlined"
+                  component="label"
+                  startIcon={<UploadIcon />}
+                >
+                  Upload About Image
+                  <input
+                    type="file"
+                    hidden
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleImageUpload('about', file);
+                    }}
+                  />
+                </Button>
+                {settings.aboutImageUrl && (
+                  <Box sx={{ mt: 2 }}>
+                    <img
+                      src={settings.aboutImageUrl}
+                      alt="About"
+                      style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
+                    />
+                    <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                      <a href={settings.aboutImageUrl} target="_blank" rel="noopener noreferrer">
+                        {settings.aboutImageUrl}
+                      </a>
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            </Grid>
+          </Grid>
         </TabPanel>
 
         {/* Contact & Hours Tab */}
