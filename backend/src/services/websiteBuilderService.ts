@@ -524,7 +524,25 @@ export const websiteBuilderService = {
       const existingSlugs = pages.map(p => p.slug);
       
       if (!existingSlugs.includes('home')) {
-        pages.unshift(this.createSystemPage('home', 'Home', 1));
+        // Get all content blocks that are not 'page' type - these will be shown on home
+        const homeContentBlocks = await prisma.contentBlock.findMany({
+          where: {
+            restaurantId: restaurantId,
+            blockType: { not: 'page' }
+          },
+          orderBy: { displayOrder: 'asc' }
+        });
+        
+        pages.unshift({
+          id: 'home',
+          name: 'Home',
+          slug: 'home',
+          url: '/',
+          isSystem: true,
+          isActive: true,
+          displayOrder: 1,
+          blocks: homeContentBlocks.map(block => this.transformContentBlockToBuilderBlock(block))
+        });
       }
       
       if (!existingSlugs.includes('about')) {
