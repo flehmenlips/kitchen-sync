@@ -19,6 +19,7 @@ import {
   CircularProgress,
   Divider,
   FormControlLabel,
+  Switch,
   Radio,
   RadioGroup,
   Stack,
@@ -1330,6 +1331,52 @@ const WebsiteBuilderPage: React.FC = () => {
                 value={websiteData.settings.metaKeywords || ''}
                 onChange={(e) => handleSettingsChange('metaKeywords', e.target.value)}
                 helperText="Comma-separated keywords for search engines"
+              />
+            </Grid>
+
+            <Grid item xs={12} sx={{ mt: 3 }}>
+              <Typography variant="h6" gutterBottom>Info Cards Customization</Typography>
+              <Divider sx={{ mb: 2 }} />
+            </Grid>
+
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                label="Hours Card Title"
+                value={websiteData.settings.hoursCardTitle || 'Opening Hours'}
+                onChange={(e) => handleSettingsChange('hoursCardTitle', e.target.value)}
+                helperText="Title for the hours information card"
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                label="Location Card Title"
+                value={websiteData.settings.locationCardTitle || 'Our Location'}
+                onChange={(e) => handleSettingsChange('locationCardTitle', e.target.value)}
+                helperText="Title for the location information card"
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                label="Contact Card Title"
+                value={websiteData.settings.contactCardTitle || 'Contact Us'}
+                onChange={(e) => handleSettingsChange('contactCardTitle', e.target.value)}
+                helperText="Title for the contact information card"
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={websiteData.settings.infoPanesEnabled ?? true}
+                    onChange={(e) => handleSettingsChange('infoPanesEnabled', e.target.checked)}
+                  />
+                }
+                label="Show Info Cards on Homepage"
+                sx={{ mt: 1 }}
               />
             </Grid>
           </Grid>
