@@ -55,6 +55,14 @@ export interface WebsiteBuilderData {
     metaTitle?: string;
     metaDescription?: string;
     metaKeywords?: string;
+    
+    // Info Panes Customization
+    infoPanesEnabled?: boolean;
+    hoursCardTitle?: string;
+    locationCardTitle?: string;
+    contactCardTitle?: string;
+    hoursCardShowDetails?: boolean;
+    locationCardShowDirections?: boolean;
   };
   
   // Pages from ContentBlocks
@@ -167,7 +175,15 @@ export const websiteBuilderService = {
           // SEO
           metaTitle: settings.metaTitle || undefined,
           metaDescription: settings.metaDescription || undefined,
-          metaKeywords: settings.metaKeywords || undefined
+          metaKeywords: settings.metaKeywords || undefined,
+          
+          // Info Panes Customization (default values for now)
+          infoPanesEnabled: true,
+          hoursCardTitle: 'Opening Hours',
+          locationCardTitle: 'Our Location', 
+          contactCardTitle: 'Contact Us',
+          hoursCardShowDetails: true,
+          locationCardShowDirections: true
         } : {},
         pages
       };
