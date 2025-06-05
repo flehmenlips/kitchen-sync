@@ -1,9 +1,10 @@
 import express from 'express';
-import { 
-  getRestaurantSettings, 
+import {
+  getRestaurantSettings,
   updateRestaurantSettings,
   uploadRestaurantImage,
-  getPublicRestaurantSettings
+  getPublicRestaurantSettings,
+  getUnifiedRestaurantContent
 } from '../controllers/restaurantSettingsController';
 import { getPublicMenusBySlug } from '../controllers/menuController';
 import { protect } from '../middleware/authMiddleware';
@@ -37,6 +38,7 @@ router.post('/settings/image/:field', protect, setRestaurantContext, requireRest
 // Public routes
 router.get('/public/settings', getPublicRestaurantSettings);
 router.get('/public/slug/:slug/settings', getPublicRestaurantSettings);
+router.get('/public/slug/:slug/unified-content', getUnifiedRestaurantContent);
 router.get('/public/slug/:slug/menus', getPublicMenusBySlug);
 
 export default router; 

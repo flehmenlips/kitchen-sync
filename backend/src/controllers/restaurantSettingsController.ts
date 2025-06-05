@@ -336,4 +336,119 @@ export const getPublicRestaurantSettings = async (req: Request, res: Response): 
     console.error('Error fetching public restaurant settings:', error);
     res.status(500).json({ error: 'Failed to fetch restaurant information' });
   }
+};
+
+// Unified content endpoint that combines RestaurantSettings + ContentBlocks
+export const getUnifiedRestaurantContent = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { slug } = req.params;
+    const { page = 'home' } = req.query;
+    
+    // Get restaurant by slug
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { slug },
+      select: { id: true, name: true, slug: true }
+    });
+    
+    if (!restaurant) {
+      res.status(404).json({ error: 'Restaurant not found' });
+      return;
+    }
+    
+    // Get restaurant settings (old system)
+    const settings = await prisma.restaurantSettings.findUnique({
+      where: { restaurantId: restaurant.id }
+    });
+    
+    // Get content blocks for this page (new system)
+    const contentBlocks = await prisma.contentBlock.findMany({
+      where: {
+        restaurantId: restaurant.id,
+        page: page as string,
+        isActive: true
+      },
+      orderBy: { displayOrder: 'asc' }
+    });
+    
+    // Find hero and about blocks specifically
+    const heroBlock = contentBlocks.find(block => block.blockType === 'hero');
+    const aboutBlocks = contentBlocks.filter(block => 
+      block.blockType === 'text' && 
+      (block.title?.toLowerCase().includes('about') || block.page === 'about')
+    );
+    const aboutBlock = aboutBlocks[0]; // Take first about block
+    
+    // Build unified response
+    const unifiedContent = {
+      restaurant: {
+        id: restaurant.id,
+        name: settings?.websiteName || restaurant.name,
+        slug: restaurant.slug,
+        description: settings?.tagline || 'Welcome to our restaurant'
+      },
+      hero: {
+        title: heroBlock?.title || settings?.heroTitle || 'Welcome to Our Restaurant',
+        subtitle: heroBlock?.subtitle || settings?.heroSubtitle || 'Experience culinary excellence',
+        imageUrl: heroBlock?.imageUrl || settings?.heroImageUrl,
+        ctaText: heroBlock?.buttonText || settings?.heroCTAText,
+        ctaLink: heroBlock?.buttonLink || settings?.heroCTALink
+      },
+      about: {
+        title: aboutBlock?.title || settings?.aboutTitle || 'About Us',
+        description: aboutBlock?.content || settings?.aboutDescription || 'Welcome to our restaurant, where we serve delicious food made with love and the finest ingredients.',
+        imageUrl: aboutBlock?.imageUrl || settings?.aboutImageUrl
+      },
+      contact: {
+        phone: settings?.contactPhone,
+        email: settings?.contactEmail,
+        address: settings?.contactAddress,
+        city: settings?.contactCity,
+        state: settings?.contactState,
+        zip: settings?.contactZip,
+        openingHours: settings?.openingHours
+      },
+      branding: {
+        logoUrl: settings?.logoUrl,
+        primaryColor: settings?.primaryColor,
+        secondaryColor: settings?.secondaryColor,
+        accentColor: settings?.accentColor,
+        fontPrimary: settings?.fontPrimary,
+        fontSecondary: settings?.fontSecondary
+      },
+      social: {
+        facebookUrl: settings?.facebookUrl,
+        instagramUrl: settings?.instagramUrl,
+        twitterUrl: settings?.twitterUrl
+      },
+      seo: {
+        metaTitle: settings?.metaTitle,
+        metaDescription: settings?.metaDescription,
+        footerText: settings?.footerText
+      },
+      contentBlocks: contentBlocks
+        .filter(block => 
+          block.blockType !== 'hero' && 
+          !(block.blockType === 'text' && block.title?.toLowerCase().includes('about'))
+        )
+        .map(block => ({
+          id: block.id,
+          blockType: block.blockType,
+          title: block.title,
+          subtitle: block.subtitle,
+          content: block.content,
+          imageUrl: block.imageUrl,
+          videoUrl: block.videoUrl,
+          buttonText: block.buttonText,
+          buttonLink: block.buttonLink,
+          settings: block.settings,
+          displayOrder: block.displayOrder,
+          isActive: block.isActive
+        }))
+    };
+    
+    res.json(unifiedContent);
+  } catch (error) {
+    console.error('Error fetching unified restaurant content:', error);
+    res.status(500).json({ error: 'Failed to fetch restaurant content' });
+  }
 }; 
