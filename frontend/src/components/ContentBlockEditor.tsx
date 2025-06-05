@@ -266,10 +266,19 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
           });
           
           if (!result.ok) {
-            throw new Error('Failed to upload image');
+            const errorText = await result.text();
+            console.error('Upload failed with status:', result.status, 'Response:', errorText);
+            throw new Error(`Failed to upload image (${result.status}): ${errorText.includes('<!doctype html>') ? 'Server returned HTML instead of JSON - API may be down' : errorText}`);
           }
           
-          const data = await result.json();
+          const responseText = await result.text();
+          let data;
+          try {
+            data = JSON.parse(responseText);
+          } catch (parseError) {
+            console.error('Failed to parse JSON response:', responseText);
+            throw new Error('Server returned invalid response - API may be down or misconfigured');
+          }
           
           // Update the form data with the uploaded image URL
           handleFieldChange('imageUrl', data.imageUrl);

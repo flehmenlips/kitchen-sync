@@ -461,10 +461,19 @@ const WebsiteBuilderPage: React.FC = () => {
       });
       
       if (!response.ok) {
-        throw new Error('Failed to upload image');
+        const errorText = await response.text();
+        console.error('Upload failed with status:', response.status, 'Response:', errorText);
+        throw new Error(`Failed to upload image (${response.status}): ${errorText.includes('<!doctype html>') ? 'Server returned HTML instead of JSON - API may be down' : errorText}`);
       }
       
-      const data = await response.json();
+      const responseText = await response.text();
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Failed to parse JSON response:', responseText);
+        throw new Error('Server returned invalid response - API may be down or misconfigured');
+      }
       
       // Refresh the website data to show the updated block
       await fetchWebsiteData();
