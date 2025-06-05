@@ -558,6 +558,16 @@ export const websiteBuilderService = {
   
   // Helper method to transform ContentBlock to WebsiteBuilderBlock
   transformContentBlockToBuilderBlock(block: any): WebsiteBuilderBlock {
+    let settings = {};
+    if (block.settings) {
+      try {
+        settings = typeof block.settings === 'string' ? JSON.parse(block.settings) : block.settings;
+      } catch (error) {
+        console.warn('Failed to parse block settings, using empty object:', error);
+        settings = {};
+      }
+    }
+
     return {
       id: block.id,
       blockType: block.blockType || 'text',
@@ -570,7 +580,7 @@ export const websiteBuilderService = {
       buttonText: block.buttonText,
       buttonLink: block.buttonLink,
       buttonStyle: block.buttonStyle,
-      settings: block.settings ? JSON.parse(block.settings) : {},
+      settings: settings,
       displayOrder: block.displayOrder || 0,
       isActive: block.isActive || false
     };
