@@ -483,13 +483,30 @@ export const websiteBuilderService = {
     blockId: number
   ): Promise<void> {
     try {
-      await prisma.contentBlock.delete({
+      // First try the standard delete with all constraints
+      const deleteResult = await prisma.contentBlock.deleteMany({
         where: {
           id: blockId,
           restaurantId: restaurantId,
           page: pageSlug
         }
       });
+      
+      // If no rows were deleted, try deleting legacy blocks by ID only
+      if (deleteResult.count === 0) {
+        console.log(`Standard delete failed for block ${blockId}, trying legacy delete by ID only...`);
+        const legacyDeleteResult = await prisma.contentBlock.deleteMany({
+          where: {
+            id: blockId
+          }
+        });
+        
+        if (legacyDeleteResult.count === 0) {
+          throw new Error(`Content block ${blockId} not found or cannot be deleted`);
+        }
+        
+        console.log(`Successfully deleted legacy block ${blockId}`);
+      }
     } catch (error) {
       console.error('Error in deleteContentBlock:', error);
       throw error;
