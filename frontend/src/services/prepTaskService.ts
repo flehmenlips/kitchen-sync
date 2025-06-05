@@ -6,8 +6,8 @@ import axios from 'axios';
 const BASE_URL = '/prep-tasks';
 // For direct API access as a workaround - Try these different options for the backend API
 const API_URL_OPTIONS = [
-    'https://kitchen-sync-api.onrender.com/api',
-    'https://kitchen-sync-api.onrender.com',
+    'https://kitchensync.restaurant/api',
+    'https://kitchensync.restaurant',
     'https://kitchen-sync-app.onrender.com/api'
 ];
 

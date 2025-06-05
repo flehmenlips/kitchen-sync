@@ -6,9 +6,10 @@ import axios from 'axios';
 const BASE_URL = '/prep-columns';
 // For direct API access as a workaround - Try these different options for the backend API
 const API_URL_OPTIONS = [
+    'https://kitchensync.restaurant/api',
+    'https://kitchensync.restaurant',
+    'https://kitchen-sync-app.onrender.com/api',
     'https://kitchen-sync-api.onrender.com/api',
-    'https://kitchen-sync-api.onrender.com',
-    'https://kitchen-sync-app.onrender.com/api'
 ];
 
 // Log the environment mode

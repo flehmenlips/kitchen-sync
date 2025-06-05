@@ -3,7 +3,7 @@ import axios from 'axios';
 // In production, use the production backend URL
 // In development, use the environment variable or localhost
 const API_URL = import.meta.env.PROD 
-    ? 'https://kitchen-sync-api.onrender.com' // Production API URL
+    ? 'https://kitchensync.restaurant' // Production API URL
     : (import.meta.env.VITE_API_URL || 'http://localhost:3001');
 
 const apiClient = axios.create({
