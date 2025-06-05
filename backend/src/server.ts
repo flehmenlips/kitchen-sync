@@ -90,6 +90,12 @@ app.use((req, res, next) => {
     next();
 });
 
+// Debug middleware to log all requests
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} - User-Agent: ${req.get('User-Agent')?.substring(0, 50)}...`);
+    next();
+});
+
 // Conditional JSON body parser - skip for Stripe webhooks
 app.use((req, res, next) => {
   if (req.originalUrl === '/api/platform/webhooks/stripe') {
@@ -131,6 +137,15 @@ app.use('/api/templates', templateRoutes); // Mount template routes
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+});
+
+// Test endpoint to verify routing fix
+app.get('/api/test-routing', (req, res) => {
+  res.json({ 
+    message: 'API routing is working correctly!', 
+    timestamp: new Date().toISOString(),
+    deployment: 'routing-fix-v2'
+  });
 });
 
 // Serve static files ONLY for non-API routes (AFTER API routes)
