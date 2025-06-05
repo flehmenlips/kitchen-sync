@@ -582,10 +582,81 @@ const WebsiteBuilderPage: React.FC = () => {
       </Paper>
 
       <Paper>
-        {/* Settings Tab - Contact & Hours, Menu Display */}
+        {/* Settings Tab - Hero, About, Contact & Hours, Menu Display */}
         <TabPanel value={tabValue} index={0}>
           <Grid container spacing={3}>
+            {/* Hero Section */}
             <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom>Hero Section</Typography>
+              <Divider sx={{ mb: 2 }} />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Hero Title"
+                value={websiteData.settings.heroTitle || ''}
+                onChange={(e) => handleSettingsChange('heroTitle', e.target.value)}
+                helperText="Main title displayed on your homepage"
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Hero Subtitle"
+                value={websiteData.settings.heroSubtitle || ''}
+                onChange={(e) => handleSettingsChange('heroSubtitle', e.target.value)}
+                helperText="Supporting text under your main title"
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Call-to-Action Text"
+                value={websiteData.settings.heroCTAText || ''}
+                onChange={(e) => handleSettingsChange('heroCTAText', e.target.value)}
+                placeholder="e.g., Make a Reservation"
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Call-to-Action Link"
+                value={websiteData.settings.heroCTALink || ''}
+                onChange={(e) => handleSettingsChange('heroCTALink', e.target.value)}
+                placeholder="e.g., /reservations"
+              />
+            </Grid>
+
+            {/* About Section */}
+            <Grid item xs={12} sx={{ mt: 3 }}>
+              <Typography variant="h6" gutterBottom>About Section</Typography>
+              <Divider sx={{ mb: 2 }} />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="About Title"
+                value={websiteData.settings.aboutTitle || ''}
+                onChange={(e) => handleSettingsChange('aboutTitle', e.target.value)}
+                helperText="Title for your About section"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                multiline
+                rows={4}
+                label="About Description"
+                value={websiteData.settings.aboutDescription || ''}
+                onChange={(e) => handleSettingsChange('aboutDescription', e.target.value)}
+                helperText="Tell your story - what makes your restaurant special"
+              />
+            </Grid>
+
+            {/* Contact Information */}
+            <Grid item xs={12} sx={{ mt: 3 }}>
               <Typography variant="h6" gutterBottom>Contact Information</Typography>
               <Divider sx={{ mb: 2 }} />
             </Grid>

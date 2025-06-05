@@ -3,9 +3,25 @@ import { api } from './api';
 export interface WebsiteBuilderData {
   // Site-wide settings from RestaurantSettings
   settings: {
-    // Branding
+    // Basic Info
     websiteName?: string;
     tagline?: string;
+    
+    // Hero Section
+    heroTitle?: string;
+    heroSubtitle?: string;
+    heroImageUrl?: string;
+    heroImagePublicId?: string;
+    heroCTAText?: string;
+    heroCTALink?: string;
+    
+    // About Section
+    aboutTitle?: string;
+    aboutDescription?: string;
+    aboutImageUrl?: string;
+    aboutImagePublicId?: string;
+    
+    // Branding
     primaryColor?: string;
     secondaryColor?: string;
     accentColor?: string;
