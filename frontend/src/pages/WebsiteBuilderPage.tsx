@@ -627,6 +627,38 @@ const WebsiteBuilderPage: React.FC = () => {
                 placeholder="e.g., /reservations"
               />
             </Grid>
+            
+            <Grid item xs={12}>
+              <Box>
+                <Typography variant="body2" gutterBottom>Hero Background Image</Typography>
+                <Box display="flex" alignItems="center" gap={2}>
+                  <Button
+                    variant="outlined"
+                    component="label"
+                    startIcon={<UploadIcon />}
+                  >
+                    Upload Hero Image
+                    <input
+                      type="file"
+                      hidden
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleImageUpload('hero', file);
+                      }}
+                    />
+                  </Button>
+                  {websiteData.settings.heroImageUrl && (
+                    <Box
+                      component="img"
+                      src={websiteData.settings.heroImageUrl}
+                      alt="Hero background"
+                      sx={{ height: 60, objectFit: 'cover', borderRadius: 1 }}
+                    />
+                  )}
+                </Box>
+              </Box>
+            </Grid>
 
             {/* About Section */}
             <Grid item xs={12} sx={{ mt: 3 }}>
@@ -653,6 +685,38 @@ const WebsiteBuilderPage: React.FC = () => {
                 onChange={(e) => handleSettingsChange('aboutDescription', e.target.value)}
                 helperText="Tell your story - what makes your restaurant special"
               />
+            </Grid>
+            
+            <Grid item xs={12}>
+              <Box>
+                <Typography variant="body2" gutterBottom>About Section Image</Typography>
+                <Box display="flex" alignItems="center" gap={2}>
+                  <Button
+                    variant="outlined"
+                    component="label"
+                    startIcon={<UploadIcon />}
+                  >
+                    Upload About Image
+                    <input
+                      type="file"
+                      hidden
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleImageUpload('about', file);
+                      }}
+                    />
+                  </Button>
+                  {websiteData.settings.aboutImageUrl && (
+                    <Box
+                      component="img"
+                      src={websiteData.settings.aboutImageUrl}
+                      alt="About section"
+                      sx={{ height: 60, objectFit: 'cover', borderRadius: 1 }}
+                    />
+                  )}
+                </Box>
+              </Box>
             </Grid>
 
             {/* Contact Information */}
