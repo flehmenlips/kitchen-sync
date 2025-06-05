@@ -5,9 +5,25 @@ const prisma = new PrismaClient();
 export interface WebsiteBuilderData {
   // Site-wide settings from RestaurantSettings
   settings: {
-    // Branding
+    // Basic Info
     websiteName?: string;
     tagline?: string;
+    
+    // Hero Section
+    heroTitle?: string;
+    heroSubtitle?: string;
+    heroImageUrl?: string;
+    heroImagePublicId?: string;
+    heroCTAText?: string;
+    heroCTALink?: string;
+    
+    // About Section
+    aboutTitle?: string;
+    aboutDescription?: string;
+    aboutImageUrl?: string;
+    aboutImagePublicId?: string;
+    
+    // Branding
     primaryColor?: string;
     secondaryColor?: string;
     accentColor?: string;
@@ -102,8 +118,25 @@ export const websiteBuilderService = {
       
       return {
         settings: settings ? {
+          // Basic Info
           websiteName: settings.websiteName || undefined,
           tagline: settings.tagline || undefined,
+          
+          // Hero Section
+          heroTitle: settings.heroTitle || undefined,
+          heroSubtitle: settings.heroSubtitle || undefined,
+          heroImageUrl: settings.heroImageUrl || undefined,
+          heroImagePublicId: settings.heroImagePublicId || undefined,
+          heroCTAText: settings.heroCTAText || undefined,
+          heroCTALink: settings.heroCTALink || undefined,
+          
+          // About Section
+          aboutTitle: settings.aboutTitle || undefined,
+          aboutDescription: settings.aboutDescription || undefined,
+          aboutImageUrl: settings.aboutImageUrl || undefined,
+          aboutImagePublicId: settings.aboutImagePublicId || undefined,
+          
+          // Branding
           primaryColor: settings.primaryColor || undefined,
           secondaryColor: settings.secondaryColor || undefined,
           accentColor: settings.accentColor || undefined,
@@ -111,6 +144,8 @@ export const websiteBuilderService = {
           fontSecondary: settings.fontSecondary || undefined,
           logoUrl: settings.logoUrl || undefined,
           logoPublicId: settings.logoPublicId || undefined,
+          
+          // Contact & Hours
           contactPhone: settings.contactPhone || undefined,
           contactEmail: settings.contactEmail || undefined,
           contactAddress: settings.contactAddress || undefined,
@@ -118,12 +153,18 @@ export const websiteBuilderService = {
           contactState: settings.contactState || undefined,
           contactZip: settings.contactZip || undefined,
           openingHours: settings.openingHours,
+          
+          // Menu Display
           menuDisplayMode: settings.menuDisplayMode || undefined,
           activeMenuIds: settings.activeMenuIds || undefined,
+          
+          // Social & Footer
           facebookUrl: settings.facebookUrl || undefined,
           instagramUrl: settings.instagramUrl || undefined,
           twitterUrl: settings.twitterUrl || undefined,
           footerText: settings.footerText || undefined,
+          
+          // SEO
           metaTitle: settings.metaTitle || undefined,
           metaDescription: settings.metaDescription || undefined,
           metaKeywords: settings.metaKeywords || undefined
@@ -139,9 +180,24 @@ export const websiteBuilderService = {
   // Get restaurant settings
   async getRestaurantSettings(restaurantId?: number) {
     try {
-      const settings = await prisma.restaurantSettings.findUnique({
+      // First try to find settings for the specific restaurant
+      let settings = await prisma.restaurantSettings.findUnique({
         where: { restaurantId: restaurantId || 1 }
       });
+      
+      // If no settings found for this restaurant, try to find any settings record
+      // This handles cases where settings exist but aren't properly associated with restaurant ID
+      if (!settings) {
+        console.log(`No settings found for restaurant ${restaurantId}, looking for any settings record...`);
+        settings = await prisma.restaurantSettings.findFirst({
+          orderBy: { id: 'desc' } // Get the most recent settings
+        });
+        
+        if (settings) {
+          console.log(`Found settings record with ID ${settings.id}, using it for restaurant ${restaurantId}`);
+        }
+      }
+      
       return settings;
     } catch (error) {
       console.error('Error getting restaurant settings:', error);
