@@ -261,28 +261,16 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
           const uploadFormData = new FormData();
           uploadFormData.append('image', file);
           
-          const result = await fetch(`/api/content-blocks/${block.id}/upload`, {
-            method: 'POST',
+          // Import the API service to use the correct base URL
+          const { api } = await import('../services/api');
+          
+          const result = await api.post(`/content-blocks/${block.id}/upload`, uploadFormData, {
             headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            },
-            body: uploadFormData,
+              'Content-Type': 'multipart/form-data'
+            }
           });
           
-          if (!result.ok) {
-            const errorText = await result.text();
-            console.error('Upload failed with status:', result.status, 'Response:', errorText);
-            throw new Error(`Failed to upload image (${result.status}): ${errorText.includes('<!doctype html>') ? 'Server returned HTML instead of JSON - API may be down' : errorText}`);
-          }
-          
-          const responseText = await result.text();
-          let data;
-          try {
-            data = JSON.parse(responseText);
-          } catch (parseError) {
-            console.error('Failed to parse JSON response:', responseText);
-            throw new Error('Server returned invalid response - API may be down or misconfigured');
-          }
+          const data = result.data;
           
           // Update the form data with the uploaded image URL
           console.log('Before update - formData.imageUrl:', formData.imageUrl);
