@@ -8,8 +8,7 @@ const BASE_URL = '/prep-columns';
 const API_URL_OPTIONS = [
     'https://kitchensync.restaurant/api',
     'https://kitchensync.restaurant',
-    'https://kitchen-sync-app.onrender.com/api',
-    'https://kitchen-sync-api.onrender.com/api',
+    'https://kitchen-sync-app.onrender.com/api'
 ];
 
 // Log the environment mode
