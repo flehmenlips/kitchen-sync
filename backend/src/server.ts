@@ -108,7 +108,21 @@ app.use((req, res, next) => {
 
 app.use(express.urlencoded({ extended: true })); // Middleware to parse URL-encoded bodies
 
-// Routes
+// Health check endpoint - MUST be before static files
+app.get('/health', (req, res) => {
+  res.json({ status: 'healthy', timestamp: new Date().toISOString(), deployment: 'routing-fix-v4' });
+});
+
+// Test endpoint to verify routing fix - MUST be before static files
+app.get('/api/test-routing', (req, res) => {
+  res.json({ 
+    message: 'API routing is working correctly!', 
+    timestamp: new Date().toISOString(),
+    deployment: 'routing-fix-v4'
+  });
+});
+
+// ALL API Routes - MUST be before static files
 app.use('/api/users', userRoutes); // Mount user routes
 app.use('/api/auth/customer', customerAuthRoutes); // Mount customer auth routes
 app.use('/api/customer/reservations', customerReservationRoutes); // Mount customer reservation routes
@@ -133,20 +147,6 @@ app.use('/api/website-builder', websiteBuilderRoutes); // Mount website builder 
 app.use('/api/admin', adminRoutes); // Mount admin routes
 app.use('/api/platform', platformRoutes); // Mount platform routes
 app.use('/api/templates', templateRoutes); // Mount template routes
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ status: 'healthy', timestamp: new Date().toISOString() });
-});
-
-// Test endpoint to verify routing fix
-app.get('/api/test-routing', (req, res) => {
-  res.json({ 
-    message: 'API routing is working correctly!', 
-    timestamp: new Date().toISOString(),
-    deployment: 'routing-fix-v2'
-  });
-});
 
 // Serve static files ONLY for non-API routes (AFTER API routes)
 app.use((req, res, next) => {
@@ -200,5 +200,5 @@ const PORT = process.env.PORT || 3001;
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
-  console.log('Deployment version: 2025-06-05 - Website Builder fixes and routing fix v3');
+  console.log('Deployment version: 2025-06-05 - CRITICAL routing fix v4 - API routes moved before static files');
 }); 
