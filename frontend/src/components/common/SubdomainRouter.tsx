@@ -63,7 +63,12 @@ export const SubdomainRouter: React.FC<SubdomainRouterProps> = ({ children }) =>
       location.pathname === path || location.pathname.startsWith(path + '/')
     );
     
-    if (!isAllowedPath) {
+    // For custom pages, allow any single path segment that doesn't match restricted patterns
+    const isCustomPagePath = /^\/[a-zA-Z0-9\-_]+$/.test(location.pathname) && 
+                            !location.pathname.startsWith('/api') && 
+                            !location.pathname.startsWith('/assets');
+    
+    if (!isAllowedPath && !isCustomPagePath) {
       console.log('[SubdomainRouter] On restaurant subdomain with invalid path - redirecting to home');
       const searchParams = location.search;
       return <Navigate to={`/${searchParams}`} replace />;
