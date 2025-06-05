@@ -13,6 +13,7 @@ import { CustomerLoginPage } from '../../pages/customer/CustomerLoginPage';
 import { CustomerVerifyEmailSentPage } from '../../pages/customer/CustomerVerifyEmailSentPage';
 import { CustomerVerifyEmailPage } from '../../pages/customer/CustomerVerifyEmailPage';
 import CustomerDashboardPage from '../../pages/customer/CustomerDashboardPage';
+import CustomerDynamicPage from '../../pages/customer/CustomerDynamicPage';
 import CustomerProtectedRoute from './CustomerProtectedRoute';
 
 // Main App Components
@@ -48,6 +49,8 @@ export const ConditionalRoutes: React.FC<ConditionalRoutesProps> = ({ children }
               <CustomerDashboardPage />
             </CustomerProtectedRoute>
           } />
+          {/* Dynamic page route - must be last to catch all other paths */}
+          <Route path=":slug" element={<CustomerDynamicPage />} />
         </Route>
         
         {/* Include other routes like platform admin */}
@@ -82,6 +85,8 @@ export const ConditionalRoutes: React.FC<ConditionalRoutesProps> = ({ children }
               <CustomerDashboardPage />
             </CustomerProtectedRoute>
           } />
+          {/* Dynamic page route - must be last to catch all other paths */}
+          <Route path=":slug" element={<CustomerDynamicPage />} />
         </Route>
         
         {/* Include other routes (platform admin, staff protected routes, etc.) */}
