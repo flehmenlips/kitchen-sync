@@ -102,15 +102,6 @@ app.use((req, res, next) => {
 
 app.use(express.urlencoded({ extended: true })); // Middleware to parse URL-encoded bodies
 
-// Serve static files from the public directory
-app.use(express.static(path.join(__dirname, '../public')));
-
-// Serve React app build files (if in production)
-if (process.env.NODE_ENV === 'production') {
-  // Serve static files from React build
-  app.use(express.static(path.join(__dirname, '../../frontend/dist')));
-}
-
 // Routes
 app.use('/api/users', userRoutes); // Mount user routes
 app.use('/api/auth/customer', customerAuthRoutes); // Mount customer auth routes
@@ -142,10 +133,13 @@ app.get('/health', (req, res) => {
   res.json({ status: 'healthy', timestamp: new Date().toISOString() });
 });
 
+// Serve static files from the public directory (AFTER API routes)
+app.use(express.static(path.join(__dirname, '../public')));
+
 // Serve React app for all other routes (must be after API routes)
 if (process.env.NODE_ENV === 'production') {
   app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../../frontend/dist/index.html'));
+    res.sendFile(path.join(__dirname, '../public/index.html'));
   });
 } else {
   // In development, just show a message for non-API routes
