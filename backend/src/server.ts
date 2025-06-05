@@ -133,12 +133,23 @@ app.get('/health', (req, res) => {
   res.json({ status: 'healthy', timestamp: new Date().toISOString() });
 });
 
-// Serve static files from the public directory (AFTER API routes)
-app.use(express.static(path.join(__dirname, '../public')));
+// Serve static files ONLY for non-API routes (AFTER API routes)
+app.use((req, res, next) => {
+  // Skip static file serving for API routes and health check
+  if (req.path.startsWith('/api/') || req.path === '/health') {
+    return next();
+  }
+  // Serve static files for everything else
+  express.static(path.join(__dirname, '../public'))(req, res, next);
+});
 
-// Serve React app for all other routes (must be after API routes)
+// Serve React app for all other NON-API routes (must be after API routes)
 if (process.env.NODE_ENV === 'production') {
   app.get('*', (req, res) => {
+    // Double-check we're not serving HTML for API routes
+    if (req.path.startsWith('/api/') || req.path === '/health') {
+      return res.status(404).json({ error: 'API endpoint not found' });
+    }
     res.sendFile(path.join(__dirname, '../public/index.html'));
   });
 } else {
