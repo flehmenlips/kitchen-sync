@@ -1379,6 +1379,31 @@ const WebsiteBuilderPage: React.FC = () => {
                 sx={{ mt: 1 }}
               />
             </Grid>
+
+            <Grid item xs={12} sx={{ mt: 3 }}>
+              <Typography variant="h6" gutterBottom>Navigation Menu</Typography>
+              <Divider sx={{ mb: 2 }} />
+            </Grid>
+
+            <Grid item xs={12}>
+              <Alert severity="info" sx={{ mb: 2 }}>
+                <Typography variant="body2">
+                  <strong>Current Navigation Items:</strong>
+                  <br />• Home - Links to homepage
+                  <br />• Menu - Links to restaurant menu
+                  <br />• Make Reservation - Links to reservation form
+                  <br />• Custom pages created in Website Builder will automatically appear in navigation
+                </Typography>
+              </Alert>
+            </Grid>
+
+            <Grid item xs={12}>
+              <Typography variant="body2" color="text.secondary">
+                Navigation customization features coming soon! For now, the navigation automatically includes:
+                <br />• Standard restaurant pages (Home, Menu, Reservations)
+                <br />• Any custom pages you create in the Pages tab
+              </Typography>
+            </Grid>
           </Grid>
         </TabPanel>
       </Paper>
