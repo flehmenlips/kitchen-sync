@@ -148,31 +148,29 @@ app.use('/api/admin', adminRoutes); // Mount admin routes
 app.use('/api/platform', platformRoutes); // Mount platform routes
 app.use('/api/templates', templateRoutes); // Mount template routes
 
-// Serve static files ONLY for non-API routes (AFTER API routes)
-app.use((req, res, next) => {
-  // Skip static file serving for API routes and health check
-  if (req.path.startsWith('/api/') || req.path === '/health') {
-    return next();
-  }
-  // Serve static files for everything else
-  express.static(path.join(__dirname, '../public'))(req, res, next);
-});
+// EMERGENCY FIX: Completely disable static file serving to isolate API issue
+console.log('🚨 EMERGENCY MODE: Static file serving disabled to fix API routing');
+console.log('Frontend should be served separately or via CDN');
 
-// Serve React app for all other NON-API routes (must be after API routes)
-if (process.env.NODE_ENV === 'production') {
-  app.get('*', (req, res) => {
-    // Double-check we're not serving HTML for API routes
-    if (req.path.startsWith('/api/') || req.path === '/health') {
-      return res.status(404).json({ error: 'API endpoint not found' });
-    }
-    res.sendFile(path.join(__dirname, '../public/index.html'));
+// Only serve API routes and health check - NO static files
+// This will help us identify if static file middleware is the culprit
+
+// Catch-all for non-API routes (temporarily return JSON instead of HTML)
+app.get('*', (req, res) => {
+  // API routes should have been handled above
+  if (req.path.startsWith('/api/') || req.path === '/health') {
+    return res.status(404).json({ error: 'API endpoint not found - route may be misconfigured' });
+  }
+  
+  // For non-API routes, return debug info instead of serving static files
+  res.json({
+    message: 'EMERGENCY MODE: Static files disabled',
+    path: req.path,
+    method: req.method,
+    timestamp: new Date().toISOString(),
+    deployment: 'emergency-api-only-v5'
   });
-} else {
-  // In development, just show a message for non-API routes
-  app.get('/', (req, res) => {
-    res.send('KitchenSync Backend API Running...');
-  });
-}
+});
 
 // --- Error Handling Middleware --- 
 // Not found handler (if route doesn't exist)
@@ -200,5 +198,5 @@ const PORT = process.env.PORT || 3001;
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
-  console.log('Deployment version: 2025-06-05 - CRITICAL routing fix v4 - API routes moved before static files');
+  console.log('🚨 EMERGENCY DEPLOYMENT v5 - Static files completely disabled to isolate API routing issue');
 }); 
