@@ -19,13 +19,11 @@ import {
   Email as EmailIcon,
   Restaurant as RestaurantIcon
 } from '@mui/icons-material';
-import { restaurantSettingsService, RestaurantSettings } from '../../services/restaurantSettingsService';
-import { contentBlockService, ContentBlock } from '../../services/contentBlockService';
+import { unifiedContentService, UnifiedRestaurantContent } from '../../services/unifiedContentService';
 import ContentBlockRenderer from '../../components/customer/ContentBlockRenderer';
 
 const CustomerHomePage: React.FC = () => {
-  const [settings, setSettings] = useState<RestaurantSettings | null>(null);
-  const [contentBlocks, setContentBlocks] = useState<ContentBlock[]>([]);
+  const [content, setContent] = useState<UnifiedRestaurantContent | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -34,36 +32,32 @@ const CustomerHomePage: React.FC = () => {
 
   const fetchData = async () => {
     try {
-      const [settingsData, blocksData] = await Promise.all([
-        restaurantSettingsService.getPublicSettings(),
-        contentBlockService.getPublicBlocks('home')
-      ]);
-      setSettings(settingsData);
-      setContentBlocks(blocksData);
+      const unifiedContent = await unifiedContentService.getUnifiedContent('home');
+      setContent(unifiedContent);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error fetching unified content:', error);
     } finally {
       setLoading(false);
     }
   };
 
   const formatAddress = () => {
-    if (!settings) return '';
+    if (!content) return '';
     const parts = [
-      settings.contactAddress,
-      settings.contactCity,
-      settings.contactState,
-      settings.contactZip
+      content.contact.address,
+      content.contact.city,
+      content.contact.state,
+      content.contact.zip
     ].filter(Boolean);
     return parts.join(', ');
   };
 
   const getTodayHours = () => {
-    if (!settings?.openingHours) return 'Hours not available';
+    if (!content?.contact.openingHours) return 'Hours not available';
     const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const today = days[new Date().getDay()];
-    const hours = settings.openingHours[today];
-    if (hours && hours.open && hours.close) {
+    const hours = content.contact.openingHours[today];
+    if (hours && typeof hours === 'object' && 'open' in hours && 'close' in hours) {
       return `${hours.open} - ${hours.close}`;
     }
     return 'Closed today';
@@ -104,8 +98,8 @@ const CustomerHomePage: React.FC = () => {
         sx={{
           position: 'relative',
           height: '500px',
-          backgroundImage: settings?.heroImageUrl 
-            ? `url(${settings.heroImageUrl})` 
+          backgroundImage: content?.hero.imageUrl 
+            ? `url(${content.hero.imageUrl})` 
             : 'linear-gradient(to right, #1976d2, #42a5f5)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
@@ -133,7 +127,7 @@ const CustomerHomePage: React.FC = () => {
               textShadow: '2px 2px 4px rgba(0,0,0,0.5)'
             }}
           >
-            {settings?.heroTitle || 'Welcome to Our Restaurant'}
+            {content?.hero.title || 'Welcome to Our Restaurant'}
           </Typography>
           <Typography
             variant="h5"
@@ -143,12 +137,12 @@ const CustomerHomePage: React.FC = () => {
               textShadow: '1px 1px 2px rgba(0,0,0,0.5)'
             }}
           >
-            {settings?.heroSubtitle || 'Experience culinary excellence'}
+            {content?.hero.subtitle || 'Experience culinary excellence'}
           </Typography>
-          {settings?.heroCTAText && settings?.heroCTALink && (
+          {content?.hero.ctaText && content?.hero.ctaLink && (
             <Button
               component={Link}
-              to={settings.heroCTALink}
+              to={content.hero.ctaLink}
               variant="contained"
               size="large"
               sx={{
@@ -162,7 +156,7 @@ const CustomerHomePage: React.FC = () => {
                 }
               }}
             >
-              {settings.heroCTAText}
+              {content.hero.ctaText}
             </Button>
           )}
         </Container>
@@ -182,9 +176,9 @@ const CustomerHomePage: React.FC = () => {
                 <Typography variant="body1" color="text.secondary" gutterBottom>
                   Today: <strong>{getTodayHours()}</strong>
                 </Typography>
-                {settings?.openingHours && (
+                {content?.contact.openingHours && (
                   <Box sx={{ mt: 2 }}>
-                    {Object.entries(settings.openingHours).map(([day, hours]) => (
+                    {Object.entries(content.contact.openingHours).map(([day, hours]: [string, any]) => (
                       <Typography key={day} variant="body2" sx={{ textTransform: 'capitalize' }}>
                         {day}: {hours.open} - {hours.close}
                       </Typography>
@@ -227,22 +221,22 @@ const CustomerHomePage: React.FC = () => {
                 <Typography variant="h6" gutterBottom>
                   Contact Us
                 </Typography>
-                {settings?.contactPhone && (
+                {content?.contact.phone && (
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
                     <PhoneIcon sx={{ mr: 1, fontSize: 20 }} />
                     <Typography variant="body1">
-                      <a href={`tel:${settings.contactPhone}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                        {settings.contactPhone}
+                      <a href={`tel:${content.contact.phone}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                        {content.contact.phone}
                       </a>
                     </Typography>
                   </Box>
                 )}
-                {settings?.contactEmail && (
+                {content?.contact.email && (
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <EmailIcon sx={{ mr: 1, fontSize: 20 }} />
                     <Typography variant="body1">
-                      <a href={`mailto:${settings.contactEmail}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                        {settings.contactEmail}
+                      <a href={`mailto:${content.contact.email}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                        {content.contact.email}
                       </a>
                     </Typography>
                   </Box>
@@ -254,19 +248,19 @@ const CustomerHomePage: React.FC = () => {
       </Container>
 
       {/* About Section */}
-      {(settings?.aboutTitle || settings?.aboutDescription) && (
+      {(content?.about.title || content?.about.description) && (
         <Container maxWidth="lg" sx={{ my: 8 }}>
           <Grid container spacing={4} alignItems="center">
             <Grid item xs={12} md={6}>
               <Typography variant="h3" component="h2" gutterBottom>
-                {settings.aboutTitle || 'About Us'}
+                {content.about.title || 'About Us'}
               </Typography>
               <Typography variant="body1" paragraph sx={{ fontSize: '1.1rem', lineHeight: 1.8 }}>
-                {settings.aboutDescription || 'Welcome to our restaurant, where we serve delicious food made with love and the finest ingredients.'}
+                {content.about.description || 'Welcome to our restaurant, where we serve delicious food made with love and the finest ingredients.'}
               </Typography>
               <Button
                 component={Link}
-                to="/customer/menu"
+                to="/menu"
                 variant="outlined"
                 size="large"
                 startIcon={<RestaurantIcon />}
@@ -275,14 +269,14 @@ const CustomerHomePage: React.FC = () => {
                 View Our Menu
               </Button>
             </Grid>
-            {settings?.aboutImageUrl && (
+            {content?.about.imageUrl && (
               <Grid item xs={12} md={6}>
                 <Paper elevation={3} sx={{ overflow: 'hidden', borderRadius: 2 }}>
                   <CardMedia
                     component="img"
                     height="400"
-                    image={settings.aboutImageUrl}
-                    alt={settings.aboutTitle || 'About our restaurant'}
+                    image={content.about.imageUrl}
+                    alt={content.about.title || 'About our restaurant'}
                     sx={{ objectFit: 'cover' }}
                   />
                 </Paper>
@@ -293,7 +287,7 @@ const CustomerHomePage: React.FC = () => {
       )}
 
       {/* Dynamic Content Blocks */}
-      <ContentBlockRenderer blocks={contentBlocks} />
+      <ContentBlockRenderer blocks={content?.contentBlocks || []} />
     </Box>
   );
 };
