@@ -136,7 +136,9 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
 
     try {
       setAutoSaving(true);
-      await onSave(data);
+      // Ensure the block ID is included in the data for auto-save
+      const dataWithId = { ...data, id: block.id };
+      await onSave(dataWithId);
       setLastSaved(new Date());
     } catch (error) {
       console.error('Auto-save failed:', error);
@@ -144,7 +146,7 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
     } finally {
       setAutoSaving(false);
     }
-  }, [editMode, saving, onSave]);
+  }, [editMode, saving, onSave, block.id]);
 
   // Debounced auto-save
   const scheduleAutoSave = useCallback((data: Partial<WBBlock>) => {
@@ -171,7 +173,9 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
   const handleSave = async () => {
     try {
       setSaving(true);
-      await onSave(formData);
+      // Ensure the block ID is included in the data for manual save
+      const dataWithId = { ...formData, id: block.id };
+      await onSave(dataWithId);
       
       // If this is a new block and we have a pending image file, upload it
       if (pendingImageFile && onPostCreateImageUpload && block.id) {
@@ -230,7 +234,7 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
     setFormData(newFormData);
     
     // Trigger auto-save for content changes (but not for settings like isActive)
-    if (editMode && ['title', 'subtitle', 'content', 'buttonText', 'buttonLink'].includes(field)) {
+    if (editMode && ['title', 'subtitle', 'content', 'buttonText', 'buttonLink', 'imageUrl', 'imagePublicId'].includes(field)) {
       scheduleAutoSave(newFormData);
     }
   };
@@ -254,15 +258,15 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
         // Check if we have a block ID (for existing blocks)
         if (block.id) {
           // Use the content block upload endpoint for existing blocks
-          const formData = new FormData();
-          formData.append('image', file);
+          const uploadFormData = new FormData();
+          uploadFormData.append('image', file);
           
           const result = await fetch(`/api/content-blocks/${block.id}/upload`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('token')}`,
             },
-            body: formData,
+            body: uploadFormData,
           });
           
           if (!result.ok) {
@@ -281,10 +285,41 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
           }
           
           // Update the form data with the uploaded image URL
-          handleFieldChange('imageUrl', data.imageUrl);
-          handleFieldChange('imagePublicId', data.publicId);
+          console.log('Before update - formData.imageUrl:', formData.imageUrl);
+          
+          // Force a state update with the new image data
+          setFormData(prev => {
+            const newData = {
+              ...prev,
+              imageUrl: data.imageUrl,
+              imagePublicId: data.publicId
+            };
+            console.log('Setting new formData:', newData);
+            
+            // Trigger auto-save logic for the new data
+            if (editMode) {
+              scheduleAutoSave(newData);
+            }
+            
+            return newData;
+          });
+          
+          // Ensure we're in edit mode after image upload
+          if (!editMode) {
+            setEditMode(true);
+            setIsEditing?.(true);
+            
+            // If we just entered edit mode, schedule auto-save for the new data
+            const newData = {
+              ...formData,
+              imageUrl: data.imageUrl,
+              imagePublicId: data.publicId
+            };
+            scheduleAutoSave(newData);
+          }
           
           console.log('Image uploaded successfully:', data.imageUrl);
+          console.log('After update - should show image now');
         } else {
           // For new blocks, we'll store the file temporarily and upload after block creation
           // Create a temporary URL for preview

@@ -288,12 +288,14 @@ const WebsiteBuilderPage: React.FC = () => {
 
   // Content Block Management Handlers
   const handleSaveBlock = async (blockData: Partial<WBBlock>) => {
-    if (!selectedPage || editingBlockId === null) return;
+    // Get the block ID from the blockData if editingBlockId is not set (for auto-save)
+    const blockId = editingBlockId || blockData.id;
+    if (!selectedPage || !blockId) return;
 
     try {
       const updatedBlock = await websiteBuilderService.updateContentBlock(
         selectedPage.slug,
-        editingBlockId,
+        blockId,
         blockData
       );
 
@@ -307,7 +309,7 @@ const WebsiteBuilderPage: React.FC = () => {
               ? {
                   ...page,
                   blocks: page.blocks.map(block =>
-                    block.id === editingBlockId ? updatedBlock : block
+                    block.id === blockId ? updatedBlock : block
                   )
                 }
               : page
@@ -321,16 +323,24 @@ const WebsiteBuilderPage: React.FC = () => {
         return {
           ...prev,
           blocks: prev.blocks.map(block =>
-            block.id === editingBlockId ? updatedBlock : block
+            block.id === blockId ? updatedBlock : block
           )
         };
       });
 
-      setEditingBlockId(null);
-      showSnackbar('Block updated successfully', 'success');
+      // Note: Don't set hasChanges for block updates since they're already saved individually
+      // The main save button is only for website settings, not content blocks
+      
+      // Only reset editingBlockId if we were in explicit edit mode
+      if (editingBlockId) {
+        setEditingBlockId(null);
+        showSnackbar('Block updated successfully', 'success');
+      }
     } catch (error) {
       console.error('Error updating block:', error);
-      showSnackbar('Failed to update block', 'error');
+      if (editingBlockId) {
+        showSnackbar('Failed to update block', 'error');
+      }
     }
   };
 
