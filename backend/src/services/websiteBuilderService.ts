@@ -206,22 +206,22 @@ export const websiteBuilderService = {
           metaDescription: settings.metaDescription || undefined,
           metaKeywords: settings.metaKeywords || undefined,
           
-          // Info Panes Customization (default values for now)
-          infoPanesEnabled: true,
-          hoursCardTitle: 'Opening Hours',
-          locationCardTitle: 'Our Location', 
-          contactCardTitle: 'Contact Us',
-          hoursCardShowDetails: true,
-          locationCardShowDirections: true,
+          // Info Panes Customization
+          infoPanesEnabled: (settings as any).infoPanesEnabled ?? true,
+          hoursCardTitle: (settings as any).hoursCardTitle || 'Opening Hours',
+          locationCardTitle: (settings as any).locationCardTitle || 'Our Location', 
+          contactCardTitle: (settings as any).contactCardTitle || 'Contact Us',
+          hoursCardShowDetails: (settings as any).hoursCardShowDetails ?? true,
+          locationCardShowDirections: (settings as any).locationCardShowDirections ?? true,
           
-          // Navigation Customization (default values)
-          navigationEnabled: true,
-          navigationLayout: 'topbar',
-          navigationAlignment: 'left',
-          navigationStyle: 'modern',
-          showMobileMenu: true,
-          mobileMenuStyle: 'hamburger',
-          navigationItems: [
+          // Navigation Customization
+          navigationEnabled: (settings as any).navigationEnabled ?? true,
+          navigationLayout: (settings as any).navigationLayout || 'topbar',
+          navigationAlignment: (settings as any).navigationAlignment || 'left',
+          navigationStyle: (settings as any).navigationStyle || 'modern',
+          showMobileMenu: (settings as any).showMobileMenu ?? true,
+          mobileMenuStyle: (settings as any).mobileMenuStyle || 'hamburger',
+          navigationItems: this.parseNavigationItems((settings as any).navigationItems) || [
             {
               id: 'home',
               label: 'Home',
@@ -327,7 +327,22 @@ export const websiteBuilderService = {
         activeMenuIds: [],
         menuDisplayMode: "grid",
         tagline: null,
-        metaKeywords: null
+        metaKeywords: null,
+        // Info Panes Customization
+        infoPanesEnabled: true,
+        hoursCardTitle: null,
+        locationCardTitle: null,
+        contactCardTitle: null,
+        hoursCardShowDetails: true,
+        locationCardShowDirections: true,
+        // Navigation Customization
+        navigationEnabled: true,
+        navigationLayout: null,
+        navigationAlignment: null,
+        navigationStyle: null,
+        navigationItems: null,
+        showMobileMenu: true,
+        mobileMenuStyle: null
       };
     }
   },
@@ -335,12 +350,30 @@ export const websiteBuilderService = {
   // Update restaurant settings
   async updateSettings(restaurantId: number | undefined, settings: Partial<WebsiteBuilderData['settings']>) {
     try {
+      // Handle JSON fields that need serialization
+      const processedSettings = { ...settings };
+      
+      // Convert navigationItems array to JSON if present
+      if (processedSettings.navigationItems) {
+        (processedSettings as any).navigationItems = JSON.stringify(processedSettings.navigationItems);
+      }
+      
+      // Convert activeMenuIds array to JSON if present
+      if (processedSettings.activeMenuIds) {
+        (processedSettings as any).activeMenuIds = JSON.stringify(processedSettings.activeMenuIds);
+      }
+      
+      // Convert openingHours to JSON if present
+      if (processedSettings.openingHours && typeof processedSettings.openingHours === 'object') {
+        (processedSettings as any).openingHours = JSON.stringify(processedSettings.openingHours);
+      }
+      
       return await prisma.restaurantSettings.upsert({
         where: { restaurantId: restaurantId || 1 },
-        update: settings,
+        update: processedSettings as any,
         create: {
           restaurantId: restaurantId || 1,
-          ...settings
+          ...processedSettings as any
         }
       });
     } catch (error) {
@@ -769,5 +802,22 @@ export const websiteBuilderService = {
       displayOrder: order,
       blocks: [] // Will be populated from actual ContentBlocks
     };
+  },
+
+  // Helper method to parse navigation items from JSON
+  parseNavigationItems(navigationItemsJson: any): NavigationItem[] | null {
+    if (!navigationItemsJson) return null;
+    
+    try {
+      if (typeof navigationItemsJson === 'string') {
+        return JSON.parse(navigationItemsJson);
+      } else if (Array.isArray(navigationItemsJson)) {
+        return navigationItemsJson;
+      }
+      return null;
+    } catch (error) {
+      console.warn('Failed to parse navigation items:', error);
+      return null;
+    }
   }
 }; 

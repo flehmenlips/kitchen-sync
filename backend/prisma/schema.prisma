@@ -651,6 +651,24 @@ model RestaurantSettings {
   menuDisplayMode    String?          @default("grid") @db.VarChar(50)
   tagline            String?
   metaKeywords       String?
+  
+  // Info Panes Customization
+  infoPanesEnabled         Boolean? @default(true) @map("info_panes_enabled")
+  hoursCardTitle           String?  @default("Opening Hours") @map("hours_card_title") @db.VarChar(100)
+  locationCardTitle        String?  @default("Our Location") @map("location_card_title") @db.VarChar(100)
+  contactCardTitle         String?  @default("Contact Us") @map("contact_card_title") @db.VarChar(100)
+  hoursCardShowDetails     Boolean? @default(true) @map("hours_card_show_details")
+  locationCardShowDirections Boolean? @default(true) @map("location_card_show_directions")
+  
+  // Navigation Customization
+  navigationEnabled        Boolean? @default(true) @map("navigation_enabled")
+  navigationLayout         String?  @default("topbar") @map("navigation_layout") @db.VarChar(50)
+  navigationAlignment      String?  @default("left") @map("navigation_alignment") @db.VarChar(50)
+  navigationStyle          String?  @default("modern") @map("navigation_style") @db.VarChar(50)
+  navigationItems          Json?    @default("[]") @map("navigation_items") @db.Json
+  showMobileMenu           Boolean? @default(true) @map("show_mobile_menu")
+  mobileMenuStyle          String?  @default("hamburger") @map("mobile_menu_style") @db.VarChar(50)
+  
   template           WebsiteTemplate? @relation(fields: [templateId], references: [id], map: "fk_restaurant_settings_template")
   restaurant         Restaurant       @relation(fields: [restaurantId], references: [id], onDelete: Cascade, map: "restaurant_settings_restaurant_id_fkey")
 

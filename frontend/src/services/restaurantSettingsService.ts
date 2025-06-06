@@ -1,6 +1,25 @@
 import apiService from './apiService';
 import { getCurrentRestaurantSlug } from '../utils/subdomain';
 
+export interface NavigationItem {
+  id: string;
+  label: string;
+  path: string;
+  icon?: string;
+  isActive: boolean;
+  displayOrder: number;
+  isSystem: boolean; // true for Home, Menu, Reservations
+  subItems?: NavigationSubItem[];
+}
+
+export interface NavigationSubItem {
+  id: string;
+  label: string;
+  path: string;
+  isActive: boolean;
+  displayOrder: number;
+}
+
 export interface RestaurantSettings {
   id?: number;
   restaurantId?: number;
@@ -59,6 +78,23 @@ export interface RestaurantSettings {
   metaTitle?: string;
   metaDescription?: string;
   metaKeywords?: string;
+  
+  // Info Panes Customization
+  infoPanesEnabled?: boolean;
+  hoursCardTitle?: string;
+  locationCardTitle?: string;
+  contactCardTitle?: string;
+  hoursCardShowDetails?: boolean;
+  locationCardShowDirections?: boolean;
+  
+  // Navigation Customization
+  navigationEnabled?: boolean;
+  navigationLayout?: 'topbar' | 'sidebar' | 'hybrid';
+  navigationAlignment?: 'left' | 'center' | 'right' | 'justified';
+  navigationStyle?: 'minimal' | 'modern' | 'classic' | 'rounded';
+  navigationItems?: NavigationItem[];
+  showMobileMenu?: boolean;
+  mobileMenuStyle?: 'hamburger' | 'dots' | 'slide';
   
   // Restaurant info (included in response)
   restaurant?: {

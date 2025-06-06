@@ -35,7 +35,7 @@ import {
   LocationOn as LocationIcon
 } from '@mui/icons-material';
 import { useCustomerAuth } from '../../context/CustomerAuthContext';
-import { restaurantSettingsService, RestaurantSettings } from '../../services/restaurantSettingsService';
+import { restaurantSettingsService, RestaurantSettings, NavigationItem } from '../../services/restaurantSettingsService';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { buildCustomerUrl } from '../../utils/subdomain';
 
