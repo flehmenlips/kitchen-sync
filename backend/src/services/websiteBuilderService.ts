@@ -63,6 +63,7 @@ export interface WebsiteBuilderData {
     contactCardTitle?: string;
     hoursCardShowDetails?: boolean;
     locationCardShowDirections?: boolean;
+    
   };
   
   // Pages from ContentBlocks
@@ -613,11 +614,11 @@ export const websiteBuilderService = {
       const existingSlugs = pages.map(p => p.slug);
       
       if (!existingSlugs.includes('home')) {
-        // Get all content blocks that are not 'page' type - these will be shown on home
+        // Get content blocks specifically associated with the 'home' page
         const homeContentBlocks = await prisma.contentBlock.findMany({
           where: {
             restaurantId: restaurantId,
-            blockType: { not: 'page' }
+            page: 'home'
           },
           orderBy: { displayOrder: 'asc' }
         });
