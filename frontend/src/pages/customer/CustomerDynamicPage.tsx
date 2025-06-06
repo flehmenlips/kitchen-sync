@@ -133,7 +133,7 @@ const CustomerDynamicPage: React.FC = () => {
             </Container>
           )}
           
-          {block.blockType === 'hero' && (
+          {(block.blockType === 'hero' || block.blockType === 'page') && (
             <Box
               sx={{
                 position: 'relative',
