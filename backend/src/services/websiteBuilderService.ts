@@ -64,6 +64,15 @@ export interface WebsiteBuilderData {
     hoursCardShowDetails?: boolean;
     locationCardShowDirections?: boolean;
     
+    // Navigation Customization
+    navigationEnabled?: boolean;
+    navigationLayout?: 'topbar' | 'sidebar' | 'hybrid';
+    navigationAlignment?: 'left' | 'center' | 'right' | 'justified';
+    navigationStyle?: 'minimal' | 'modern' | 'classic' | 'rounded';
+    navigationItems?: NavigationItem[];
+    showMobileMenu?: boolean;
+    mobileMenuStyle?: 'hamburger' | 'dots' | 'slide';
+    
   };
   
   // Pages from ContentBlocks
@@ -113,6 +122,25 @@ export interface PageTemplate {
   name: string;
   description: string;
   blocks: string[];
+}
+
+export interface NavigationItem {
+  id: string;
+  label: string;
+  path: string;
+  icon?: string;
+  isActive: boolean;
+  displayOrder: number;
+  isSystem: boolean; // true for Home, Menu, Reservations
+  subItems?: NavigationSubItem[];
+}
+
+export interface NavigationSubItem {
+  id: string;
+  label: string;
+  path: string;
+  isActive: boolean;
+  displayOrder: number;
 }
 
 export const websiteBuilderService = {
@@ -184,7 +212,44 @@ export const websiteBuilderService = {
           locationCardTitle: 'Our Location', 
           contactCardTitle: 'Contact Us',
           hoursCardShowDetails: true,
-          locationCardShowDirections: true
+          locationCardShowDirections: true,
+          
+          // Navigation Customization (default values)
+          navigationEnabled: true,
+          navigationLayout: 'topbar',
+          navigationAlignment: 'left',
+          navigationStyle: 'modern',
+          showMobileMenu: true,
+          mobileMenuStyle: 'hamburger',
+          navigationItems: [
+            {
+              id: 'home',
+              label: 'Home',
+              path: '/',
+              icon: 'home',
+              isActive: true,
+              displayOrder: 1,
+              isSystem: true
+            },
+            {
+              id: 'menu',
+              label: 'Menu',
+              path: '/menu',
+              icon: 'menu_book',
+              isActive: true,
+              displayOrder: 2,
+              isSystem: true
+            },
+            {
+              id: 'reservations',
+              label: 'Make Reservation',
+              path: '/reservations/new',
+              icon: 'event_seat',
+              isActive: true,
+              displayOrder: 3,
+              isSystem: true
+            }
+          ]
         } : {},
         pages
       };

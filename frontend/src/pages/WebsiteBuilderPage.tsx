@@ -40,7 +40,8 @@ import {
   DialogActions,
   Menu,
   ListItemIcon as MuiListItemIcon,
-  Fab
+  Fab,
+  FormHelperText
 } from '@mui/material';
 import {
   Save,
@@ -66,7 +67,8 @@ import {
   Restaurant as RestaurantIcon,
   Contacts as ContactIcon,
   MoreVert as MoreIcon,
-  DragIndicator as DragIcon
+  DragIndicator as DragIcon,
+  Menu as MenuIcon
 } from '@mui/icons-material';
 import { restaurantSettingsService, RestaurantSettings } from '../services/restaurantSettingsService';
 import { api } from '../services/api';
@@ -114,7 +116,7 @@ const WebsiteBuilderPage: React.FC = () => {
   const [editingBlockId, setEditingBlockId] = useState<number | null>(null);
   const [blockMenuAnchor, setBlockMenuAnchor] = useState<null | HTMLElement>(null);
   const [selectedBlockId, setSelectedBlockId] = useState<number | null>(null);
-  const [tabValue, setTabValue] = useState(0); // 0: Settings, 1: Pages, 2: Branding, 3: SEO
+  const [tabValue, setTabValue] = useState(0); // 0: Settings, 1: Pages, 2: Branding, 3: SEO, 4: Navigation
   const [hasChanges, setHasChanges] = useState(false);
   const [templateSelectorOpen, setTemplateSelectorOpen] = useState(false);
   const [pageDialogOpen, setPageDialogOpen] = useState(false);
@@ -579,6 +581,7 @@ const WebsiteBuilderPage: React.FC = () => {
           <Tab icon={<PagesIcon />} label="Pages" />
           <Tab icon={<PaletteIcon />} label="Branding" />
           <Tab icon={<SeoIcon />} label="SEO" />
+          <Tab icon={<MenuIcon />} label="Navigation" />
         </Tabs>
       </Paper>
 
@@ -1402,6 +1405,188 @@ const WebsiteBuilderPage: React.FC = () => {
                 Navigation customization features coming soon! For now, the navigation automatically includes:
                 <br />• Standard restaurant pages (Home, Menu, Reservations)
                 <br />• Any custom pages you create in the Pages tab
+              </Typography>
+            </Grid>
+          </Grid>
+        </TabPanel>
+
+        {/* Navigation Tab - Menu Customization */}
+        <TabPanel value={tabValue} index={4}>
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom>Navigation Layout</Typography>
+              <Divider sx={{ mb: 2 }} />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Navigation Layout</InputLabel>
+                <Select
+                  value={websiteData.settings.navigationLayout || 'topbar'}
+                  onChange={(e) => handleSettingsChange('navigationLayout', e.target.value)}
+                  label="Navigation Layout"
+                >
+                  <MenuItem value="topbar">Top Navigation Bar</MenuItem>
+                  <MenuItem value="sidebar">Side Navigation (Left)</MenuItem>
+                  <MenuItem value="hybrid">Hybrid (Top + Side)</MenuItem>
+                </Select>
+                <FormHelperText>Choose how navigation is displayed on your website</FormHelperText>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Navigation Alignment</InputLabel>
+                <Select
+                  value={websiteData.settings.navigationAlignment || 'left'}
+                  onChange={(e) => handleSettingsChange('navigationAlignment', e.target.value)}
+                  label="Navigation Alignment"
+                >
+                  <MenuItem value="left">Left Aligned</MenuItem>
+                  <MenuItem value="center">Center Aligned</MenuItem>
+                  <MenuItem value="right">Right Aligned</MenuItem>
+                  <MenuItem value="justified">Justified/Spread</MenuItem>
+                </Select>
+                <FormHelperText>How navigation items are positioned</FormHelperText>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Navigation Style</InputLabel>
+                <Select
+                  value={websiteData.settings.navigationStyle || 'modern'}
+                  onChange={(e) => handleSettingsChange('navigationStyle', e.target.value)}
+                  label="Navigation Style"
+                >
+                  <MenuItem value="minimal">Minimal</MenuItem>
+                  <MenuItem value="modern">Modern</MenuItem>
+                  <MenuItem value="classic">Classic</MenuItem>
+                  <MenuItem value="rounded">Rounded Buttons</MenuItem>
+                </Select>
+                <FormHelperText>Visual style of navigation elements</FormHelperText>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Mobile Menu Style</InputLabel>
+                <Select
+                  value={websiteData.settings.mobileMenuStyle || 'hamburger'}
+                  onChange={(e) => handleSettingsChange('mobileMenuStyle', e.target.value)}
+                  label="Mobile Menu Style"
+                >
+                  <MenuItem value="hamburger">Hamburger Menu</MenuItem>
+                  <MenuItem value="dots">Three Dots</MenuItem>
+                  <MenuItem value="slide">Slide-in Menu</MenuItem>
+                </Select>
+                <FormHelperText>How navigation appears on mobile devices</FormHelperText>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={websiteData.settings.navigationEnabled ?? true}
+                    onChange={(e) => handleSettingsChange('navigationEnabled', e.target.checked)}
+                  />
+                }
+                label="Enable Navigation Menu"
+                sx={{ mt: 1 }}
+              />
+              <FormHelperText>Turn navigation on/off for your website</FormHelperText>
+            </Grid>
+
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={websiteData.settings.showMobileMenu ?? true}
+                    onChange={(e) => handleSettingsChange('showMobileMenu', e.target.checked)}
+                  />
+                }
+                label="Show Mobile Menu"
+                sx={{ mt: 1 }}
+              />
+              <FormHelperText>Display navigation menu on mobile devices</FormHelperText>
+            </Grid>
+
+            <Grid item xs={12} sx={{ mt: 3 }}>
+              <Typography variant="h6" gutterBottom>Navigation Items</Typography>
+              <Divider sx={{ mb: 2 }} />
+            </Grid>
+
+            <Grid item xs={12}>
+              <Alert severity="info" sx={{ mb: 2 }}>
+                <Typography variant="body2">
+                  <strong>Current Navigation Setup:</strong>
+                  <br />• System Pages: Home, Menu, Reservations (always visible)
+                  <br />• Custom Pages: Any pages you create will automatically appear
+                  <br />• Order: System pages first, then custom pages by creation order
+                </Typography>
+              </Alert>
+            </Grid>
+
+            <Grid item xs={12}>
+              <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
+                <Typography variant="subtitle1" gutterBottom>Available Pages</Typography>
+                
+                {websiteData.pages.map((page, index) => (
+                  <Box key={page.id} sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    py: 1,
+                    borderBottom: index < websiteData.pages.length - 1 ? '1px solid' : 'none',
+                    borderColor: 'divider'
+                  }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {page.isSystem ? (
+                        <Chip 
+                          label="System" 
+                          size="small" 
+                          color="primary" 
+                          variant="outlined"
+                        />
+                      ) : (
+                        <Chip 
+                          label="Custom" 
+                          size="small" 
+                          color="secondary" 
+                          variant="outlined"
+                        />
+                      )}
+                      <Typography variant="body2">
+                        <strong>{page.name}</strong>
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        ({page.url})
+                      </Typography>
+                    </Box>
+                    
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Chip 
+                        label={page.isActive ? "Visible" : "Hidden"} 
+                        size="small" 
+                        color={page.isActive ? "success" : "default"}
+                        variant={page.isActive ? "filled" : "outlined"}
+                      />
+                      {/* Future: Add reorder buttons, visibility toggles, etc. */}
+                    </Box>
+                  </Box>
+                ))}
+              </Paper>
+            </Grid>
+
+            <Grid item xs={12}>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                <strong>Coming Soon:</strong>
+                <br />• Drag & drop reordering of navigation items
+                <br />• Show/hide individual pages from navigation
+                <br />• Custom navigation labels (different from page names)
+                <br />• Dropdown sub-menus for page categories
+                <br />• External link support in navigation
               </Typography>
             </Grid>
           </Grid>
