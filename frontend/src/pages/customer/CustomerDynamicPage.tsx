@@ -30,18 +30,22 @@ const CustomerDynamicPage: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
+      console.log('[CustomerDynamicPage] Fetching data for slug:', slug);
       const unifiedContent = await unifiedContentService.getUnifiedContent(slug);
+      console.log('[CustomerDynamicPage] Received unified content:', unifiedContent);
       
       // Check if page has any content blocks
       if (!unifiedContent.contentBlocks || unifiedContent.contentBlocks.length === 0) {
+        console.log('[CustomerDynamicPage] No content blocks found:', unifiedContent.contentBlocks);
         setError('Page not found or has no content');
         setLoading(false);
         return;
       }
       
+      console.log('[CustomerDynamicPage] Content blocks found:', unifiedContent.contentBlocks.length);
       setContent(unifiedContent);
     } catch (error) {
-      console.error('Error fetching page content:', error);
+      console.error('[CustomerDynamicPage] Error fetching page content:', error);
       setError('Failed to load page content');
     } finally {
       setLoading(false);
@@ -81,6 +85,9 @@ const CustomerDynamicPage: React.FC = () => {
       </Container>
     );
   }
+
+  console.log('[CustomerDynamicPage] Rendering with content:', content);
+  console.log('[CustomerDynamicPage] Content blocks to render:', content?.contentBlocks);
 
   return (
     <Box>
