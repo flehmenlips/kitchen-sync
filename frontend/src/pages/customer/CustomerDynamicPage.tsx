@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import {
   Box,
   Container,
   Typography,
   CircularProgress,
-  Alert
+  Alert,
+  Button
 } from '@mui/material';
 import { unifiedContentService, UnifiedRestaurantContent } from '../../services/unifiedContentService';
 
@@ -83,24 +84,6 @@ const CustomerDynamicPage: React.FC = () => {
 
   return (
     <Box>
-      {/* Page Title (if available from first content block or page settings) */}
-      {content.contentBlocks && content.contentBlocks.length > 0 && (
-        <Container maxWidth="lg" sx={{ py: 4 }}>
-          <Typography 
-            variant="h2" 
-            component="h1" 
-            gutterBottom
-            sx={{ 
-              textAlign: 'center',
-              textTransform: 'capitalize',
-              mb: 4
-            }}
-          >
-            {slug?.replace(/-/g, ' ')}
-          </Typography>
-        </Container>
-      )}
-
       {/* Dynamic Content Blocks */}
       {content.contentBlocks && content.contentBlocks.map((block) => (
         <Box key={block.id} sx={{ mb: 4 }}>
@@ -147,7 +130,7 @@ const CustomerDynamicPage: React.FC = () => {
             <Box
               sx={{
                 position: 'relative',
-                height: '400px',
+                height: '500px',
                 backgroundImage: block.imageUrl ? `url(${block.imageUrl})` : 'linear-gradient(to right, #1976d2, #42a5f5)',
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
@@ -184,12 +167,47 @@ const CustomerDynamicPage: React.FC = () => {
                     variant="h5"
                     sx={{
                       color: 'white',
-                      mb: 4,
+                      mb: 3,
                       textShadow: '1px 1px 2px rgba(0,0,0,0.5)'
                     }}
                   >
                     {block.subtitle}
                   </Typography>
+                )}
+                {block.content && (
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      color: 'white',
+                      mb: 4,
+                      textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
+                      maxWidth: '600px'
+                    }}
+                  >
+                    {block.content}
+                  </Typography>
+                )}
+                {block.buttonText && block.buttonLink && (
+                  <Button
+                    component="a"
+                    href={block.buttonLink.startsWith('http') ? block.buttonLink : `https://${block.buttonLink}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    variant="contained"
+                    size="large"
+                    sx={{
+                      backgroundColor: 'primary.main',
+                      color: 'white',
+                      px: 4,
+                      py: 1.5,
+                      fontSize: '1.1rem',
+                      '&:hover': {
+                        backgroundColor: 'primary.dark',
+                      }
+                    }}
+                  >
+                    {block.buttonText}
+                  </Button>
                 )}
               </Container>
             </Box>
