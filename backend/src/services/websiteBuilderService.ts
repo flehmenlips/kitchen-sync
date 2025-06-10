@@ -263,8 +263,53 @@ export const websiteBuilderService = {
   async getRestaurantSettings(restaurantId?: number) {
     try {
       // First try to find settings for the specific restaurant
+      // Using selective fields to avoid database schema issues
       let settings = await prisma.restaurantSettings.findUnique({
-        where: { restaurantId: restaurantId || 1 }
+        where: { restaurantId: restaurantId || 1 },
+        select: {
+          id: true,
+          restaurantId: true,
+          createdAt: true,
+          updatedAt: true,
+          templateId: true,
+          customCss: true,
+          websiteName: true,
+          metaTitle: true,
+          metaDescription: true,
+          heroTitle: true,
+          heroSubtitle: true,
+          heroImageUrl: true,
+          heroImagePublicId: true,
+          heroCTAText: true,
+          heroCTALink: true,
+          aboutTitle: true,
+          aboutDescription: true,
+          aboutImageUrl: true,
+          aboutImagePublicId: true,
+          logoUrl: true,
+          logoPublicId: true,
+          primaryColor: true,
+          secondaryColor: true,
+          accentColor: true,
+          fontPrimary: true,
+          fontSecondary: true,
+          contactPhone: true,
+          contactEmail: true,
+          contactAddress: true,
+          contactCity: true,
+          contactState: true,
+          contactZip: true,
+          openingHours: true,
+          facebookUrl: true,
+          instagramUrl: true,
+          twitterUrl: true,
+          linkedinUrl: true,
+          footerText: true,
+          activeMenuIds: true,
+          menuDisplayMode: true,
+          tagline: true,
+          metaKeywords: true
+        }
       });
       
       // If no settings found for this restaurant, try to find any settings record
@@ -272,7 +317,51 @@ export const websiteBuilderService = {
       if (!settings) {
         console.log(`No settings found for restaurant ${restaurantId}, looking for any settings record...`);
         settings = await prisma.restaurantSettings.findFirst({
-          orderBy: { id: 'desc' } // Get the most recent settings
+          orderBy: { id: 'desc' }, // Get the most recent settings
+          select: {
+            id: true,
+            restaurantId: true,
+            createdAt: true,
+            updatedAt: true,
+            templateId: true,
+            customCss: true,
+            websiteName: true,
+            metaTitle: true,
+            metaDescription: true,
+            heroTitle: true,
+            heroSubtitle: true,
+            heroImageUrl: true,
+            heroImagePublicId: true,
+            heroCTAText: true,
+            heroCTALink: true,
+            aboutTitle: true,
+            aboutDescription: true,
+            aboutImageUrl: true,
+            aboutImagePublicId: true,
+            logoUrl: true,
+            logoPublicId: true,
+            primaryColor: true,
+            secondaryColor: true,
+            accentColor: true,
+            fontPrimary: true,
+            fontSecondary: true,
+            contactPhone: true,
+            contactEmail: true,
+            contactAddress: true,
+            contactCity: true,
+            contactState: true,
+            contactZip: true,
+            openingHours: true,
+            facebookUrl: true,
+            instagramUrl: true,
+            twitterUrl: true,
+            linkedinUrl: true,
+            footerText: true,
+            activeMenuIds: true,
+            menuDisplayMode: true,
+            tagline: true,
+            metaKeywords: true
+          }
         });
         
         if (settings) {
