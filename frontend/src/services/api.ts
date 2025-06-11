@@ -34,8 +34,8 @@ api.interceptors.request.use(
                 const userInfo = localStorage.getItem('kitchenSyncUserInfo');
                 if (userInfo) {
                     const parsed = JSON.parse(userInfo);
-                    // Skip if this is a customer user
-                    if (parsed.user?.isCustomer) {
+                    // Only skip if this is explicitly a customer user AND we're not in admin context
+                    if (parsed.user?.isCustomer && !window.location.pathname.includes('/admin')) {
                         token = null;
                     } else {
                         token = parsed.token;
@@ -46,11 +46,18 @@ api.interceptors.request.use(
             }
         }
         
-        // Also check if there's a customer auth in session storage - if so, skip this request
-        const customerAuth = sessionStorage.getItem('customerAuth');
-        if (customerAuth) {
-            // Don't set any auth header if customer is logged in
-            token = null;
+        // Only skip customer auth interference for admin/website-builder routes
+        const isAdminRoute = config.url?.includes('/website-builder') || 
+                           config.url?.includes('/admin') || 
+                           window.location.pathname.includes('/admin');
+        
+        if (!isAdminRoute) {
+            // Check if there's a customer auth in session storage - if so, skip this request
+            const customerAuth = sessionStorage.getItem('customerAuth');
+            if (customerAuth) {
+                // Don't set any auth header if customer is logged in
+                token = null;
+            }
         }
         
         if (token) {
