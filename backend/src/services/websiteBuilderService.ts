@@ -439,38 +439,97 @@ export const websiteBuilderService = {
   // Update restaurant settings
   async updateSettings(restaurantId: number | undefined, settings: Partial<WebsiteBuilderData['settings']>) {
     try {
-      // Handle JSON fields that need serialization
-      const processedSettings = { ...settings };
+      // Filter out fields that don't exist in the current database schema
+      // Only include fields that match our selective read query
+      const allowedFields = {
+        // Basic Info
+        websiteName: settings.websiteName,
+        tagline: settings.tagline,
+        
+        // Hero Section
+        heroTitle: settings.heroTitle,
+        heroSubtitle: settings.heroSubtitle,
+        heroImageUrl: settings.heroImageUrl,
+        heroImagePublicId: settings.heroImagePublicId,
+        heroCTAText: settings.heroCTAText,
+        heroCTALink: settings.heroCTALink,
+        
+        // About Section
+        aboutTitle: settings.aboutTitle,
+        aboutDescription: settings.aboutDescription,
+        aboutImageUrl: settings.aboutImageUrl,
+        aboutImagePublicId: settings.aboutImagePublicId,
+        
+        // Branding
+        primaryColor: settings.primaryColor,
+        secondaryColor: settings.secondaryColor,
+        accentColor: settings.accentColor,
+        fontPrimary: settings.fontPrimary,
+        fontSecondary: settings.fontSecondary,
+        logoUrl: settings.logoUrl,
+        logoPublicId: settings.logoPublicId,
+        
+        // Contact & Hours
+        contactPhone: settings.contactPhone,
+        contactEmail: settings.contactEmail,
+        contactAddress: settings.contactAddress,
+        contactCity: settings.contactCity,
+        contactState: settings.contactState,
+        contactZip: settings.contactZip,
+        
+        // Social & Footer
+        facebookUrl: settings.facebookUrl,
+        instagramUrl: settings.instagramUrl,
+        twitterUrl: settings.twitterUrl,
+        footerText: settings.footerText,
+        
+        // Menu Display
+        menuDisplayMode: settings.menuDisplayMode,
+        
+        // SEO
+        metaTitle: settings.metaTitle,
+        metaDescription: settings.metaDescription,
+        metaKeywords: settings.metaKeywords
+      };
       
-      // Convert navigationItems array to JSON if present
-      if (processedSettings.navigationItems) {
-        (processedSettings as any).navigationItems = JSON.stringify(processedSettings.navigationItems);
+      // Remove undefined fields to avoid setting them to null
+      const filteredSettings: any = {};
+      Object.entries(allowedFields).forEach(([key, value]) => {
+        if (value !== undefined) {
+          filteredSettings[key] = value;
+        }
+      });
+      
+      // Handle special JSON fields that need serialization
+      if (settings.activeMenuIds !== undefined) {
+        filteredSettings.activeMenuIds = Array.isArray(settings.activeMenuIds) 
+          ? JSON.stringify(settings.activeMenuIds)
+          : settings.activeMenuIds;
       }
       
-      // Convert activeMenuIds array to JSON if present
-      if (processedSettings.activeMenuIds) {
-        (processedSettings as any).activeMenuIds = JSON.stringify(processedSettings.activeMenuIds);
+      if (settings.openingHours !== undefined) {
+        filteredSettings.openingHours = typeof settings.openingHours === 'object'
+          ? JSON.stringify(settings.openingHours)
+          : settings.openingHours;
       }
       
-      // Convert openingHours to JSON if present
-      if (processedSettings.openingHours && typeof processedSettings.openingHours === 'object') {
-        (processedSettings as any).openingHours = JSON.stringify(processedSettings.openingHours);
-      }
+      console.log('Updating restaurant settings with filtered data:', {
+        restaurantId: restaurantId || 1,
+        fieldCount: Object.keys(filteredSettings).length,
+        fields: Object.keys(filteredSettings)
+      });
       
       return await prisma.restaurantSettings.upsert({
         where: { restaurantId: restaurantId || 1 },
-        update: processedSettings as any,
+        update: filteredSettings,
         create: {
           restaurantId: restaurantId || 1,
-          ...processedSettings as any
+          ...filteredSettings
         }
       });
     } catch (error) {
       console.error('Error in updateSettings:', error);
-      // For now, just log the error and return a success response
-      // This prevents the save button from failing while we fix the database schema
-      console.warn('Restaurant settings update failed due to database schema issues, but continuing...');
-      return { id: 0, restaurantId: restaurantId || 1, ...settings };
+      throw error; // Now that we're filtering fields properly, let real errors bubble up
     }
   },
   
