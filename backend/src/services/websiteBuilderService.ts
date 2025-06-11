@@ -440,7 +440,7 @@ export const websiteBuilderService = {
   async updateSettings(restaurantId: number | undefined, settings: Partial<WebsiteBuilderData['settings']>) {
     try {
       // Filter out fields that don't exist in the current database schema
-      // Only include fields that match our selective read query
+      // EXACTLY match the fields from our working getRestaurantSettings select query
       const allowedFields = {
         // Basic Info
         websiteName: settings.websiteName,
@@ -477,10 +477,10 @@ export const websiteBuilderService = {
         contactState: settings.contactState,
         contactZip: settings.contactZip,
         
-        // Social & Footer
+        // Social & Footer - FIXED: Use linkedinUrl instead of twitterUrl
         facebookUrl: settings.facebookUrl,
         instagramUrl: settings.instagramUrl,
-        twitterUrl: settings.twitterUrl,
+        linkedinUrl: settings.twitterUrl, // Map twitterUrl to linkedinUrl field that exists in DB
         footerText: settings.footerText,
         
         // Menu Display
