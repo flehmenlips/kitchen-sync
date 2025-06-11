@@ -206,15 +206,22 @@ export const websiteBuilderService = {
           metaDescription: settings.metaDescription || undefined,
           metaKeywords: settings.metaKeywords || undefined,
           
-          // NOTE: Removed Info Panes and Navigation fields - they don't exist in production DB yet
-          // This prevents frontend from receiving these fields and trying to save them back
-          // - infoPanesEnabled, hoursCardTitle, locationCardTitle, contactCardTitle
-          // - hoursCardShowDetails, locationCardShowDirections  
-          // - navigationEnabled, navigationLayout, navigationAlignment, navigationStyle
-          // - showMobileMenu, mobileMenuStyle, navigationItems
+          // Info Panes Customization
+          infoPanesEnabled: (settings as any).infoPanesEnabled ?? true,
+          hoursCardTitle: (settings as any).hoursCardTitle || 'Opening Hours',
+          locationCardTitle: (settings as any).locationCardTitle || 'Our Location', 
+          contactCardTitle: (settings as any).contactCardTitle || 'Contact Us',
+          hoursCardShowDetails: (settings as any).hoursCardShowDetails ?? true,
+          locationCardShowDirections: (settings as any).locationCardShowDirections ?? true,
           
-          // Temporary default navigation items for frontend display only (not saved to DB)
-          navigationItems: [
+          // Navigation Customization
+          navigationEnabled: (settings as any).navigationEnabled ?? true,
+          navigationLayout: (settings as any).navigationLayout || 'topbar',
+          navigationAlignment: (settings as any).navigationAlignment || 'left',
+          navigationStyle: (settings as any).navigationStyle || 'modern',
+          showMobileMenu: (settings as any).showMobileMenu ?? true,
+          mobileMenuStyle: (settings as any).mobileMenuStyle || 'hamburger',
+          navigationItems: this.parseNavigationItems((settings as any).navigationItems) || [
             {
               id: 'home',
               label: 'Home',
@@ -409,12 +416,22 @@ export const websiteBuilderService = {
         activeMenuIds: [],
         menuDisplayMode: "grid",
         tagline: null,
-        metaKeywords: null
-        // NOTE: Removed Info Panes and Navigation fields from error fallback too
-        // - infoPanesEnabled, hoursCardTitle, locationCardTitle, contactCardTitle
-        // - hoursCardShowDetails, locationCardShowDirections
-        // - navigationEnabled, navigationLayout, navigationAlignment, navigationStyle
-        // - navigationItems, showMobileMenu, mobileMenuStyle
+        metaKeywords: null,
+        // Info Panes Customization
+        infoPanesEnabled: true,
+        hoursCardTitle: null,
+        locationCardTitle: null,
+        contactCardTitle: null,
+        hoursCardShowDetails: true,
+        locationCardShowDirections: true,
+        // Navigation Customization
+        navigationEnabled: true,
+        navigationLayout: null,
+        navigationAlignment: null,
+        navigationStyle: null,
+        navigationItems: null,
+        showMobileMenu: true,
+        mobileMenuStyle: null
       };
     }
   },
@@ -472,13 +489,23 @@ export const websiteBuilderService = {
         // SEO
         metaTitle: settings.metaTitle,
         metaDescription: settings.metaDescription,
-        metaKeywords: settings.metaKeywords
+        metaKeywords: settings.metaKeywords,
         
-        // NOTE: Removed Info Panes and Navigation fields - they don't exist in production DB yet:
-        // - infoPanesEnabled, hoursCardTitle, locationCardTitle, contactCardTitle
-        // - hoursCardShowDetails, locationCardShowDirections
-        // - navigationEnabled, navigationLayout, navigationAlignment, navigationStyle
-        // - navigationItems, showMobileMenu, mobileMenuStyle
+        // Info Panes Customization (now that we're adding DB columns)
+        infoPanesEnabled: settings.infoPanesEnabled,
+        hoursCardTitle: settings.hoursCardTitle,
+        locationCardTitle: settings.locationCardTitle,
+        contactCardTitle: settings.contactCardTitle,
+        hoursCardShowDetails: settings.hoursCardShowDetails,
+        locationCardShowDirections: settings.locationCardShowDirections,
+        
+        // Navigation Customization (now that we're adding DB columns)
+        navigationEnabled: settings.navigationEnabled,
+        navigationLayout: settings.navigationLayout,
+        navigationAlignment: settings.navigationAlignment,
+        navigationStyle: settings.navigationStyle,
+        showMobileMenu: settings.showMobileMenu,
+        mobileMenuStyle: settings.mobileMenuStyle
       };
       
       // Remove undefined fields to avoid setting them to null
@@ -510,6 +537,13 @@ export const websiteBuilderService = {
         filteredSettings.openingHours = typeof settings.openingHours === 'object'
           ? JSON.stringify(settings.openingHours)
           : settings.openingHours;
+      }
+      
+      // Handle navigationItems - this should be stored as JSON
+      if (settings.navigationItems !== undefined) {
+        filteredSettings.navigationItems = Array.isArray(settings.navigationItems)
+          ? JSON.stringify(settings.navigationItems)
+          : settings.navigationItems;
       }
       
       console.log('Updating restaurant settings with filtered data:', {

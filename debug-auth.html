@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Authentication</title>
+</head>
+<body>
+    <h1>Authentication Debug</h1>
+    <div id="output"></div>
+    
+    <script>
+        function debugAuth() {
+            const output = document.getElementById('output');
+            let html = '<h2>LocalStorage:</h2>';
+            
+            // Check all localStorage items
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                const value = localStorage.getItem(key);
+                html += `<p><strong>${key}:</strong> ${value}</p>`;
+            }
+            
+            html += '<h2>SessionStorage:</h2>';
+            
+            // Check all sessionStorage items
+            for (let i = 0; i < sessionStorage.length; i++) {
+                const key = sessionStorage.key(i);
+                const value = sessionStorage.getItem(key);
+                html += `<p><strong>${key}:</strong> ${value}</p>`;
+            }
+            
+            // Check specific auth logic
+            html += '<h2>Auth Logic Test:</h2>';
+            
+            let token = localStorage.getItem('token');
+            html += `<p>Direct token: ${token}</p>`;
+            
+            const userInfo = localStorage.getItem('kitchenSyncUserInfo');
+            if (userInfo) {
+                try {
+                    const parsed = JSON.parse(userInfo);
+                    html += `<p>User info: ${JSON.stringify(parsed, null, 2)}</p>`;
+                    html += `<p>Is customer: ${parsed.user?.isCustomer}</p>`;
+                    if (!parsed.user?.isCustomer) {
+                        token = parsed.token;
+                    }
+                } catch (e) {
+                    html += `<p>Error parsing user info: ${e.message}</p>`;
+                }
+            }
+            
+            const customerAuth = sessionStorage.getItem('customerAuth');
+            html += `<p>Customer auth: ${customerAuth}</p>`;
+            
+            if (customerAuth) {
+                token = null;
+                html += `<p>Token nullified due to customer auth</p>`;
+            }
+            
+            html += `<p><strong>Final token: ${token}</strong></p>`;
+            
+            output.innerHTML = html;
+        }
+        
+        debugAuth();
+    </script>
+</body>
+</html> 
