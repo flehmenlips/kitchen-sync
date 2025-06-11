@@ -500,13 +500,23 @@ export const websiteBuilderService = {
         }
       });
       
-      // Handle special JSON fields that need serialization
+      // Handle special JSON fields - activeMenuIds should be an array, not a string
       if (settings.activeMenuIds !== undefined) {
-        filteredSettings.activeMenuIds = Array.isArray(settings.activeMenuIds) 
-          ? JSON.stringify(settings.activeMenuIds)
-          : settings.activeMenuIds;
+        if (Array.isArray(settings.activeMenuIds)) {
+          filteredSettings.activeMenuIds = settings.activeMenuIds; // Keep as array
+        } else if (typeof settings.activeMenuIds === 'string') {
+          try {
+            filteredSettings.activeMenuIds = JSON.parse(settings.activeMenuIds); // Parse string to array
+          } catch (e) {
+            console.warn('Could not parse activeMenuIds string:', settings.activeMenuIds);
+            filteredSettings.activeMenuIds = []; // Default to empty array
+          }
+        } else {
+          filteredSettings.activeMenuIds = settings.activeMenuIds;
+        }
       }
       
+      // Handle openingHours - this should be stored as JSON string
       if (settings.openingHours !== undefined) {
         filteredSettings.openingHours = typeof settings.openingHours === 'object'
           ? JSON.stringify(settings.openingHours)
@@ -516,10 +526,14 @@ export const websiteBuilderService = {
       console.log('Updating restaurant settings with filtered data:', {
         restaurantId: restaurantId || 1,
         fieldCount: Object.keys(filteredSettings).length,
-        fields: Object.keys(filteredSettings)
+        fields: Object.keys(filteredSettings),
+        sampleData: Object.keys(filteredSettings).slice(0, 3).reduce((acc, key) => {
+          acc[key] = filteredSettings[key];
+          return acc;
+        }, {} as any)
       });
       
-      return await prisma.restaurantSettings.upsert({
+      const result = await prisma.restaurantSettings.upsert({
         where: { restaurantId: restaurantId || 1 },
         update: filteredSettings,
         create: {
@@ -527,8 +541,21 @@ export const websiteBuilderService = {
           ...filteredSettings
         }
       });
+      
+      console.log('Successfully updated restaurant settings:', {
+        restaurantId: result.restaurantId,
+        updatedFields: Object.keys(filteredSettings).length
+      });
+      
+      return result;
     } catch (error) {
-      console.error('Error in updateSettings:', error);
+      console.error('DETAILED ERROR in updateSettings:', {
+        error: error,
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        restaurantId: restaurantId || 1,
+        attemptedFields: 'Error occurred before filteredSettings was created'
+      });
       throw error; // Now that we're filtering fields properly, let real errors bubble up
     }
   },
