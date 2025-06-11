@@ -440,7 +440,7 @@ export const websiteBuilderService = {
   async updateSettings(restaurantId: number | undefined, settings: Partial<WebsiteBuilderData['settings']>) {
     try {
       // Filter out fields that don't exist in the current database schema
-      // EXACTLY match the fields from our working getRestaurantSettings select query
+      // ONLY include fields that exist in PRODUCTION database (from getRestaurantSettings select query)
       const allowedFields = {
         // Basic Info
         websiteName: settings.websiteName,
@@ -490,6 +490,12 @@ export const websiteBuilderService = {
         metaTitle: settings.metaTitle,
         metaDescription: settings.metaDescription,
         metaKeywords: settings.metaKeywords
+        
+        // NOTE: Removed Info Panes and Navigation fields - they don't exist in production DB yet:
+        // - infoPanesEnabled, hoursCardTitle, locationCardTitle, contactCardTitle
+        // - hoursCardShowDetails, locationCardShowDirections
+        // - navigationEnabled, navigationLayout, navigationAlignment, navigationStyle
+        // - navigationItems, showMobileMenu, mobileMenuStyle
       };
       
       // Remove undefined fields to avoid setting them to null
