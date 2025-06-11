@@ -338,6 +338,28 @@ export const getPublicRestaurantSettings = async (req: Request, res: Response): 
   }
 };
 
+// Helper function to parse opening hours (handles both JSON string and object)
+const parseOpeningHours = (openingHours: any): any => {
+  if (!openingHours) return null;
+  
+  // If it's already an object, return as-is
+  if (typeof openingHours === 'object' && !Array.isArray(openingHours)) {
+    return openingHours;
+  }
+  
+  // If it's a string, try to parse it
+  if (typeof openingHours === 'string') {
+    try {
+      return JSON.parse(openingHours);
+    } catch (e) {
+      console.warn('Failed to parse opening hours JSON:', openingHours);
+      return null;
+    }
+  }
+  
+  return null;
+};
+
 // Unified content endpoint that combines RestaurantSettings + ContentBlocks
 export const getUnifiedRestaurantContent = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -405,7 +427,7 @@ export const getUnifiedRestaurantContent = async (req: Request, res: Response): 
         city: settings?.contactCity,
         state: settings?.contactState,
         zip: settings?.contactZip,
-        openingHours: settings?.openingHours
+        openingHours: parseOpeningHours(settings?.openingHours)
       },
       branding: {
         logoUrl: settings?.logoUrl,

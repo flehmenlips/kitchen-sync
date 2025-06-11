@@ -189,7 +189,7 @@ export const websiteBuilderService = {
           contactCity: settings.contactCity || undefined,
           contactState: settings.contactState || undefined,
           contactZip: settings.contactZip || undefined,
-          openingHours: settings.openingHours,
+          openingHours: this.parseOpeningHours(settings.openingHours),
           
           // Menu Display
           menuDisplayMode: settings.menuDisplayMode || undefined,
@@ -1017,5 +1017,27 @@ export const websiteBuilderService = {
       console.warn('Failed to parse navigation items:', error);
       return null;
     }
+  },
+
+  // Helper method to parse opening hours (handles both JSON string and object)
+  parseOpeningHours(openingHours: any): any {
+    if (!openingHours) return null;
+    
+    // If it's already an object, return as-is
+    if (typeof openingHours === 'object' && !Array.isArray(openingHours)) {
+      return openingHours;
+    }
+    
+    // If it's a string, try to parse it
+    if (typeof openingHours === 'string') {
+      try {
+        return JSON.parse(openingHours);
+      } catch (e) {
+        console.warn('Failed to parse opening hours JSON:', openingHours);
+        return null;
+      }
+    }
+    
+    return null;
   }
 }; 
