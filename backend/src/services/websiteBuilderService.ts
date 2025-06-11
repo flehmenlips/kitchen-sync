@@ -206,22 +206,15 @@ export const websiteBuilderService = {
           metaDescription: settings.metaDescription || undefined,
           metaKeywords: settings.metaKeywords || undefined,
           
-          // Info Panes Customization
-          infoPanesEnabled: (settings as any).infoPanesEnabled ?? true,
-          hoursCardTitle: (settings as any).hoursCardTitle || 'Opening Hours',
-          locationCardTitle: (settings as any).locationCardTitle || 'Our Location', 
-          contactCardTitle: (settings as any).contactCardTitle || 'Contact Us',
-          hoursCardShowDetails: (settings as any).hoursCardShowDetails ?? true,
-          locationCardShowDirections: (settings as any).locationCardShowDirections ?? true,
+          // NOTE: Removed Info Panes and Navigation fields - they don't exist in production DB yet
+          // This prevents frontend from receiving these fields and trying to save them back
+          // - infoPanesEnabled, hoursCardTitle, locationCardTitle, contactCardTitle
+          // - hoursCardShowDetails, locationCardShowDirections  
+          // - navigationEnabled, navigationLayout, navigationAlignment, navigationStyle
+          // - showMobileMenu, mobileMenuStyle, navigationItems
           
-          // Navigation Customization
-          navigationEnabled: (settings as any).navigationEnabled ?? true,
-          navigationLayout: (settings as any).navigationLayout || 'topbar',
-          navigationAlignment: (settings as any).navigationAlignment || 'left',
-          navigationStyle: (settings as any).navigationStyle || 'modern',
-          showMobileMenu: (settings as any).showMobileMenu ?? true,
-          mobileMenuStyle: (settings as any).mobileMenuStyle || 'hamburger',
-          navigationItems: this.parseNavigationItems((settings as any).navigationItems) || [
+          // Temporary default navigation items for frontend display only (not saved to DB)
+          navigationItems: [
             {
               id: 'home',
               label: 'Home',
@@ -416,22 +409,12 @@ export const websiteBuilderService = {
         activeMenuIds: [],
         menuDisplayMode: "grid",
         tagline: null,
-        metaKeywords: null,
-        // Info Panes Customization
-        infoPanesEnabled: true,
-        hoursCardTitle: null,
-        locationCardTitle: null,
-        contactCardTitle: null,
-        hoursCardShowDetails: true,
-        locationCardShowDirections: true,
-        // Navigation Customization
-        navigationEnabled: true,
-        navigationLayout: null,
-        navigationAlignment: null,
-        navigationStyle: null,
-        navigationItems: null,
-        showMobileMenu: true,
-        mobileMenuStyle: null
+        metaKeywords: null
+        // NOTE: Removed Info Panes and Navigation fields from error fallback too
+        // - infoPanesEnabled, hoursCardTitle, locationCardTitle, contactCardTitle
+        // - hoursCardShowDetails, locationCardShowDirections
+        // - navigationEnabled, navigationLayout, navigationAlignment, navigationStyle
+        // - navigationItems, showMobileMenu, mobileMenuStyle
       };
     }
   },
