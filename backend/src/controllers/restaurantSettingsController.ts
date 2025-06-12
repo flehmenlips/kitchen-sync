@@ -336,6 +336,21 @@ export const getPublicRestaurantSettings = async (req: Request, res: Response): 
         metaDescription: true,
         activeMenuIds: true,
         menuDisplayMode: true,
+        // Navigation Customization
+        navigationEnabled: true,
+        navigationLayout: true,
+        navigationAlignment: true,
+        navigationStyle: true,
+        navigationItems: true,
+        showMobileMenu: true,
+        mobileMenuStyle: true,
+        // Info Panes Customization
+        infoPanesEnabled: true,
+        hoursCardTitle: true,
+        locationCardTitle: true,
+        contactCardTitle: true,
+        hoursCardShowDetails: true,
+        locationCardShowDirections: true,
       }
     });
 

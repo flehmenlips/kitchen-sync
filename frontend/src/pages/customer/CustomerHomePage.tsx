@@ -69,14 +69,24 @@ const CustomerHomePage: React.FC = () => {
   };
 
   const getTodayHours = () => {
-    if (!content?.contact.openingHours) return 'Hours not available';
-    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const today = days[new Date().getDay()];
-    const hours = content.contact.openingHours[today];
-    if (hours && typeof hours === 'object' && 'open' in hours && 'close' in hours) {
-      return `${hours.open} - ${hours.close}`;
+    try {
+      if (!content?.contact?.openingHours) return 'Hours not available';
+      const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const today = days[new Date().getDay()];
+      const hours = content.contact.openingHours[today];
+      
+      if (!hours || typeof hours !== 'object') return 'Closed today';
+      
+      const open = hours.open;
+      const close = hours.close;
+      
+      if (!open || !close) return 'Closed today';
+      
+      return `${String(open)} - ${String(close)}`;
+    } catch (error) {
+      console.error('Error getting today hours:', error);
+      return 'Hours not available';
     }
-    return 'Closed today';
   };
 
   if (loading) {
@@ -194,39 +204,42 @@ const CustomerHomePage: React.FC = () => {
                 </Typography>
                 {content?.contact.openingHours && (
                   <Box sx={{ mt: 2 }}>
-                    {Object.entries(content.contact.openingHours)
-                      .filter(([key, value]) => {
-                        // Filter out prototype and non-enumerable properties
-                        return content.contact.openingHours.hasOwnProperty(key) && 
-                               typeof value === 'object' && 
-                               value !== null;
-                      })
-                      .map(([day, hours]: [string, any]) => {
-                        // Debug logging to see what's causing the React error
-                        console.log('[CustomerHomePage] Rendering day:', day, 'hours:', hours, 'type:', typeof hours);
+                    {(() => {
+                      try {
+                        if (!content?.contact?.openingHours || typeof content.contact.openingHours !== 'object') {
+                          return <Typography variant="body2">Hours not available</Typography>;
+                        }
                         
-                        // Safely handle hours data - ensure we render strings only
-                        const formatHours = (hours: any) => {
-                          if (!hours) return 'Closed';
-                          if (typeof hours === 'string') return hours;
-                          if (typeof hours === 'object' && hours.open && hours.close) {
-                            const open = typeof hours.open === 'string' ? hours.open : String(hours.open);
-                            const close = typeof hours.close === 'string' ? hours.close : String(hours.close);
-                            return `${open} - ${close}`;
-                          }
-                          // Fallback for any other data type
-                          return String(hours);
-                        };
-
-                        const formattedHours = formatHours(hours);
-                        console.log('[CustomerHomePage] Formatted hours for', day, ':', formattedHours);
-
-                        return (
+                        const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+                        const validEntries = days
+                          .filter(day => content.contact.openingHours[day])
+                          .map(day => {
+                            const hours = content.contact.openingHours[day];
+                            
+                            if (!hours || typeof hours !== 'object') {
+                              return { day, formattedHours: 'Closed' };
+                            }
+                            
+                            const open = hours.open ? String(hours.open) : '';
+                            const close = hours.close ? String(hours.close) : '';
+                            
+                            if (!open || !close) {
+                              return { day, formattedHours: 'Closed' };
+                            }
+                            
+                            return { day, formattedHours: `${open} - ${close}` };
+                          });
+                        
+                        return validEntries.map(({ day, formattedHours }) => (
                           <Typography key={day} variant="body2" sx={{ textTransform: 'capitalize' }}>
                             {day}: {formattedHours}
                           </Typography>
-                        );
-                      })}
+                        ));
+                      } catch (error) {
+                        console.error('Error rendering opening hours:', error);
+                        return <Typography variant="body2">Hours not available</Typography>;
+                      }
+                    })()}
                   </Box>
                 )}
               </CardContent>
