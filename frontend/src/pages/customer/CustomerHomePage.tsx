@@ -54,6 +54,20 @@ const CustomerHomePage: React.FC = () => {
     return parts.join(', ');
   };
 
+  // Safe rendering helper to prevent objects as React children
+  const safeRender = (value: any): string => {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'string' || typeof value === 'number') return String(value);
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (typeof value === 'object') {
+      // If it's an object, try to extract meaningful content
+      if (Array.isArray(value)) return value.join(', ');
+      if (value.toString && typeof value.toString === 'function') return value.toString();
+      return JSON.stringify(value);
+    }
+    return String(value);
+  };
+
   const getTodayHours = () => {
     if (!content?.contact.openingHours) return 'Hours not available';
     const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -129,7 +143,7 @@ const CustomerHomePage: React.FC = () => {
               textShadow: '2px 2px 4px rgba(0,0,0,0.5)'
             }}
           >
-            {content?.hero.title || 'Welcome to Our Restaurant'}
+            {safeRender(content?.hero.title) || 'Welcome to Our Restaurant'}
           </Typography>
           <Typography
             variant="h5"
@@ -139,7 +153,7 @@ const CustomerHomePage: React.FC = () => {
               textShadow: '1px 1px 2px rgba(0,0,0,0.5)'
             }}
           >
-            {content?.hero.subtitle || 'Experience culinary excellence'}
+            {safeRender(content?.hero.subtitle) || 'Experience culinary excellence'}
           </Typography>
           {content?.hero.ctaText && content?.hero.ctaLink && (
             <Button
@@ -158,7 +172,7 @@ const CustomerHomePage: React.FC = () => {
                 }
               }}
             >
-              {content.hero.ctaText}
+              {safeRender(content.hero.ctaText)}
             </Button>
           )}
         </Container>
@@ -249,7 +263,7 @@ const CustomerHomePage: React.FC = () => {
                     <PhoneIcon sx={{ mr: 1, fontSize: 20 }} />
                     <Typography variant="body1">
                       <a href={`tel:${content.contact.phone}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                        {content.contact.phone}
+                        {safeRender(content.contact.phone)}
                       </a>
                     </Typography>
                   </Box>
@@ -259,7 +273,7 @@ const CustomerHomePage: React.FC = () => {
                     <EmailIcon sx={{ mr: 1, fontSize: 20 }} />
                     <Typography variant="body1">
                       <a href={`mailto:${content.contact.email}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                        {content.contact.email}
+                        {safeRender(content.contact.email)}
                       </a>
                     </Typography>
                   </Box>
@@ -276,10 +290,10 @@ const CustomerHomePage: React.FC = () => {
           <Grid container spacing={4} alignItems="center">
             <Grid item xs={12} md={6}>
               <Typography variant="h3" component="h2" gutterBottom>
-                {content.about.title || 'About Us'}
+                {safeRender(content?.about.title) || 'About Us'}
               </Typography>
               <Typography variant="body1" paragraph sx={{ fontSize: '1.1rem', lineHeight: 1.8 }}>
-                {content.about.description || 'Welcome to our restaurant, where we serve delicious food made with love and the finest ingredients.'}
+                {safeRender(content?.about.description) || 'Welcome to our restaurant, where we serve delicious food made with love and the finest ingredients.'}
               </Typography>
               <Button
                 component={Link}
