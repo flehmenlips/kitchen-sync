@@ -417,7 +417,7 @@ const CustomerLayout: React.FC = () => {
                 {settings?.openingHours && typeof settings.openingHours === 'object' ? (
                   Object.entries(settings.openingHours).map(([day, hours]) => (
                     <Typography key={day} variant="body2" sx={{ mb: 0.5 }}>
-                      <strong>{day}:</strong> {hours as string}
+                      <strong>{day}:</strong> {String(hours)}
                     </Typography>
                   ))
                 ) : (
