@@ -581,7 +581,7 @@ model Restaurant {
   is_chain                Boolean               @default(false)
   parent_restaurant_id    Int?
   website_builder_enabled Boolean               @default(false)
-  websiteSettings         Json?                 @map("website_settings")
+  website_settings        Json?
   brandAssets             BrandAsset[]
   categories              Category[]
   colorPalettes           ColorPalette[]
@@ -653,6 +653,8 @@ model RestaurantSettings {
   footerText                 String?
   activeMenuIds              Int[]            @default([])
   menuDisplayMode            String?          @default("grid") @db.VarChar(50)
+  createdAt                  DateTime?        @default(now()) @db.Timestamp(6)
+  updatedAt                  DateTime?        @default(now()) @db.Timestamp(6)
   tagline                    String?
   metaKeywords               String?
   infoPanesEnabled           Boolean?         @default(true) @map("info_panes_enabled")
@@ -858,15 +860,15 @@ model Subscription {
   lastPaymentStatus      String?            @map("last_payment_status") @db.VarChar(255)
   lastPaymentDate        DateTime?          @map("last_payment_date") @db.Timestamp(6)
   metadata               Json?
-  api_access             Boolean            @default(false) @map("api_access")
-  custom_domain          Boolean            @default(false) @map("custom_domain")
-  enabledModules         String[]           @default([]) @map("enabled_modules")
-  maxCustomerAccounts    Int                @default(100) @map("max_customer_accounts")
-  maxLocations           Int                @default(1) @map("max_locations")
-  maxStaffAccounts       Int                @default(2) @map("max_staff_accounts")
-  module_access          Json?              @db.Json @map("module_access")
-  prioritySupport        Boolean            @default(false) @map("priority_support")
-  whiteLabel             Boolean            @default(false) @map("white_label")
+  api_access             Boolean            @default(false)
+  custom_domain          Boolean            @default(false)
+  enabled_modules        String[]           @default([])
+  max_customer_accounts  Int                @default(100)
+  max_locations          Int                @default(1)
+  max_staff_accounts     Int                @default(2)
+  module_access          Json?              @db.Json
+  priority_support       Boolean            @default(false)
+  white_label            Boolean            @default(false)
   invoices               Invoice[]
   restaurant             Restaurant         @relation(fields: [restaurantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   usageRecords           UsageRecord[]
