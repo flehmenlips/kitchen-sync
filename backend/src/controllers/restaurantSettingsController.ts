@@ -105,6 +105,7 @@ export const getRestaurantSettings = async (req: Request, res: Response) => {
 
     res.json({
       ...settings,
+      openingHours: parseOpeningHours(settings.openingHours),
       restaurant: {
         name: settings.websiteName || restaurant?.name || 'Restaurant',
         slug: restaurant?.slug || 'restaurant',
@@ -159,6 +160,7 @@ export const updateRestaurantSettings = async (req: Request, res: Response) => {
 
     res.json({
       ...settings,
+      openingHours: parseOpeningHours(settings.openingHours),
       restaurant: {
         name: settings.websiteName || restaurant?.name || 'Restaurant',
         slug: restaurant?.slug || 'restaurant',
@@ -345,6 +347,7 @@ export const getPublicRestaurantSettings = async (req: Request, res: Response): 
     // Add restaurant info
     const result = {
       ...settings,
+      openingHours: parseOpeningHours(settings.openingHours),
       restaurant: {
         id: restaurant.id,
         name: settings.websiteName || restaurant.name || 'Restaurant',
