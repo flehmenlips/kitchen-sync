@@ -33,6 +33,8 @@ const CustomerHomePage: React.FC = () => {
   const fetchData = async () => {
     try {
       const unifiedContent = await unifiedContentService.getUnifiedContent('home');
+      console.log('[CustomerHomePage] Fetched content:', unifiedContent);
+      console.log('[CustomerHomePage] Opening hours data:', unifiedContent?.contact?.openingHours);
       setContent(unifiedContent);
     } catch (error) {
       console.error('Error fetching unified content:', error);
@@ -179,6 +181,9 @@ const CustomerHomePage: React.FC = () => {
                 {content?.contact.openingHours && (
                   <Box sx={{ mt: 2 }}>
                     {Object.entries(content.contact.openingHours).map(([day, hours]: [string, any]) => {
+                      // Debug logging to see what's causing the React error
+                      console.log('[CustomerHomePage] Rendering day:', day, 'hours:', hours, 'type:', typeof hours);
+                      
                       // Safely handle hours data - ensure we render strings only
                       const formatHours = (hours: any) => {
                         if (!hours) return 'Closed';
@@ -188,12 +193,16 @@ const CustomerHomePage: React.FC = () => {
                           const close = typeof hours.close === 'string' ? hours.close : String(hours.close);
                           return `${open} - ${close}`;
                         }
-                        return 'Closed';
+                        // Fallback for any other data type
+                        return String(hours);
                       };
-                      
+
+                      const formattedHours = formatHours(hours);
+                      console.log('[CustomerHomePage] Formatted hours for', day, ':', formattedHours);
+
                       return (
                         <Typography key={day} variant="body2" sx={{ textTransform: 'capitalize' }}>
-                          {day}: {formatHours(hours)}
+                          {day}: {formattedHours}
                         </Typography>
                       );
                     })}
