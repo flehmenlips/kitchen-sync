@@ -48,7 +48,44 @@ const LoginPage: React.FC = () => {
           alignItems: 'center',
         }}
       >
-        <Typography component="h1" variant="h5">
+        {/* KitchenSync Logo and Branding */}
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          mb: 4 
+        }}>
+          <img 
+            src="/logo.svg" 
+            alt="KitchenSync Logo" 
+            style={{ 
+              height: '80px',
+              width: 'auto',
+              marginBottom: '16px'
+            }}
+          />
+          <Typography 
+            variant="h4" 
+            component="h1" 
+            sx={{ 
+              fontWeight: 600,
+              color: 'primary.main',
+              letterSpacing: '0.5px',
+              mb: 1
+            }}
+          >
+            KitchenSync
+          </Typography>
+          <Typography 
+            variant="subtitle1" 
+            color="text.secondary"
+            sx={{ textAlign: 'center' }}
+          >
+            Restaurant Management Platform
+          </Typography>
+        </Box>
+
+        <Typography component="h2" variant="h5" sx={{ mb: 2 }}>
           Sign In
         </Typography>
         {submitError && <Alert severity="error" sx={{ mt: 2, width: '100%' }}>{submitError}</Alert>}

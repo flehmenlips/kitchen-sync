@@ -76,14 +76,39 @@ const MainLayout: React.FC = () => {
             <Toolbar sx={{ 
                 display: 'flex', 
                 alignItems: 'center', 
-                justifyContent: 'flex-end',
-                px: [1],
+                justifyContent: 'flex-start',
+                px: [2],
                 background: theme.palette.primary.main,
-                color: 'white'
+                color: 'white',
+                minHeight: '64px !important'
             }}>
-                <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, ml: 2 }}>
-                    KitchenSync
-                </Typography>
+                {/* KitchenSync Logo */}
+                <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    flexGrow: 1,
+                    gap: 1
+                }}>
+                    <img 
+                        src="/logo-white.svg" 
+                        alt="KitchenSync Logo" 
+                        style={{ 
+                            height: '32px',
+                            width: 'auto'
+                        }}
+                    />
+                    <Typography 
+                        variant="h6" 
+                        noWrap 
+                        component="div" 
+                        sx={{ 
+                            fontWeight: 600,
+                            letterSpacing: '0.5px'
+                        }}
+                    >
+                        KitchenSync
+                    </Typography>
+                </Box>
                 {isMobile && (
                     <IconButton onClick={handleDrawerToggle} sx={{ color: 'white' }}>
                         <ChevronLeftIcon />

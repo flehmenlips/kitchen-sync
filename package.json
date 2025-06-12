@@ -1,6 +1,6 @@
 {
   "name": "kitchen-sync",
-  "version": "1.0.0",
+  "version": "3.3.0",
   "description": "KitchenSync Restaurant Management System",
   "private": true,
   "scripts": {

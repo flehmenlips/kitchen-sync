@@ -5,58 +5,6 @@ All notable changes to KitchenSync will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.3.0] - 2025-01-03
-
-### Added
-- **Production-Ready Website Builder** - Complete stability and advanced customization
-  - Resolved all production deployment issues and database schema conflicts
-  - Comprehensive error handling with graceful fallbacks
-  - Database schema synchronization between local and production environments
-  - Authentication security fixes for customer/admin system separation
-  - Stable API endpoints with proper routing and middleware configuration
-- **Advanced Navigation Customization**
-  - Layout options: topbar, sidebar, or hybrid navigation layouts
-  - Alignment control: left, center, right, or justified navigation alignment
-  - Style themes: modern, classic, minimal, or rounded navigation styles
-  - Mobile responsiveness with dedicated mobile menu controls
-  - Dynamic navigation with automatic inclusion of custom pages
-  - System page protection for essential navigation items
-- **Info Panes Customization System**
-  - Card title customization for Opening Hours, Location, and Contact cards
-  - Visibility controls to show/hide individual info cards
-  - Content personalization to match restaurant branding
-  - Responsive design that adapts to all screen sizes
-- **Opening Hours Display System**
-  - Robust data parsing for opening hours (JSON string or object formats)
-  - Consistent display across all website sections (info cards, footer, etc.)
-  - Error prevention for numbered list display bugs (0: -, 1: -, etc.)
-  - Format flexibility supporting various time formats
-- **Database Schema Management**
-  - Production synchronization with comprehensive SQL migration scripts
-  - Automatic addition of missing database columns
-  - Schema validation with intelligent field filtering
-  - Safe migration procedures with rollback capabilities
-
-### Fixed
-- **Critical Production Fixes**
-  - Database schema conflicts between local and production environments
-  - API routing issues causing HTML responses instead of JSON
-  - Authentication conflicts between customer and admin systems
-  - Static file serving middleware configuration
-  - Opening hours data format inconsistencies across all endpoints
-- **Website Builder Stability**
-  - Field mapping for all customization options
-  - Data type conversion for arrays, JSON, and complex data types
-  - Save functionality with proper error handling
-  - State management in customization forms
-  - Validation logic for all customization inputs
-
-### Technical
-- Intelligent field filtering system based on database schema availability
-- Enhanced error recovery with detailed logging and recovery mechanisms
-- Proper API middleware ordering to prevent conflicts
-- Comprehensive data type validation for complex data structures
-- Unified API service integration with proper error handling 
 ## [3.2.0] - 2024-12-28
 
 ### Added
