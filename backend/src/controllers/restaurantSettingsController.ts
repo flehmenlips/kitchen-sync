@@ -344,7 +344,7 @@ export const getPublicRestaurantSettings = async (req: Request, res: Response): 
       return;
     }
 
-    // Add restaurant info
+    // Add restaurant info and parse opening hours
     const result = {
       ...settings,
       openingHours: parseOpeningHours(settings.openingHours),

@@ -122,11 +122,40 @@ const CustomerLayout: React.FC = () => {
     navigate(buildCustomerUrl());
   };
 
-  const navigationItems = [
-    { text: 'Home', path: buildCustomerUrl(), icon: <HomeIcon /> },
-    { text: 'Menu', path: buildCustomerUrl('menu'), icon: <MenuBookIcon /> },
-    { text: 'Make Reservation', path: buildCustomerUrl('reservations/new'), icon: <EventSeatIcon /> },
-  ];
+  // Icon mapping for navigation items
+  const getNavigationIcon = (iconName?: string) => {
+    switch (iconName) {
+      case 'home': return <HomeIcon />;
+      case 'menu_book': return <MenuBookIcon />;
+      case 'event_seat': return <EventSeatIcon />;
+      default: return <HomeIcon />;
+    }
+  };
+
+  // Get navigation items from settings or use defaults
+  const getNavigationItems = () => {
+    // Check if navigation is enabled and we have custom navigation items
+    if (settings?.navigationEnabled !== false && settings?.navigationItems && settings.navigationItems.length > 0) {
+      // Use custom navigation items from settings
+      return settings.navigationItems
+        .filter(item => item.isActive)
+        .sort((a, b) => a.displayOrder - b.displayOrder)
+        .map(item => ({
+          text: item.label,
+          path: buildCustomerUrl(item.path.replace('/', '')),
+          icon: getNavigationIcon(item.icon)
+        }));
+    }
+    
+    // Fallback to default navigation items
+    return [
+      { text: 'Home', path: buildCustomerUrl(), icon: <HomeIcon /> },
+      { text: 'Menu', path: buildCustomerUrl('menu'), icon: <MenuBookIcon /> },
+      { text: 'Make Reservation', path: buildCustomerUrl('reservations/new'), icon: <EventSeatIcon /> },
+    ];
+  };
+
+  const navigationItems = getNavigationItems();
 
   const formatFooterText = (text: string) => {
     const currentYear = new Date().getFullYear();
@@ -318,6 +347,10 @@ const CustomerLayout: React.FC = () => {
                     <ListItemIcon><EventSeatIcon /></ListItemIcon>
                     <ListItemText primary="My Reservations" />
                   </ListItem>
+                  <Divider />
+                  <ListItem button onClick={handleLogout}>
+                    <ListItemText primary="Sign Out" />
+                  </ListItem>
                 </>
               )}
             </List>
@@ -325,7 +358,7 @@ const CustomerLayout: React.FC = () => {
         </Drawer>
 
         {/* Main Content */}
-        <Box component="main" sx={{ flexGrow: 1, backgroundColor: 'background.default' }}>
+        <Box component="main" sx={{ flexGrow: 1 }}>
           <Outlet />
         </Box>
 
@@ -333,109 +366,106 @@ const CustomerLayout: React.FC = () => {
         <Box
           component="footer"
           sx={{
-            backgroundColor: 'grey.900',
-            color: 'white',
+            backgroundColor: theme.palette.grey[100],
             py: 6,
             mt: 'auto',
           }}
         >
           <Container maxWidth="lg">
             <Grid container spacing={4}>
+              {/* Contact Info */}
               <Grid item xs={12} md={4}>
                 <Typography variant="h6" gutterBottom>
-                  {settings?.websiteName || 'Restaurant'}
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 2 }}>
-                  {settings?.tagline || 'Fresh, local ingredients meet culinary excellence'}
-                </Typography>
-                
-                {/* Social Media Links */}
-                {(settings?.facebookUrl || settings?.instagramUrl || settings?.twitterUrl) && (
-                  <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
-                    {settings.facebookUrl && (
-                      <IconButton
-                        href={settings.facebookUrl}
-                        target="_blank"
-                        sx={{ color: 'white' }}
-                        size="small"
-                      >
-                        <FacebookIcon />
-                      </IconButton>
-                    )}
-                    {settings.instagramUrl && (
-                      <IconButton
-                        href={settings.instagramUrl}
-                        target="_blank"
-                        sx={{ color: 'white' }}
-                        size="small"
-                      >
-                        <InstagramIcon />
-                      </IconButton>
-                    )}
-                    {settings.twitterUrl && (
-                      <IconButton
-                        href={settings.twitterUrl}
-                        target="_blank"
-                        sx={{ color: 'white' }}
-                        size="small"
-                      >
-                        <TwitterIcon />
-                      </IconButton>
-                    )}
-                  </Box>
-                )}
-              </Grid>
-              
-              <Grid item xs={12} md={4}>
-                <Typography variant="h6" gutterBottom>
-                  Contact
+                  {settings?.contactCardTitle || 'Contact Us'}
                 </Typography>
                 {settings?.contactPhone && (
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <PhoneIcon sx={{ mr: 1, fontSize: 20 }} />
-                    <Typography variant="body2">
-                      {settings.contactPhone}
-                    </Typography>
+                    <PhoneIcon sx={{ mr: 1, fontSize: 18 }} />
+                    <Typography variant="body2">{settings.contactPhone}</Typography>
                   </Box>
                 )}
                 {settings?.contactEmail && (
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <EmailIcon sx={{ mr: 1, fontSize: 20 }} />
-                    <Typography variant="body2">
-                      {settings.contactEmail}
-                    </Typography>
+                    <EmailIcon sx={{ mr: 1, fontSize: 18 }} />
+                    <Typography variant="body2">{settings.contactEmail}</Typography>
                   </Box>
                 )}
                 {formatAddress() && (
-                  <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-                    <LocationIcon sx={{ mr: 1, fontSize: 20, mt: 0.5 }} />
-                    <Typography variant="body2">
-                      {formatAddress()}
-                    </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
+                    <LocationIcon sx={{ mr: 1, fontSize: 18, mt: 0.2 }} />
+                    <Typography variant="body2">{formatAddress()}</Typography>
                   </Box>
                 )}
               </Grid>
-              
+
+              {/* Hours */}
               <Grid item xs={12} md={4}>
                 <Typography variant="h6" gutterBottom>
-                  Hours
+                  {settings?.hoursCardTitle || 'Opening Hours'}
                 </Typography>
-                {settings?.openingHours && (
-                  <Box>
-                    {Object.entries(settings.openingHours).map(([day, hours]) => (
-                      <Typography key={day} variant="body2" sx={{ mb: 0.5 }}>
-                        <span style={{ textTransform: 'capitalize' }}>{day}:</span> {hours.open} - {hours.close}
-                      </Typography>
-                    ))}
-                  </Box>
+                {settings?.openingHours && typeof settings.openingHours === 'object' ? (
+                  Object.entries(settings.openingHours).map(([day, hours]) => (
+                    <Typography key={day} variant="body2" sx={{ mb: 0.5 }}>
+                      <strong>{day}:</strong> {hours as string}
+                    </Typography>
+                  ))
+                ) : (
+                  <Typography variant="body2">
+                    Please contact us for current hours
+                  </Typography>
                 )}
               </Grid>
+
+              {/* Social Media */}
+              <Grid item xs={12} md={4}>
+                <Typography variant="h6" gutterBottom>
+                  Follow Us
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  {settings?.facebookUrl && (
+                    <IconButton
+                      component={Link}
+                      to={settings.facebookUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      size="small"
+                    >
+                      <FacebookIcon />
+                    </IconButton>
+                  )}
+                  {settings?.instagramUrl && (
+                    <IconButton
+                      component={Link}
+                      to={settings.instagramUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      size="small"
+                    >
+                      <InstagramIcon />
+                    </IconButton>
+                  )}
+                  {settings?.twitterUrl && (
+                    <IconButton
+                      component={Link}
+                      to={settings.twitterUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      size="small"
+                    >
+                      <TwitterIcon />
+                    </IconButton>
+                  )}
+                </Box>
+              </Grid>
             </Grid>
-            
-            <Divider sx={{ my: 4, borderColor: 'grey.800' }} />
-            
-            <Typography variant="body2" align="center">
-              {settings?.footerText ? formatFooterText(settings.footerText) : `© ${new Date().getFullYear()} All rights reserved.`}
+
+            {/* Copyright */}
+            <Divider sx={{ my: 3 }} />
+            <Typography variant="body2" color="text.secondary" align="center">
+              {settings?.footerText ? 
+                formatFooterText(settings.footerText) : 
+                `© ${new Date().getFullYear()} ${settings?.websiteName || 'Restaurant'}. All rights reserved.`
+              }
             </Typography>
           </Container>
         </Box>
