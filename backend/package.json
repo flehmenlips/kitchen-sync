@@ -9,7 +9,8 @@
   },
   "scripts": {
     "postinstall": "npx prisma generate",
-    "build": "tsc",
+    "build": "npm run build:frontend && tsc",
+    "build:frontend": "cd ../frontend && npm install && npm run build && cp -r dist/* ../backend/public/",
     "start": "node dist/server.js",
     "dev": "nodemon --exec ts-node src/server.ts",
     "dev:local": "dotenv -e .env.local -- tsx watch src/server.ts",
