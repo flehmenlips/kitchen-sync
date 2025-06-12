@@ -194,32 +194,39 @@ const CustomerHomePage: React.FC = () => {
                 </Typography>
                 {content?.contact.openingHours && (
                   <Box sx={{ mt: 2 }}>
-                    {Object.entries(content.contact.openingHours).map(([day, hours]: [string, any]) => {
-                      // Debug logging to see what's causing the React error
-                      console.log('[CustomerHomePage] Rendering day:', day, 'hours:', hours, 'type:', typeof hours);
-                      
-                      // Safely handle hours data - ensure we render strings only
-                      const formatHours = (hours: any) => {
-                        if (!hours) return 'Closed';
-                        if (typeof hours === 'string') return hours;
-                        if (typeof hours === 'object' && hours.open && hours.close) {
-                          const open = typeof hours.open === 'string' ? hours.open : String(hours.open);
-                          const close = typeof hours.close === 'string' ? hours.close : String(hours.close);
-                          return `${open} - ${close}`;
-                        }
-                        // Fallback for any other data type
-                        return String(hours);
-                      };
+                    {Object.entries(content.contact.openingHours)
+                      .filter(([key, value]) => {
+                        // Filter out prototype and non-enumerable properties
+                        return content.contact.openingHours.hasOwnProperty(key) && 
+                               typeof value === 'object' && 
+                               value !== null;
+                      })
+                      .map(([day, hours]: [string, any]) => {
+                        // Debug logging to see what's causing the React error
+                        console.log('[CustomerHomePage] Rendering day:', day, 'hours:', hours, 'type:', typeof hours);
+                        
+                        // Safely handle hours data - ensure we render strings only
+                        const formatHours = (hours: any) => {
+                          if (!hours) return 'Closed';
+                          if (typeof hours === 'string') return hours;
+                          if (typeof hours === 'object' && hours.open && hours.close) {
+                            const open = typeof hours.open === 'string' ? hours.open : String(hours.open);
+                            const close = typeof hours.close === 'string' ? hours.close : String(hours.close);
+                            return `${open} - ${close}`;
+                          }
+                          // Fallback for any other data type
+                          return String(hours);
+                        };
 
-                      const formattedHours = formatHours(hours);
-                      console.log('[CustomerHomePage] Formatted hours for', day, ':', formattedHours);
+                        const formattedHours = formatHours(hours);
+                        console.log('[CustomerHomePage] Formatted hours for', day, ':', formattedHours);
 
-                      return (
-                        <Typography key={day} variant="body2" sx={{ textTransform: 'capitalize' }}>
-                          {day}: {formattedHours}
-                        </Typography>
-                      );
-                    })}
+                        return (
+                          <Typography key={day} variant="body2" sx={{ textTransform: 'capitalize' }}>
+                            {day}: {formattedHours}
+                          </Typography>
+                        );
+                      })}
                   </Box>
                 )}
               </CardContent>
