@@ -11,6 +11,28 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
+// Helper function to parse opening hours (handles both JSON string and object)
+const parseOpeningHours = (openingHours: any): any => {
+  if (!openingHours) return null;
+  
+  // If it's already an object, return as-is
+  if (typeof openingHours === 'object' && !Array.isArray(openingHours)) {
+    return openingHours;
+  }
+  
+  // If it's a string, try to parse it
+  if (typeof openingHours === 'string') {
+    try {
+      return JSON.parse(openingHours);
+    } catch (e) {
+      console.warn('Failed to parse opening hours JSON:', openingHours);
+      return null;
+    }
+  }
+  
+  return null;
+};
+
 export const getRestaurantSettings = async (req: Request, res: Response) => {
   try {
     // Use restaurant context from middleware
@@ -336,28 +358,6 @@ export const getPublicRestaurantSettings = async (req: Request, res: Response): 
     console.error('Error fetching public restaurant settings:', error);
     res.status(500).json({ error: 'Failed to fetch restaurant information' });
   }
-};
-
-// Helper function to parse opening hours (handles both JSON string and object)
-const parseOpeningHours = (openingHours: any): any => {
-  if (!openingHours) return null;
-  
-  // If it's already an object, return as-is
-  if (typeof openingHours === 'object' && !Array.isArray(openingHours)) {
-    return openingHours;
-  }
-  
-  // If it's a string, try to parse it
-  if (typeof openingHours === 'string') {
-    try {
-      return JSON.parse(openingHours);
-    } catch (e) {
-      console.warn('Failed to parse opening hours JSON:', openingHours);
-      return null;
-    }
-  }
-  
-  return null;
 };
 
 // Unified content endpoint that combines RestaurantSettings + ContentBlocks
