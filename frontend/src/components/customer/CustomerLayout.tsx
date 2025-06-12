@@ -134,17 +134,28 @@ const CustomerLayout: React.FC = () => {
 
   // Get navigation items from settings or use defaults
   const getNavigationItems = () => {
-    // Check if navigation is enabled and we have custom navigation items
-    if (settings?.navigationEnabled !== false && settings?.navigationItems && settings.navigationItems.length > 0) {
-      // Use custom navigation items from settings
-      return settings.navigationItems
-        .filter(item => item.isActive)
-        .sort((a, b) => a.displayOrder - b.displayOrder)
-        .map(item => ({
-          text: item.label,
-          path: buildCustomerUrl(item.path.replace('/', '')),
-          icon: getNavigationIcon(item.icon)
-        }));
+    try {
+      // Check if navigation is enabled and we have custom navigation items
+      if (settings?.navigationEnabled !== false && settings?.navigationItems) {
+        // Ensure navigationItems is an array
+        const navigationItems = Array.isArray(settings.navigationItems) 
+          ? settings.navigationItems 
+          : (settings.navigationItems ? JSON.parse(settings.navigationItems) : []);
+        
+        if (navigationItems && navigationItems.length > 0) {
+          // Use custom navigation items from settings
+          return navigationItems
+            .filter(item => item && item.isActive)
+            .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
+            .map(item => ({
+              text: String(item.label || 'Nav Item'),
+              path: buildCustomerUrl(String(item.path || '').replace('/', '')),
+              icon: getNavigationIcon(item.icon)
+            }));
+        }
+      }
+    } catch (error) {
+      console.error('Error processing navigation items:', error);
     }
     
     // Fallback to default navigation items
