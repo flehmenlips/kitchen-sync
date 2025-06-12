@@ -41,7 +41,8 @@ import {
   Menu,
   ListItemIcon as MuiListItemIcon,
   Fab,
-  FormHelperText
+  FormHelperText,
+  Tooltip
 } from '@mui/material';
 import {
   Save,
@@ -68,7 +69,10 @@ import {
   Contacts as ContactIcon,
   MoreVert as MoreIcon,
   DragIndicator as DragIcon,
-  Menu as MenuIcon
+  Menu as MenuIcon,
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
+  DragHandle as DragHandleIcon
 } from '@mui/icons-material';
 import { restaurantSettingsService, RestaurantSettings } from '../services/restaurantSettingsService';
 import { api } from '../services/api';
@@ -136,6 +140,21 @@ const WebsiteBuilderPage: React.FC = () => {
     blockType: 'text',
     title: '',
     content: ''
+  });
+  const [addNavItemDialogOpen, setAddNavItemDialogOpen] = useState(false);
+  const [editNavItemDialogOpen, setEditNavItemDialogOpen] = useState(false);
+  const [newNavItemData, setNewNavItemData] = useState({
+    label: '',
+    path: '',
+    icon: '',
+    isActive: true
+  });
+  const [editNavItemData, setEditNavItemData] = useState({
+    id: '',
+    label: '',
+    path: '',
+    icon: '',
+    isActive: true
   });
   const navigate = useNavigate();
   const { currentRestaurant } = useRestaurant();
@@ -489,6 +508,104 @@ const WebsiteBuilderPage: React.FC = () => {
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
+  };
+
+  const handleNavigationItemToggle = async (itemId: string) => {
+    try {
+      if (!websiteData || !websiteData.settings.navigationItems) return;
+      
+      const updatedItems = websiteData.settings.navigationItems.map(item => 
+        item.id === itemId ? { ...item, isActive: !item.isActive } : item
+      );
+      
+      handleSettingsChange('navigationItems', updatedItems);
+      showSnackbar('Navigation item visibility toggled successfully', 'success');
+    } catch (error) {
+      console.error('Error toggling navigation item visibility:', error);
+      showSnackbar('Failed to toggle navigation item visibility', 'error');
+    }
+  };
+
+  const handleEditNavigationItem = (item: any) => {
+    setEditNavItemData({
+      id: item.id,
+      label: item.label,
+      path: item.path,
+      icon: item.icon || '',
+      isActive: item.isActive
+    });
+    setEditNavItemDialogOpen(true);
+  };
+
+  const handleAddNavItemDialogOpen = () => {
+    setNewNavItemData({
+      label: '',
+      path: '',
+      icon: '',
+      isActive: true
+    });
+    setAddNavItemDialogOpen(true);
+  };
+
+  const handleCreateNavigationItem = async () => {
+    try {
+      if (!websiteData || !newNavItemData.label.trim() || !newNavItemData.path.trim()) return;
+      
+      const currentItems = websiteData.settings.navigationItems || [];
+      const newItem = {
+        id: `nav-${Date.now()}`,
+        label: newNavItemData.label,
+        path: newNavItemData.path,
+        icon: newNavItemData.icon,
+        isActive: newNavItemData.isActive,
+        displayOrder: currentItems.length + 1,
+        isSystem: false
+      };
+      
+      const updatedItems = [...currentItems, newItem];
+      handleSettingsChange('navigationItems', updatedItems);
+      setAddNavItemDialogOpen(false);
+      showSnackbar('Navigation item created successfully', 'success');
+    } catch (error) {
+      console.error('Error creating navigation item:', error);
+      showSnackbar('Failed to create navigation item', 'error');
+    }
+  };
+
+  const handleUpdateNavigationItem = async () => {
+    try {
+      if (!websiteData || !editNavItemData.id || !editNavItemData.label.trim() || !editNavItemData.path.trim()) return;
+      
+      const updatedItems = websiteData.settings.navigationItems?.map(item => 
+        item.id === editNavItemData.id ? {
+          ...item,
+          label: editNavItemData.label,
+          path: editNavItemData.path,
+          icon: editNavItemData.icon,
+          isActive: editNavItemData.isActive
+        } : item
+      ) || [];
+      
+      handleSettingsChange('navigationItems', updatedItems);
+      setEditNavItemDialogOpen(false);
+      showSnackbar('Navigation item updated successfully', 'success');
+    } catch (error) {
+      console.error('Error updating navigation item:', error);
+      showSnackbar('Failed to update navigation item', 'error');
+    }
+  };
+
+  const handleDeleteNavigationItem = async (itemId: string) => {
+    try {
+      if (!websiteData || !websiteData.settings.navigationItems) return;
+      
+      const updatedItems = websiteData.settings.navigationItems.filter(item => item.id !== itemId);
+      handleSettingsChange('navigationItems', updatedItems);
+      showSnackbar('Navigation item deleted successfully', 'success');
+    } catch (error) {
+      console.error('Error deleting navigation item:', error);
+      showSnackbar('Failed to delete navigation item', 'error');
+    }
   };
 
   if (loading) {
@@ -1520,73 +1637,137 @@ const WebsiteBuilderPage: React.FC = () => {
             <Grid item xs={12}>
               <Alert severity="info" sx={{ mb: 2 }}>
                 <Typography variant="body2">
-                  <strong>Current Navigation Setup:</strong>
-                  <br />• System Pages: Home, Menu, Reservations (always visible)
-                  <br />• Custom Pages: Any pages you create will automatically appear
-                  <br />• Order: System pages first, then custom pages by creation order
+                  <strong>Manage Your Navigation:</strong>
+                  <br />• Drag items to reorder them
+                  <br />• Toggle visibility with the eye icon
+                  <br />• Edit labels and paths by clicking the edit icon
+                  <br />• System pages (Home, Menu, Reservations) are required and always visible
                 </Typography>
               </Alert>
             </Grid>
 
             <Grid item xs={12}>
-              <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
-                <Typography variant="subtitle1" gutterBottom>Available Pages</Typography>
+              <Paper sx={{ p: 2 }}>
+                <Typography variant="subtitle1" gutterBottom sx={{ mb: 2 }}>Navigation Items</Typography>
                 
-                {websiteData.pages.map((page, index) => (
-                  <Box key={page.id} sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'space-between',
-                    py: 1,
-                    borderBottom: index < websiteData.pages.length - 1 ? '1px solid' : 'none',
-                    borderColor: 'divider'
-                  }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      {page.isSystem ? (
-                        <Chip 
-                          label="System" 
-                          size="small" 
-                          color="primary" 
-                          variant="outlined"
-                        />
-                      ) : (
-                        <Chip 
-                          label="Custom" 
-                          size="small" 
-                          color="secondary" 
-                          variant="outlined"
-                        />
-                      )}
-                      <Typography variant="body2">
-                        <strong>{page.name}</strong>
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        ({page.url})
-                      </Typography>
-                    </Box>
-                    
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Chip 
-                        label={page.isActive ? "Visible" : "Hidden"} 
-                        size="small" 
-                        color={page.isActive ? "success" : "default"}
-                        variant={page.isActive ? "filled" : "outlined"}
-                      />
-                      {/* Future: Add reorder buttons, visibility toggles, etc. */}
-                    </Box>
+                {websiteData.settings.navigationItems && websiteData.settings.navigationItems.length > 0 ? (
+                  <Box>
+                    {websiteData.settings.navigationItems
+                      .sort((a, b) => a.displayOrder - b.displayOrder)
+                      .map((item, index) => (
+                        <Box key={item.id} sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'space-between',
+                          py: 2,
+                          px: 1,
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          borderRadius: 1,
+                          mb: 1,
+                          bgcolor: item.isActive ? 'background.paper' : 'grey.50'
+                        }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            {/* Drag Handle */}
+                            <IconButton size="small" sx={{ cursor: 'grab' }}>
+                              <DragHandleIcon />
+                            </IconButton>
+                            
+                            {/* Page Type Indicator */}
+                            <Chip 
+                              label={item.isSystem ? "System" : "Custom"} 
+                              size="small" 
+                              color={item.isSystem ? "primary" : "secondary"} 
+                              variant="outlined"
+                            />
+                            
+                            {/* Navigation Item Info */}
+                            <Box>
+                              <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                                {item.label}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {item.path}
+                              </Typography>
+                            </Box>
+                          </Box>
+                          
+                          {/* Actions */}
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            {/* Visibility Toggle */}
+                            {!item.isSystem && (
+                              <Tooltip title={item.isActive ? "Hide from navigation" : "Show in navigation"}>
+                                <IconButton 
+                                  size="small"
+                                  onClick={() => handleNavigationItemToggle(item.id)}
+                                  color={item.isActive ? "default" : "error"}
+                                >
+                                  {item.isActive ? <VisibilityIcon /> : <VisibilityOffIcon />}
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                            
+                            {/* Edit Button */}
+                            <Tooltip title="Edit navigation item">
+                              <IconButton 
+                                size="small"
+                                onClick={() => handleEditNavigationItem(item)}
+                              >
+                                <EditIcon />
+                              </IconButton>
+                            </Tooltip>
+                            
+                            {/* Delete Button - Only for custom items */}
+                            {!item.isSystem && (
+                              <Tooltip title="Delete navigation item">
+                                <IconButton 
+                                  size="small"
+                                  onClick={() => handleDeleteNavigationItem(item.id)}
+                                  color="error"
+                                >
+                                  <DeleteIcon />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                            
+                            {/* Status Chip */}
+                            <Chip 
+                              label={item.isActive ? "Visible" : "Hidden"} 
+                              size="small" 
+                              color={item.isActive ? "success" : "default"}
+                              variant={item.isActive ? "filled" : "outlined"}
+                            />
+                          </Box>
+                        </Box>
+                      ))}
                   </Box>
-                ))}
+                ) : (
+                  <Alert severity="warning">
+                    No navigation items found. Default navigation will be used.
+                  </Alert>
+                )}
               </Paper>
+            </Grid>
+
+            {/* Add Custom Navigation Item Button */}
+            <Grid item xs={12}>
+              <Button
+                variant="outlined"
+                startIcon={<AddIcon />}
+                onClick={() => setAddNavItemDialogOpen(true)}
+                sx={{ mt: 1 }}
+              >
+                Add Custom Navigation Item
+              </Button>
             </Grid>
 
             <Grid item xs={12}>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                <strong>Coming Soon:</strong>
-                <br />• Drag & drop reordering of navigation items
-                <br />• Show/hide individual pages from navigation
-                <br />• Custom navigation labels (different from page names)
-                <br />• Dropdown sub-menus for page categories
-                <br />• External link support in navigation
+                <strong>Navigation Features:</strong>
+                <br />• System pages (Home, Menu, Reservations) cannot be hidden or deleted
+                <br />• Custom pages created in the Pages tab automatically appear here
+                <br />• External links can be added as custom navigation items
+                <br />• Drag items to reorder - changes save automatically
               </Typography>
             </Grid>
           </Grid>
@@ -1793,6 +1974,152 @@ const WebsiteBuilderPage: React.FC = () => {
             disabled={!newBlockData.blockType || !newBlockData.title?.trim()}
           >
             Add Block
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Add Navigation Item Dialog */}
+      <Dialog open={addNavItemDialogOpen} onClose={() => setAddNavItemDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Add Navigation Item</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ pt: 2 }}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Navigation Label"
+                value={newNavItemData.label}
+                onChange={(e) => setNewNavItemData(prev => ({ ...prev, label: e.target.value }))}
+                placeholder="e.g., About Us, Services, Contact"
+                helperText="Text that will appear in the navigation menu"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Link Path"
+                value={newNavItemData.path}
+                onChange={(e) => setNewNavItemData(prev => ({ ...prev, path: e.target.value }))}
+                placeholder="e.g., /about, /services, https://external-site.com"
+                helperText="URL path or full URL for external links"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel>Icon (Optional)</InputLabel>
+                <Select
+                  value={newNavItemData.icon}
+                  onChange={(e) => setNewNavItemData(prev => ({ ...prev, icon: e.target.value }))}
+                  label="Icon (Optional)"
+                >
+                  <MenuItem value="">No Icon</MenuItem>
+                  <MenuItem value="home">Home</MenuItem>
+                  <MenuItem value="menu_book">Menu</MenuItem>
+                  <MenuItem value="event_seat">Reservations</MenuItem>
+                  <MenuItem value="info">Info</MenuItem>
+                  <MenuItem value="contact_page">Contact</MenuItem>
+                  <MenuItem value="location_on">Location</MenuItem>
+                  <MenuItem value="phone">Phone</MenuItem>
+                  <MenuItem value="email">Email</MenuItem>
+                  <MenuItem value="restaurant">Restaurant</MenuItem>
+                  <MenuItem value="event">Events</MenuItem>
+                </Select>
+                <FormHelperText>Choose an icon to display with the navigation item</FormHelperText>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={newNavItemData.isActive}
+                    onChange={(e) => setNewNavItemData(prev => ({ ...prev, isActive: e.target.checked }))}
+                  />
+                }
+                label="Show in Navigation"
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAddNavItemDialogOpen(false)}>Cancel</Button>
+          <Button 
+            onClick={handleCreateNavigationItem} 
+            variant="contained"
+            disabled={!newNavItemData.label.trim() || !newNavItemData.path.trim()}
+          >
+            Add Navigation Item
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit Navigation Item Dialog */}
+      <Dialog open={editNavItemDialogOpen} onClose={() => setEditNavItemDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Edit Navigation Item</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ pt: 2 }}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Navigation Label"
+                value={editNavItemData.label}
+                onChange={(e) => setEditNavItemData(prev => ({ ...prev, label: e.target.value }))}
+                placeholder="e.g., About Us, Services, Contact"
+                helperText="Text that will appear in the navigation menu"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Link Path"
+                value={editNavItemData.path}
+                onChange={(e) => setEditNavItemData(prev => ({ ...prev, path: e.target.value }))}
+                placeholder="e.g., /about, /services, https://external-site.com"
+                helperText="URL path or full URL for external links"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel>Icon (Optional)</InputLabel>
+                <Select
+                  value={editNavItemData.icon}
+                  onChange={(e) => setEditNavItemData(prev => ({ ...prev, icon: e.target.value }))}
+                  label="Icon (Optional)"
+                >
+                  <MenuItem value="">No Icon</MenuItem>
+                  <MenuItem value="home">Home</MenuItem>
+                  <MenuItem value="menu_book">Menu</MenuItem>
+                  <MenuItem value="event_seat">Reservations</MenuItem>
+                  <MenuItem value="info">Info</MenuItem>
+                  <MenuItem value="contact_page">Contact</MenuItem>
+                  <MenuItem value="location_on">Location</MenuItem>
+                  <MenuItem value="phone">Phone</MenuItem>
+                  <MenuItem value="email">Email</MenuItem>
+                  <MenuItem value="restaurant">Restaurant</MenuItem>
+                  <MenuItem value="event">Events</MenuItem>
+                </Select>
+                <FormHelperText>Choose an icon to display with the navigation item</FormHelperText>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={editNavItemData.isActive}
+                    onChange={(e) => setEditNavItemData(prev => ({ ...prev, isActive: e.target.checked }))}
+                  />
+                }
+                label="Show in Navigation"
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditNavItemDialogOpen(false)}>Cancel</Button>
+          <Button 
+            onClick={handleUpdateNavigationItem} 
+            variant="contained"
+            disabled={!editNavItemData.label.trim() || !editNavItemData.path.trim()}
+          >
+            Update Navigation Item
           </Button>
         </DialogActions>
       </Dialog>

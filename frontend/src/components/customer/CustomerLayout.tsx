@@ -334,7 +334,7 @@ const CustomerLayout: React.FC = () => {
                   <ListItem
                     button
                     component={Link}
-                    to="/customer/dashboard"
+                    to={buildCustomerUrl('dashboard')}
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <ListItemIcon><AccountIcon /></ListItemIcon>
@@ -343,7 +343,7 @@ const CustomerLayout: React.FC = () => {
                   <ListItem
                     button
                     component={Link}
-                    to="/customer/profile"
+                    to={buildCustomerUrl('profile')}
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <ListItemIcon><AccountIcon /></ListItemIcon>
@@ -352,7 +352,7 @@ const CustomerLayout: React.FC = () => {
                   <ListItem
                     button
                     component={Link}
-                    to="/customer/reservations"
+                    to={buildCustomerUrl('reservations')}
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <ListItemIcon><EventSeatIcon /></ListItemIcon>

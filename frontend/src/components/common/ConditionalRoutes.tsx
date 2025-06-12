@@ -49,6 +49,16 @@ export const ConditionalRoutes: React.FC<ConditionalRoutesProps> = ({ children }
               <CustomerDashboardPage />
             </CustomerProtectedRoute>
           } />
+          <Route path="profile" element={
+            <CustomerProtectedRoute>
+              <CustomerDashboardPage />
+            </CustomerProtectedRoute>
+          } />
+          <Route path="reservations" element={
+            <CustomerProtectedRoute>
+              <CustomerDashboardPage />
+            </CustomerProtectedRoute>
+          } />
           {/* Dynamic page route - must be last to catch all other paths */}
           <Route path=":slug" element={<CustomerDynamicPage />} />
         </Route>
@@ -81,6 +91,16 @@ export const ConditionalRoutes: React.FC<ConditionalRoutesProps> = ({ children }
           <Route path="verify-email-sent" element={<CustomerVerifyEmailSentPage />} />
           <Route path="verify-email" element={<CustomerVerifyEmailPage />} />
           <Route path="dashboard" element={
+            <CustomerProtectedRoute>
+              <CustomerDashboardPage />
+            </CustomerProtectedRoute>
+          } />
+          <Route path="profile" element={
+            <CustomerProtectedRoute>
+              <CustomerDashboardPage />
+            </CustomerProtectedRoute>
+          } />
+          <Route path="reservations" element={
             <CustomerProtectedRoute>
               <CustomerDashboardPage />
             </CustomerProtectedRoute>
