@@ -178,11 +178,25 @@ const CustomerHomePage: React.FC = () => {
                 </Typography>
                 {content?.contact.openingHours && (
                   <Box sx={{ mt: 2 }}>
-                    {Object.entries(content.contact.openingHours).map(([day, hours]: [string, any]) => (
-                      <Typography key={day} variant="body2" sx={{ textTransform: 'capitalize' }}>
-                        {day}: {hours.open} - {hours.close}
-                      </Typography>
-                    ))}
+                    {Object.entries(content.contact.openingHours).map(([day, hours]: [string, any]) => {
+                      // Safely handle hours data - ensure we render strings only
+                      const formatHours = (hours: any) => {
+                        if (!hours) return 'Closed';
+                        if (typeof hours === 'string') return hours;
+                        if (typeof hours === 'object' && hours.open && hours.close) {
+                          const open = typeof hours.open === 'string' ? hours.open : String(hours.open);
+                          const close = typeof hours.close === 'string' ? hours.close : String(hours.close);
+                          return `${open} - ${close}`;
+                        }
+                        return 'Closed';
+                      };
+                      
+                      return (
+                        <Typography key={day} variant="body2" sx={{ textTransform: 'capitalize' }}>
+                          {day}: {formatHours(hours)}
+                        </Typography>
+                      );
+                    })}
                   </Box>
                 )}
               </CardContent>
