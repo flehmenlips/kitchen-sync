@@ -18,6 +18,19 @@ interface ContentBlockRendererProps {
 }
 
 const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) => {
+  // Safe rendering helper to prevent objects as React children
+  const safeRender = (value: any): string => {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'string' || typeof value === 'number') return String(value);
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (typeof value === 'object') {
+      if (Array.isArray(value)) return value.join(', ');
+      if (value.toString && typeof value.toString === 'function') return value.toString();
+      return JSON.stringify(value);
+    }
+    return String(value);
+  };
+
   const renderBlock = (block: ContentBlock) => {
     switch (block.blockType) {
       case BLOCK_TYPES.TEXT:
@@ -25,17 +38,17 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
           <Container maxWidth="lg" sx={{ py: 4 }}>
             {block.title && (
               <Typography variant="h4" component="h2" gutterBottom align="center">
-                {block.title}
+                {safeRender(block.title)}
               </Typography>
             )}
             {block.subtitle && (
               <Typography variant="h6" color="text.secondary" gutterBottom align="center">
-                {block.subtitle}
+                {safeRender(block.subtitle)}
               </Typography>
             )}
             {block.content && (
               <Typography variant="body1" paragraph>
-                {block.content}
+                {safeRender(block.content)}
               </Typography>
             )}
           </Container>
@@ -46,11 +59,11 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
           <Container maxWidth="lg" sx={{ py: 4 }}>
             {block.title && (
               <Typography variant="h4" component="h2" gutterBottom align="center">
-                {block.title}
+                {safeRender(block.title)}
               </Typography>
             )}
             {block.content && (
-              <Box dangerouslySetInnerHTML={{ __html: block.content }} />
+              <Box dangerouslySetInnerHTML={{ __html: safeRender(block.content) }} />
             )}
           </Container>
         );
@@ -60,15 +73,15 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
           <Container maxWidth="lg" sx={{ py: 4 }}>
             {block.title && (
               <Typography variant="h4" component="h2" gutterBottom align="center">
-                {block.title}
+                {safeRender(block.title)}
               </Typography>
             )}
             {block.imageUrl && (
               <Box display="flex" justifyContent="center">
                 <Paper elevation={3} sx={{ overflow: 'hidden', borderRadius: 2 }}>
                   <img
-                    src={block.imageUrl}
-                    alt={block.title || 'Image'}
+                    src={safeRender(block.imageUrl)}
+                    alt={safeRender(block.title) || 'Image'}
                     style={{ maxWidth: '100%', height: 'auto' }}
                   />
                 </Paper>
@@ -83,18 +96,18 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
             <Container maxWidth="lg" sx={{ textAlign: 'center' }}>
               {block.title && (
                 <Typography variant="h4" gutterBottom>
-                  {block.title}
+                  {safeRender(block.title)}
                 </Typography>
               )}
               {block.subtitle && (
                 <Typography variant="h6" sx={{ mb: 3 }}>
-                  {block.subtitle}
+                  {safeRender(block.subtitle)}
                 </Typography>
               )}
               {block.buttonText && block.buttonLink && (
                 <Button
                   component={Link}
-                  to={block.buttonLink}
+                  to={safeRender(block.buttonLink)}
                   variant="contained"
                   size="large"
                   sx={{
@@ -107,7 +120,7 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
                     }
                   }}
                 >
-                  {block.buttonText}
+                  {safeRender(block.buttonText)}
                 </Button>
               )}
             </Container>
@@ -120,7 +133,7 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
             sx={{
               position: 'relative',
               height: '500px',
-              backgroundImage: block.imageUrl ? `url(${block.imageUrl})` : 'linear-gradient(to right, #1976d2, #42a5f5)',
+              backgroundImage: block.imageUrl ? `url(${safeRender(block.imageUrl)})` : 'linear-gradient(to right, #1976d2, #42a5f5)',
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               display: 'flex',
@@ -148,7 +161,7 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
                     textShadow: '2px 2px 4px rgba(0,0,0,0.5)'
                   }}
                 >
-                  {block.title}
+                  {safeRender(block.title)}
                 </Typography>
               )}
               {block.subtitle && (
@@ -160,13 +173,13 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
                     textShadow: '1px 1px 2px rgba(0,0,0,0.5)'
                   }}
                 >
-                  {block.subtitle}
+                  {safeRender(block.subtitle)}
                 </Typography>
               )}
               {block.buttonText && block.buttonLink && (
                 <Button
                   component={Link}
-                  to={block.buttonLink}
+                  to={safeRender(block.buttonLink)}
                   variant="contained"
                   size="large"
                   sx={{
@@ -180,7 +193,7 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
                     }
                   }}
                 >
-                  {block.buttonText}
+                  {safeRender(block.buttonText)}
                 </Button>
               )}
             </Container>
@@ -196,16 +209,18 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
           console.error('Failed to parse features content:', e);
         }
         
+
+        
         return (
           <Container maxWidth="lg" sx={{ py: 6 }}>
             {block.title && (
               <Typography variant="h4" component="h2" gutterBottom align="center">
-                {block.title}
+                {safeRender(block.title)}
               </Typography>
             )}
             {block.subtitle && (
               <Typography variant="h6" color="text.secondary" gutterBottom align="center" sx={{ mb: 4 }}>
-                {block.subtitle}
+                {safeRender(block.subtitle)}
               </Typography>
             )}
             <Grid container spacing={4}>
@@ -214,10 +229,10 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
                   <Card sx={{ height: '100%' }}>
                     <CardContent sx={{ textAlign: 'center', p: 3 }}>
                       <Typography variant="h6" gutterBottom>
-                        {feature.title}
+                        {safeRender(feature.title)}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        {feature.description}
+                        {safeRender(feature.description)}
                       </Typography>
                     </CardContent>
                   </Card>
