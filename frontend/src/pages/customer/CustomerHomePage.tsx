@@ -20,7 +20,6 @@ import {
   Restaurant as RestaurantIcon
 } from '@mui/icons-material';
 import { unifiedContentService, UnifiedRestaurantContent } from '../../services/unifiedContentService';
-import ContentBlockRenderer from '../../components/customer/ContentBlockRenderer';
 
 const CustomerHomePage: React.FC = () => {
   const [content, setContent] = useState<UnifiedRestaurantContent | null>(null);
@@ -211,10 +210,11 @@ const CustomerHomePage: React.FC = () => {
                         }
                         
                         const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+                        const openingHours = content.contact.openingHours;
                         const validEntries = days
-                          .filter(day => content.contact.openingHours[day])
+                          .filter(day => openingHours[day])
                           .map(day => {
-                            const hours = content.contact.openingHours[day];
+                            const hours = openingHours[day];
                             
                             if (!hours || typeof hours !== 'object') {
                               return { day, formattedHours: 'Closed' };
@@ -343,8 +343,7 @@ const CustomerHomePage: React.FC = () => {
         </Container>
       )}
 
-      {/* Dynamic Content Blocks */}
-      <ContentBlockRenderer blocks={content?.contentBlocks || []} />
+      {/* Additional content sections can be added here in the future */}
     </Box>
   );
 };

@@ -73,7 +73,7 @@ export const getRestaurants = async (req: PlatformAuthRequest, res: Response): P
               reservations: true,
               orders: true,
               categories: true,
-              contentBlocks: true
+              pages: true
             }
           }
         },
@@ -169,11 +169,11 @@ export const getRestaurant = async (req: PlatformAuthRequest, res: Response): Pr
         },
         _count: {
           select: {
-            staff: true,
-            reservations: true,
-            orders: true,
-            categories: true,
-            contentBlocks: true
+                          staff: true,
+              reservations: true,
+              orders: true,
+              categories: true,
+              pages: true
           }
         }
       }

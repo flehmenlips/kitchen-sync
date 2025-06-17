@@ -1,52 +1,76 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
   Box,
   Container,
   Typography,
-  CircularProgress,
-  Alert,
-  Button
+  Skeleton,
+  Card,
+  CardContent,
+  Chip
 } from '@mui/material';
 import { unifiedContentService, UnifiedRestaurantContent } from '../../services/unifiedContentService';
+import { pageService, Page } from '../../services/pageService';
+import { getCurrentRestaurantSlug } from '../../utils/subdomain';
 
 const CustomerDynamicPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const [content, setContent] = useState<UnifiedRestaurantContent | null>(null);
+  const [pageData, setPageData] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchPageData();
+    fetchData();
   }, [slug]);
 
-  const fetchPageData = async () => {
-    if (!slug) {
-      setError('Page not found');
-      setLoading(false);
-      return;
-    }
-
+  const fetchData = async () => {
     try {
-      setLoading(true);
-      setError(null);
-      console.log('[CustomerDynamicPage] Fetching data for slug:', slug);
-      const unifiedContent = await unifiedContentService.getUnifiedContent(slug);
-      console.log('[CustomerDynamicPage] Received unified content:', unifiedContent);
+      console.log('[CustomerDynamicPage] Fetching page for slug:', slug);
+      console.log('[CustomerDynamicPage] Current URL:', window.location.href);
+      console.log('[CustomerDynamicPage] URL search params:', window.location.search);
       
-      // Check if page has any content blocks
-      if (!unifiedContent.contentBlocks || unifiedContent.contentBlocks.length === 0) {
-        console.log('[CustomerDynamicPage] No content blocks found:', unifiedContent.contentBlocks);
-        setError('Page not found or has no content');
+      // Get restaurant slug from current context
+      const restaurantSlug = getCurrentRestaurantSlug();
+      console.log('[CustomerDynamicPage] Restaurant slug:', restaurantSlug);
+      
+      // Debug subdomain detection
+      const params = new URLSearchParams(window.location.search);
+      const restaurantParam = params.get('restaurant');
+      console.log('[CustomerDynamicPage] Restaurant query param:', restaurantParam);
+      
+      // TEMPORARY: Use restaurant param as fallback
+      const finalRestaurantSlug = restaurantSlug || restaurantParam;
+      console.log('[CustomerDynamicPage] Final restaurant slug:', finalRestaurantSlug);
+      
+      if (!finalRestaurantSlug || !slug) {
+        console.error('[CustomerDynamicPage] Missing restaurant slug or page slug', {
+          restaurantSlug,
+          finalRestaurantSlug,
+          restaurantParam,
+          slug,
+          url: window.location.href,
+          params: window.location.search
+        });
         setLoading(false);
         return;
       }
+
+      // Fetch the page directly using the public API
+      const pageResponse = await pageService.getPublicPageBySlug(finalRestaurantSlug, slug);
+      console.log('[CustomerDynamicPage] Fetched page data:', pageResponse);
+      setPageData(pageResponse);
       
-      console.log('[CustomerDynamicPage] Content blocks found:', unifiedContent.contentBlocks.length);
-      setContent(unifiedContent);
+      // Also get unified content for context (optional - fallback if page fetch fails)
+      try {
+        const unifiedContent = await unifiedContentService.getUnifiedContent('home');
+        console.log('[CustomerDynamicPage] Fetched unified content for context:', unifiedContent);
+        setContent(unifiedContent);
+      } catch (contextError) {
+        console.warn('[CustomerDynamicPage] Failed to fetch unified content context:', contextError);
+      }
+      
     } catch (error) {
       console.error('[CustomerDynamicPage] Error fetching page content:', error);
-      setError('Failed to load page content');
     } finally {
       setLoading(false);
     }
@@ -54,174 +78,63 @@ const CustomerDynamicPage: React.FC = () => {
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ py: 8 }}>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-          <CircularProgress />
+      <Container maxWidth="lg" sx={{ my: 4 }}>
+        <Skeleton variant="text" height={60} width="60%" />
+        <Skeleton variant="text" height={30} width="80%" />
+        <Box sx={{ mt: 4 }}>
+          <Skeleton variant="rectangular" height={200} />
         </Box>
       </Container>
     );
   }
 
-  if (error) {
+  if (!pageData) {
     return (
-      <Container maxWidth="lg" sx={{ py: 8 }}>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-          <Alert severity="error" sx={{ maxWidth: 400 }}>
-            {error}
-          </Alert>
-        </Box>
+      <Container maxWidth="lg" sx={{ my: 4 }}>
+        <Typography variant="h4" component="h1" gutterBottom>
+          Page Not Found
+        </Typography>
+        <Typography variant="body1">
+          The requested page "{slug}" could not be found.
+        </Typography>
       </Container>
     );
   }
-
-  if (!content) {
-    return (
-      <Container maxWidth="lg" sx={{ py: 8 }}>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-          <Typography variant="h6" color="text.secondary">
-            Page not found
-          </Typography>
-        </Box>
-      </Container>
-    );
-  }
-
-  console.log('[CustomerDynamicPage] Rendering with content:', content);
-  console.log('[CustomerDynamicPage] Content blocks to render:', content?.contentBlocks);
 
   return (
-    <Box>
-      {/* Dynamic Content Blocks */}
-      {content.contentBlocks && content.contentBlocks.map((block) => (
-        <Box key={block.id} sx={{ mb: 4 }}>
-          {block.blockType === 'text' && (
-            <Container maxWidth="lg" sx={{ py: 4 }}>
-              {block.title && (
-                <Typography variant="h4" component="h2" gutterBottom align="center">
-                  {block.title}
-                </Typography>
-              )}
-              {block.subtitle && (
-                <Typography variant="h6" color="text.secondary" gutterBottom align="center">
-                  {block.subtitle}
-                </Typography>
-              )}
-              {block.content && (
-                <Typography variant="body1" paragraph>
-                  {block.content}
-                </Typography>
-              )}
-            </Container>
-          )}
-          
-          {block.blockType === 'image' && (
-            <Container maxWidth="lg" sx={{ py: 4 }}>
-              {block.title && (
-                <Typography variant="h4" component="h2" gutterBottom align="center">
-                  {block.title}
-                </Typography>
-              )}
-              {block.imageUrl && (
-                <Box display="flex" justifyContent="center">
-                  <img
-                    src={block.imageUrl}
-                    alt={block.title || 'Image'}
-                    style={{ maxWidth: '100%', height: 'auto', borderRadius: 8 }}
-                  />
-                </Box>
-              )}
-            </Container>
-          )}
-          
-          {(block.blockType === 'hero' || block.blockType === 'page') && (
-            <Box
-              sx={{
-                position: 'relative',
-                height: '500px',
-                backgroundImage: block.imageUrl ? `url(${block.imageUrl})` : 'linear-gradient(to right, #1976d2, #42a5f5)',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                display: 'flex',
-                alignItems: 'center',
-                '&::before': {
-                  content: '""',
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: 'rgba(0, 0, 0, 0.4)',
-                }
-              }}
-            >
-              <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
-                {block.title && (
-                  <Typography
-                    variant="h2"
-                    component="h1"
-                    sx={{
-                      color: 'white',
-                      fontWeight: 'bold',
-                      mb: 2,
-                      textShadow: '2px 2px 4px rgba(0,0,0,0.5)'
-                    }}
-                  >
-                    {block.title}
-                  </Typography>
-                )}
-                {block.subtitle && (
-                  <Typography
-                    variant="h5"
-                    sx={{
-                      color: 'white',
-                      mb: 3,
-                      textShadow: '1px 1px 2px rgba(0,0,0,0.5)'
-                    }}
-                  >
-                    {block.subtitle}
-                  </Typography>
-                )}
-                {block.content && (
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      color: 'white',
-                      mb: 4,
-                      textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
-                      maxWidth: '600px'
-                    }}
-                  >
-                    {block.content}
-                  </Typography>
-                )}
-                {block.buttonText && block.buttonLink && (
-                  <Button
-                    component="a"
-                    href={block.buttonLink.startsWith('http') ? block.buttonLink : `https://${block.buttonLink}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    variant="contained"
-                    size="large"
-                    sx={{
-                      backgroundColor: 'primary.main',
-                      color: 'white',
-                      px: 4,
-                      py: 1.5,
-                      fontSize: '1.1rem',
-                      '&:hover': {
-                        backgroundColor: 'primary.dark',
-                      }
-                    }}
-                  >
-                    {block.buttonText}
-                  </Button>
-                )}
-              </Container>
-            </Box>
-          )}
-        </Box>
-      ))}
-    </Box>
+    <Container maxWidth="lg" sx={{ my: 4 }}>
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="h3" component="h1" gutterBottom>
+          {pageData.title || pageData.name}
+        </Typography>
+        {pageData.template && pageData.template !== 'default' && (
+          <Chip label={`Template: ${pageData.template}`} size="small" sx={{ mb: 2 }} />
+        )}
+      </Box>
+      
+      {pageData.description && (
+        <Card sx={{ mb: 4 }}>
+          <CardContent>
+            <Typography variant="body1" sx={{ fontSize: '1.1rem', lineHeight: 1.8 }}>
+              {pageData.description}
+            </Typography>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Future: This is where page content blocks would be rendered */}
+      <Box sx={{ mt: 4, p: 3, backgroundColor: 'grey.50', borderRadius: 2 }}>
+        <Typography variant="h6" gutterBottom>
+          Page Content
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          This page is live and accessible via: /{pageData.slug}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          Content blocks and advanced page content will be available in future updates.
+        </Typography>
+      </Box>
+    </Container>
   );
 };
 

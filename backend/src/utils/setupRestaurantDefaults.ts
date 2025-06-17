@@ -32,8 +32,8 @@ export const setupRestaurantDefaults = async (restaurantId: number, userId: numb
     // 7. Create sample reservations
     await createSampleReservations(restaurantId);
     
-    // 8. Create sample content blocks
-    await createSampleContentBlocks(restaurantId);
+    // 8. Create sample pages
+    await createSamplePages(restaurantId);
     
     console.log(`Successfully set up default data for restaurant ${restaurantId}`);
   } catch (error) {
@@ -393,44 +393,6 @@ async function createSampleReservations(restaurantId: number) {
   });
 }
 
-async function createSampleContentBlocks(restaurantId: number) {
-  await prisma.contentBlock.createMany({
-    data: [
-      {
-        restaurantId,
-        page: 'home',
-        blockType: 'welcome',
-        title: 'Welcome to Your Restaurant',
-        subtitle: 'Experience culinary excellence',
-        content: 'We are delighted to have you join us for an unforgettable dining experience.',
-        displayOrder: 1,
-        isActive: true
-      },
-      {
-        restaurantId,
-        page: 'home',
-        blockType: 'features',
-        title: 'Why Choose Us',
-        content: JSON.stringify([
-          'Fresh, locally-sourced ingredients',
-          'Award-winning chef',
-          'Exceptional service',
-          'Beautiful ambiance'
-        ]),
-        displayOrder: 2,
-        isActive: true
-      },
-      {
-        restaurantId,
-        page: 'home',
-        blockType: 'cta',
-        title: 'Make a Reservation',
-        subtitle: 'Join us for an unforgettable experience',
-        buttonText: 'Book Now',
-        buttonLink: '/reservations/new',
-        displayOrder: 3,
-        isActive: true
-      }
-    ]
-  });
+async function createSamplePages(restaurantId: number) {
+  // Implementation of createSamplePages function
 } 

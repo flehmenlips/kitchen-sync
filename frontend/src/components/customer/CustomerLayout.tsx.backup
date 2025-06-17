@@ -37,7 +37,7 @@ import {
 import { useCustomerAuth } from '../../context/CustomerAuthContext';
 import { restaurantSettingsService, RestaurantSettings, NavigationItem } from '../../services/restaurantSettingsService';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import { buildCustomerUrl, buildCustomerUrlWithRestaurant } from '../../utils/subdomain';
+import { buildCustomerUrl } from '../../utils/subdomain';
 
 const CustomerLayout: React.FC = () => {
   const theme = useTheme();
@@ -119,10 +119,7 @@ const CustomerLayout: React.FC = () => {
   const handleLogout = async () => {
     await logout();
     handleUserMenuClose();
-    const homeUrl = settings?.restaurant?.slug 
-      ? buildCustomerUrlWithRestaurant(settings.restaurant.slug, '')
-      : buildCustomerUrl();
-    navigate(homeUrl);
+    navigate(buildCustomerUrl());
   };
 
   // Icon mapping for navigation items
@@ -137,47 +134,24 @@ const CustomerLayout: React.FC = () => {
 
   // Get navigation items from settings or use defaults
   const getNavigationItems = () => {
-    try {
-      // Check if navigation is enabled and we have custom navigation items
-      if (settings?.navigationEnabled !== false && settings?.navigationItems) {
-        // Ensure navigationItems is an array
-        const navigationItems = Array.isArray(settings.navigationItems) 
-          ? settings.navigationItems 
-          : (settings.navigationItems ? JSON.parse(settings.navigationItems) : []);
-        
-        if (navigationItems && navigationItems.length > 0) {
-          // Use custom navigation items from settings
-          return navigationItems
-            .filter((item: any) => item && item.isActive)
-            .sort((a: any, b: any) => (a.displayOrder || 0) - (b.displayOrder || 0))
-            .map((item: any) => {
-              const cleanPath = String(item.path || '').replace('/', '');
-              // Use restaurant slug from settings for reliable URL generation
-              const path = settings?.restaurant?.slug 
-                ? buildCustomerUrlWithRestaurant(settings.restaurant.slug, cleanPath)
-                : buildCustomerUrl(cleanPath);
-              
-              return {
-                text: String(item.label || 'Nav Item'),
-                path,
-                icon: getNavigationIcon(item.icon)
-              };
-            });
-        }
-      }
-    } catch (error) {
-      console.error('Error processing navigation items:', error);
+    // Check if navigation is enabled and we have custom navigation items
+    if (settings?.navigationEnabled !== false && settings?.navigationItems && settings.navigationItems.length > 0) {
+      // Use custom navigation items from settings
+      return settings.navigationItems
+        .filter(item => item.isActive)
+        .sort((a, b) => a.displayOrder - b.displayOrder)
+        .map(item => ({
+          text: item.label,
+          path: buildCustomerUrl(item.path.replace('/', '')),
+          icon: getNavigationIcon(item.icon)
+        }));
     }
     
     // Fallback to default navigation items
-    const buildUrl = (path: string = '') => settings?.restaurant?.slug 
-      ? buildCustomerUrlWithRestaurant(settings.restaurant.slug, path)
-      : buildCustomerUrl(path);
-      
     return [
-      { text: 'Home', path: buildUrl(), icon: <HomeIcon /> },
-      { text: 'Menu', path: buildUrl('menu'), icon: <MenuBookIcon /> },
-      { text: 'Make Reservation', path: buildUrl('reservations/new'), icon: <EventSeatIcon /> },
+      { text: 'Home', path: buildCustomerUrl(), icon: <HomeIcon /> },
+      { text: 'Menu', path: buildCustomerUrl('menu'), icon: <MenuBookIcon /> },
+      { text: 'Make Reservation', path: buildCustomerUrl('reservations/new'), icon: <EventSeatIcon /> },
     ];
   };
 
@@ -251,7 +225,7 @@ const CustomerLayout: React.FC = () => {
 
             {!isMobile && (
               <Box sx={{ display: 'flex', gap: 2, mr: 2 }}>
-                {navigationItems.map((item: any) => (
+                {navigationItems.map((item) => (
                   <Button
                     key={item.path}
                     component={Link}
@@ -331,7 +305,7 @@ const CustomerLayout: React.FC = () => {
                 </Typography>
               </ListItem>
               <Divider />
-              {navigationItems.map((item: any) => (
+              {navigationItems.map((item) => (
                 <ListItem
                   key={item.path}
                   button
@@ -349,7 +323,7 @@ const CustomerLayout: React.FC = () => {
                   <ListItem
                     button
                     component={Link}
-                    to={buildCustomerUrl('dashboard')}
+                    to="/customer/dashboard"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <ListItemIcon><AccountIcon /></ListItemIcon>
@@ -358,7 +332,7 @@ const CustomerLayout: React.FC = () => {
                   <ListItem
                     button
                     component={Link}
-                    to={buildCustomerUrl('profile')}
+                    to="/customer/profile"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <ListItemIcon><AccountIcon /></ListItemIcon>
@@ -367,7 +341,7 @@ const CustomerLayout: React.FC = () => {
                   <ListItem
                     button
                     component={Link}
-                    to={buildCustomerUrl('reservations')}
+                    to="/customer/reservations"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <ListItemIcon><EventSeatIcon /></ListItemIcon>
@@ -432,7 +406,7 @@ const CustomerLayout: React.FC = () => {
                 {settings?.openingHours && typeof settings.openingHours === 'object' ? (
                   Object.entries(settings.openingHours).map(([day, hours]) => (
                     <Typography key={day} variant="body2" sx={{ mb: 0.5 }}>
-                      <strong>{day}:</strong> {String(hours)}
+                      <strong>{day}:</strong> {hours as string}
                     </Typography>
                   ))
                 ) : (

@@ -3,31 +3,31 @@ require('dotenv').config({ path: '.env.local' });
 
 const prisma = new PrismaClient();
 
-async function main() {
-  console.log('\n--- STAFF USERS ---');
-  const staffUsers = await prisma.user.findMany({
-    where: { isCustomer: false },
-    select: { id: true, email: true, name: true, role: true }
-  });
-  console.table(staffUsers);
-
-  console.log('\n--- CUSTOMER USERS ---');
-  const customerUsers = await prisma.user.findMany({
-    where: { isCustomer: true },
-    include: { customerProfile: true }
-  });
-  console.table(customerUsers.map(u => ({
-    id: u.id,
-    email: u.email,
-    name: u.name,
-    emailVerified: u.customerProfile?.emailVerified || false
-  })));
-
-  console.log('\n--- TOTAL COUNTS ---');
-  console.log(`Staff users: ${staffUsers.length}`);
-  console.log(`Customer users: ${customerUsers.length}`);
+async function checkUsers() {
+  try {
+    console.log('=== USERS TABLE ===');
+    const users = await prisma.user.findMany({
+      select: { id: true, email: true, role: true, name: true }
+    });
+    console.log('Users:', users);
+    
+    console.log('\n=== CUSTOMERS TABLE ===');
+    const customers = await prisma.customer.findMany({
+      select: { id: true, email: true, firstName: true, lastName: true }
+    });
+    console.log('Customers:', customers);
+    
+    console.log('\n=== RESTAURANT STAFF ===');
+    const staff = await prisma.restaurantStaff.findMany({
+      include: { user: { select: { email: true } }, restaurant: { select: { name: true } } }
+    });
+    console.log('Restaurant Staff:', staff);
+    
+  } catch (error) {
+    console.error('Error:', error);
+  } finally {
+    await prisma.$disconnect();
+  }
 }
 
-main()
-  .catch(console.error)
-  .finally(() => prisma.$disconnect()); 
+checkUsers(); 

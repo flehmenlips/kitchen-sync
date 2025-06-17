@@ -108,15 +108,15 @@ export const modules: Module[] = [
   },
   {
     id: 'website',
-    name: 'Website & Marketing',
+    name: 'Website Settings',
     type: 'optional',
     requiredTier: ['TRIAL', 'PROFESSIONAL', 'ENTERPRISE'],
     icon: WebIcon,
-    path: '/website',
+    path: '/website-settings',
     subModules: [
-      { id: 'website-builder', name: 'Website Builder', icon: WebIcon, path: '/website' },
-      { id: 'content-blocks', name: 'Content Blocks', icon: WebIcon, path: '/website/content' },
-      { id: 'website-settings', name: 'Settings', icon: SettingsIcon, path: '/website/settings' }
+      { id: 'website-content', name: 'Content & Styling', icon: WebIcon, path: '/website-settings#content' },
+      { id: 'website-pages', name: 'Page Management', icon: SettingsIcon, path: '/website-settings#pages' },
+      { id: 'website-preview', name: 'Website Preview', icon: WebIcon, path: '/website-settings#preview' }
     ]
   }
 ];

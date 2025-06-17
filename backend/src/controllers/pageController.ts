@@ -1,86 +1,19 @@
 import { Request, Response } from 'express';
+import { pageService } from '../services/pageService';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// Generate URL-friendly slug from name
-const generateSlug = (name: string): string => {
-  return name.toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-};
-
-// Temporary: Create virtual pages from existing content block pages
-// This provides compatibility until we can safely migrate the database
-const getVirtualPages = async (restaurantId: number) => {
-  // Get unique pages from content blocks
-  const uniquePages = await prisma.contentBlock.findMany({
-    where: { restaurantId },
-    select: { page: true },
-    distinct: ['page']
-  });
-
-  // Get content block counts per page
-  const pageCounts = await prisma.contentBlock.groupBy({
-    by: ['page'],
-    where: { restaurantId },
-    _count: { id: true }
-  });
-
-  const countMap = pageCounts.reduce((acc, item) => {
-    acc[item.page] = item._count.id;
-    return acc;
-  }, {} as Record<string, number>);
-
-  // Consistent pageId mapping with contentBlockController
-  const getPageId = (pageSlug: string): number => {
-    const pageMap: Record<string, number> = {
-      'home': 1,
-      'about': 2,
-      'menu': 3,
-      'contact': 4
-    };
-    
-    // For custom pages, use a hash of the page name as ID (same as contentBlockController)
-    return pageMap[pageSlug] || Math.abs(pageSlug.split('').reduce((a, b) => {
-      a = ((a << 5) - a) + b.charCodeAt(0);
-      return a & a;
-    }, 0));
-  };
-
-  // Create virtual page objects
-  const systemPages = ['home', 'about', 'menu', 'contact'];
-  const virtualPages = uniquePages.map((item) => ({
-    id: getPageId(item.page), // Use consistent virtual ID mapping
-    restaurantId,
-    name: item.page.charAt(0).toUpperCase() + item.page.slice(1),
-    slug: item.page,
-    title: null,
-    description: null,
-    template: 'default',
-    displayOrder: systemPages.indexOf(item.page) !== -1 ? systemPages.indexOf(item.page) : 100,
-    isActive: true,
-    isSystem: systemPages.includes(item.page),
-    metaTitle: null,
-    metaKeywords: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    _count: {
-      contentBlocks: countMap[item.page] || 0
-    }
-  }));
-
-  return virtualPages.sort((a, b) => a.displayOrder - b.displayOrder);
-};
-
 // GET /api/pages - List all pages for restaurant
 export const getPages = async (req: Request, res: Response) => {
   try {
-    const restaurantId = 1; // MVP: single restaurant
+    const restaurantId = req.restaurantId;
     
-    // For now, return virtual pages based on existing content blocks
-    const pages = await getVirtualPages(restaurantId);
+    if (!restaurantId) {
+      return res.status(400).json({ error: 'Restaurant ID is required' });
+    }
 
+    const pages = await pageService.getPagesWithContentCounts(restaurantId);
     res.json({ pages });
   } catch (error) {
     console.error('Error fetching pages:', error);
@@ -88,176 +21,265 @@ export const getPages = async (req: Request, res: Response) => {
   }
 };
 
-// POST /api/pages - Create new page (creates a placeholder content block)
-export const createPage = async (req: Request, res: Response) => {
+// GET /api/pages/:id - Get specific page
+export const getPageById = async (req: Request, res: Response) => {
   try {
-    const restaurantId = 1;
-    const { name, slug, title, description, template, isActive, metaTitle, metaKeywords } = req.body;
-
-    // Generate slug if not provided
-    const finalSlug = slug || generateSlug(name);
-
-    // Check if page already exists (by checking content blocks)
-    const existingBlock = await prisma.contentBlock.findFirst({
-      where: {
-        restaurantId,
-        page: finalSlug
-      }
-    });
-
-    if (existingBlock) {
-      return res.status(400).json({ error: 'Page with this slug already exists' });
+    const { id } = req.params;
+    const restaurantId = req.restaurantId;
+    
+    if (!restaurantId) {
+      return res.status(400).json({ error: 'Restaurant ID is required' });
     }
 
-    // Create a placeholder content block to represent the page
-    const placeholderBlock = await prisma.contentBlock.create({
-      data: {
-        restaurantId,
-        page: finalSlug,
-        blockType: 'text',
-        title: `${name} Page`,
-        content: `Welcome to the ${name} page. Add content blocks to customize this page.`,
-        displayOrder: 0,
-        isActive: isActive !== undefined ? isActive : true
-      }
-    });
+    const pageId = parseInt(id);
+    if (isNaN(pageId)) {
+      return res.status(400).json({ error: 'Invalid page ID' });
+    }
 
-    // Use consistent pageId mapping
-    const getPageId = (pageSlug: string): number => {
-      const pageMap: Record<string, number> = {
-        'home': 1,
-        'about': 2,
-        'menu': 3,
-        'contact': 4
-      };
-      
-      return pageMap[pageSlug] || Math.abs(pageSlug.split('').reduce((a, b) => {
-        a = ((a << 5) - a) + b.charCodeAt(0);
-        return a & a;
-      }, 0));
-    };
+    const page = await pageService.getPageById(pageId, restaurantId);
+    if (!page) {
+      return res.status(404).json({ error: 'Page not found' });
+    }
 
-    // Return virtual page object
-    const virtualPage = {
-      id: getPageId(finalSlug), // Use consistent virtual ID
-      restaurantId,
-      name,
-      slug: finalSlug,
-      title,
-      description,
-      template: template || 'default',
-      displayOrder: 100, // New pages go to end
-      isActive: isActive !== undefined ? isActive : true,
-      isSystem: false,
-      metaTitle,
-      metaKeywords,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    res.status(201).json(virtualPage);
+    res.json(page);
   } catch (error) {
-    console.error('Error creating page:', error);
-    res.status(500).json({ error: 'Failed to create page' });
+    console.error('Error fetching page:', error);
+    res.status(500).json({ error: 'Failed to fetch page' });
   }
 };
 
-// PUT /api/pages/:id - Update page (limited functionality with current schema)
-export const updatePage = async (req: Request, res: Response) => {
+// POST /api/pages - Create new page
+export const createPage = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
-    const { name, slug, title, description, template, isActive, metaTitle, metaKeywords } = req.body;
+    const restaurantId = req.restaurantId;
+    
+    if (!restaurantId) {
+      return res.status(400).json({ error: 'Restaurant ID is required' });
+    }
 
-    // For now, we can't really update pages since they don't exist as entities
-    // We'll just return success to maintain frontend compatibility
-    const virtualPage = {
-      id: parseInt(id),
-      restaurantId: 1,
+    const { name, slug, title, description, template, isActive, metaTitle, metaDescription, metaKeywords } = req.body;
+
+    if (!name || !slug) {
+      return res.status(400).json({ error: 'Name and slug are required' });
+    }
+
+    const page = await pageService.createPage(restaurantId, {
       name,
       slug,
       title,
       description,
-      template: template || 'default',
-      displayOrder: 0,
-      isActive: isActive !== undefined ? isActive : true,
-      isSystem: false,
+      template,
+      isActive,
       metaTitle,
-      metaKeywords,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+      metaDescription,
+      metaKeywords
+    });
 
-    res.json(virtualPage);
+    res.status(201).json(page);
+  } catch (error) {
+    console.error('Error creating page:', error);
+    if (error instanceof Error && error.message.includes('already exists')) {
+      return res.status(400).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Failed to create page' });
+  }
+};
+
+// PUT /api/pages/:id - Update page
+export const updatePage = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const restaurantId = req.restaurantId;
+    
+    if (!restaurantId) {
+      return res.status(400).json({ error: 'Restaurant ID is required' });
+    }
+
+    const pageId = parseInt(id);
+    if (isNaN(pageId)) {
+      return res.status(400).json({ error: 'Invalid page ID' });
+    }
+
+    const { name, slug, title, description, template, isActive, metaTitle, metaDescription, metaKeywords } = req.body;
+
+    const page = await pageService.updatePage(pageId, restaurantId, {
+      name,
+      slug,
+      title,
+      description,
+      template,
+      isActive,
+      metaTitle,
+      metaDescription,
+      metaKeywords
+    });
+
+    res.json(page);
   } catch (error) {
     console.error('Error updating page:', error);
+    if (error instanceof Error && error.message.includes('not found')) {
+      return res.status(404).json({ error: error.message });
+    }
+    if (error instanceof Error && error.message.includes('already exists')) {
+      return res.status(400).json({ error: error.message });
+    }
     res.status(500).json({ error: 'Failed to update page' });
   }
 };
 
-// DELETE /api/pages/:id - Delete page (deletes all content blocks for that page)
+// DELETE /api/pages/:id - Delete page
 export const deletePage = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const restaurantId = req.restaurantId;
     
-    // We need to find the page by getting all virtual pages and finding the matching one
-    const restaurantId = 1;
-    const virtualPages = await getVirtualPages(restaurantId);
-    const pageToDelete = virtualPages.find(p => p.id === parseInt(id));
-
-    if (!pageToDelete) {
-      return res.status(404).json({ error: 'Page not found' });
+    if (!restaurantId) {
+      return res.status(400).json({ error: 'Restaurant ID is required' });
     }
 
-    // Prevent deletion of system pages
-    if (pageToDelete.isSystem) {
-      return res.status(400).json({ 
-        error: 'Cannot delete system pages (Home, About, Menu, Contact)' 
-      });
+    const pageId = parseInt(id);
+    if (isNaN(pageId)) {
+      return res.status(400).json({ error: 'Invalid page ID' });
     }
 
-    // Check if page has content blocks
-    const blockCount = await prisma.contentBlock.count({
-      where: {
-        restaurantId,
-        page: pageToDelete.slug
-      }
-    });
-
-    if (blockCount > 0) {
-      return res.status(400).json({ 
-        error: `Cannot delete page with ${blockCount} content blocks. Please remove all content blocks first.` 
-      });
-    }
-
-    res.json({ message: 'Page deleted successfully' });
+    await pageService.deletePage(pageId, restaurantId);
+    res.status(204).send();
   } catch (error) {
     console.error('Error deleting page:', error);
+    if (error instanceof Error && error.message.includes('not found')) {
+      return res.status(404).json({ error: error.message });
+    }
+    if (error instanceof Error && error.message.includes('Cannot delete system pages')) {
+      return res.status(400).json({ error: error.message });
+    }
     res.status(500).json({ error: 'Failed to delete page' });
   }
 };
 
-// POST /api/pages/reorder - Reorder pages (limited functionality)
+// PUT /api/pages/reorder - Reorder pages
 export const reorderPages = async (req: Request, res: Response) => {
   try {
-    const { pages } = req.body; // Array of { id, displayOrder }
+    const restaurantId = req.restaurantId;
+    
+    if (!restaurantId) {
+      return res.status(400).json({ error: 'Restaurant ID is required' });
+    }
 
-    // For now, just return success since we can't actually reorder virtual pages
-    res.json({ message: 'Pages reordered successfully' });
+    const { pageOrders } = req.body;
+
+    if (!Array.isArray(pageOrders)) {
+      return res.status(400).json({ error: 'pageOrders must be an array' });
+    }
+
+    await pageService.reorderPages(restaurantId, pageOrders);
+    res.json({ success: true });
   } catch (error) {
     console.error('Error reordering pages:', error);
     res.status(500).json({ error: 'Failed to reorder pages' });
   }
 };
 
-// POST /api/pages/:id/duplicate - Duplicate page (limited functionality)
+// POST /api/pages/:id/duplicate - Duplicate page
 export const duplicatePage = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const restaurantId = req.restaurantId;
     
-    // For now, return an error since duplication is complex with current schema
-    res.status(501).json({ error: 'Page duplication not yet implemented' });
+    if (!restaurantId) {
+      return res.status(400).json({ error: 'Restaurant ID is required' });
+    }
+
+    const pageId = parseInt(id);
+    if (isNaN(pageId)) {
+      return res.status(400).json({ error: 'Invalid page ID' });
+    }
+
+    // Get the original page
+    const originalPage = await pageService.getPageById(pageId, restaurantId);
+    if (!originalPage) {
+      return res.status(404).json({ error: 'Page not found' });
+    }
+
+    // Create duplicate with modified name and slug
+    const duplicateName = `${originalPage.name} Copy`;
+    const duplicateSlug = `${originalPage.slug}-copy`;
+
+    const duplicatedPage = await pageService.createPage(restaurantId, {
+      name: duplicateName,
+      slug: duplicateSlug,
+      title: originalPage.title || undefined,
+      description: originalPage.description || undefined,
+      template: originalPage.template,
+      isActive: originalPage.isActive,
+      metaTitle: originalPage.metaTitle || undefined,
+      metaDescription: originalPage.metaDescription || undefined,
+      metaKeywords: originalPage.metaKeywords || undefined
+    });
+
+    res.status(201).json(duplicatedPage);
   } catch (error) {
     console.error('Error duplicating page:', error);
+    if (error instanceof Error && error.message.includes('already exists')) {
+      return res.status(400).json({ error: 'A page with this name already exists. Please choose a different name.' });
+    }
     res.status(500).json({ error: 'Failed to duplicate page' });
+  }
+};
+
+// Public endpoint for customer portal - Get page by slug
+export const getPublicPageBySlug = async (req: Request, res: Response) => {
+  try {
+    const { restaurantSlug, pageSlug } = req.params;
+
+    // Get restaurant by slug
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { slug: restaurantSlug },
+      select: { id: true, name: true, slug: true }
+    });
+
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    // Get page by slug for this restaurant (only active pages)
+    const page = await prisma.page.findFirst({
+      where: {
+        restaurantId: restaurant.id,
+        slug: pageSlug,
+        isActive: true
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        title: true,
+        description: true,
+        template: true,
+        displayOrder: true,
+        isActive: true,
+        isSystem: true,
+        metaTitle: true,
+        metaDescription: true,
+        metaKeywords: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+
+    if (!page) {
+      return res.status(404).json({ error: 'Page not found' });
+    }
+
+    res.json({
+      ...page,
+      restaurant: {
+        id: restaurant.id,
+        name: restaurant.name,
+        slug: restaurant.slug
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching public page:', error);
+    res.status(500).json({ error: 'Failed to fetch page' });
   }
 }; 

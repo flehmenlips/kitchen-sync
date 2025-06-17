@@ -46,19 +46,12 @@ api.interceptors.request.use(
             }
         }
         
-        // Only skip customer auth interference for admin/website-builder routes
-        const isAdminRoute = config.url?.includes('/website-builder') || 
-                           config.url?.includes('/admin') || 
-                           window.location.pathname.includes('/admin');
-        
-        if (!isAdminRoute) {
-            // Check if there's a customer auth in session storage - if so, skip this request
-            const customerAuth = sessionStorage.getItem('customerAuth');
-            if (customerAuth) {
-                // Don't set any auth header if customer is logged in
-                token = null;
-            }
-        }
+        // TEMPORARILY DISABLED: Customer auth interference with admin routes
+        // const customerAuth = sessionStorage.getItem('customerAuth');
+        // if (customerAuth) {
+        //     // Don't set any auth header if customer is logged in
+        //     token = null;
+        // }
         
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;

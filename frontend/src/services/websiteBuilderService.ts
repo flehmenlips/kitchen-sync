@@ -72,66 +72,39 @@ export interface WebsiteBuilderData {
     mobileMenuStyle?: 'hamburger' | 'dots' | 'slide';
   };
   
-  // Pages from ContentBlocks
+  // Pages
   pages: WBPage[];
 }
 
 export interface WBPage {
-  id: string; // Virtual ID for new pages, 'home'/'about' for system pages
+  id: number;
   name: string;
   slug: string;
-  url: string;
-  isSystem: boolean; // true for home/about, false for custom pages
-  isActive: boolean;
+  title: string;
+  description?: string;
+  template: string;
   displayOrder: number;
+  isActive: boolean;
+  isSystem: boolean;
   metaTitle?: string;
   metaDescription?: string;
-  blocks: WBBlock[];
-}
-
-export interface WBBlock {
-  id: number;
-  blockType: string;
-  title?: string;
-  subtitle?: string;
-  content?: string;
-  imageUrl?: string;
-  imagePublicId?: string;
-  videoUrl?: string;
-  buttonText?: string;
-  buttonLink?: string;
-  buttonStyle?: string;
-  settings?: any;
-  displayOrder: number;
-  isActive: boolean;
 }
 
 export interface PageCreationData {
   name: string;
   slug: string;
+  title: string;
+  description?: string;
   template?: string;
   metaTitle?: string;
   metaDescription?: string;
-}
-
-export interface BlockCreationData {
-  blockType: string;
-  title?: string;
-  subtitle?: string;
-  content?: string;
-  imageUrl?: string;
-  videoUrl?: string;
-  buttonText?: string;
-  buttonLink?: string;
-  buttonStyle?: string;
-  settings?: any;
 }
 
 export interface PageTemplate {
   id: string;
   name: string;
   description: string;
-  blocks: string[];
+  template: string;
 }
 
 export interface NavigationItem {
@@ -181,28 +154,6 @@ export const websiteBuilderService = {
   // Delete page
   async deletePage(slug: string): Promise<void> {
     await api.delete(`/website-builder/pages/${slug}`);
-  },
-
-  // Update content block
-  async updateContentBlock(pageSlug: string, blockId: number, blockData: Partial<WBBlock>): Promise<WBBlock> {
-    const response = await api.put(`/website-builder/pages/${pageSlug}/blocks/${blockId}`, blockData);
-    return response.data;
-  },
-
-  // Create new content block
-  async createContentBlock(pageSlug: string, blockData: BlockCreationData): Promise<WBBlock> {
-    const response = await api.post(`/website-builder/pages/${pageSlug}/blocks`, blockData);
-    return response.data;
-  },
-
-  // Delete content block
-  async deleteContentBlock(pageSlug: string, blockId: number): Promise<void> {
-    await api.delete(`/website-builder/pages/${pageSlug}/blocks/${blockId}`);
-  },
-
-  // Reorder content blocks
-  async reorderContentBlocks(pageSlug: string, blockOrder: number[]): Promise<void> {
-    await api.put(`/website-builder/pages/${pageSlug}/blocks/reorder`, { blockOrder });
   },
 
   // Get page templates

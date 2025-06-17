@@ -10,6 +10,8 @@ export function getSubdomain(): string | null {
   const hostname = window.location.hostname;
   
   console.log('[Subdomain Detection] Hostname:', hostname);
+  console.log('[Subdomain Detection] Full URL:', window.location.href);
+  console.log('[Subdomain Detection] Search params:', window.location.search);
   
   // Handle localhost development
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
@@ -17,6 +19,7 @@ export function getSubdomain(): string | null {
     const params = new URLSearchParams(window.location.search);
     const subdomain = params.get('restaurant') || null;
     console.log('[Subdomain Detection] Dev mode subdomain:', subdomain);
+    console.log('[Subdomain Detection] All params:', Object.fromEntries(params.entries()));
     return subdomain;
   }
   
@@ -152,6 +155,18 @@ export function buildCustomerUrl(path: string = ''): string {
     // Restaurant subdomain: use clean URLs
     return cleanPath ? `/${cleanPath}` : '/';
   } else {
+    // Main domain: check if we're in development mode with restaurant parameter
+    const hostname = window.location.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      const params = new URLSearchParams(window.location.search);
+      const restaurantParam = params.get('restaurant');
+      if (restaurantParam) {
+        // In development with restaurant parameter, use clean URLs with restaurant param
+        const fullPath = cleanPath ? `/${cleanPath}` : '/';
+        return `${fullPath}?restaurant=${restaurantParam}`;
+      }
+    }
+    
     // Main domain: use legacy /customer prefix
     return cleanPath ? `/customer/${cleanPath}` : '/customer';
   }
@@ -165,9 +180,56 @@ export function getCurrentRestaurantSlug(): string | null {
   const subdomain = getSubdomain();
   if (subdomain) return subdomain;
   
+  // Then check URL query parameters directly (fallback for development)
+  const params = new URLSearchParams(window.location.search);
+  const restaurantParam = params.get('restaurant');
+  if (restaurantParam) return restaurantParam;
+  
   // Then check URL path (for backward compatibility)
   const pathMatch = window.location.pathname.match(/^\/restaurant\/([^\/]+)/);
   if (pathMatch) return pathMatch[1];
   
   return null;
+}
+
+/**
+ * Build customer URL with explicit restaurant slug (for when context is known)
+ * This is more reliable than buildCustomerUrl() when you know the restaurant slug
+ */
+export function buildCustomerUrlWithRestaurant(restaurantSlug: string, path: string = ''): string {
+  const hostname = window.location.hostname;
+  const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+  
+  console.log('[buildCustomerUrlWithRestaurant] Building URL:', {
+    restaurantSlug,
+    path,
+    cleanPath,
+    hostname
+  });
+  
+  // Handle localhost development
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    const fullPath = cleanPath ? `/${cleanPath}` : '/';
+    const finalURL = `${fullPath}?restaurant=${restaurantSlug}`;
+    console.log('[buildCustomerUrlWithRestaurant] Generated development URL:', finalURL);
+    return finalURL;
+  }
+  
+  // Handle production - use subdomain
+  const protocol = window.location.protocol;
+  const parts = hostname.split('.');
+  let baseDomain: string;
+  
+  if (parts.length >= 3) {
+    // Already on a subdomain, replace it
+    baseDomain = parts.slice(1).join('.');
+  } else {
+    // On main domain
+    baseDomain = hostname;
+  }
+  
+  const fullPath = cleanPath ? `/${cleanPath}` : '';
+  const finalURL = `${protocol}//${restaurantSlug}.${baseDomain}${fullPath}`;
+  console.log('[buildCustomerUrlWithRestaurant] Generated production URL:', finalURL);
+  return finalURL;
 } 

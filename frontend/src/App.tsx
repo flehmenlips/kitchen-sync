@@ -79,9 +79,10 @@ import MenuDetailPage from './pages/MenuDetailPage';
 import { TableFarmPage } from './pages/TableFarmPage';
 
 // Website & Marketing Module
-import WebsiteBuilderPage from './pages/WebsiteBuilderPage';
-import ContentBlocksPage from './pages/ContentBlocksPage';
+// import WebsiteBuilderPage from './pages/WebsiteBuilderPage'; // TEMPORARY: Disabled during emergency stabilization
 import BillingPage from './pages/BillingPage';
+// import WebsiteBuilderPage from './pages/WebsiteBuilderPage'; // Component was deleted - replaced with WebsiteSettingsPage
+import WebsiteSettingsPage from './pages/WebsiteSettingsPage';
 
 // Customer Portal Components
 import CustomerLayout from './components/customer/CustomerLayout';
@@ -93,6 +94,7 @@ import { CustomerLoginPage } from './pages/customer/CustomerLoginPage';
 import { CustomerVerifyEmailSentPage } from './pages/customer/CustomerVerifyEmailSentPage';
 import { CustomerVerifyEmailPage } from './pages/customer/CustomerVerifyEmailPage';
 import CustomerDashboardPage from './pages/customer/CustomerDashboardPage';
+import CustomerDynamicPage from './pages/customer/CustomerDynamicPage';
 
 // Reservation Management Page
 import ReservationManagementPage from './pages/ReservationManagementPage';
@@ -166,6 +168,7 @@ const App: React.FC = () => {
                         <Route element={<ProtectedRoute />}>
                           <Route element={<MainLayout />}>
                             {/* Dashboard */}
+                            <Route path="/" element={<Navigate to="/dashboard" replace />} />
                             <Route path="/dashboard" element={<DashboardPage />} />
 
                             {/* CookBook Module Routes */}
@@ -214,11 +217,12 @@ const App: React.FC = () => {
                             <Route path="reservations" element={<ReservationManagementPage />} />
 
                             {/* Website & Marketing Module Routes */}
-                            <Route path="website" element={<WebsiteBuilderPage />} />
-                            <Route path="website/content" element={<ContentBlocksPage />} />
+                            {/* <Route path="website" element={<WebsiteBuilderPage />} /> */} {/* TEMPORARY: Disabled during emergency stabilization */}
                             
                             {/* Billing Settings */}
                             <Route path="settings/billing" element={<BillingPage />} />
+                                                          <Route path="billing" element={<BillingPage />} />
+                              <Route path="website-settings" element={<WebsiteSettingsPage />} />
 
                             {/* AgileChef Module Routes */}
                             <Route path="prep" element={<PrepBoard />} />

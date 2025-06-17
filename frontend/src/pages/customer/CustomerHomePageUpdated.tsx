@@ -20,7 +20,6 @@ import {
   Restaurant as RestaurantIcon
 } from '@mui/icons-material';
 import { unifiedContentService, UnifiedRestaurantContent } from '../../services/unifiedContentService';
-import ContentBlockRenderer from '../../components/customer/ContentBlockRenderer';
 
 const CustomerHomePage: React.FC = () => {
   const [content, setContent] = useState<UnifiedRestaurantContent | null>(null);
@@ -286,8 +285,23 @@ const CustomerHomePage: React.FC = () => {
         </Container>
       )}
 
-      {/* Dynamic Content Blocks */}
-      <ContentBlockRenderer blocks={content?.contentBlocks || []} />
+      {/* Dynamic Pages */}
+      {content?.pages && content.pages.length > 0 && (
+        <Container maxWidth="lg" sx={{ my: 8 }}>
+          {content.pages.map((page) => (
+            <Box key={page.id} sx={{ mb: 4 }}>
+              <Typography variant="h4" component="h2" gutterBottom>
+                {page.title}
+              </Typography>
+              {page.description && (
+                <Typography variant="body1" paragraph>
+                  {page.description}
+                </Typography>
+              )}
+            </Box>
+          ))}
+        </Container>
+      )}
     </Box>
   );
 };

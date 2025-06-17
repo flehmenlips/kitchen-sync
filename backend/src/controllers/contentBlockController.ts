@@ -1,43 +1,37 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { v2 as cloudinary } from 'cloudinary';
+import { deleteImage } from '../services/cloudinaryService';
 
 const prisma = new PrismaClient();
 
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
+export interface ContentBlockData {
+  page: string;
+  blockType: string;
+  title?: string;
+  subtitle?: string;
+  content?: string;
+  imageUrl?: string;
+  imagePublicId?: string;
+  buttonText?: string;
+  buttonLink?: string;
+  displayOrder?: number;
+  isActive?: boolean;
+}
 
-// Block type definitions
-export const BLOCK_TYPES = {
-  TEXT: 'text',
-  HTML: 'html',
-  IMAGE: 'image',
-  VIDEO: 'video',
-  CTA: 'cta',
-  HERO: 'hero',
-  FEATURES: 'features',
-  TESTIMONIAL: 'testimonial',
-  GALLERY: 'gallery',
-  CONTACT: 'contact',
-  MAP: 'map',
-  MENU_PREVIEW: 'menu_preview',
-  RESERVATION_FORM: 'reservation_form'
-};
-
-// Get all content blocks for a page
-export const getContentBlocks = async (req: Request, res: Response) => {
+// GET /api/content-blocks/page/:page - Get content blocks for a specific page
+export const getContentBlocksByPage = async (req: Request, res: Response) => {
   try {
-    const { page = 'home' } = req.query;
-    const restaurantId = 1; // MVP: single restaurant
+    const { page } = req.params;
+    const restaurantId = req.restaurantId;
+    
+    if (!restaurantId) {
+      return res.status(400).json({ error: 'Restaurant ID is required' });
+    }
 
-    const blocks = await prisma.contentBlock.findMany({
+    const contentBlocks = await prisma.contentBlock.findMany({
       where: {
         restaurantId,
-        page: page as string,
+        page,
         isActive: true
       },
       orderBy: {
@@ -45,191 +39,191 @@ export const getContentBlocks = async (req: Request, res: Response) => {
       }
     });
 
-    res.json(blocks);
+    res.json({ contentBlocks });
   } catch (error) {
     console.error('Error fetching content blocks:', error);
     res.status(500).json({ error: 'Failed to fetch content blocks' });
   }
 };
 
-// Get all content blocks for admin (including inactive)
-export const getAllContentBlocks = async (req: Request, res: Response) => {
+// GET /api/content-blocks/:id - Get specific content block
+export const getContentBlockById = async (req: Request, res: Response) => {
   try {
-    const restaurantId = 1;
+    const { id } = req.params;
+    const restaurantId = req.restaurantId;
+    
+    if (!restaurantId) {
+      return res.status(400).json({ error: 'Restaurant ID is required' });
+    }
 
-    const blocks = await prisma.contentBlock.findMany({
-      where: { restaurantId },
-      orderBy: [
-        { page: 'asc' },
-        { displayOrder: 'asc' }
-      ]
+    const contentBlock = await prisma.contentBlock.findFirst({
+      where: {
+        id: parseInt(id),
+        restaurantId
+      }
     });
 
-    // Convert blocks to include pageId and page object for frontend compatibility
-    const convertedBlocks = blocks.map(block => {
-      // Create a virtual pageId based on page string
-      const pageMap: Record<string, number> = {
-        'home': 1,
-        'about': 2, 
-        'menu': 3,
-        'contact': 4
-      };
-      
-      // For custom pages, use a hash of the page name as ID
-      const pageId = pageMap[block.page] || Math.abs(block.page.split('').reduce((a, b) => {
-        a = ((a << 5) - a) + b.charCodeAt(0);
-        return a & a;
-      }, 0));
+    if (!contentBlock) {
+      return res.status(404).json({ error: 'Content block not found' });
+    }
 
-      return {
-        ...block,
-        pageId, // Add virtual pageId for frontend compatibility
-        page: {
-          id: pageId,
-          name: block.page.charAt(0).toUpperCase() + block.page.slice(1),
-          slug: block.page
-        }
-      };
-    });
-
-    res.json(convertedBlocks);
+    res.json(contentBlock);
   } catch (error) {
-    console.error('Error fetching all content blocks:', error);
-    res.status(500).json({ error: 'Failed to fetch content blocks' });
+    console.error('Error fetching content block:', error);
+    res.status(500).json({ error: 'Failed to fetch content block' });
   }
 };
 
-// Create a new content block
+// POST /api/content-blocks - Create new content block
 export const createContentBlock = async (req: Request, res: Response) => {
   try {
-    const restaurantId = 1;
-    let blockData = {
-      ...req.body,
-      restaurantId,
-      settings: req.body.settings || {}
-    };
-
-    // Convert pageId to page string for database storage
-    if (blockData.pageId && !blockData.page) {
-      // Create getPageSlug function that reverses the pageId mapping
-      const getPageSlug = async (pageId: number): Promise<string> => {
-        const pageMap: Record<number, string> = {
-          1: 'home',
-          2: 'about',
-          3: 'menu', 
-          4: 'contact'
-        };
-        
-        // If it's a system page, return the slug
-        if (pageMap[pageId]) {
-          return pageMap[pageId];
-        }
-        
-        // For custom pages, we need to find the page by its virtual ID
-        // Get all unique pages and find the one that generates this pageId
-        const uniquePages = await prisma.contentBlock.findMany({
-          where: { restaurantId },
-          select: { page: true },
-          distinct: ['page']
-        });
-        
-        for (const pageItem of uniquePages) {
-          const generatedId = Math.abs(pageItem.page.split('').reduce((a, b) => {
-            a = ((a << 5) - a) + b.charCodeAt(0);
-            return a & a;
-          }, 0));
-          
-          if (generatedId === pageId) {
-            return pageItem.page;
-          }
-        }
-        
-        // Fallback - shouldn't happen but just in case
-        return 'custom';
-      };
-      
-      blockData.page = await getPageSlug(blockData.pageId);
-      delete blockData.pageId; // Remove pageId as it doesn't exist in current schema
+    const restaurantId = req.restaurantId;
+    
+    if (!restaurantId) {
+      return res.status(400).json({ error: 'Restaurant ID is required' });
     }
 
-    const block = await prisma.contentBlock.create({
-      data: blockData
+    const {
+      page,
+      blockType,
+      title,
+      subtitle,
+      content,
+      imageUrl,
+      imagePublicId,
+      buttonText,
+      buttonLink,
+      displayOrder,
+      isActive = true
+    }: ContentBlockData = req.body;
+
+    if (!page || !blockType) {
+      return res.status(400).json({ error: 'Page and blockType are required' });
+    }
+
+    // Get the next display order if not provided
+    let finalDisplayOrder = displayOrder;
+    if (finalDisplayOrder === undefined) {
+      const maxOrder = await prisma.contentBlock.findFirst({
+        where: { restaurantId, page },
+        orderBy: { displayOrder: 'desc' },
+        select: { displayOrder: true }
+      });
+      finalDisplayOrder = (maxOrder?.displayOrder || 0) + 1;
+    }
+
+    const contentBlock = await prisma.contentBlock.create({
+      data: {
+        restaurantId,
+        page,
+        blockType,
+        title,
+        subtitle,
+        content,
+        imageUrl,
+        imagePublicId,
+        buttonText,
+        buttonLink,
+        displayOrder: finalDisplayOrder,
+        isActive,
+        lastModifiedBy: req.user?.id
+      }
     });
 
-    // Convert response back to include pageId for frontend
-    const pageMap: Record<string, number> = {
-      'home': 1,
-      'about': 2,
-      'menu': 3,
-      'contact': 4
-    };
-    
-    const pageId = pageMap[block.page] || Math.abs(block.page.split('').reduce((a, b) => {
-      a = ((a << 5) - a) + b.charCodeAt(0);
-      return a & a;
-    }, 0));
-
-    const responseBlock = {
-      ...block,
-      pageId,
-      page: {
-        id: pageId,
-        name: block.page.charAt(0).toUpperCase() + block.page.slice(1),
-        slug: block.page
-      }
-    };
-
-    res.status(201).json(responseBlock);
+    res.status(201).json(contentBlock);
   } catch (error) {
     console.error('Error creating content block:', error);
     res.status(500).json({ error: 'Failed to create content block' });
   }
 };
 
-// Update a content block
+// PUT /api/content-blocks/:id - Update content block
 export const updateContentBlock = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const updateData = req.body;
+    const restaurantId = req.restaurantId;
+    
+    if (!restaurantId) {
+      return res.status(400).json({ error: 'Restaurant ID is required' });
+    }
 
-    // Remove fields that shouldn't be updated
-    delete updateData.id;
-    delete updateData.restaurantId;
-    delete updateData.createdAt;
+    const {
+      title,
+      subtitle,
+      content,
+      imageUrl,
+      imagePublicId,
+      buttonText,
+      buttonLink,
+      displayOrder,
+      isActive
+    }: Partial<ContentBlockData> = req.body;
 
-    const block = await prisma.contentBlock.update({
-      where: { id: parseInt(id) },
-      data: updateData
+    // Verify the content block exists and belongs to the restaurant
+    const existingBlock = await prisma.contentBlock.findFirst({
+      where: {
+        id: parseInt(id),
+        restaurantId
+      }
     });
 
-    res.json(block);
+    if (!existingBlock) {
+      return res.status(404).json({ error: 'Content block not found' });
+    }
+
+    const contentBlock = await prisma.contentBlock.update({
+      where: { id: parseInt(id) },
+      data: {
+        title,
+        subtitle,
+        content,
+        imageUrl,
+        imagePublicId,
+        buttonText,
+        buttonLink,
+        displayOrder,
+        isActive,
+        lastModifiedBy: req.user?.id,
+        version: { increment: 1 }
+      }
+    });
+
+    res.json(contentBlock);
   } catch (error) {
     console.error('Error updating content block:', error);
     res.status(500).json({ error: 'Failed to update content block' });
   }
 };
 
-// Delete a content block
-export const deleteContentBlock = async (req: Request, res: Response): Promise<void> => {
+// DELETE /api/content-blocks/:id - Delete content block
+export const deleteContentBlock = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-
-    // Get block to check for images
-    const block = await prisma.contentBlock.findUnique({
-      where: { id: parseInt(id) }
-    });
-
-    if (!block) {
-      res.status(404).json({ error: 'Content block not found' });
-      return;
+    const restaurantId = req.restaurantId;
+    
+    if (!restaurantId) {
+      return res.status(400).json({ error: 'Restaurant ID is required' });
     }
 
-    // Delete image from Cloudinary if exists
-    if (block.imagePublicId) {
+    // Verify the content block exists and belongs to the restaurant
+    const existingBlock = await prisma.contentBlock.findFirst({
+      where: {
+        id: parseInt(id),
+        restaurantId
+      }
+    });
+
+    if (!existingBlock) {
+      return res.status(404).json({ error: 'Content block not found' });
+    }
+
+    // Delete associated image from Cloudinary if it exists
+    if (existingBlock.imagePublicId) {
       try {
-        await cloudinary.uploader.destroy(block.imagePublicId);
-      } catch (error) {
-        console.error('Error deleting image from Cloudinary:', error);
+        await deleteImage(existingBlock.imagePublicId);
+      } catch (cloudinaryError) {
+        console.warn('Failed to delete image from Cloudinary:', cloudinaryError);
+        // Continue with deletion even if Cloudinary fails
       }
     }
 
@@ -244,124 +238,159 @@ export const deleteContentBlock = async (req: Request, res: Response): Promise<v
   }
 };
 
-// Reorder content blocks
+// PUT /api/content-blocks/reorder - Reorder content blocks for drag-and-drop
 export const reorderContentBlocks = async (req: Request, res: Response) => {
   try {
-    const { blocks } = req.body; // Array of { id, displayOrder }
+    const restaurantId = req.restaurantId;
+    
+    if (!restaurantId) {
+      return res.status(400).json({ error: 'Restaurant ID is required' });
+    }
 
-    // Update each block's display order
-    const updates = blocks.map((block: { id: number; displayOrder: number }) =>
-      prisma.contentBlock.update({
-        where: { id: block.id },
-        data: { displayOrder: block.displayOrder }
-      })
+    const { page, blockOrders }: { page: string; blockOrders: { id: number; displayOrder: number }[] } = req.body;
+
+    if (!page || !Array.isArray(blockOrders)) {
+      return res.status(400).json({ error: 'Page and blockOrders array are required' });
+    }
+
+    // Update all blocks in a transaction
+    await prisma.$transaction(
+      blockOrders.map(({ id, displayOrder }) =>
+        prisma.contentBlock.update({
+          where: { id },
+          data: { 
+            displayOrder,
+            lastModifiedBy: req.user?.id,
+            version: { increment: 1 }
+          }
+        })
+      )
     );
 
-    await Promise.all(updates);
+    // Return updated blocks
+    const updatedBlocks = await prisma.contentBlock.findMany({
+      where: {
+        restaurantId,
+        page,
+        isActive: true
+      },
+      orderBy: {
+        displayOrder: 'asc'
+      }
+    });
 
-    res.json({ message: 'Content blocks reordered successfully' });
+    res.json({ contentBlocks: updatedBlocks });
   } catch (error) {
     console.error('Error reordering content blocks:', error);
     res.status(500).json({ error: 'Failed to reorder content blocks' });
   }
 };
 
-// Upload image for content block
-export const uploadContentBlockImage = async (req: Request, res: Response): Promise<void> => {
+// PUT /api/content-blocks/:id/publish - Publish content block
+export const publishContentBlock = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-
-    if (!req.file) {
-      res.status(400).json({ error: 'No file uploaded' });
-      return;
+    const restaurantId = req.restaurantId;
+    
+    if (!restaurantId) {
+      return res.status(400).json({ error: 'Restaurant ID is required' });
     }
 
-    // Get current block
-    const block = await prisma.contentBlock.findUnique({
-      where: { id: parseInt(id) }
-    });
-
-    if (!block) {
-      res.status(404).json({ error: 'Content block not found' });
-      return;
-    }
-
-    // Delete old image if exists
-    if (block.imagePublicId) {
-      try {
-        await cloudinary.uploader.destroy(block.imagePublicId);
-      } catch (error) {
-        console.error('Error deleting old image:', error);
+    // Verify the content block exists and belongs to the restaurant
+    const existingBlock = await prisma.contentBlock.findFirst({
+      where: {
+        id: parseInt(id),
+        restaurantId
       }
-    }
-
-    // Upload new image
-    const result = await new Promise<any>((resolve, reject) => {
-      cloudinary.uploader.upload_stream(
-        {
-          folder: 'content-blocks',
-          transformation: [
-            { width: 1920, height: 1080, crop: 'limit', quality: 'auto' }
-          ]
-        },
-        (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
-        }
-      ).end(req.file!.buffer);
     });
 
-    // Update block with new image info
-    const updatedBlock = await prisma.contentBlock.update({
+    if (!existingBlock) {
+      return res.status(404).json({ error: 'Content block not found' });
+    }
+
+    const contentBlock = await prisma.contentBlock.update({
       where: { id: parseInt(id) },
       data: {
-        imageUrl: result.secure_url,
-        imagePublicId: result.public_id
+        isPublished: true,
+        publishedAt: new Date(),
+        lastModifiedBy: req.user?.id
       }
     });
 
-    res.json({
-      imageUrl: result.secure_url,
-      publicId: result.public_id,
-      block: updatedBlock
-    });
+    res.json(contentBlock);
   } catch (error) {
-    console.error('Error uploading content block image:', error);
-    res.status(500).json({ error: 'Failed to upload image' });
+    console.error('Error publishing content block:', error);
+    res.status(500).json({ error: 'Failed to publish content block' });
   }
 };
 
-// Duplicate a content block
-export const duplicateContentBlock = async (req: Request, res: Response): Promise<void> => {
+// PUT /api/content-blocks/:id/unpublish - Unpublish content block
+export const unpublishContentBlock = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-
-    // Get original block
-    const originalBlock = await prisma.contentBlock.findUnique({
-      where: { id: parseInt(id) }
-    });
-
-    if (!originalBlock) {
-      res.status(404).json({ error: 'Content block not found' });
-      return;
+    const restaurantId = req.restaurantId;
+    
+    if (!restaurantId) {
+      return res.status(400).json({ error: 'Restaurant ID is required' });
     }
 
-    // Create duplicate without id and timestamps
-    const { id: _, createdAt, updatedAt, imagePublicId, ...blockData } = originalBlock;
-
-    const duplicatedBlock = await prisma.contentBlock.create({
-      data: {
-        ...blockData,
-        title: `${blockData.title} (Copy)`,
-        displayOrder: blockData.displayOrder + 1,
-        isActive: false, // Start as inactive
-        settings: blockData.settings || {}
+    // Verify the content block exists and belongs to the restaurant
+    const existingBlock = await prisma.contentBlock.findFirst({
+      where: {
+        id: parseInt(id),
+        restaurantId
       }
     });
 
-    res.json(duplicatedBlock);
+    if (!existingBlock) {
+      return res.status(404).json({ error: 'Content block not found' });
+    }
+
+    const contentBlock = await prisma.contentBlock.update({
+      where: { id: parseInt(id) },
+      data: {
+        isPublished: false,
+        publishedAt: null,
+        lastModifiedBy: req.user?.id
+      }
+    });
+
+    res.json(contentBlock);
   } catch (error) {
-    console.error('Error duplicating content block:', error);
-    res.status(500).json({ error: 'Failed to duplicate content block' });
+    console.error('Error unpublishing content block:', error);
+    res.status(500).json({ error: 'Failed to unpublish content block' });
+  }
+};
+
+// GET /api/content-blocks/public/:restaurantSlug/:page - Get published content blocks for customer portal
+export const getPublicContentBlocks = async (req: Request, res: Response) => {
+  try {
+    const { restaurantSlug, page } = req.params;
+
+    // Find restaurant by slug
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { slug: restaurantSlug }
+    });
+
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    const contentBlocks = await prisma.contentBlock.findMany({
+      where: {
+        restaurantId: restaurant.id,
+        page,
+        isActive: true,
+        isPublished: true
+      },
+      orderBy: {
+        displayOrder: 'asc'
+      }
+    });
+
+    res.json({ contentBlocks });
+  } catch (error) {
+    console.error('Error fetching public content blocks:', error);
+    res.status(500).json({ error: 'Failed to fetch content blocks' });
   }
 }; 

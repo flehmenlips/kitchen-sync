@@ -15,9 +15,6 @@ export interface Page {
   metaKeywords?: string;
   createdAt: string;
   updatedAt: string;
-  _count?: {
-    contentBlocks: number;
-  };
 }
 
 export interface CreatePageRequest {
@@ -28,6 +25,7 @@ export interface CreatePageRequest {
   template?: string;
   isActive?: boolean;
   metaTitle?: string;
+  metaDescription?: string;
   metaKeywords?: string;
 }
 
@@ -39,6 +37,7 @@ export interface UpdatePageRequest {
   template?: string;
   isActive?: boolean;
   metaTitle?: string;
+  metaDescription?: string;
   metaKeywords?: string;
 }
 
@@ -65,6 +64,26 @@ export const pageService = {
   async getPages(): Promise<{ pages: Page[] }> {
     const response = await api.get('/pages');
     return response.data;
+  },
+
+  // Get public page by slug (no authentication required)
+  async getPublicPageBySlug(restaurantSlug: string, pageSlug: string): Promise<Page & { restaurant: { id: number; name: string; slug: string } }> {
+    const API_URL = import.meta.env.PROD 
+      ? 'https://api.kitchensync.restaurant/api'
+      : (import.meta.env.VITE_API_URL || 'http://localhost:3001/api');
+    
+    const response = await fetch(`${API_URL}/pages/public/${restaurantSlug}/${pageSlug}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch page: ${response.status}`);
+    }
+
+    return response.json();
   },
 
   // Create new page

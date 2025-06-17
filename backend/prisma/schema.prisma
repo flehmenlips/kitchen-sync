@@ -518,29 +518,61 @@ model OrderItem {
   @@map("order_items")
 }
 
-model ContentBlock {
-  id            Int        @id @default(autoincrement())
-  restaurantId  Int        @map("restaurant_id")
-  page          String     @default("home") @db.VarChar(50)
-  blockType     String     @map("block_type") @db.VarChar(50)
-  title         String?    @db.VarChar(255)
-  subtitle      String?    @db.VarChar(500)
-  content       String?
-  imageUrl      String?    @map("image_url")
-  imagePublicId String?    @map("image_public_id") @db.VarChar(255)
-  videoUrl      String?    @map("video_url")
-  buttonText    String?    @map("button_text") @db.VarChar(100)
-  buttonLink    String?    @map("button_link") @db.VarChar(255)
-  buttonStyle   String?    @default("primary") @map("button_style") @db.VarChar(50)
-  settings      Json?      @default("{}") @db.Json
-  displayOrder  Int        @default(0) @map("display_order")
-  isActive      Boolean    @default(true) @map("is_active")
-  createdAt     DateTime   @default(now()) @map("created_at")
-  updatedAt     DateTime   @updatedAt @map("updated_at")
-  restaurant    Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+model Page {
+  id            Int           @id @default(autoincrement())
+  restaurantId  Int           @map("restaurant_id")
+  name          String        @db.VarChar(255)
+  slug          String        @db.VarChar(255)
+  title         String?       @db.VarChar(255)
+  description   String?
+  template      String        @default("default") @db.VarChar(50)
+  displayOrder  Int           @default(0) @map("display_order")
+  isActive      Boolean       @default(true) @map("is_active")
+  isSystem      Boolean       @default(false) @map("is_system")
+  metaTitle     String?       @map("meta_title") @db.VarChar(255)
+  metaDescription String?     @map("meta_description")
+  metaKeywords  String?       @map("meta_keywords")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  restaurant    Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 
+  @@unique([restaurantId, slug])
+  @@index([restaurantId])
+  @@index([slug])
   @@index([displayOrder])
-  @@index([restaurantId, page])
+  @@index([isActive])
+  @@map("pages")
+}
+
+model ContentBlock {
+  id             Int       @id @default(autoincrement())
+  restaurantId   Int       @map("restaurant_id")
+  page           String    @db.VarChar(100)
+  blockType      String    @map("block_type") @db.VarChar(50)
+  title          String?   @db.VarChar(255)
+  subtitle       String?   @db.VarChar(255)
+  content        String?
+  imageUrl       String?   @map("image_url")
+  imagePublicId  String?   @map("image_public_id")
+  buttonText     String?   @map("button_text") @db.VarChar(100)
+  buttonLink     String?   @map("button_link") @db.VarChar(255)
+  displayOrder   Int       @default(0) @map("display_order")
+  isActive       Boolean   @default(true) @map("is_active")
+  version        Int       @default(1)
+  isPublished    Boolean   @default(false) @map("is_published")
+  publishedAt    DateTime? @map("published_at")
+  lastModifiedBy Int?      @map("last_modified_by")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  restaurant     Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@unique([restaurantId, page, blockType, displayOrder])
+  @@index([restaurantId])
+  @@index([page])
+  @@index([blockType])
+  @@index([displayOrder])
+  @@index([isActive])
+  @@index([isPublished])
   @@map("content_blocks")
 }
 
@@ -581,12 +613,13 @@ model Restaurant {
   is_chain                Boolean               @default(false)
   parent_restaurant_id    Int?
   website_builder_enabled Boolean               @default(false)
-  websiteSettings         Json?                 @map("website_settings")
+  website_settings        Json?                 @map("website_settings")
   brandAssets             BrandAsset[]
   categories              Category[]
   colorPalettes           ColorPalette[]
   contentBlocks           ContentBlock[]
   customerRestaurants     CustomerRestaurant[]  @relation("RestaurantToCustomers")
+  pages                   Page[]
   ingredientCategories    IngredientCategory[]
   ingredients             Ingredient[]
   menus                   Menu[]
@@ -614,47 +647,44 @@ model Restaurant {
 
 model RestaurantSettings {
   id                         Int              @id @default(autoincrement())
-  restaurantId               Int              @unique(map: "restaurant_settings_restaurant_id_key")
+  restaurantId               Int              @unique(map: "restaurant_settings_restaurant_id_key") @map("restaurant_id")
   createdAt                  DateTime         @default(now()) @map("created_at")
   updatedAt                  DateTime         @updatedAt @map("updated_at")
-  templateId                 Int?
-  customCss                  String?
-  websiteName                String?          @db.VarChar(255)
-  metaTitle                  String?          @db.VarChar(255)
-  metaDescription            String?
-  heroTitle                  String?          @db.VarChar(255)
-  heroSubtitle               String?
-  heroImageUrl               String?
-  heroImagePublicId          String?          @db.VarChar(255)
-  heroCTAText                String?          @db.VarChar(255)
-  heroCTALink                String?          @db.VarChar(255)
-  aboutTitle                 String?          @db.VarChar(255)
-  aboutDescription           String?
-  aboutImageUrl              String?
-  aboutImagePublicId         String?          @db.VarChar(255)
-  logoUrl                    String?
-  logoPublicId               String?          @db.VarChar(255)
-  primaryColor               String?          @default("#1976d2") @db.VarChar(50)
-  secondaryColor             String?          @default("#dc004e") @db.VarChar(50)
-  accentColor                String?          @default("#333333") @db.VarChar(50)
-  fontPrimary                String?          @default("Roboto, sans-serif") @db.VarChar(255)
-  fontSecondary              String?          @default("Playfair Display, serif") @db.VarChar(255)
-  contactPhone               String?          @db.VarChar(50)
-  contactEmail               String?          @db.VarChar(255)
-  contactAddress             String?          @db.VarChar(255)
-  contactCity                String?          @db.VarChar(100)
-  contactState               String?          @db.VarChar(50)
-  contactZip                 String?          @db.VarChar(20)
-  openingHours               Json?            @default("{}")
-  facebookUrl                String?          @db.VarChar(255)
-  instagramUrl               String?          @db.VarChar(255)
-  twitterUrl                 String?          @db.VarChar(255)
-  linkedinUrl                String?          @db.VarChar(255)
-  footerText                 String?
-  activeMenuIds              Int[]            @default([])
-  menuDisplayMode            String?          @default("grid") @db.VarChar(50)
+  websiteName                String?          @map("website_name")
   tagline                    String?
-  metaKeywords               String?
+  logoUrl                    String?          @map("logo_url")
+  logoPublicId               String?          @map("logo_public_id")
+  heroTitle                  String?          @map("hero_title")
+  heroSubtitle               String?          @map("hero_subtitle")
+  heroImageUrl               String?          @map("hero_image_url")
+  heroImagePublicId          String?          @map("hero_image_public_id")
+  heroCTAText                String?          @map("hero_cta_text")
+  heroCTALink                String?          @map("hero_cta_link")
+  aboutTitle                 String?          @map("about_title")
+  aboutDescription           String?          @map("about_description")
+  aboutImageUrl              String?          @map("about_image_url")
+  aboutImagePublicId         String?          @map("about_image_public_id")
+  primaryColor               String?          @default("#1976d2") @map("primary_color")
+  secondaryColor             String?          @default("#dc004e") @map("secondary_color")
+  accentColor                String?          @default("#333333") @map("accent_color")
+  fontPrimary                String?          @default("Roboto, sans-serif") @map("font_primary")
+  fontSecondary              String?          @default("Playfair Display, serif") @map("font_secondary")
+  contactPhone               String?          @map("contact_phone")
+  contactEmail               String?          @map("contact_email")
+  contactAddress             String?          @map("contact_address")
+  contactCity                String?          @map("contact_city")
+  contactState               String?          @map("contact_state")
+  contactZip                 String?          @map("contact_zip")
+  openingHours               Json?            @default("{}") @map("opening_hours")
+  facebookUrl                String?          @map("facebook_url")
+  instagramUrl               String?          @map("instagram_url")
+  twitterUrl                 String?          @map("twitter_url")
+  activeMenuIds              Int[]            @default([]) @map("active_menu_ids")
+  menuDisplayMode            String?          @default("tabs") @map("menu_display_mode")
+  footerText                 String?          @map("footer_text")
+  metaTitle                  String?          @map("meta_title")
+  metaDescription            String?          @map("meta_description")
+  metaKeywords               String?          @map("meta_keywords")
   infoPanesEnabled           Boolean?         @default(true) @map("info_panes_enabled")
   hoursCardTitle             String?          @default("Opening Hours") @map("hours_card_title") @db.VarChar(100)
   locationCardTitle          String?          @default("Our Location") @map("location_card_title") @db.VarChar(100)
@@ -668,7 +698,6 @@ model RestaurantSettings {
   navigationItems            Json?            @default("[]") @map("navigation_items") @db.Json
   showMobileMenu             Boolean?         @default(true) @map("show_mobile_menu")
   mobileMenuStyle            String?          @default("hamburger") @map("mobile_menu_style") @db.VarChar(50)
-  WebsiteTemplate            WebsiteTemplate? @relation(fields: [templateId], references: [id], map: "fk_restaurant_settings_template")
   restaurants                Restaurant       @relation(fields: [restaurantId], references: [id], onDelete: Cascade, map: "restaurant_settings_restaurant_id_fkey")
 
   @@map("restaurant_settings")
@@ -858,15 +887,15 @@ model Subscription {
   lastPaymentStatus      String?            @map("last_payment_status") @db.VarChar(255)
   lastPaymentDate        DateTime?          @map("last_payment_date") @db.Timestamp(6)
   metadata               Json?
-  api_access             Boolean            @default(false) @map("api_access")
-  custom_domain          Boolean            @default(false) @map("custom_domain")
-  enabledModules         String[]           @default([]) @map("enabled_modules")
-  maxCustomerAccounts    Int                @default(100) @map("max_customer_accounts")
-  maxLocations           Int                @default(1) @map("max_locations")
-  maxStaffAccounts       Int                @default(2) @map("max_staff_accounts")
-  module_access          Json?              @db.Json @map("module_access")
-  prioritySupport        Boolean            @default(false) @map("priority_support")
-  whiteLabel             Boolean            @default(false) @map("white_label")
+  api_access             Boolean            @default(false)
+  custom_domain          Boolean            @default(false)
+  enabled_modules        String[]           @default([])
+  max_customer_accounts  Int                @default(100)
+  max_locations          Int                @default(1)
+  max_staff_accounts     Int                @default(2)
+  module_access          Json?              @db.Json
+  priority_support       Boolean            @default(false)
+  white_label            Boolean            @default(false)
   invoices               Invoice[]
   restaurant             Restaurant         @relation(fields: [restaurantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   usageRecords           UsageRecord[]
@@ -1103,7 +1132,6 @@ model WebsiteTemplate {
   sortOrder           Int                  @default(0)
   createdAt           DateTime             @default(now()) @db.Timestamp(6)
   updatedAt           DateTime             @default(now()) @db.Timestamp(6)
-  restaurant_settings RestaurantSettings[]
 
   @@index([category])
   @@index([isActive])

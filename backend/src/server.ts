@@ -16,16 +16,15 @@ import menuRoutes from './routes/menuRoutes'; // Import menu routes
 import reservationRoutes from './routes/reservationRoutes'; // Import reservation routes
 import orderRoutes from './routes/orderRoutes'; // Import order routes
 import restaurantSettingsRoutes from './routes/restaurantSettingsRoutes';
+import pageRoutes from './routes/pageRoutes';
 import contentBlockRoutes from './routes/contentBlockRoutes';
 import customerAuthRoutes from './routes/customerAuthRoutes'; // Import customer auth routes
 import customerReservationRoutes from './routes/customerReservationRoutes'; // Import customer reservation routes
 import adminRoutes from './routes/adminRoutes'; // Import admin routes
 import platformRoutes from './routes/platformRoutes'; // Import platform routes
 import restaurantOnboardingRoutes from './routes/restaurantOnboardingRoutes'; // Import restaurant onboarding routes
-import subscriptionRoutes from './routes/subscriptionRoutes'; // Import subscription routes
-import templateRoutes from './routes/templateRoutes'; // Import template routes
-import pageRoutes from './routes/pageRoutes'; // Import page routes
-import websiteBuilderRoutes from './routes/websiteBuilderRoutes'; // Import website builder routes
+// TEMPORARILY DISABLED: import subscriptionRoutes from './routes/subscriptionRoutes'; // Import subscription routes
+// TEMPORARILY DISABLED: import templateRoutes from './routes/templateRoutes'; // Import template routes
 import { Request, Response, NextFunction } from 'express';
 import { protect } from './middleware/authMiddleware';
 import { setRestaurantContext } from './middleware/restaurantContext';
@@ -127,7 +126,6 @@ app.use('/api/users', userRoutes); // Mount user routes
 app.use('/api/auth/customer', customerAuthRoutes); // Mount customer auth routes
 app.use('/api/customer/reservations', customerReservationRoutes); // Mount customer reservation routes
 app.use('/api/restaurant-onboarding', restaurantOnboardingRoutes); // Mount restaurant onboarding routes
-app.use('/api/subscription', subscriptionRoutes); // Mount subscription routes
 app.use('/api/recipes', recipeRoutes);
 app.use('/api/units', unitRoutes); // Mount unit routes
 app.use('/api/ingredients', ingredientRoutes); // Mount ingredient routes
@@ -140,13 +138,11 @@ app.use('/api/prep-columns', prepColumnRoutes);
 app.use('/api/menus', menuRoutes); // Mount menu routes
 app.use('/api/reservations', reservationRoutes); // Mount reservation routes
 app.use('/api/orders', orderRoutes); // Mount order routes
-app.use('/api/restaurant', restaurantSettingsRoutes); // Mount restaurant settings routes
-app.use('/api/content-blocks', contentBlockRoutes); // Mount content block routes
-app.use('/api/pages', pageRoutes); // Mount page routes
-app.use('/api/website-builder', websiteBuilderRoutes); // Mount website builder routes
+app.use('/api/restaurant-settings', restaurantSettingsRoutes);
+app.use('/api/pages', pageRoutes);
+app.use('/api/content-blocks', contentBlockRoutes);
 app.use('/api/admin', adminRoutes); // Mount admin routes
 app.use('/api/platform', platformRoutes); // Mount platform routes
-app.use('/api/templates', templateRoutes); // Mount template routes
 
 // Serve static files ONLY for non-API routes (AFTER API routes)
 app.use((req, res, next) => {
@@ -197,8 +193,11 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 // Read port from environment variables or default to 3001
 const PORT = process.env.PORT || 3001;
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
-  console.log('🎯 FINAL FIX v6 - Frontend API URLs corrected to point to api.kitchensync.restaurant');
-}); 
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+    console.log('🎯 FINAL FIX v6 - Frontend API URLs corrected to point to api.kitchensync.restaurant');
+  });
+}
+
+export default app; 

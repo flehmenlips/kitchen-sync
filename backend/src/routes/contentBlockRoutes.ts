@@ -1,45 +1,38 @@
 import express from 'express';
 import {
-  getContentBlocks,
-  getAllContentBlocks,
+  getContentBlocksByPage,
+  getContentBlockById,
   createContentBlock,
   updateContentBlock,
   deleteContentBlock,
   reorderContentBlocks,
-  uploadContentBlockImage,
-  duplicateContentBlock
+  publishContentBlock,
+  unpublishContentBlock,
+  getPublicContentBlocks
 } from '../controllers/contentBlockController';
 import { protect } from '../middleware/authMiddleware';
-const multer = require('multer');
+import { setRestaurantContext, requireRestaurantContext } from '../middleware/restaurantContext';
 
 const router = express.Router();
 
-// Configure multer for image uploads
-const storage = multer.memoryStorage();
-const upload = multer({
-  storage,
-  limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit
-  },
-  fileFilter: (req: any, file: any, cb: any) => {
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed'));
-    }
-  }
-});
+// Public routes (no authentication required)
+router.get('/public/:restaurantSlug/:page', getPublicContentBlocks);
 
-// Public routes
-router.get('/public', getContentBlocks); // Get blocks for a specific page
+// Protected routes (require authentication)
+router.use(protect);
+router.use(setRestaurantContext);
+router.use(requireRestaurantContext);
 
-// Protected routes (admin only)
-router.get('/', protect, getAllContentBlocks); // Get all blocks for admin
-router.post('/', protect, createContentBlock);
-router.put('/:id', protect, updateContentBlock);
-router.delete('/:id', protect, deleteContentBlock);
-router.post('/reorder', protect, reorderContentBlocks);
-router.post('/:id/upload', protect, upload.single('image'), uploadContentBlockImage);
-router.post('/:id/duplicate', protect, duplicateContentBlock);
+// Content block CRUD operations
+router.get('/page/:page', getContentBlocksByPage);
+router.get('/:id', getContentBlockById);
+router.post('/', createContentBlock);
+router.put('/:id', updateContentBlock);
+router.delete('/:id', deleteContentBlock);
+
+// Special operations
+router.put('/reorder', reorderContentBlocks);
+router.put('/:id/publish', publishContentBlock);
+router.put('/:id/unpublish', unpublishContentBlock);
 
 export default router; 
