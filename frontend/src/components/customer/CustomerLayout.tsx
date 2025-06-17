@@ -23,6 +23,7 @@ import {
 } from '@mui/material';
 import {
   Menu as MenuIcon,
+  MoreVert as MoreVertIcon,
   Home as HomeIcon,
   MenuBook as MenuBookIcon,
   EventSeat as EventSeatIcon,
@@ -184,127 +185,621 @@ const CustomerLayout: React.FC = () => {
     return parts.join(', ');
   };
 
+  // Get navigation settings
+  const navigationLayout = settings?.navigationLayout || 'topbar';
+  const navigationAlignment = settings?.navigationAlignment || 'left';
+  const navigationStyle = settings?.navigationStyle || 'modern';
+  const mobileMenuStyle = settings?.mobileMenuStyle || 'hamburger';
+  const isSidebarLayout = navigationLayout === 'sidebar';
+  const isHybridLayout = navigationLayout === 'hybrid';
+  const sidebarWidth = 240;
+
+  // Helper function to get justifyContent based on alignment
+  const getNavigationJustification = (alignment: string) => {
+    switch (alignment) {
+      case 'center': return 'center';
+      case 'right': return 'flex-end';
+      case 'justified': return 'space-evenly';
+      case 'left':
+      default: return 'flex-start';
+    }
+  };
+
+  // Helper function to get button styles based on navigation style
+  const getNavigationButtonStyles = (style: string) => {
+    switch (style) {
+      case 'minimal':
+        return {
+          textTransform: 'none' as const,
+          fontWeight: 400,
+          color: 'text.primary',
+          backgroundColor: 'transparent',
+          border: 'none',
+          boxShadow: 'none',
+          '&:hover': {
+            backgroundColor: 'transparent',
+            textDecoration: 'underline',
+          },
+        };
+      case 'classic':
+        return {
+          textTransform: 'uppercase' as const,
+          fontWeight: 600,
+          fontSize: '0.875rem',
+          letterSpacing: '0.05em',
+          color: 'text.primary',
+          backgroundColor: 'transparent',
+          border: '1px solid transparent',
+          '&:hover': {
+            backgroundColor: 'grey.100',
+            borderColor: 'grey.300',
+          },
+        };
+      case 'rounded':
+        return {
+          textTransform: 'none' as const,
+          fontWeight: 500,
+          borderRadius: '20px',
+          px: 3,
+          py: 1,
+          backgroundColor: 'grey.100',
+          color: 'text.primary',
+          '&:hover': {
+            backgroundColor: 'grey.200',
+          },
+        };
+      case 'modern':
+      default:
+        return {
+          // Default Material-UI button styling
+          textTransform: 'none' as const,
+          fontWeight: 500,
+        };
+    }
+  };
+
+  // Helper function to get mobile menu icon based on style
+  const getMobileMenuIcon = (style: string) => {
+    switch (style) {
+      case 'dots':
+        return <MoreVertIcon />;
+      case 'hamburger':
+      case 'slide':
+      default:
+        return <MenuIcon />;
+    }
+  };
+
+  // Helper function to get mobile drawer anchor based on style
+  const getMobileDrawerAnchor = (style: string) => {
+    switch (style) {
+      case 'slide':
+        return 'right' as const;
+      case 'hamburger':
+      case 'dots':
+      default:
+        return 'left' as const;
+    }
+  };
+
   return (
     <ThemeProvider theme={customTheme}>
-      <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-        {/* Header */}
-        <AppBar position="sticky" sx={{ backgroundColor: 'white', color: 'text.primary' }}>
-          <Toolbar>
-            {isMobile && (
-              <IconButton
-                edge="start"
-                onClick={() => setMobileMenuOpen(true)}
-                sx={{ mr: 2 }}
-              >
-                <MenuIcon />
-              </IconButton>
-            )}
-            
-            <Box
-              component={Link}
-              to="/customer"
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                flexGrow: 1,
-                textDecoration: 'none',
-                color: 'inherit',
-              }}
-            >
-              {settings?.logoUrl ? (
+      <Box sx={{ display: 'flex', flexDirection: isSidebarLayout ? 'row' : 'column', minHeight: '100vh' }}>
+        
+        {/* Sidebar Navigation - Only for sidebar and hybrid layouts on desktop */}
+        {(isSidebarLayout || isHybridLayout) && !isMobile && (
+          <Drawer
+            variant="permanent"
+            anchor="left"
+            sx={{
+              width: sidebarWidth,
+              flexShrink: 0,
+              '& .MuiDrawer-paper': {
+                width: sidebarWidth,
+                boxSizing: 'border-box',
+                backgroundColor: 'white',
+                borderRight: '1px solid',
+                borderColor: 'divider',
+              },
+            }}
+          >
+            <Box sx={{ overflow: 'auto' }}>
+              {/* Sidebar Header with Logo */}
+              <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
                 <Box
-                  component="img"
-                  src={settings.logoUrl}
-                  alt={settings.websiteName || 'Restaurant Logo'}
-                  sx={{ height: 40, mr: 2 }}
-                />
-              ) : (
-                <Typography
-                  variant="h5"
+                  component={Link}
+                  to="/customer"
                   sx={{
-                    fontWeight: 'bold',
+                    display: 'flex',
+                    alignItems: 'center',
+                    textDecoration: 'none',
+                    color: 'inherit',
                   }}
                 >
-                  {loading ? (
-                    <Skeleton width={200} />
+                  {settings?.logoUrl ? (
+                    <Box
+                      component="img"
+                      src={settings.logoUrl}
+                      alt={settings.websiteName || 'Restaurant Logo'}
+                      sx={{ height: 40, mr: 2 }}
+                    />
                   ) : (
-                    settings?.websiteName || 'Seabreeze Kitchen'
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        fontWeight: 'bold',
+                      }}
+                    >
+                      {loading ? (
+                        <Skeleton width={150} />
+                      ) : (
+                        settings?.websiteName || 'Seabreeze Kitchen'
+                      )}
+                    </Typography>
                   )}
-                </Typography>
-              )}
-            </Box>
+                </Box>
+              </Box>
 
-            {!isMobile && (
-              <Box sx={{ display: 'flex', gap: 2, mr: 2 }}>
+              {/* Sidebar Navigation Items */}
+              <List sx={{ py: 1 }}>
                 {navigationItems.map((item) => (
-                  <Button
+                  <ListItem
                     key={item.path}
+                    button
                     component={Link}
                     to={item.path}
-                    startIcon={item.icon}
+                    sx={{
+                      mx: 1,
+                      mb: 0.5,
+                      borderRadius: 1,
+                      '&:hover': {
+                        backgroundColor: 'action.hover',
+                      },
+                    }}
                   >
-                    {item.text}
-                  </Button>
+                    <ListItemIcon sx={{ minWidth: 40 }}>
+                      {item.icon}
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary={item.text}
+                      primaryTypographyProps={{
+                        variant: 'body2',
+                        fontWeight: 500,
+                      }}
+                    />
+                  </ListItem>
                 ))}
-              </Box>
-            )}
+              </List>
 
-            {user ? (
-              <>
-                <IconButton onClick={handleUserMenuOpen}>
-                  <AccountIcon />
-                </IconButton>
-                <Menu
-                  anchorEl={anchorEl}
-                  open={Boolean(anchorEl)}
-                  onClose={handleUserMenuClose}
+              {/* User Menu in Sidebar */}
+              {user && (
+                <>
+                  <Divider sx={{ mx: 2 }} />
+                  <List sx={{ py: 1 }}>
+                    <ListItem
+                      button
+                      component={Link}
+                      to={buildCustomerUrl('dashboard')}
+                      sx={{
+                        mx: 1,
+                        mb: 0.5,
+                        borderRadius: 1,
+                        '&:hover': {
+                          backgroundColor: 'action.hover',
+                        },
+                      }}
+                    >
+                      <ListItemIcon sx={{ minWidth: 40 }}>
+                        <AccountIcon />
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary="Dashboard"
+                        primaryTypographyProps={{
+                          variant: 'body2',
+                          fontWeight: 500,
+                        }}
+                      />
+                    </ListItem>
+                    <ListItem
+                      button
+                      component={Link}
+                      to={buildCustomerUrl('profile')}
+                      sx={{
+                        mx: 1,
+                        mb: 0.5,
+                        borderRadius: 1,
+                        '&:hover': {
+                          backgroundColor: 'action.hover',
+                        },
+                      }}
+                    >
+                      <ListItemIcon sx={{ minWidth: 40 }}>
+                        <AccountIcon />
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary="My Profile"
+                        primaryTypographyProps={{
+                          variant: 'body2',
+                          fontWeight: 500,
+                        }}
+                      />
+                    </ListItem>
+                    <ListItem
+                      button
+                      component={Link}
+                      to={buildCustomerUrl('reservations')}
+                      sx={{
+                        mx: 1,
+                        mb: 0.5,
+                        borderRadius: 1,
+                        '&:hover': {
+                          backgroundColor: 'action.hover',
+                        },
+                      }}
+                    >
+                      <ListItemIcon sx={{ minWidth: 40 }}>
+                        <EventSeatIcon />
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary="My Reservations"
+                        primaryTypographyProps={{
+                          variant: 'body2',
+                          fontWeight: 500,
+                        }}
+                      />
+                    </ListItem>
+                    <Divider sx={{ mx: 2, my: 1 }} />
+                    <ListItem
+                      button
+                      onClick={handleLogout}
+                      sx={{
+                        mx: 1,
+                        mb: 0.5,
+                        borderRadius: 1,
+                        '&:hover': {
+                          backgroundColor: 'action.hover',
+                        },
+                      }}
+                    >
+                      <ListItemText 
+                        primary="Sign Out"
+                        primaryTypographyProps={{
+                          variant: 'body2',
+                          fontWeight: 500,
+                        }}
+                      />
+                    </ListItem>
+                  </List>
+                </>
+              )}
+            </Box>
+          </Drawer>
+        )}
+
+        {/* Main Content Area */}
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          flexGrow: 1,
+          width: isSidebarLayout && !isMobile ? `calc(100% - ${sidebarWidth}px)` : '100%',
+        }}>
+          
+          {/* Top Header - Show for topbar layout, or minimal header for sidebar/hybrid */}
+          {(!isSidebarLayout || isMobile) && (
+            <AppBar position="sticky" sx={{ backgroundColor: 'white', color: 'text.primary' }}>
+              <Toolbar>
+                {isMobile && (
+                  <IconButton
+                    edge="start"
+                    onClick={() => setMobileMenuOpen(true)}
+                    sx={{ mr: 2 }}
+                  >
+                    {getMobileMenuIcon(mobileMenuStyle)}
+                  </IconButton>
+                )}
+                
+                <Box
+                  component={Link}
+                  to="/customer"
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    flexGrow: 1,
+                    textDecoration: 'none',
+                    color: 'inherit',
+                  }}
                 >
-                  <MenuItem onClick={() => {
-                    handleUserMenuClose();
-                    navigate(buildCustomerUrl('dashboard'));
+                  {settings?.logoUrl ? (
+                    <Box
+                      component="img"
+                      src={settings.logoUrl}
+                      alt={settings.websiteName || 'Restaurant Logo'}
+                      sx={{ height: 40, mr: 2 }}
+                    />
+                  ) : (
+                    <Typography
+                      variant="h5"
+                      sx={{
+                        fontWeight: 'bold',
+                      }}
+                    >
+                      {loading ? (
+                        <Skeleton width={200} />
+                      ) : (
+                        settings?.websiteName || 'Seabreeze Kitchen'
+                      )}
+                    </Typography>
+                  )}
+                </Box>
+
+                {!isMobile && navigationLayout === 'topbar' && (
+                  <Box sx={{ 
+                    display: 'flex', 
+                    gap: navigationAlignment === 'justified' ? 0 : 2, 
+                    mr: navigationAlignment === 'right' ? 0 : 2,
+                    ml: navigationAlignment === 'left' ? 0 : 2,
+                    justifyContent: getNavigationJustification(navigationAlignment),
+                    flexGrow: navigationAlignment !== 'right' ? 1 : 0,
+                    maxWidth: navigationAlignment === 'center' ? '600px' : 'none'
                   }}>
-                    Dashboard
-                  </MenuItem>
-                  <MenuItem onClick={() => {
-                    handleUserMenuClose();
-                    navigate(buildCustomerUrl('profile'));
-                  }}>
-                    My Profile
-                  </MenuItem>
-                  <MenuItem onClick={() => {
-                    handleUserMenuClose();
-                    navigate(buildCustomerUrl('reservations'));
-                  }}>
-                    My Reservations
-                  </MenuItem>
-                  <Divider />
-                  <MenuItem onClick={handleLogout}>
-                    Sign Out
-                  </MenuItem>
-                </Menu>
-              </>
-            ) : (
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button
-                  variant="outlined"
-                  onClick={() => navigate(buildCustomerUrl('login'))}
-                >
-                  Sign In
-                </Button>
-                <Button
-                  variant="contained"
-                  onClick={() => navigate(buildCustomerUrl('register'))}
-                >
-                  Sign Up
-                </Button>
-              </Box>
-            )}
-          </Toolbar>
-        </AppBar>
+                    {navigationItems.map((item) => (
+                      <Button
+                        key={item.path}
+                        component={Link}
+                        to={item.path}
+                        startIcon={item.icon}
+                        sx={{
+                          ...getNavigationButtonStyles(navigationStyle),
+                          ...(navigationAlignment === 'justified' && {
+                            flex: 1,
+                            mx: 0.5
+                          })
+                        }}
+                      >
+                        {item.text}
+                      </Button>
+                    ))}
+                  </Box>
+                )}
+
+                {user ? (
+                  <>
+                    <IconButton onClick={handleUserMenuOpen}>
+                      <AccountIcon />
+                    </IconButton>
+                    <Menu
+                      anchorEl={anchorEl}
+                      open={Boolean(anchorEl)}
+                      onClose={handleUserMenuClose}
+                    >
+                      <MenuItem onClick={() => {
+                        handleUserMenuClose();
+                        navigate(buildCustomerUrl('dashboard'));
+                      }}>
+                        Dashboard
+                      </MenuItem>
+                      <MenuItem onClick={() => {
+                        handleUserMenuClose();
+                        navigate(buildCustomerUrl('profile'));
+                      }}>
+                        My Profile
+                      </MenuItem>
+                      <MenuItem onClick={() => {
+                        handleUserMenuClose();
+                        navigate(buildCustomerUrl('reservations'));
+                      }}>
+                        My Reservations
+                      </MenuItem>
+                      <Divider />
+                      <MenuItem onClick={handleLogout}>
+                        Sign Out
+                      </MenuItem>
+                    </Menu>
+                  </>
+                ) : (
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button
+                      variant="outlined"
+                      onClick={() => navigate(buildCustomerUrl('login'))}
+                    >
+                      Sign In
+                    </Button>
+                    <Button
+                      variant="contained"
+                      onClick={() => navigate(buildCustomerUrl('register'))}
+                    >
+                      Sign Up
+                    </Button>
+                  </Box>
+                )}
+              </Toolbar>
+            </AppBar>
+          )}
+
+          {/* For sidebar layout on desktop - minimal top bar */}
+          {isSidebarLayout && !isMobile && (
+            <AppBar position="sticky" sx={{ backgroundColor: 'white', color: 'text.primary', boxShadow: 1 }}>
+              <Toolbar sx={{ minHeight: '48px !important', py: 0 }}>
+                <Box sx={{ flexGrow: 1 }} />
+                {user ? (
+                  <>
+                    <IconButton onClick={handleUserMenuOpen} size="small">
+                      <AccountIcon />
+                    </IconButton>
+                    <Menu
+                      anchorEl={anchorEl}
+                      open={Boolean(anchorEl)}
+                      onClose={handleUserMenuClose}
+                    >
+                      <MenuItem onClick={() => {
+                        handleUserMenuClose();
+                        navigate(buildCustomerUrl('dashboard'));
+                      }}>
+                        Dashboard
+                      </MenuItem>
+                      <MenuItem onClick={() => {
+                        handleUserMenuClose();
+                        navigate(buildCustomerUrl('profile'));
+                      }}>
+                        My Profile
+                      </MenuItem>
+                      <MenuItem onClick={() => {
+                        handleUserMenuClose();
+                        navigate(buildCustomerUrl('reservations'));
+                      }}>
+                        My Reservations
+                      </MenuItem>
+                      <Divider />
+                      <MenuItem onClick={handleLogout}>
+                        Sign Out
+                      </MenuItem>
+                    </Menu>
+                  </>
+                ) : (
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => navigate(buildCustomerUrl('login'))}
+                    >
+                      Sign In
+                    </Button>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={() => navigate(buildCustomerUrl('register'))}
+                    >
+                      Sign Up
+                    </Button>
+                  </Box>
+                )}
+              </Toolbar>
+            </AppBar>
+                     )}
+
+          {/* Main Content */}
+          <Box component="main" sx={{ flexGrow: 1 }}>
+            <Outlet />
+          </Box>
+
+          {/* Footer */}
+          <Box
+            component="footer"
+            sx={{
+              backgroundColor: theme.palette.grey[100],
+              py: 6,
+              mt: 'auto',
+            }}
+          >
+            <Container maxWidth="lg">
+              <Grid container spacing={4}>
+                {/* Restaurant Info */}
+                <Grid item xs={12} md={4}>
+                  <Typography variant="h6" gutterBottom>
+                    {settings?.websiteName || 'Seabreeze Kitchen'}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    {settings?.tagline || 'Delicious food, exceptional service'}
+                  </Typography>
+                  {settings?.contactPhone && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <PhoneIcon sx={{ mr: 1, fontSize: 20 }} />
+                      <Typography variant="body2">
+                        {settings.contactPhone}
+                      </Typography>
+                    </Box>
+                  )}
+                  {settings?.contactEmail && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <EmailIcon sx={{ mr: 1, fontSize: 20 }} />
+                      <Typography variant="body2">
+                        {settings.contactEmail}
+                      </Typography>
+                    </Box>
+                  )}
+                  {formatAddress() && (
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <LocationIcon sx={{ mr: 1, fontSize: 20 }} />
+                      <Typography variant="body2">
+                        {formatAddress()}
+                      </Typography>
+                    </Box>
+                  )}
+                </Grid>
+
+                {/* Quick Links */}
+                <Grid item xs={12} md={4}>
+                  <Typography variant="h6" gutterBottom>
+                    Quick Links
+                  </Typography>
+                  {navigationItems.map((item) => (
+                    <Box key={item.path} sx={{ mb: 1 }}>
+                      <Link
+                        component={Link}
+                        to={item.path}
+                        color="text.secondary"
+                        sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+                      >
+                        {item.text}
+                      </Link>
+                    </Box>
+                  ))}
+                </Grid>
+
+                {/* Social Media */}
+                <Grid item xs={12} md={4}>
+                  <Typography variant="h6" gutterBottom>
+                    Follow Us
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    {settings?.facebookUrl && (
+                      <IconButton
+                        component="a"
+                        href={settings.facebookUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        size="small"
+                      >
+                        <FacebookIcon />
+                      </IconButton>
+                    )}
+                    {settings?.instagramUrl && (
+                      <IconButton
+                        component="a"
+                        href={settings.instagramUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        size="small"
+                      >
+                        <InstagramIcon />
+                      </IconButton>
+                    )}
+                    {settings?.twitterUrl && (
+                      <IconButton
+                        component="a"
+                        href={settings.twitterUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        size="small"
+                      >
+                        <TwitterIcon />
+                      </IconButton>
+                    )}
+                  </Box>
+                  {settings?.footerText && (
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                      {formatFooterText(settings.footerText)}
+                    </Typography>
+                  )}
+                </Grid>
+              </Grid>
+            </Container>
+          </Box>
+        </Box>
 
         {/* Mobile Drawer */}
         <Drawer
-          anchor="left"
+          anchor={getMobileDrawerAnchor(mobileMenuStyle)}
           open={mobileMenuOpen}
           onClose={() => setMobileMenuOpen(false)}
         >
@@ -367,119 +862,6 @@ const CustomerLayout: React.FC = () => {
             </List>
           </Box>
         </Drawer>
-
-        {/* Main Content */}
-        <Box component="main" sx={{ flexGrow: 1 }}>
-          <Outlet />
-        </Box>
-
-        {/* Footer */}
-        <Box
-          component="footer"
-          sx={{
-            backgroundColor: theme.palette.grey[100],
-            py: 6,
-            mt: 'auto',
-          }}
-        >
-          <Container maxWidth="lg">
-            <Grid container spacing={4}>
-              {/* Contact Info */}
-              <Grid item xs={12} md={4}>
-                <Typography variant="h6" gutterBottom>
-                  {settings?.contactCardTitle || 'Contact Us'}
-                </Typography>
-                {settings?.contactPhone && (
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <PhoneIcon sx={{ mr: 1, fontSize: 18 }} />
-                    <Typography variant="body2">{settings.contactPhone}</Typography>
-                  </Box>
-                )}
-                {settings?.contactEmail && (
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <EmailIcon sx={{ mr: 1, fontSize: 18 }} />
-                    <Typography variant="body2">{settings.contactEmail}</Typography>
-                  </Box>
-                )}
-                {formatAddress() && (
-                  <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
-                    <LocationIcon sx={{ mr: 1, fontSize: 18, mt: 0.2 }} />
-                    <Typography variant="body2">{formatAddress()}</Typography>
-                  </Box>
-                )}
-              </Grid>
-
-              {/* Hours */}
-              <Grid item xs={12} md={4}>
-                <Typography variant="h6" gutterBottom>
-                  {settings?.hoursCardTitle || 'Opening Hours'}
-                </Typography>
-                {settings?.openingHours && typeof settings.openingHours === 'object' ? (
-                  Object.entries(settings.openingHours).map(([day, hours]) => (
-                    <Typography key={day} variant="body2" sx={{ mb: 0.5 }}>
-                      <strong>{day}:</strong> {String(hours)}
-                    </Typography>
-                  ))
-                ) : (
-                  <Typography variant="body2">
-                    Please contact us for current hours
-                  </Typography>
-                )}
-              </Grid>
-
-              {/* Social Media */}
-              <Grid item xs={12} md={4}>
-                <Typography variant="h6" gutterBottom>
-                  Follow Us
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  {settings?.facebookUrl && (
-                    <IconButton
-                      component={Link}
-                      to={settings.facebookUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      size="small"
-                    >
-                      <FacebookIcon />
-                    </IconButton>
-                  )}
-                  {settings?.instagramUrl && (
-                    <IconButton
-                      component={Link}
-                      to={settings.instagramUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      size="small"
-                    >
-                      <InstagramIcon />
-                    </IconButton>
-                  )}
-                  {settings?.twitterUrl && (
-                    <IconButton
-                      component={Link}
-                      to={settings.twitterUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      size="small"
-                    >
-                      <TwitterIcon />
-                    </IconButton>
-                  )}
-                </Box>
-              </Grid>
-            </Grid>
-
-            {/* Copyright */}
-            <Divider sx={{ my: 3 }} />
-            <Typography variant="body2" color="text.secondary" align="center">
-              {settings?.footerText ? 
-                formatFooterText(settings.footerText) : 
-                `© ${new Date().getFullYear()} ${settings?.websiteName || 'Restaurant'}. All rights reserved.`
-              }
-            </Typography>
-          </Container>
-        </Box>
       </Box>
     </ThemeProvider>
   );

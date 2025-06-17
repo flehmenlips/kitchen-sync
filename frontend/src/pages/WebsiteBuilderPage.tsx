@@ -72,8 +72,15 @@ import {
   Menu as MenuIcon,
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
-  DragHandle as DragHandleIcon
+  DragHandle as DragHandleIcon,
+  Sync as SyncIcon
 } from '@mui/icons-material';
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  DropResult
+} from '@hello-pangea/dnd';
 import { restaurantSettingsService, RestaurantSettings } from '../services/restaurantSettingsService';
 import { api } from '../services/api';
 import { 
@@ -167,8 +174,30 @@ const WebsiteBuilderPage: React.FC = () => {
     try {
       setLoading(true);
       const data = await websiteBuilderService.getWebsiteBuilderData();
+      
+      // Synchronize pages and navigation items
+      const currentNavItems = data.settings.navigationItems || [];
+      const pagesBySlug = new Set(data.pages.map(page => page.slug));
+      
+      // Remove navigation items for pages that no longer exist
+      const validNavItems = currentNavItems.filter(item => {
+        if (item.isSystem) return true; // Keep system navigation items
+        const slug = item.path.replace(/^\/+/, ''); // Remove leading slashes
+        return pagesBySlug.has(slug) || !item.path.startsWith('/'); // Keep external links
+      });
+      
+      // Check if any navigation items were removed
+      if (validNavItems.length !== currentNavItems.length) {
+        console.log('Cleaning up orphaned navigation items');
+        await websiteBuilderService.updateSettings({
+          navigationItems: validNavItems
+        });
+        data.settings.navigationItems = validNavItems;
+      }
+      
       setWebsiteData(data);
       setHasChanges(false); // Reset changes state when data is loaded
+      
       // Select the first page by default
       if (data.pages.length > 0) {
         setSelectedPage(data.pages[0]);
@@ -231,17 +260,47 @@ const WebsiteBuilderPage: React.FC = () => {
   const handleCreatePage = async () => {
     try {
       const newPage = await websiteBuilderService.createPage(newPageData);
+      
+      // Create a navigation item for the new page (if not a system page)
+      const currentNavItems = websiteData?.settings.navigationItems || [];
+      const newNavItem = {
+        id: `nav-page-${newPage.id}`,
+        label: newPage.name,
+        path: `/${newPage.slug}`,
+        icon: '',
+        isActive: true,
+        displayOrder: currentNavItems.length + 1,
+        isSystem: false
+      };
+      
+      const updatedNavItems = [...currentNavItems, newNavItem];
+      
+      // Auto-save the navigation items to database immediately
+      await websiteBuilderService.updateSettings({
+        navigationItems: updatedNavItems
+      });
+      
+      // Update the local state
       setWebsiteData(prev => {
         if (!prev) return null;
+        
+        // Add the new page
+        const updatedPages = [...prev.pages, newPage].sort((a, b) => a.displayOrder - b.displayOrder);
+        
         return {
           ...prev,
-          pages: [...prev.pages, newPage].sort((a, b) => a.displayOrder - b.displayOrder)
+          pages: updatedPages,
+          settings: {
+            ...prev.settings,
+            navigationItems: updatedNavItems
+          }
         };
       });
+      
       setSelectedPage(newPage);
       setPageDialogOpen(false);
       setNewPageData({ name: '', slug: '', template: 'default' });
-      showSnackbar('Page created successfully', 'success');
+      showSnackbar('Page and navigation item created successfully', 'success');
     } catch (error) {
       console.error('Error creating page:', error);
       showSnackbar('Failed to create page', 'error');
@@ -251,10 +310,31 @@ const WebsiteBuilderPage: React.FC = () => {
   const handleDeletePage = async (pageSlug: string) => {
     try {
       await websiteBuilderService.deletePage(pageSlug);
+      
+      // Find and remove the corresponding navigation item
+      const currentNavItems = websiteData?.settings.navigationItems || [];
+      const updatedNavItems = currentNavItems.filter(item => 
+        item.path !== `/${pageSlug}` && !item.path.endsWith(`/${pageSlug}`)
+      );
+      
+      // Auto-save the updated navigation items if any were removed
+      if (updatedNavItems.length !== currentNavItems.length) {
+        await websiteBuilderService.updateSettings({
+          navigationItems: updatedNavItems
+        });
+      }
+      
       setWebsiteData(prev => {
         if (!prev) return null;
         const updatedPages = prev.pages.filter(p => p.slug !== pageSlug);
-        return { ...prev, pages: updatedPages };
+        return { 
+          ...prev, 
+          pages: updatedPages,
+          settings: {
+            ...prev.settings,
+            navigationItems: updatedNavItems
+          }
+        };
       });
       
       // If deleted page was selected, select first remaining page
@@ -263,7 +343,7 @@ const WebsiteBuilderPage: React.FC = () => {
         setSelectedPage(remainingPages.length > 0 ? remainingPages[0] : null);
       }
       
-      showSnackbar('Page deleted successfully', 'success');
+      showSnackbar('Page and navigation item deleted successfully', 'success');
     } catch (error) {
       console.error('Error deleting page:', error);
       showSnackbar('Failed to delete page', 'error');
@@ -605,6 +685,97 @@ const WebsiteBuilderPage: React.FC = () => {
     } catch (error) {
       console.error('Error deleting navigation item:', error);
       showSnackbar('Failed to delete navigation item', 'error');
+    }
+  };
+
+  const handleNavigationReorder = (result: DropResult) => {
+    const { destination, source } = result;
+
+    // Check if item was dropped outside the list
+    if (!destination) {
+      return;
+    }
+
+    // Check if item was dropped in the same position
+    if (destination.index === source.index) {
+      return;
+    }
+
+    if (!websiteData?.settings.navigationItems) return;
+
+    // Get current navigation items sorted by display order
+    const currentItems = [...websiteData.settings.navigationItems]
+      .sort((a, b) => a.displayOrder - b.displayOrder);
+
+    // Remove the item from source position
+    const [reorderedItem] = currentItems.splice(source.index, 1);
+    
+    // Insert the item at destination position
+    currentItems.splice(destination.index, 0, reorderedItem);
+
+    // Update display orders
+    const updatedItems = currentItems.map((item, index) => ({
+      ...item,
+      displayOrder: index + 1
+    }));
+
+    // Update the state
+    handleSettingsChange('navigationItems', updatedItems);
+    showSnackbar('Navigation items reordered', 'success');
+  };
+
+  // Helper function to recreate missing navigation items for existing pages
+  const handleSyncNavigationItems = async () => {
+    if (!websiteData) return;
+    
+    try {
+      const currentNavItems = websiteData.settings.navigationItems || [];
+      const existingPaths = new Set(currentNavItems.map(item => item.path));
+      
+      // Find pages without navigation items
+      const pagesWithoutNavItems = websiteData.pages.filter(page => 
+        !existingPaths.has(`/${page.slug}`)
+      );
+      
+      if (pagesWithoutNavItems.length === 0) {
+        showSnackbar('All pages already have navigation items', 'info');
+        return;
+      }
+      
+      // Create navigation items for missing pages
+      const newNavItems = pagesWithoutNavItems.map((page, index) => ({
+        id: `nav-page-${page.id}`,
+        label: page.name,
+        path: `/${page.slug}`,
+        icon: '',
+        isActive: true,
+        displayOrder: currentNavItems.length + index + 1,
+        isSystem: false
+      }));
+      
+      const updatedNavItems = [...currentNavItems, ...newNavItems];
+      
+      // Save to database
+      await websiteBuilderService.updateSettings({
+        navigationItems: updatedNavItems
+      });
+      
+      // Update local state
+      setWebsiteData(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          settings: {
+            ...prev.settings,
+            navigationItems: updatedNavItems
+          }
+        };
+      });
+      
+      showSnackbar(`Added ${newNavItems.length} missing navigation items`, 'success');
+    } catch (error) {
+      console.error('Error syncing navigation items:', error);
+      showSnackbar('Failed to sync navigation items', 'error');
     }
   };
 
@@ -1651,96 +1822,121 @@ const WebsiteBuilderPage: React.FC = () => {
                 <Typography variant="subtitle1" gutterBottom sx={{ mb: 2 }}>Navigation Items</Typography>
                 
                 {websiteData.settings.navigationItems && websiteData.settings.navigationItems.length > 0 ? (
-                  <Box>
-                    {websiteData.settings.navigationItems
-                      .sort((a, b) => a.displayOrder - b.displayOrder)
-                      .map((item, index) => (
-                        <Box key={item.id} sx={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'space-between',
-                          py: 2,
-                          px: 1,
-                          border: '1px solid',
-                          borderColor: 'divider',
-                          borderRadius: 1,
-                          mb: 1,
-                          bgcolor: item.isActive ? 'background.paper' : 'grey.50'
-                        }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            {/* Drag Handle */}
-                            <IconButton size="small" sx={{ cursor: 'grab' }}>
-                              <DragHandleIcon />
-                            </IconButton>
-                            
-                            {/* Page Type Indicator */}
-                            <Chip 
-                              label={item.isSystem ? "System" : "Custom"} 
-                              size="small" 
-                              color={item.isSystem ? "primary" : "secondary"} 
-                              variant="outlined"
-                            />
-                            
-                            {/* Navigation Item Info */}
-                            <Box>
-                              <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
-                                {item.label}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {item.path}
-                              </Typography>
-                            </Box>
-                          </Box>
-                          
-                          {/* Actions */}
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            {/* Visibility Toggle */}
-                            {!item.isSystem && (
-                              <Tooltip title={item.isActive ? "Hide from navigation" : "Show in navigation"}>
-                                <IconButton 
-                                  size="small"
-                                  onClick={() => handleNavigationItemToggle(item.id)}
-                                  color={item.isActive ? "default" : "error"}
-                                >
-                                  {item.isActive ? <VisibilityIcon /> : <VisibilityOffIcon />}
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                            
-                            {/* Edit Button */}
-                            <Tooltip title="Edit navigation item">
-                              <IconButton 
-                                size="small"
-                                onClick={() => handleEditNavigationItem(item)}
-                              >
-                                <EditIcon />
-                              </IconButton>
-                            </Tooltip>
-                            
-                            {/* Delete Button - Only for custom items */}
-                            {!item.isSystem && (
-                              <Tooltip title="Delete navigation item">
-                                <IconButton 
-                                  size="small"
-                                  onClick={() => handleDeleteNavigationItem(item.id)}
-                                  color="error"
-                                >
-                                  <DeleteIcon />
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                            
-                            {/* Status Chip */}
-                            <Chip 
-                              label={item.isActive ? "Visible" : "Hidden"} 
-                              size="small" 
-                              color={item.isActive ? "success" : "default"}
-                              variant={item.isActive ? "filled" : "outlined"}
-                            />
-                          </Box>
+                  <DragDropContext onDragEnd={handleNavigationReorder}>
+                    <Droppable droppableId="navigation-items">
+                      {(provided) => (
+                        <Box
+                          {...provided.droppableProps}
+                          ref={provided.innerRef}
+                        >
+                          {(websiteData.settings.navigationItems || [])
+                            .sort((a, b) => a.displayOrder - b.displayOrder)
+                            .map((item, index) => (
+                              <Draggable key={item.id} draggableId={item.id} index={index}>
+                                {(provided, snapshot) => (
+                                  <Box
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    sx={{ 
+                                      display: 'flex', 
+                                      alignItems: 'center', 
+                                      justifyContent: 'space-between',
+                                      py: 2,
+                                      px: 1,
+                                      border: '1px solid',
+                                      borderColor: 'divider',
+                                      borderRadius: 1,
+                                      mb: 1,
+                                      bgcolor: snapshot.isDragging ? 'action.hover' : (item.isActive ? 'background.paper' : 'grey.50'),
+                                      transform: snapshot.isDragging ? 'rotate(3deg)' : 'none',
+                                      boxShadow: snapshot.isDragging ? 3 : 0
+                                    }}
+                                  >
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                      {/* Drag Handle */}
+                                      <Box 
+                                        {...provided.dragHandleProps}
+                                        sx={{ cursor: 'grab', '&:active': { cursor: 'grabbing' } }}
+                                      >
+                                        <IconButton size="small">
+                                          <DragHandleIcon />
+                                        </IconButton>
+                                      </Box>
+                                      
+                                      {/* Page Type Indicator */}
+                                      <Chip 
+                                        label={item.isSystem ? "System" : "Custom"} 
+                                        size="small" 
+                                        color={item.isSystem ? "primary" : "secondary"} 
+                                        variant="outlined"
+                                      />
+                                      
+                                      {/* Navigation Item Info */}
+                                      <Box>
+                                        <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                                          {item.label}
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary">
+                                          {item.path}
+                                        </Typography>
+                                      </Box>
+                                    </Box>
+                                    
+                                    {/* Actions */}
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                      {/* Visibility Toggle */}
+                                      {!item.isSystem && (
+                                        <Tooltip title={item.isActive ? "Hide from navigation" : "Show in navigation"}>
+                                          <IconButton 
+                                            size="small"
+                                            onClick={() => handleNavigationItemToggle(item.id)}
+                                            color={item.isActive ? "default" : "error"}
+                                          >
+                                            {item.isActive ? <VisibilityIcon /> : <VisibilityOffIcon />}
+                                          </IconButton>
+                                        </Tooltip>
+                                      )}
+                                      
+                                      {/* Edit Button */}
+                                      <Tooltip title="Edit navigation item">
+                                        <IconButton 
+                                          size="small"
+                                          onClick={() => handleEditNavigationItem(item)}
+                                        >
+                                          <EditIcon />
+                                        </IconButton>
+                                      </Tooltip>
+                                      
+                                      {/* Delete Button - Only for custom items */}
+                                      {!item.isSystem && (
+                                        <Tooltip title="Delete navigation item">
+                                          <IconButton 
+                                            size="small"
+                                            onClick={() => handleDeleteNavigationItem(item.id)}
+                                            color="error"
+                                          >
+                                            <DeleteIcon />
+                                          </IconButton>
+                                        </Tooltip>
+                                      )}
+                                      
+                                      {/* Status Chip */}
+                                      <Chip 
+                                        label={item.isActive ? "Visible" : "Hidden"} 
+                                        size="small" 
+                                        color={item.isActive ? "success" : "default"}
+                                        variant={item.isActive ? "filled" : "outlined"}
+                                      />
+                                    </Box>
+                                  </Box>
+                                )}
+                              </Draggable>
+                            ))}
+                          {provided.placeholder}
                         </Box>
-                      ))}
-                  </Box>
+                      )}
+                    </Droppable>
+                  </DragDropContext>
                 ) : (
                   <Alert severity="warning">
                     No navigation items found. Default navigation will be used.
@@ -1751,14 +1947,23 @@ const WebsiteBuilderPage: React.FC = () => {
 
             {/* Add Custom Navigation Item Button */}
             <Grid item xs={12}>
-              <Button
-                variant="outlined"
-                startIcon={<AddIcon />}
-                onClick={() => setAddNavItemDialogOpen(true)}
-                sx={{ mt: 1 }}
-              >
-                Add Custom Navigation Item
-              </Button>
+              <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
+                <Button
+                  variant="outlined"
+                  startIcon={<AddIcon />}
+                  onClick={() => setAddNavItemDialogOpen(true)}
+                >
+                  Add Custom Navigation Item
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="secondary"
+                  startIcon={<SyncIcon />}
+                  onClick={handleSyncNavigationItems}
+                >
+                  Sync Missing Pages
+                </Button>
+              </Box>
             </Grid>
 
             <Grid item xs={12}>
