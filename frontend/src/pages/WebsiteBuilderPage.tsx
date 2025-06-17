@@ -210,6 +210,74 @@ const WebsiteBuilderPage: React.FC = () => {
     }
   };
 
+  // Helper functions to get hero/about data from ContentBlocks
+  const getHeroBlockData = () => {
+    const homePage = websiteData?.pages.find(page => page.slug === 'home');
+    const heroBlock = homePage?.blocks.find(block => block.blockType === 'hero');
+    return heroBlock ? {
+      heroTitle: heroBlock.title || '',
+      heroSubtitle: heroBlock.subtitle || '',
+      heroImageUrl: heroBlock.imageUrl || '',
+      heroImagePublicId: heroBlock.imagePublicId || '',
+      heroCTAText: heroBlock.buttonText || '',
+      heroCTALink: heroBlock.buttonLink || ''
+    } : {};
+  };
+
+  const getAboutBlockData = () => {
+    const homePage = websiteData?.pages.find(page => page.slug === 'home');
+    const aboutBlock = homePage?.blocks.find(block => block.blockType === 'about');
+    return aboutBlock ? {
+      aboutTitle: aboutBlock.title || '',
+      aboutDescription: aboutBlock.content || '',
+      aboutImageUrl: aboutBlock.imageUrl || '',
+      aboutImagePublicId: aboutBlock.imagePublicId || ''
+    } : {};
+  };
+
+  const updateContentBlock = async (blockType: 'hero' | 'about', field: string, value: any) => {
+    try {
+      const homePage = websiteData?.pages.find(page => page.slug === 'home');
+      const block = homePage?.blocks.find(block => block.blockType === blockType);
+      
+      if (!block) {
+        console.error(`${blockType} block not found`);
+        return;
+      }
+
+      // Map settings field names to ContentBlock field names
+      const fieldMap: { [key: string]: string } = {
+        heroTitle: 'title',
+        heroSubtitle: 'subtitle', 
+        heroImageUrl: 'imageUrl',
+        heroImagePublicId: 'imagePublicId',
+        heroCTAText: 'buttonText',
+        heroCTALink: 'buttonLink',
+        aboutTitle: 'title',
+        aboutDescription: 'content',
+        aboutImageUrl: 'imageUrl',
+        aboutImagePublicId: 'imagePublicId'
+      };
+
+      const blockField = fieldMap[field] || field;
+      
+      // Update the content block
+      const updatedBlockData = {
+        ...block,
+        [blockField]: value
+      };
+
+      await handleSaveBlock(updatedBlockData);
+      
+      // Refresh data to reflect changes
+      await fetchWebsiteData();
+      
+    } catch (error) {
+      console.error(`Error updating ${blockType} block:`, error);
+      showSnackbar(`Failed to update ${blockType} content`, 'error');
+    }
+  };
+
   const handleSaveSettings = async () => {
     if (!websiteData) return;
 
@@ -540,20 +608,37 @@ const WebsiteBuilderPage: React.FC = () => {
 
   const handleImageUpload = async (field: 'hero' | 'about' | 'cover' | 'logo', file: File) => {
     try {
-      const result = await restaurantSettingsService.uploadImage(field, file);
-      
-      setWebsiteData(prevData => {
-        if (!prevData) return null;
-        return {
-          ...prevData,
-          settings: {
-            ...prevData.settings,
-            ...result.settings
-          }
-        };
-      });
-      
-      showSnackbar('Image uploaded successfully', 'success');
+      // For hero and about images, use ContentBlocks; for cover and logo, use settings
+      if (field === 'hero' || field === 'about') {
+        const homePage = websiteData?.pages.find(page => page.slug === 'home');
+        const block = homePage?.blocks.find(block => block.blockType === field);
+        
+        if (!block) {
+          showSnackbar(`${field} block not found`, 'error');
+          return;
+        }
+
+        // Upload image to the content block
+        const uploadResult = await handlePostCreateImageUpload(block.id, file);
+        
+        showSnackbar('Image uploaded successfully', 'success');
+      } else {
+        // Handle cover and logo uploads for settings
+        const result = await restaurantSettingsService.uploadImage(field, file);
+        
+        setWebsiteData(prevData => {
+          if (!prevData) return null;
+          return {
+            ...prevData,
+            settings: {
+              ...prevData.settings,
+              ...result.settings
+            }
+          };
+        });
+        
+        showSnackbar('Image uploaded successfully', 'success');
+      }
     } catch (error) {
       console.error('Error uploading image:', error);
       showSnackbar('Failed to upload image', 'error');
@@ -874,141 +959,35 @@ const WebsiteBuilderPage: React.FC = () => {
       </Paper>
 
       <Paper>
-        {/* Settings Tab - Hero, About, Contact & Hours, Menu Display */}
+        {/* Settings Tab - Site Configuration Only */}
         <TabPanel value={tabValue} index={0}>
           <Grid container spacing={3}>
-            {/* Hero Section */}
+            {/* Content Editing Guide */}
             <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom>Hero Section</Typography>
-              <Divider sx={{ mb: 2 }} />
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Hero Title"
-                value={websiteData.settings.heroTitle || ''}
-                onChange={(e) => handleSettingsChange('heroTitle', e.target.value)}
-                helperText="Main title displayed on your homepage"
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Hero Subtitle"
-                value={websiteData.settings.heroSubtitle || ''}
-                onChange={(e) => handleSettingsChange('heroSubtitle', e.target.value)}
-                helperText="Supporting text under your main title"
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Call-to-Action Text"
-                value={websiteData.settings.heroCTAText || ''}
-                onChange={(e) => handleSettingsChange('heroCTAText', e.target.value)}
-                placeholder="e.g., Make a Reservation"
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Call-to-Action Link"
-                value={websiteData.settings.heroCTALink || ''}
-                onChange={(e) => handleSettingsChange('heroCTALink', e.target.value)}
-                placeholder="e.g., /reservations"
-              />
-            </Grid>
-            
-            <Grid item xs={12}>
-              <Box>
-                <Typography variant="body2" gutterBottom>Hero Background Image</Typography>
+              <Paper sx={{ p: 3, mb: 3, bgcolor: 'info.lighter', border: '1px solid', borderColor: 'info.light' }}>
                 <Box display="flex" alignItems="center" gap={2}>
-                  <Button
-                    variant="outlined"
-                    component="label"
-                    startIcon={<UploadIcon />}
-                  >
-                    Upload Hero Image
-                    <input
-                      type="file"
-                      hidden
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleImageUpload('hero', file);
-                      }}
-                    />
-                  </Button>
-                  {websiteData.settings.heroImageUrl && (
-                    <Box
-                      component="img"
-                      src={websiteData.settings.heroImageUrl}
-                      alt="Hero background"
-                      sx={{ height: 60, objectFit: 'cover', borderRadius: 1 }}
-                    />
-                  )}
+                  <InfoIcon color="info" />
+                  <Box>
+                    <Typography variant="subtitle1" color="info.main" fontWeight="bold">
+                      Looking to edit your homepage content? 📝
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Hero sections, about content, and page text are now managed in the{' '}
+                      <strong>Pages Tab</strong>. Click the "Pages" tab above to edit your homepage content blocks.
+                      This Settings tab focuses on site-wide configuration like branding, SEO, and navigation.
+                    </Typography>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      sx={{ mt: 1 }}
+                      onClick={() => setTabValue(1)}
+                      startIcon={<PagesIcon />}
+                    >
+                      Go to Pages Tab
+                    </Button>
+                  </Box>
                 </Box>
-              </Box>
-            </Grid>
-
-            {/* About Section */}
-            <Grid item xs={12} sx={{ mt: 3 }}>
-              <Typography variant="h6" gutterBottom>About Section</Typography>
-              <Divider sx={{ mb: 2 }} />
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="About Title"
-                value={websiteData.settings.aboutTitle || ''}
-                onChange={(e) => handleSettingsChange('aboutTitle', e.target.value)}
-                helperText="Title for your About section"
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                multiline
-                rows={4}
-                label="About Description"
-                value={websiteData.settings.aboutDescription || ''}
-                onChange={(e) => handleSettingsChange('aboutDescription', e.target.value)}
-                helperText="Tell your story - what makes your restaurant special"
-              />
-            </Grid>
-            
-            <Grid item xs={12}>
-              <Box>
-                <Typography variant="body2" gutterBottom>About Section Image</Typography>
-                <Box display="flex" alignItems="center" gap={2}>
-                  <Button
-                    variant="outlined"
-                    component="label"
-                    startIcon={<UploadIcon />}
-                  >
-                    Upload About Image
-                    <input
-                      type="file"
-                      hidden
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleImageUpload('about', file);
-                      }}
-                    />
-                  </Button>
-                  {websiteData.settings.aboutImageUrl && (
-                    <Box
-                      component="img"
-                      src={websiteData.settings.aboutImageUrl}
-                      alt="About section"
-                      sx={{ height: 60, objectFit: 'cover', borderRadius: 1 }}
-                    />
-                  )}
-                </Box>
-              </Box>
+              </Paper>
             </Grid>
 
             {/* Contact Information */}

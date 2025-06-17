@@ -15,8 +15,11 @@ const CustomerDynamicPage: React.FC = () => {
   const [content, setContent] = useState<UnifiedRestaurantContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  console.log('[CustomerDynamicPage] Component rendered with slug:', slug);
 
   useEffect(() => {
+    console.log('[CustomerDynamicPage] useEffect triggered, slug changed to:', slug);
     fetchPageData();
   }, [slug]);
 

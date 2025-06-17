@@ -200,6 +200,188 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
           </Box>
         );
 
+      case BLOCK_TYPES.MENU_PREVIEW:
+        return (
+          <Container maxWidth="lg" sx={{ py: 6 }}>
+            {block.title && (
+              <Typography variant="h4" component="h2" gutterBottom align="center">
+                {safeRender(block.title)}
+              </Typography>
+            )}
+            {block.subtitle && (
+              <Typography variant="h6" color="text.secondary" gutterBottom align="center" sx={{ mb: 4 }}>
+                {safeRender(block.subtitle)}
+              </Typography>
+            )}
+            {block.content && (
+              <Typography 
+                variant="body1" 
+                paragraph 
+                align="center" 
+                sx={{ mb: 4 }}
+                dangerouslySetInnerHTML={{ __html: block.content }}
+              />
+            )}
+            <Box sx={{ textAlign: 'center' }}>
+              {block.buttonText && block.buttonLink && (
+                <Button
+                  component={Link}
+                  to={safeRender(block.buttonLink)}
+                  variant="contained"
+                  size="large"
+                  sx={{
+                    backgroundColor: 'primary.main',
+                    color: 'white',
+                    px: 4,
+                    py: 1.5,
+                    fontSize: '1.1rem',
+                    '&:hover': {
+                      backgroundColor: 'primary.dark',
+                    }
+                  }}
+                >
+                  {safeRender(block.buttonText)}
+                </Button>
+              )}
+            </Box>
+          </Container>
+        );
+
+      case 'about':
+        return (
+          <Container maxWidth="lg" sx={{ py: 6 }}>
+            <Grid container spacing={4} alignItems="center">
+              <Grid item xs={12} md={block.imageUrl ? 6 : 12}>
+                {block.title && (
+                  <Typography variant="h4" component="h2" gutterBottom>
+                    {safeRender(block.title)}
+                  </Typography>
+                )}
+                {block.subtitle && (
+                  <Typography variant="h6" color="text.secondary" gutterBottom sx={{ mb: 3 }}>
+                    {safeRender(block.subtitle)}
+                  </Typography>
+                )}
+                {block.content && (
+                  <Typography 
+                    variant="body1" 
+                    paragraph 
+                    sx={{ lineHeight: 1.7 }}
+                    dangerouslySetInnerHTML={{ __html: block.content }}
+                  />
+                )}
+                {block.buttonText && block.buttonLink && (
+                  <Button
+                    component={Link}
+                    to={safeRender(block.buttonLink)}
+                    variant="contained"
+                    sx={{ mt: 2 }}
+                  >
+                    {safeRender(block.buttonText)}
+                  </Button>
+                )}
+              </Grid>
+              {block.imageUrl && (
+                <Grid item xs={12} md={6}>
+                  <Paper elevation={3} sx={{ overflow: 'hidden', borderRadius: 2 }}>
+                    <img
+                      src={safeRender(block.imageUrl)}
+                      alt={safeRender(block.title) || 'About us'}
+                      style={{ width: '100%', height: 'auto', display: 'block' }}
+                    />
+                  </Paper>
+                </Grid>
+              )}
+            </Grid>
+          </Container>
+        );
+
+      case BLOCK_TYPES.CONTACT:
+        // Parse contact settings for better display options
+        let contactSettings = {};
+        try {
+          contactSettings = block.settings ? JSON.parse(block.settings) : {};
+        } catch (e) {
+          console.error('Failed to parse contact settings:', e);
+        }
+
+        return (
+          <Container maxWidth="lg" sx={{ py: 6 }}>
+            {block.title && (
+              <Typography variant="h4" component="h2" gutterBottom align="center" sx={{ mb: 4 }}>
+                {safeRender(block.title)}
+              </Typography>
+            )}
+            <Grid container spacing={4}>
+              <Grid item xs={12} md={6}>
+                <Paper elevation={2} sx={{ p: 4, height: '100%' }}>
+                  <Typography variant="h6" gutterBottom>
+                    Get in Touch
+                  </Typography>
+                  
+                  {/* Contact Information */}
+                  {block.content && (
+                    <Typography 
+                      variant="body1" 
+                      paragraph
+                      dangerouslySetInnerHTML={{ __html: block.content }}
+                    />
+                  )}
+                  
+                  {/* Parse contact details from settings */}
+                  {(contactSettings as any).phone && (
+                    <Box sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
+                      <Typography variant="body1">
+                        <strong>Phone:</strong> {safeRender((contactSettings as any).phone)}
+                      </Typography>
+                    </Box>
+                  )}
+                  
+                  {(contactSettings as any).email && (
+                    <Box sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
+                      <Typography variant="body1">
+                        <strong>Email:</strong> {safeRender((contactSettings as any).email)}
+                      </Typography>
+                    </Box>
+                  )}
+                  
+                  {(contactSettings as any).address && (
+                    <Box sx={{ mb: 2, display: 'flex', alignItems: 'flex-start' }}>
+                      <Typography variant="body1">
+                        <strong>Address:</strong><br />
+                        {safeRender((contactSettings as any).address)}
+                      </Typography>
+                    </Box>
+                  )}
+                  
+                  {block.buttonText && block.buttonLink && (
+                    <Button
+                      component={Link}
+                      to={safeRender(block.buttonLink)}
+                      variant="contained"
+                      sx={{ mt: 2 }}
+                    >
+                      {safeRender(block.buttonText)}
+                    </Button>
+                  )}
+                </Paper>
+              </Grid>
+              
+              {block.imageUrl && (
+                <Grid item xs={12} md={6}>
+                  <Paper elevation={3} sx={{ overflow: 'hidden', borderRadius: 2, height: '100%' }}>
+                    <img
+                      src={safeRender(block.imageUrl)}
+                      alt={safeRender(block.title) || 'Contact us'}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                    />
+                  </Paper>
+                </Grid>
+              )}
+            </Grid>
+          </Container>
+        );
+
       case BLOCK_TYPES.FEATURES:
         // For features, we expect the content to be JSON with feature items
         let features = [];

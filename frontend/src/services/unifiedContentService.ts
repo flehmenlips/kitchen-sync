@@ -59,6 +59,9 @@ export interface UnifiedRestaurantContent {
     metaTitle?: string;
     metaDescription?: string;
     footerText?: string;
+    hoursCardTitle?: string;
+    locationCardTitle?: string;
+    contactCardTitle?: string;
   };
   
   // Dynamic content blocks (from ContentBlocks)
@@ -86,23 +89,30 @@ class UnifiedContentService {
    * - Dynamic content blocks from ContentBlocks
    */
   async getUnifiedContent(pageSlug: string = 'home'): Promise<UnifiedRestaurantContent> {
-    const slug = getCurrentRestaurantSlug();
+    let slug = getCurrentRestaurantSlug();
+    
+    console.log('[UnifiedContentService] Page slug:', pageSlug);
+    console.log('[UnifiedContentService] Restaurant slug:', slug);
+    console.log('[UnifiedContentService] Current URL:', window.location.href);
+    console.log('[UnifiedContentService] URL search params:', window.location.search);
+    
+    // If slug is null, try to extract it manually from URL as fallback
+    if (!slug) {
+      const urlParams = new URLSearchParams(window.location.search);
+      slug = urlParams.get('restaurant');
+      console.log('[UnifiedContentService] Fallback slug extraction:', slug);
+    }
     
     if (!slug) {
+      console.error('[UnifiedContentService] Restaurant slug not found after all attempts');
+      console.error('[UnifiedContentService] URL:', window.location.href);
+      console.error('[UnifiedContentService] Search params:', window.location.search);
       throw new Error('Restaurant slug not found');
     }
     
-    try {
-      // Get unified content from new backend endpoint
-      const response = await apiService.get<UnifiedRestaurantContent>(
-        `/restaurant/public/slug/${slug}/unified-content?page=${pageSlug}`
-      );
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching unified content:', error);
-      // Fall back to old system for backward compatibility
-      return this.getFallbackContent(slug, pageSlug);
-    }
+    // Skip the non-existent unified endpoint and go directly to fallback
+    console.log('[UnifiedContentService] Using fallback content method with slug:', slug);
+    return this.getFallbackContent(slug, pageSlug);
   }
   
   /**
@@ -110,24 +120,30 @@ class UnifiedContentService {
    */
   private async getFallbackContent(slug: string, pageSlug: string): Promise<UnifiedRestaurantContent> {
     try {
+      console.log('[UnifiedContentService] Fetching fallback content for:', { slug, pageSlug });
+      
       // Get restaurant settings (old system)
+      console.log('[UnifiedContentService] Fetching restaurant settings...');
       const settingsResponse = await apiService.get(`/restaurant/public/slug/${slug}/settings`);
       const settings = settingsResponse.data;
+      console.log('[UnifiedContentService] Restaurant settings loaded');
       
       // Try to get content blocks (new system)
       let contentBlocks = [];
       try {
+        console.log('[UnifiedContentService] Fetching content blocks...');
         const blocksResponse = await apiService.get(`/content-blocks/public?page=${pageSlug}&restaurantSlug=${slug}`);
         contentBlocks = blocksResponse.data || [];
+        console.log('[UnifiedContentService] Content blocks loaded:', contentBlocks.length, 'blocks');
       } catch (blockError) {
-        console.warn('Could not fetch content blocks:', blockError);
+        console.warn('[UnifiedContentService] Could not fetch content blocks:', blockError);
       }
       
       // Find hero and about blocks from ContentBlocks
       const heroBlock = contentBlocks.find((block: any) => block.blockType === 'hero');
       const aboutBlock = contentBlocks.find((block: any) => block.blockType === 'text' && block.title?.toLowerCase().includes('about'));
       
-      return {
+      const result = {
         restaurant: {
           id: settings.restaurant?.id || 1,
           name: settings.restaurant?.name || 'Restaurant',
@@ -171,15 +187,22 @@ class UnifiedContentService {
         seo: {
           metaTitle: settings.metaTitle,
           metaDescription: settings.metaDescription,
-          footerText: settings.footerText
+          footerText: settings.footerText,
+          hoursCardTitle: settings.hoursCardTitle,
+          locationCardTitle: settings.locationCardTitle,
+          contactCardTitle: settings.contactCardTitle
         },
-        contentBlocks: contentBlocks.filter((block: any) => 
-          block.blockType !== 'hero' && 
-          !(block.blockType === 'text' && block.title?.toLowerCase().includes('about'))
-        )
+        contentBlocks: contentBlocks
       };
+      
+      console.log('[UnifiedContentService] Returning unified content:', {
+        contentBlocksCount: result.contentBlocks.length,
+        restaurantName: result.restaurant.name
+      });
+      
+      return result;
     } catch (error) {
-      console.error('Error in fallback content fetch:', error);
+      console.error('[UnifiedContentService] Error in fallback content fetch:', error);
       throw error;
     }
   }

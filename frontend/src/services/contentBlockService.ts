@@ -1,5 +1,6 @@
 import { api } from './api';
 import { customerApi } from './customerApi';
+import { getCurrentRestaurantSlug } from '../utils/subdomain';
 
 export interface ContentBlock {
   id: number;
@@ -62,10 +63,31 @@ export const BLOCK_TYPE_LABELS = {
 export const contentBlockService = {
   // Get public content blocks for a page (customer portal)
   async getPublicBlocks(page: string = 'home'): Promise<ContentBlock[]> {
-    const response = await customerApi.get('/content-blocks/public', {
-      params: { page }
-    });
-    return response.data;
+    try {
+      const restaurantSlug = getCurrentRestaurantSlug();
+      const params: any = { page };
+      
+      console.log('[ContentBlockService] Fetching public blocks:', { page, restaurantSlug });
+      
+      // Add restaurant slug if available
+      if (restaurantSlug) {
+        params.restaurantSlug = restaurantSlug;
+      }
+      
+      const response = await customerApi.get('/content-blocks/public', {
+        params
+      });
+      
+      console.log('[ContentBlockService] Received blocks:', { count: response.data?.length || 0, page });
+      return response.data || []; // Ensure we always return an array
+    } catch (error) {
+      console.error('[ContentBlockService] Error fetching public content blocks:', error);
+      
+      // Graceful degradation - return empty array instead of throwing
+      // This prevents the entire customer portal from crashing
+      console.warn('[ContentBlockService] Returning empty array due to error');
+      return [];
+    }
   },
 
   // Admin endpoints

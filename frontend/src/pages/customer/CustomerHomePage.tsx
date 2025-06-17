@@ -20,10 +20,12 @@ import {
   Restaurant as RestaurantIcon
 } from '@mui/icons-material';
 import { unifiedContentService, UnifiedRestaurantContent } from '../../services/unifiedContentService';
+import { contentBlockService, ContentBlock } from '../../services/contentBlockService';
 import ContentBlockRenderer from '../../components/customer/ContentBlockRenderer';
 
 const CustomerHomePage: React.FC = () => {
   const [content, setContent] = useState<UnifiedRestaurantContent | null>(null);
+  const [contentBlocks, setContentBlocks] = useState<ContentBlock[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -32,12 +34,18 @@ const CustomerHomePage: React.FC = () => {
 
   const fetchData = async () => {
     try {
+      // Fetch unified content for hero, info cards, etc.
       const unifiedContent = await unifiedContentService.getUnifiedContent('home');
       console.log('[CustomerHomePage] Fetched content:', unifiedContent);
       console.log('[CustomerHomePage] Opening hours data:', unifiedContent?.contact?.openingHours);
       setContent(unifiedContent);
+
+      // Fetch content blocks separately for proper typing
+      const blocks = await contentBlockService.getPublicBlocks('home');
+      console.log('[CustomerHomePage] Fetched content blocks:', blocks);
+      setContentBlocks(blocks);
     } catch (error) {
-      console.error('Error fetching unified content:', error);
+      console.error('Error fetching content:', error);
     } finally {
       setLoading(false);
     }
@@ -117,76 +125,14 @@ const CustomerHomePage: React.FC = () => {
     );
   }
 
+  // Separate hero block from other content blocks
+  const heroBlock = contentBlocks.find(block => block.blockType === 'hero');
+  const otherBlocks = contentBlocks.filter(block => block.blockType !== 'hero');
+
   return (
     <Box>
-      {/* Hero Section */}
-      <Box
-        sx={{
-          position: 'relative',
-          height: '500px',
-          backgroundImage: content?.hero.imageUrl 
-            ? `url(${content.hero.imageUrl})` 
-            : 'linear-gradient(to right, #1976d2, #42a5f5)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          display: 'flex',
-          alignItems: 'center',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.4)',
-          }
-        }}
-      >
-        <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
-          <Typography
-            variant="h2"
-            component="h1"
-            sx={{
-              color: 'white',
-              fontWeight: 'bold',
-              mb: 2,
-              textShadow: '2px 2px 4px rgba(0,0,0,0.5)'
-            }}
-          >
-            {safeRender(content?.hero.title) || 'Welcome to Our Restaurant'}
-          </Typography>
-          <Typography
-            variant="h5"
-            sx={{
-              color: 'white',
-              mb: 4,
-              textShadow: '1px 1px 2px rgba(0,0,0,0.5)'
-            }}
-          >
-            {safeRender(content?.hero.subtitle) || 'Experience culinary excellence'}
-          </Typography>
-          {content?.hero.ctaText && content?.hero.ctaLink && (
-            <Button
-              component={Link}
-              to={content.hero.ctaLink}
-              variant="contained"
-              size="large"
-              sx={{
-                backgroundColor: 'primary.main',
-                color: 'white',
-                px: 4,
-                py: 1.5,
-                fontSize: '1.1rem',
-                '&:hover': {
-                  backgroundColor: 'primary.dark',
-                }
-              }}
-            >
-              {safeRender(content.hero.ctaText)}
-            </Button>
-          )}
-        </Container>
-      </Box>
+      {/* Hero Section from ContentBlocks */}
+      {heroBlock && <ContentBlockRenderer blocks={[heroBlock]} />}
 
       {/* Restaurant Info Cards */}
       <Container maxWidth="lg" sx={{ mt: -8, position: 'relative', zIndex: 2 }}>
@@ -197,7 +143,7 @@ const CustomerHomePage: React.FC = () => {
               <CardContent sx={{ textAlign: 'center', p: 3 }}>
                 <AccessTimeIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
                 <Typography variant="h6" gutterBottom>
-                  Opening Hours
+                  {content?.seo?.hoursCardTitle || 'Opening Hours'}
                 </Typography>
                 <Typography variant="body1" color="text.secondary" gutterBottom>
                   Today: <strong>{getTodayHours()}</strong>
@@ -252,7 +198,7 @@ const CustomerHomePage: React.FC = () => {
               <CardContent sx={{ textAlign: 'center', p: 3 }}>
                 <LocationOnIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
                 <Typography variant="h6" gutterBottom>
-                  Our Location
+                  {content?.seo?.locationCardTitle || 'Our Location'}
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
                   {formatAddress() || '123 Main Street, City, State 12345'}
@@ -276,7 +222,7 @@ const CustomerHomePage: React.FC = () => {
               <CardContent sx={{ textAlign: 'center', p: 3 }}>
                 <PhoneIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
                 <Typography variant="h6" gutterBottom>
-                  Contact Us
+                  {content?.seo?.contactCardTitle || 'Contact Us'}
                 </Typography>
                 {content?.contact.phone && (
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
@@ -304,47 +250,8 @@ const CustomerHomePage: React.FC = () => {
         </Grid>
       </Container>
 
-      {/* About Section */}
-      {(content?.about.title || content?.about.description) && (
-        <Container maxWidth="lg" sx={{ my: 8 }}>
-          <Grid container spacing={4} alignItems="center">
-            <Grid item xs={12} md={6}>
-              <Typography variant="h3" component="h2" gutterBottom>
-                {safeRender(content?.about.title) || 'About Us'}
-              </Typography>
-              <Typography variant="body1" paragraph sx={{ fontSize: '1.1rem', lineHeight: 1.8 }}>
-                {safeRender(content?.about.description) || 'Welcome to our restaurant, where we serve delicious food made with love and the finest ingredients.'}
-              </Typography>
-              <Button
-                component={Link}
-                to="/menu"
-                variant="outlined"
-                size="large"
-                startIcon={<RestaurantIcon />}
-                sx={{ mt: 2 }}
-              >
-                View Our Menu
-              </Button>
-            </Grid>
-            {content?.about.imageUrl && (
-              <Grid item xs={12} md={6}>
-                <Paper elevation={3} sx={{ overflow: 'hidden', borderRadius: 2 }}>
-                  <CardMedia
-                    component="img"
-                    height="400"
-                    image={content.about.imageUrl}
-                    alt={content.about.title || 'About our restaurant'}
-                    sx={{ objectFit: 'cover' }}
-                  />
-                </Paper>
-              </Grid>
-            )}
-          </Grid>
-        </Container>
-      )}
-
-      {/* Dynamic Content Blocks */}
-      <ContentBlockRenderer blocks={content?.contentBlocks || []} />
+      {/* Other Content Blocks (About, Contact, Menu Preview, etc.) */}
+      <ContentBlockRenderer blocks={otherBlocks} />
     </Box>
   );
 };

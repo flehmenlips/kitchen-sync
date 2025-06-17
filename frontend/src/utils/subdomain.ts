@@ -144,13 +144,22 @@ export function buildRestaurantPageUrl(slug: string, path: string = ''): string 
 export function buildCustomerUrl(path: string = ''): string {
   const subdomain = getSubdomain();
   const isRestaurantSubdomain = Boolean(subdomain);
+  const hostname = window.location.hostname;
   
   // Remove leading slash from path for consistency
   const cleanPath = path.startsWith('/') ? path.slice(1) : path;
   
   if (isRestaurantSubdomain) {
     // Restaurant subdomain: use clean URLs
-    return cleanPath ? `/${cleanPath}` : '/';
+    const basePath = cleanPath ? `/${cleanPath}` : '/';
+    
+    // In development mode (localhost), preserve the restaurant query parameter
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return basePath + `?restaurant=${subdomain}`;
+    } else {
+      // In production, just return the clean path (subdomain handles restaurant context)
+      return basePath;
+    }
   } else {
     // Main domain: use legacy /customer prefix
     return cleanPath ? `/customer/${cleanPath}` : '/customer';

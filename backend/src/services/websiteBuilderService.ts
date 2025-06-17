@@ -9,20 +9,6 @@ export interface WebsiteBuilderData {
     websiteName?: string;
     tagline?: string;
     
-    // Hero Section
-    heroTitle?: string;
-    heroSubtitle?: string;
-    heroImageUrl?: string;
-    heroImagePublicId?: string;
-    heroCTAText?: string;
-    heroCTALink?: string;
-    
-    // About Section
-    aboutTitle?: string;
-    aboutDescription?: string;
-    aboutImageUrl?: string;
-    aboutImagePublicId?: string;
-    
     // Branding
     primaryColor?: string;
     secondaryColor?: string;
@@ -32,7 +18,7 @@ export interface WebsiteBuilderData {
     logoUrl?: string;
     logoPublicId?: string;
     
-    // Contact & Hours
+    // Contact & Hours (site-wide defaults, content blocks take precedence)
     contactPhone?: string;
     contactEmail?: string;
     contactAddress?: string;
@@ -109,6 +95,141 @@ export interface WebsiteBuilderBlock {
   isActive: boolean;
 }
 
+// Enhanced content block types for unified system
+export interface ContentBlockSchema {
+  type: string;
+  name: string;
+  description: string;
+  fields: ContentBlockField[];
+  category: 'layout' | 'content' | 'media' | 'interactive' | 'system';
+  icon: string;
+}
+
+export interface ContentBlockField {
+  name: string;
+  type: 'text' | 'textarea' | 'image' | 'url' | 'select' | 'color' | 'number' | 'boolean';
+  label: string;
+  required?: boolean;
+  options?: string[];
+  placeholder?: string;
+  maxLength?: number;
+}
+
+// Predefined content block schemas for the unified system
+export const CONTENT_BLOCK_SCHEMAS: ContentBlockSchema[] = [
+  {
+    type: 'hero',
+    name: 'Hero Section',
+    description: 'Large banner with title, subtitle, image, and call-to-action',
+    category: 'layout',
+    icon: 'wallpaper',
+    fields: [
+      { name: 'title', type: 'text', label: 'Hero Title', required: true, maxLength: 100 },
+      { name: 'subtitle', type: 'textarea', label: 'Hero Subtitle', maxLength: 200 },
+      { name: 'imageUrl', type: 'image', label: 'Background Image' },
+      { name: 'buttonText', type: 'text', label: 'Button Text', maxLength: 30 },
+      { name: 'buttonLink', type: 'url', label: 'Button Link' },
+      { name: 'buttonStyle', type: 'select', label: 'Button Style', options: ['primary', 'secondary', 'outline'] }
+    ]
+  },
+  {
+    type: 'about',
+    name: 'About Section',
+    description: 'Rich content section with title, description, and optional image',
+    category: 'content',
+    icon: 'info',
+    fields: [
+      { name: 'title', type: 'text', label: 'Section Title', required: true, maxLength: 100 },
+      { name: 'content', type: 'textarea', label: 'Description', required: true, maxLength: 1000 },
+      { name: 'imageUrl', type: 'image', label: 'Section Image' }
+    ]
+  },
+  {
+    type: 'contact',
+    name: 'Contact Information',
+    description: 'Contact details with phone, email, address, and hours',
+    category: 'content',
+    icon: 'contact_page',
+    fields: [
+      { name: 'title', type: 'text', label: 'Section Title', required: true, maxLength: 100 },
+      { name: 'phone', type: 'text', label: 'Phone Number' },
+      { name: 'email', type: 'text', label: 'Email Address' },
+      { name: 'address', type: 'textarea', label: 'Full Address' },
+      { name: 'showHours', type: 'boolean', label: 'Show Opening Hours' },
+      { name: 'showMap', type: 'boolean', label: 'Show Map/Directions' }
+    ]
+  },
+  {
+    type: 'hours',
+    name: 'Opening Hours',
+    description: 'Restaurant opening hours display',
+    category: 'content',
+    icon: 'schedule',
+    fields: [
+      { name: 'title', type: 'text', label: 'Section Title', required: true, maxLength: 100 },
+      { name: 'showToday', type: 'boolean', label: 'Highlight Today' },
+      { name: 'showAllDays', type: 'boolean', label: 'Show All Days' }
+    ]
+  },
+  {
+    type: 'text',
+    name: 'Text Block',
+    description: 'Simple text content with formatting',
+    category: 'content',
+    icon: 'text_fields',
+    fields: [
+      { name: 'title', type: 'text', label: 'Title', maxLength: 100 },
+      { name: 'content', type: 'textarea', label: 'Content', required: true, maxLength: 2000 }
+    ]
+  },
+  {
+    type: 'image',
+    name: 'Image Block',
+    description: 'Image with optional caption',
+    category: 'media',
+    icon: 'image',
+    fields: [
+      { name: 'imageUrl', type: 'image', label: 'Image', required: true },
+      { name: 'title', type: 'text', label: 'Caption', maxLength: 200 },
+      { name: 'alt', type: 'text', label: 'Alt Text', maxLength: 150 }
+    ]
+  },
+  {
+    type: 'button',
+    name: 'Call-to-Action Button',
+    description: 'Prominent button with link',
+    category: 'interactive',
+    icon: 'smart_button',
+    fields: [
+      { name: 'buttonText', type: 'text', label: 'Button Text', required: true, maxLength: 30 },
+      { name: 'buttonLink', type: 'url', label: 'Button Link', required: true },
+      { name: 'buttonStyle', type: 'select', label: 'Button Style', options: ['primary', 'secondary', 'outline'] }
+    ]
+  },
+  {
+    type: 'gallery',
+    name: 'Image Gallery',
+    description: 'Multiple images in a grid layout',
+    category: 'media',
+    icon: 'photo_library',
+    fields: [
+      { name: 'title', type: 'text', label: 'Gallery Title', maxLength: 100 },
+      { name: 'columns', type: 'select', label: 'Columns', options: ['1', '2', '3', '4'] }
+    ]
+  },
+  {
+    type: 'features',
+    name: 'Features Grid',
+    description: 'Grid of features or services',
+    category: 'layout',
+    icon: 'grid_view',
+    fields: [
+      { name: 'title', type: 'text', label: 'Section Title', maxLength: 100 },
+      { name: 'columns', type: 'select', label: 'Columns', options: ['2', '3', '4'] }
+    ]
+  }
+];
+
 export interface PageCreationData {
   name: string;
   slug: string;
@@ -155,25 +276,11 @@ export const websiteBuilderService = {
       
       return {
         settings: settings ? {
-          // Basic Info
+          // Basic Info (site-wide configuration only)
           websiteName: settings.websiteName || undefined,
           tagline: settings.tagline || undefined,
           
-          // Hero Section
-          heroTitle: settings.heroTitle || undefined,
-          heroSubtitle: settings.heroSubtitle || undefined,
-          heroImageUrl: settings.heroImageUrl || undefined,
-          heroImagePublicId: settings.heroImagePublicId || undefined,
-          heroCTAText: settings.heroCTAText || undefined,
-          heroCTALink: settings.heroCTALink || undefined,
-          
-          // About Section
-          aboutTitle: settings.aboutTitle || undefined,
-          aboutDescription: settings.aboutDescription || undefined,
-          aboutImageUrl: settings.aboutImageUrl || undefined,
-          aboutImagePublicId: settings.aboutImagePublicId || undefined,
-          
-          // Branding
+          // Branding (keep - site-wide configuration)
           primaryColor: settings.primaryColor || undefined,
           secondaryColor: settings.secondaryColor || undefined,
           accentColor: settings.accentColor || undefined,
@@ -182,7 +289,7 @@ export const websiteBuilderService = {
           logoUrl: settings.logoUrl || undefined,
           logoPublicId: settings.logoPublicId || undefined,
           
-          // Contact & Hours
+          // Contact & Hours (keep for site-wide defaults, but content blocks take precedence)
           contactPhone: settings.contactPhone || undefined,
           contactEmail: settings.contactEmail || undefined,
           contactAddress: settings.contactAddress || undefined,
@@ -195,18 +302,18 @@ export const websiteBuilderService = {
           menuDisplayMode: settings.menuDisplayMode || undefined,
           activeMenuIds: settings.activeMenuIds || undefined,
           
-          // Social & Footer
+          // Social & Footer (keep - site-wide configuration)
           facebookUrl: settings.facebookUrl || undefined,
           instagramUrl: settings.instagramUrl || undefined,
           twitterUrl: settings.twitterUrl || undefined,
           footerText: settings.footerText || undefined,
           
-          // SEO
+          // SEO (keep - site-wide defaults)
           metaTitle: settings.metaTitle || undefined,
           metaDescription: settings.metaDescription || undefined,
           metaKeywords: settings.metaKeywords || undefined,
           
-          // Info Panes Customization
+          // Info Panes Customization (keep - UI configuration)
           infoPanesEnabled: (settings as any).infoPanesEnabled ?? true,
           hoursCardTitle: (settings as any).hoursCardTitle || 'Opening Hours',
           locationCardTitle: (settings as any).locationCardTitle || 'Our Location', 
@@ -214,7 +321,7 @@ export const websiteBuilderService = {
           hoursCardShowDetails: (settings as any).hoursCardShowDetails ?? true,
           locationCardShowDirections: (settings as any).locationCardShowDirections ?? true,
           
-          // Navigation Customization
+          // Navigation Customization (keep - UI configuration)
           navigationEnabled: (settings as any).navigationEnabled ?? true,
           navigationLayout: (settings as any).navigationLayout || 'topbar',
           navigationAlignment: (settings as any).navigationAlignment || 'left',
@@ -271,7 +378,6 @@ export const websiteBuilderService = {
           restaurantId: true,
           createdAt: true,
           updatedAt: true,
-          templateId: true,
           customCss: true,
           websiteName: true,
           metaTitle: true,
@@ -445,20 +551,6 @@ export const websiteBuilderService = {
         // Basic Info
         websiteName: settings.websiteName,
         tagline: settings.tagline,
-        
-        // Hero Section
-        heroTitle: settings.heroTitle,
-        heroSubtitle: settings.heroSubtitle,
-        heroImageUrl: settings.heroImageUrl,
-        heroImagePublicId: settings.heroImagePublicId,
-        heroCTAText: settings.heroCTAText,
-        heroCTALink: settings.heroCTALink,
-        
-        // About Section
-        aboutTitle: settings.aboutTitle,
-        aboutDescription: settings.aboutDescription,
-        aboutImageUrl: settings.aboutImageUrl,
-        aboutImagePublicId: settings.aboutImagePublicId,
         
         // Branding
         primaryColor: settings.primaryColor,
@@ -871,68 +963,80 @@ export const websiteBuilderService = {
   // Helper method to get pages from ContentBlocks
   async getPages(restaurantId?: number): Promise<WebsiteBuilderPage[]> {
     try {
-      // Get page-level ContentBlocks (where blockType = 'page')
-      const pageBlocks = await prisma.contentBlock.findMany({
+      // Get all unique pages that have content blocks
+      const allContentBlocks = await prisma.contentBlock.findMany({
         where: {
           restaurantId: restaurantId,
-          blockType: 'page'
+          isActive: true
         },
+                 select: {
+           page: true,
+           blockType: true,
+           title: true,
+           displayOrder: true,
+           isActive: true
+         },
         orderBy: { displayOrder: 'asc' }
       });
 
-      // Get content blocks for each page
+      // Group content blocks by page
+      const pageGroups = allContentBlocks.reduce((groups, block) => {
+        if (!block.page) return groups;
+        if (!groups[block.page]) {
+          groups[block.page] = [];
+        }
+        groups[block.page].push(block);
+        return groups;
+      }, {} as Record<string, any[]>);
+
       const pages: WebsiteBuilderPage[] = [];
       
-      for (const pageBlock of pageBlocks) {
+      // Create pages for each group
+      for (const [pageSlug, blocks] of Object.entries(pageGroups)) {
+        // Find a page-level block or use the first block for page metadata
+        const pageBlock = blocks.find(b => b.blockType === 'page') || blocks[0];
+        
+        // Get full content blocks for this page
         const contentBlocks = await prisma.contentBlock.findMany({
           where: {
             restaurantId: restaurantId,
-            page: pageBlock.page
+            page: pageSlug,
+            isActive: true
           },
           orderBy: { displayOrder: 'asc' }
         });
+
+        // Determine page name from page block or capitalize slug
+        let pageName = pageSlug.charAt(0).toUpperCase() + pageSlug.slice(1);
+        if (pageBlock.blockType === 'page' && pageBlock.title) {
+          pageName = pageBlock.title;
+        } else if (pageSlug === 'home') {
+          pageName = 'Home';
+        } else if (pageSlug === 'about') {
+          pageName = 'About';
+        } else if (pageSlug === 'contact') {
+          pageName = 'Contact';
+        }
+
+        // Determine display order
+        let displayOrder = 999;
+        if (pageSlug === 'home') displayOrder = 1;
+        else if (pageSlug === 'about') displayOrder = 2;
+        else if (pageSlug === 'contact') displayOrder = 3;
+        else if (pageBlock.blockType === 'page') displayOrder = pageBlock.displayOrder || 999;
 
         pages.push({
-          id: pageBlock.page!,
-          name: pageBlock.title || 'Untitled Page',
-          slug: pageBlock.page!,
-          url: `/${pageBlock.page}`,
-          isSystem: ['home', 'about', 'contact'].includes(pageBlock.page!),
-          isActive: pageBlock.isActive || false,
-          displayOrder: pageBlock.displayOrder || 0,
-          metaTitle: (pageBlock.settings as any)?.metaTitle,
-          metaDescription: (pageBlock.settings as any)?.metaDescription,
+          id: pageSlug,
+          name: pageName,
+          slug: pageSlug,
+          url: pageSlug === 'home' ? '/' : `/${pageSlug}`,
+          isSystem: ['home', 'about', 'contact'].includes(pageSlug),
+          isActive: true, // If content blocks exist, page is active
+          displayOrder: displayOrder,
+                   metaTitle: undefined, // Will be populated from full block data if needed
+         metaDescription: undefined, // Will be populated from full block data if needed
           blocks: contentBlocks.map(block => this.transformContentBlockToBuilderBlock(block))
         });
-      }
-
-      // Add system pages if they don't exist
-      const existingSlugs = pages.map(p => p.slug);
-      
-      if (!existingSlugs.includes('home')) {
-        // Get content blocks specifically associated with the 'home' page
-        const homeContentBlocks = await prisma.contentBlock.findMany({
-          where: {
-            restaurantId: restaurantId,
-            page: 'home'
-          },
-          orderBy: { displayOrder: 'asc' }
-        });
-        
-        pages.unshift({
-          id: 'home',
-          name: 'Home',
-          slug: 'home',
-          url: '/',
-          isSystem: true,
-          isActive: true,
-          displayOrder: 1,
-          blocks: homeContentBlocks.map(block => this.transformContentBlockToBuilderBlock(block))
-        });
-      }
-      
-      if (!existingSlugs.includes('about')) {
-        pages.push(this.createSystemPage('about', 'About', 2));
       }
 
       return pages.sort((a, b) => a.displayOrder - b.displayOrder);
@@ -1039,5 +1143,10 @@ export const websiteBuilderService = {
     }
     
     return null;
+  },
+
+  // Get available content block schemas
+  async getContentBlockSchemas(): Promise<ContentBlockSchema[]> {
+    return CONTENT_BLOCK_SCHEMAS;
   }
 }; 
