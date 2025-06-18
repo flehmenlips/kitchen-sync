@@ -393,7 +393,7 @@ export const debugContentBlocks = async (req: Request, res: Response) => {
     const debugInfo: any = {
       timestamp: new Date().toISOString(),
       endpoint: 'debugContentBlocks',
-      version: '2.0', // Update this when changes are deployed
+      version: '2.1', // Update this when changes are deployed
       query: req.query
     };
 
@@ -410,7 +410,25 @@ export const debugContentBlocks = async (req: Request, res: Response) => {
 
     // Test 4: Content blocks for this restaurant
     if (restaurant) {
-      const contentBlocks = await prisma.contentBlock.findMany({
+      // First, get ALL content blocks for this restaurant (ignore isActive)
+      const allContentBlocks = await prisma.contentBlock.findMany({
+        where: {
+          restaurantId: restaurant.id,
+          page: 'home'
+        },
+        select: {
+          id: true,
+          blockType: true,
+          title: true,
+          displayOrder: true,
+          isActive: true
+        },
+        orderBy: { displayOrder: 'asc' }
+      });
+      debugInfo.allContentBlocks = allContentBlocks;
+
+      // Then, get only active ones
+      const activeContentBlocks = await prisma.contentBlock.findMany({
         where: {
           restaurantId: restaurant.id,
           page: 'home',
@@ -425,7 +443,7 @@ export const debugContentBlocks = async (req: Request, res: Response) => {
         },
         orderBy: { displayOrder: 'asc' }
       });
-      debugInfo.contentBlocks = contentBlocks;
+      debugInfo.activeContentBlocks = activeContentBlocks;
     }
 
     res.json(debugInfo);
