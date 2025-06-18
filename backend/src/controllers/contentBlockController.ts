@@ -32,93 +32,35 @@ export const BLOCK_TYPES = {
 export const getContentBlocks = async (req: Request, res: Response) => {
   try {
     const { page = 'home', restaurantSlug } = req.query;
-    let restaurantId = 1; // Default fallback for backward compatibility
-    let restaurantFound = false;
+    let restaurantId = 1; // Default fallback
 
-    console.log('[ContentBlocks API] Request params:', { page, restaurantSlug });
-    console.log('[ContentBlocks API] Request host:', req.get('host'));
-
-    // Priority 1: If restaurantSlug is provided, look up the restaurant ID
+    // If restaurantSlug is provided, look up the restaurant ID
     if (restaurantSlug) {
-      try {
-        const restaurant = await prisma.restaurant.findUnique({
-          where: { slug: restaurantSlug as string },
-          select: { id: true, name: true }
-        });
-        
-        if (restaurant) {
-          restaurantId = restaurant.id;
-          restaurantFound = true;
-          console.log('[ContentBlocks API] Restaurant found by slug:', { slug: restaurantSlug, id: restaurantId, name: restaurant.name });
-        } else {
-          console.warn('[ContentBlocks API] Restaurant not found for slug:', restaurantSlug);
-        }
-      } catch (error) {
-        console.error('[ContentBlocks API] Error looking up restaurant by slug:', error);
-      }
-    }
-
-    // Priority 2: Try to determine restaurant from subdomain (production only)
-    if (!restaurantFound && process.env.NODE_ENV === 'production') {
-      try {
-        const host = req.get('host');
-        if (host) {
-          const subdomain = host.split('.')[0];
-          console.log('[ContentBlocks API] Attempting subdomain detection:', { host, subdomain });
-          
-          if (subdomain && subdomain !== 'kitchensync' && subdomain !== 'www' && subdomain !== 'api' && subdomain !== 'app') {
-            // Convert subdomain to slug format and look up restaurant
-            const slugFromSubdomain = subdomain.replace(/-/g, '-'); // Keep hyphens as-is
-            const restaurant = await prisma.restaurant.findUnique({
-              where: { slug: slugFromSubdomain },
-              select: { id: true, name: true }
-            });
-            
-            if (restaurant) {
-              restaurantId = restaurant.id;
-              restaurantFound = true;
-              console.log('[ContentBlocks API] Restaurant found by subdomain:', { subdomain, id: restaurantId, name: restaurant.name });
-            } else {
-              console.warn('[ContentBlocks API] Restaurant not found for subdomain:', subdomain);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('[ContentBlocks API] Error detecting restaurant from subdomain:', error);
-      }
-    }
-
-    // Priority 3: Fallback to default restaurant (backward compatibility)
-    if (!restaurantFound) {
-      console.log('[ContentBlocks API] Using default restaurant ID:', restaurantId);
-    }
-
-    // Fetch content blocks with comprehensive error handling
-    let blocks: any[] = [];
-    try {
-      blocks = await prisma.contentBlock.findMany({
-        where: {
-          restaurantId,
-          page: page as string,
-          isActive: true
-        },
-        orderBy: {
-          displayOrder: 'asc'
-        }
+      const restaurant = await prisma.restaurant.findUnique({
+        where: { slug: restaurantSlug as string },
+        select: { id: true }
       });
-
-      console.log('[ContentBlocks API] Found blocks:', { count: blocks.length, restaurantId, page });
-    } catch (error) {
-      console.error('[ContentBlocks API] Error fetching content blocks:', error);
-      // Return empty array instead of failing - graceful degradation
-      blocks = [];
+      
+      if (restaurant) {
+        restaurantId = restaurant.id;
+      }
     }
+
+    const blocks = await prisma.contentBlock.findMany({
+      where: {
+        restaurantId,
+        page: page as string,
+        isActive: true
+      },
+      orderBy: {
+        displayOrder: 'asc'
+      }
+    });
 
     res.json(blocks);
   } catch (error) {
-    console.error('[ContentBlocks API] Critical error in getContentBlocks:', error);
-    // Return empty array instead of 500 error for production stability
-    res.json([]);
+    console.error('Error fetching content blocks:', error);
+    res.status(500).json({ error: 'Failed to fetch content blocks' });
   }
 };
 
