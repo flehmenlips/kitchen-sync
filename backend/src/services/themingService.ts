@@ -59,49 +59,311 @@ export interface BrandAssetData {
   isPrimary?: boolean;
 }
 
-// Color accessibility utilities
-export function calculateContrastRatio(color1: string, color2: string): number {
-  const getLuminance = (hex: string): number => {
-    const rgb = parseInt(hex.slice(1), 16);
-    const r = (rgb >> 16) & 0xff;
-    const g = (rgb >> 8) & 0xff;
-    const b = rgb & 0xff;
-    
-    const toLinear = (c: number) => {
-      c = c / 255;
-      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-    };
-    
-    return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
-  };
-  
-  const lum1 = getLuminance(color1);
-  const lum2 = getLuminance(color2);
-  const brightest = Math.max(lum1, lum2);
-  const darkest = Math.min(lum1, lum2);
-  
-  return (brightest + 0.05) / (darkest + 0.05);
+export interface GoogleFont {
+  family: string;
+  category: string;
+  variants: string[];
+  popularity: number;
+  pairing: string[];
 }
 
-export function getWCAGLevel(contrastRatio: number): 'AA' | 'AAA' | 'FAIL' {
-  if (contrastRatio >= 7) return 'AAA';
-  if (contrastRatio >= 4.5) return 'AA';
-  return 'FAIL';
+export interface FontPairing {
+  heading: string;
+  body: string;
+  category: string;
+  style: string;
+  description: string;
 }
 
-// Color extraction from images (placeholder for future implementation)
-export async function extractColorsFromImage(imageUrl: string): Promise<string[]> {
-  // TODO: Implement color extraction using canvas or external service
-  // For now, return some default colors
-  return ['#1976d2', '#dc004e', '#333333', '#ffffff', '#f5f5f5'];
-}
+// Comprehensive Google Fonts database for restaurants
+const RESTAURANT_GOOGLE_FONTS: GoogleFont[] = [
+  // Premium Serif Fonts for Restaurant Headers
+  {
+    family: 'Playfair Display',
+    category: 'serif',
+    variants: ['400', '400i', '700', '700i', '900', '900i'],
+    popularity: 95,
+    pairing: ['Open Sans', 'Source Sans Pro', 'Lato', 'Roboto', 'Nunito Sans']
+  },
+  {
+    family: 'Cormorant Garamond',
+    category: 'serif',
+    variants: ['300', '300i', '400', '400i', '500', '500i', '600', '600i', '700', '700i'],
+    popularity: 85,
+    pairing: ['Open Sans', 'Lato', 'Montserrat', 'Source Sans Pro']
+  },
+  {
+    family: 'Lora',
+    category: 'serif',
+    variants: ['400', '400i', '500', '500i', '600', '600i', '700', '700i'],
+    popularity: 88,
+    pairing: ['Open Sans', 'Source Sans Pro', 'Montserrat', 'Nunito Sans']
+  },
+  {
+    family: 'Crimson Text',
+    category: 'serif',
+    variants: ['400', '400i', '600', '600i', '700', '700i'],
+    popularity: 75,
+    pairing: ['Montserrat', 'Open Sans', 'Lato']
+  },
+  {
+    family: 'EB Garamond',
+    category: 'serif',
+    variants: ['400', '400i', '500', '500i', '600', '600i', '700', '700i', '800', '800i'],
+    popularity: 80,
+    pairing: ['Source Sans Pro', 'Open Sans', 'Nunito Sans']
+  },
+
+  // Modern Sans-Serif Fonts
+  {
+    family: 'Open Sans',
+    category: 'sans-serif',
+    variants: ['300', '300i', '400', '400i', '500', '500i', '600', '600i', '700', '700i', '800', '800i'],
+    popularity: 99,
+    pairing: ['Playfair Display', 'Lora', 'Cormorant Garamond', 'Merriweather']
+  },
+  {
+    family: 'Montserrat',
+    category: 'sans-serif',
+    variants: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
+    popularity: 92,
+    pairing: ['Lora', 'Playfair Display', 'Crimson Text', 'Cormorant Garamond']
+  },
+  {
+    family: 'Source Sans Pro',
+    category: 'sans-serif',
+    variants: ['200', '200i', '300', '300i', '400', '400i', '600', '600i', '700', '700i', '900', '900i'],
+    popularity: 90,
+    pairing: ['Playfair Display', 'Lora', 'EB Garamond', 'Cormorant Garamond']
+  },
+  {
+    family: 'Lato',
+    category: 'sans-serif',
+    variants: ['100', '100i', '300', '300i', '400', '400i', '700', '700i', '900', '900i'],
+    popularity: 94,
+    pairing: ['Playfair Display', 'Lora', 'Crimson Text']
+  },
+  {
+    family: 'Nunito Sans',
+    category: 'sans-serif',
+    variants: ['200', '300', '400', '600', '700', '800', '900'],
+    popularity: 85,
+    pairing: ['Playfair Display', 'Lora', 'EB Garamond']
+  },
+  {
+    family: 'Roboto',
+    category: 'sans-serif',
+    variants: ['100', '300', '400', '500', '700', '900'],
+    popularity: 98,
+    pairing: ['Playfair Display', 'Lora', 'Merriweather']
+  },
+  {
+    family: 'Inter',
+    category: 'sans-serif',
+    variants: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
+    popularity: 88,
+    pairing: ['Playfair Display', 'Lora', 'EB Garamond']
+  },
+
+  // Professional Serif Options
+  {
+    family: 'Merriweather',
+    category: 'serif',
+    variants: ['300', '300i', '400', '400i', '700', '700i', '900', '900i'],
+    popularity: 82,
+    pairing: ['Open Sans', 'Source Sans Pro', 'Roboto', 'Lato']
+  },
+  {
+    family: 'Libre Baskerville',
+    category: 'serif',
+    variants: ['400', '400i', '700'],
+    popularity: 78,
+    pairing: ['Open Sans', 'Montserrat', 'Source Sans Pro']
+  },
+
+  // Elegant Script/Display Fonts (for special occasions)
+  {
+    family: 'Dancing Script',
+    category: 'handwriting',
+    variants: ['400', '500', '600', '700'],
+    popularity: 70,
+    pairing: ['Open Sans', 'Lato', 'Montserrat']
+  },
+  {
+    family: 'Great Vibes',
+    category: 'handwriting',
+    variants: ['400'],
+    popularity: 65,
+    pairing: ['Open Sans', 'Lato', 'Source Sans Pro']
+  }
+];
+
+// Professional font pairing recommendations
+const FONT_PAIRINGS: FontPairing[] = [
+  {
+    heading: 'Playfair Display',
+    body: 'Open Sans',
+    category: 'Classic Elegance',
+    style: 'Traditional Fine Dining',
+    description: 'Sophisticated serif headlines with clean, readable body text'
+  },
+  {
+    heading: 'Montserrat',
+    body: 'Lora',
+    category: 'Modern Sophistication',
+    style: 'Contemporary Casual',
+    description: 'Modern sans-serif headers with elegant serif body text'
+  },
+  {
+    heading: 'Cormorant Garamond',
+    body: 'Source Sans Pro',
+    category: 'Artisanal Craft',
+    style: 'Boutique Restaurant',
+    description: 'Artisanal serif with professional sans-serif for readability'
+  },
+  {
+    heading: 'Lora',
+    body: 'Nunito Sans',
+    category: 'Warm & Approachable',
+    style: 'Family Restaurant',
+    description: 'Friendly serif with approachable sans-serif for comfort'
+  },
+  {
+    heading: 'EB Garamond',
+    body: 'Inter',
+    category: 'Literary Elegance',
+    style: 'Wine Bar & Bistro',
+    description: 'Classic book-style serif with modern geometric sans-serif'
+  },
+  {
+    heading: 'Crimson Text',
+    body: 'Montserrat',
+    category: 'Bold & Confident',
+    style: 'Modern Steakhouse',
+    description: 'Strong serif headlines with bold sans-serif support'
+  },
+  {
+    heading: 'Dancing Script',
+    body: 'Open Sans',
+    category: 'Romantic & Playful',
+    style: 'Café & Bakery',
+    description: 'Handwritten script for charm with clean body text'
+  },
+  {
+    heading: 'Inter',
+    body: 'Libre Baskerville',
+    category: 'Tech-Forward Dining',
+    style: 'Modern Fusion',
+    description: 'Contemporary sans-serif with traditional serif for balance'
+  }
+];
+
+// Default typography configurations for different restaurant styles
+const DEFAULT_TYPOGRAPHY_CONFIGS = {
+  'Fine Dining': {
+    name: 'Fine Dining Typography',
+    headingFontFamily: 'Playfair Display',
+    bodyFontFamily: 'Open Sans',
+    fontSizes: {
+      h1: '3.5rem',
+      h2: '2.5rem',
+      h3: '2rem',
+      h4: '1.5rem',
+      h5: '1.25rem',
+      h6: '1.125rem',
+      body1: '1rem',
+      body2: '0.875rem',
+      caption: '0.75rem'
+    },
+    lineHeights: {
+      heading: 1.2,
+      body: 1.6
+    },
+    letterSpacing: {
+      tight: '-0.025em',
+      normal: '0',
+      wide: '0.05em'
+    },
+    fontWeights: {
+      light: 300,
+      normal: 400,
+      medium: 500,
+      bold: 700
+    }
+  },
+  'Casual Dining': {
+    name: 'Casual Dining Typography',
+    headingFontFamily: 'Montserrat',
+    bodyFontFamily: 'Lora',
+    fontSizes: {
+      h1: '3rem',
+      h2: '2.25rem',
+      h3: '1.75rem',
+      h4: '1.375rem',
+      h5: '1.125rem',
+      h6: '1rem',
+      body1: '1rem',
+      body2: '0.875rem',
+      caption: '0.75rem'
+    },
+    lineHeights: {
+      heading: 1.3,
+      body: 1.7
+    },
+    letterSpacing: {
+      tight: '-0.015em',
+      normal: '0',
+      wide: '0.025em'
+    },
+    fontWeights: {
+      light: 300,
+      normal: 400,
+      medium: 500,
+      bold: 600
+    }
+  },
+  'Modern Café': {
+    name: 'Modern Café Typography',
+    headingFontFamily: 'Inter',
+    bodyFontFamily: 'Open Sans',
+    fontSizes: {
+      h1: '2.75rem',
+      h2: '2rem',
+      h3: '1.5rem',
+      h4: '1.25rem',
+      h5: '1.125rem',
+      h6: '1rem',
+      body1: '1rem',
+      body2: '0.875rem',
+      caption: '0.75rem'
+    },
+    lineHeights: {
+      heading: 1.25,
+      body: 1.6
+    },
+    letterSpacing: {
+      tight: '-0.01em',
+      normal: '0',
+      wide: '0.015em'
+    },
+    fontWeights: {
+      light: 300,
+      normal: 400,
+      medium: 500,
+      bold: 600
+    }
+  }
+};
 
 export const themingService = {
   // Color Palette Methods
   async getColorPalettes(restaurantId: number) {
     return await prisma.colorPalette.findMany({
       where: { restaurantId },
-      orderBy: { createdAt: 'desc' }
+      orderBy: [
+        { isActive: 'desc' },
+        { createdAt: 'desc' }
+      ]
     });
   },
 
@@ -115,10 +377,6 @@ export const themingService = {
   },
 
   async createColorPalette(restaurantId: number, data: ColorPaletteData) {
-    // Calculate accessibility metrics
-    const contrastRatio = calculateContrastRatio(data.textColor, data.backgroundColor);
-    const wcagLevel = getWCAGLevel(contrastRatio);
-
     return await prisma.colorPalette.create({
       data: {
         restaurantId,
@@ -131,41 +389,20 @@ export const themingService = {
         successColor: data.successColor || '#4caf50',
         warningColor: data.warningColor || '#ff9800',
         errorColor: data.errorColor || '#f44336',
-        contrastRatio,
-        wcagLevel: wcagLevel !== 'FAIL' ? wcagLevel : null,
-        isActive: false // New palettes are not active by default
+        isActive: false
       }
     });
   },
 
   async updateColorPalette(paletteId: string, data: Partial<ColorPaletteData>) {
-    const updateData: any = { ...data };
-    
-    // Recalculate accessibility if text or background colors changed
-    if (data.textColor || data.backgroundColor) {
-      const palette = await prisma.colorPalette.findUnique({
-        where: { id: paletteId }
-      });
-      
-      if (palette) {
-        const textColor = data.textColor || palette.textColor;
-        const backgroundColor = data.backgroundColor || palette.backgroundColor;
-        const contrastRatio = calculateContrastRatio(textColor, backgroundColor);
-        const wcagLevel = getWCAGLevel(contrastRatio);
-        
-        updateData.contrastRatio = contrastRatio;
-        updateData.wcagLevel = wcagLevel !== 'FAIL' ? wcagLevel : null;
-      }
-    }
-
     return await prisma.colorPalette.update({
       where: { id: paletteId },
-      data: updateData
+      data
     });
   },
 
   async setActiveColorPalette(restaurantId: number, paletteId: string) {
-    // First, deactivate all palettes for this restaurant
+    // First deactivate all palettes for this restaurant
     await prisma.colorPalette.updateMany({
       where: { restaurantId },
       data: { isActive: false }
@@ -188,7 +425,10 @@ export const themingService = {
   async getTypographyConfigs(restaurantId: number) {
     return await prisma.typographyConfig.findMany({
       where: { restaurantId },
-      orderBy: { createdAt: 'desc' }
+      orderBy: [
+        { isActive: 'desc' },
+        { createdAt: 'desc' }
+      ]
     });
   },
 
@@ -234,7 +474,7 @@ export const themingService = {
   },
 
   async setActiveTypographyConfig(restaurantId: number, configId: string) {
-    // First, deactivate all configs for this restaurant
+    // First deactivate all typography configs for this restaurant
     await prisma.typographyConfig.updateMany({
       where: { restaurantId },
       data: { isActive: false }
@@ -253,15 +493,15 @@ export const themingService = {
     });
   },
 
-  // Brand Asset Methods
+  // Brand Asset Methods (placeholder for future implementation)
   async getBrandAssets(restaurantId: number, assetType?: string) {
-    const where: any = { restaurantId };
+    const whereClause: any = { restaurantId };
     if (assetType) {
-      where.assetType = assetType;
+      whereClause.assetType = assetType;
     }
 
     return await prisma.brandAsset.findMany({
-      where,
+      where: whereClause,
       orderBy: [
         { isPrimary: 'desc' },
         { createdAt: 'desc' }
@@ -293,7 +533,7 @@ export const themingService = {
   },
 
   async setPrimaryBrandAsset(restaurantId: number, assetId: string, assetType: string) {
-    // First, remove primary status from all assets of this type
+    // First remove primary status from all assets of this type
     await prisma.brandAsset.updateMany({
       where: { 
         restaurantId,
@@ -315,57 +555,81 @@ export const themingService = {
     });
   },
 
-  // Predefined Color Schemes
-  async getPredefinedColorSchemes() {
-    return [
-      {
-        name: 'Classic Restaurant',
-        primaryColor: '#8B4513',
-        secondaryColor: '#D2691E',
-        accentColor: '#2F1B14',
-        backgroundColor: '#FFFEF7',
-        textColor: '#2F1B14'
-      },
-      {
-        name: 'Modern Minimalist',
-        primaryColor: '#2E2E2E',
-        secondaryColor: '#FFD700',
-        accentColor: '#4A4A4A',
-        backgroundColor: '#FFFFFF',
-        textColor: '#2E2E2E'
-      },
-      {
-        name: 'Mediterranean Blue',
-        primaryColor: '#1E3A8A',
-        secondaryColor: '#3B82F6',
-        accentColor: '#1E40AF',
-        backgroundColor: '#F8FAFC',
-        textColor: '#1E293B'
-      },
-      {
-        name: 'Warm Bistro',
-        primaryColor: '#DC2626',
-        secondaryColor: '#F59E0B',
-        accentColor: '#7C2D12',
-        backgroundColor: '#FEF3C7',
-        textColor: '#7C2D12'
-      },
-      {
-        name: 'Fresh Green',
-        primaryColor: '#059669',
-        secondaryColor: '#10B981',
-        accentColor: '#047857',
-        backgroundColor: '#F0FDF4',
-        textColor: '#064E3B'
-      },
-      {
-        name: 'Elegant Purple',
-        primaryColor: '#7C3AED',
-        secondaryColor: '#A855F7',
-        accentColor: '#5B21B6',
-        backgroundColor: '#FAF5FF',
-        textColor: '#4C1D95'
-      }
-    ];
+  // Google Fonts and Typography Utility Methods
+  async getGoogleFonts(): Promise<GoogleFont[]> {
+    return RESTAURANT_GOOGLE_FONTS;
+  },
+
+  async getFontPairings(fontFamily?: string): Promise<FontPairing[]> {
+    if (fontFamily) {
+      // Return pairings that include the specified font
+      return FONT_PAIRINGS.filter(pairing => 
+        pairing.heading === fontFamily || pairing.body === fontFamily
+      );
+    }
+    return FONT_PAIRINGS;
+  },
+
+  async getDefaultTypographyConfigs(): Promise<typeof DEFAULT_TYPOGRAPHY_CONFIGS> {
+    return DEFAULT_TYPOGRAPHY_CONFIGS;
+  },
+
+  async createDefaultTypographyConfig(restaurantId: number, style: keyof typeof DEFAULT_TYPOGRAPHY_CONFIGS) {
+    const config = DEFAULT_TYPOGRAPHY_CONFIGS[style];
+    if (!config) {
+      throw new Error(`Unknown typography style: ${style}`);
+    }
+
+    return await this.createTypographyConfig(restaurantId, config);
+  },
+
+  // Utility method to validate font combination accessibility
+  validateTypographyAccessibility(config: TypographyConfigData): {
+    isValid: boolean;
+    warnings: string[];
+    suggestions: string[];
+  } {
+    const warnings: string[] = [];
+    const suggestions: string[] = [];
+
+    // Check font size accessibility
+    const bodySize = parseFloat(config.fontSizes.body1);
+    if (bodySize < 1) {
+      warnings.push('Body text size is below 16px (1rem) - may not be accessible');
+      suggestions.push('Consider increasing body text size to at least 1rem (16px)');
+    }
+
+    // Check line height accessibility
+    if (config.lineHeights.body < 1.5) {
+      warnings.push('Body line height is below 1.5 - may not meet WCAG guidelines');
+      suggestions.push('Increase body line height to at least 1.5 for better readability');
+    }
+
+    // Check font pairing compatibility
+    const heading = RESTAURANT_GOOGLE_FONTS.find(f => f.family === config.headingFontFamily);
+    const body = RESTAURANT_GOOGLE_FONTS.find(f => f.family === config.bodyFontFamily);
+    
+    if (heading && body && heading.category === body.category) {
+      suggestions.push('Consider pairing serif and sans-serif fonts for better contrast');
+    }
+
+    return {
+      isValid: warnings.length === 0,
+      warnings,
+      suggestions
+    };
   }
-}; 
+};
+
+// Helper function to extract colors from uploaded images (placeholder)
+export async function extractColorsFromImage(imageUrl: string): Promise<string[]> {
+  // TODO: Implement actual color extraction using a service like Cloudinary or a color extraction library
+  // For now, return some sample colors
+  return [
+    '#8B4513', // Saddle Brown
+    '#DEB887', // Burlywood  
+    '#F4A460', // Sandy Brown
+    '#CD853F', // Peru
+    '#D2691E'  // Chocolate
+  ];
+} 

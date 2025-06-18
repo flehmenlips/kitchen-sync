@@ -3,8 +3,7 @@ import {
   themingService, 
   ColorPaletteData, 
   TypographyConfigData, 
-  BrandAssetData,
-  extractColorsFromImage 
+  BrandAssetData
 } from '../services/themingService';
 
 export const themingController = {
@@ -34,9 +33,8 @@ export const themingController = {
   async createColorPalette(req: Request, res: Response) {
     try {
       const restaurantId = parseInt(req.params.restaurantId);
-      const paletteData: ColorPaletteData = req.body;
-      
-      const palette = await themingService.createColorPalette(restaurantId, paletteData);
+      const data: ColorPaletteData = req.body;
+      const palette = await themingService.createColorPalette(restaurantId, data);
       res.status(201).json(palette);
     } catch (error) {
       console.error('Error creating color palette:', error);
@@ -47,9 +45,8 @@ export const themingController = {
   async updateColorPalette(req: Request, res: Response) {
     try {
       const paletteId = req.params.paletteId;
-      const updateData: Partial<ColorPaletteData> = req.body;
-      
-      const palette = await themingService.updateColorPalette(paletteId, updateData);
+      const data: Partial<ColorPaletteData> = req.body;
+      const palette = await themingService.updateColorPalette(paletteId, data);
       res.json(palette);
     } catch (error) {
       console.error('Error updating color palette:', error);
@@ -61,7 +58,6 @@ export const themingController = {
     try {
       const restaurantId = parseInt(req.params.restaurantId);
       const paletteId = req.params.paletteId;
-      
       const palette = await themingService.setActiveColorPalette(restaurantId, paletteId);
       res.json(palette);
     } catch (error) {
@@ -107,10 +103,18 @@ export const themingController = {
   async createTypographyConfig(req: Request, res: Response) {
     try {
       const restaurantId = parseInt(req.params.restaurantId);
-      const configData: TypographyConfigData = req.body;
+      const data: TypographyConfigData = req.body;
       
-      const config = await themingService.createTypographyConfig(restaurantId, configData);
-      res.status(201).json(config);
+      // Validate typography accessibility
+      const validation = themingService.validateTypographyAccessibility(data);
+      
+      const config = await themingService.createTypographyConfig(restaurantId, data);
+      
+      // Include validation results in response
+      res.status(201).json({
+        ...config,
+        validation
+      });
     } catch (error) {
       console.error('Error creating typography config:', error);
       res.status(500).json({ error: 'Failed to create typography config' });
@@ -120,10 +124,20 @@ export const themingController = {
   async updateTypographyConfig(req: Request, res: Response) {
     try {
       const configId = req.params.configId;
-      const updateData: Partial<TypographyConfigData> = req.body;
+      const data: Partial<TypographyConfigData> = req.body;
       
-      const config = await themingService.updateTypographyConfig(configId, updateData);
-      res.json(config);
+      // Validate typography accessibility if full config provided
+      let validation;
+      if (data.fontSizes && data.lineHeights && data.headingFontFamily && data.bodyFontFamily) {
+        validation = themingService.validateTypographyAccessibility(data as TypographyConfigData);
+      }
+      
+      const config = await themingService.updateTypographyConfig(configId, data);
+      
+      res.json({
+        ...config,
+        ...(validation && { validation })
+      });
     } catch (error) {
       console.error('Error updating typography config:', error);
       res.status(500).json({ error: 'Failed to update typography config' });
@@ -134,7 +148,6 @@ export const themingController = {
     try {
       const restaurantId = parseInt(req.params.restaurantId);
       const configId = req.params.configId;
-      
       const config = await themingService.setActiveTypographyConfig(restaurantId, configId);
       res.json(config);
     } catch (error) {
@@ -159,7 +172,6 @@ export const themingController = {
     try {
       const restaurantId = parseInt(req.params.restaurantId);
       const assetType = req.query.type as string;
-      
       const assets = await themingService.getBrandAssets(restaurantId, assetType);
       res.json(assets);
     } catch (error) {
@@ -171,9 +183,8 @@ export const themingController = {
   async createBrandAsset(req: Request, res: Response) {
     try {
       const restaurantId = parseInt(req.params.restaurantId);
-      const assetData: BrandAssetData = req.body;
-      
-      const asset = await themingService.createBrandAsset(restaurantId, assetData);
+      const data: BrandAssetData = req.body;
+      const asset = await themingService.createBrandAsset(restaurantId, data);
       res.status(201).json(asset);
     } catch (error) {
       console.error('Error creating brand asset:', error);
@@ -184,9 +195,8 @@ export const themingController = {
   async updateBrandAsset(req: Request, res: Response) {
     try {
       const assetId = req.params.assetId;
-      const updateData: Partial<BrandAssetData> = req.body;
-      
-      const asset = await themingService.updateBrandAsset(assetId, updateData);
+      const data: Partial<BrandAssetData> = req.body;
+      const asset = await themingService.updateBrandAsset(assetId, data);
       res.json(asset);
     } catch (error) {
       console.error('Error updating brand asset:', error);
@@ -199,7 +209,6 @@ export const themingController = {
       const restaurantId = parseInt(req.params.restaurantId);
       const assetId = req.params.assetId;
       const { assetType } = req.body;
-      
       const asset = await themingService.setPrimaryBrandAsset(restaurantId, assetId, assetType);
       res.json(asset);
     } catch (error) {
@@ -222,7 +231,106 @@ export const themingController = {
   // Utility Endpoints
   async getPredefinedColorSchemes(req: Request, res: Response) {
     try {
-      const schemes = await themingService.getPredefinedColorSchemes();
+      // Predefined color schemes for restaurants
+      const schemes = [
+        {
+          name: 'Classic Fine Dining',
+          primaryColor: '#8B4513',
+          secondaryColor: '#D2691E',
+          accentColor: '#2F1B14',
+          backgroundColor: '#FFFEF7',
+          textColor: '#2F1B14'
+        },
+        {
+          name: 'Modern Minimalist',
+          primaryColor: '#2E2E2E',
+          secondaryColor: '#FFD700',
+          accentColor: '#4A4A4A',
+          backgroundColor: '#FFFFFF',
+          textColor: '#2E2E2E'
+        },
+        {
+          name: 'Mediterranean Blue',
+          primaryColor: '#1E3A8A',
+          secondaryColor: '#3B82F6',
+          accentColor: '#1E40AF',
+          backgroundColor: '#F8FAFC',
+          textColor: '#1E293B'
+        },
+        {
+          name: 'Warm Bistro',
+          primaryColor: '#DC2626',
+          secondaryColor: '#F59E0B',
+          accentColor: '#7C2D12',
+          backgroundColor: '#FEF3C7',
+          textColor: '#7C2D12'
+        },
+        {
+          name: 'Fresh Garden',
+          primaryColor: '#059669',
+          secondaryColor: '#10B981',
+          accentColor: '#047857',
+          backgroundColor: '#F0FDF4',
+          textColor: '#064E3B'
+        },
+        {
+          name: 'Elegant Purple',
+          primaryColor: '#7C3AED',
+          secondaryColor: '#A855F7',
+          accentColor: '#5B21B6',
+          backgroundColor: '#FAF5FF',
+          textColor: '#4C1D95'
+        },
+        {
+          name: 'Rustic Brick',
+          primaryColor: '#B91C1C',
+          secondaryColor: '#DC2626',
+          accentColor: '#7F1D1D',
+          backgroundColor: '#FEF2F2',
+          textColor: '#7F1D1D'
+        },
+        {
+          name: 'Ocean Breeze',
+          primaryColor: '#0EA5E9',
+          secondaryColor: '#38BDF8',
+          accentColor: '#0284C7',
+          backgroundColor: '#F0F9FF',
+          textColor: '#0C4A6E'
+        },
+        {
+          name: 'Sunset Orange',
+          primaryColor: '#EA580C',
+          secondaryColor: '#FB923C',
+          accentColor: '#C2410C',
+          backgroundColor: '#FFF7ED',
+          textColor: '#9A3412'
+        },
+        {
+          name: 'Forest Green',
+          primaryColor: '#166534',
+          secondaryColor: '#22C55E',
+          accentColor: '#14532D',
+          backgroundColor: '#F0FDF4',
+          textColor: '#14532D'
+        },
+        {
+          name: 'Royal Gold',
+          primaryColor: '#D97706',
+          secondaryColor: '#F59E0B',
+          accentColor: '#92400E',
+          backgroundColor: '#FFFBEB',
+          textColor: '#78350F'
+        },
+        {
+          name: 'Vintage Wine',
+          primaryColor: '#7C2D12',
+          secondaryColor: '#DC2626',
+          accentColor: '#451A03',
+          backgroundColor: '#FEF2F2',
+          textColor: '#451A03'
+        }
+      ];
+      
       res.json(schemes);
     } catch (error) {
       console.error('Error fetching predefined color schemes:', error);
@@ -238,7 +346,16 @@ export const themingController = {
         return res.status(400).json({ error: 'Image URL is required' });
       }
       
-      const colors = await extractColorsFromImage(imageUrl);
+      // TODO: Implement actual color extraction
+      // For now, return sample colors based on common restaurant themes
+      const colors = [
+        '#8B4513', // Saddle Brown
+        '#DEB887', // Burlywood  
+        '#F4A460', // Sandy Brown
+        '#CD853F', // Peru
+        '#D2691E'  // Chocolate
+      ];
+      
       res.json({ colors });
     } catch (error) {
       console.error('Error extracting colors from image:', error);
@@ -246,56 +363,9 @@ export const themingController = {
     }
   },
 
-  // Google Fonts Integration (placeholder for future implementation)
   async getGoogleFonts(req: Request, res: Response) {
     try {
-      // TODO: Implement Google Fonts API integration
-      // For now, return a curated list of popular restaurant fonts
-      const fonts = [
-        {
-          family: 'Playfair Display',
-          category: 'serif',
-          variants: ['400', '400i', '700', '700i'],
-          popularity: 95,
-          pairing: ['Open Sans', 'Source Sans Pro', 'Lato']
-        },
-        {
-          family: 'Open Sans',
-          category: 'sans-serif',
-          variants: ['300', '400', '600', '700'],
-          popularity: 99,
-          pairing: ['Playfair Display', 'Merriweather', 'Lora']
-        },
-        {
-          family: 'Lora',
-          category: 'serif',
-          variants: ['400', '400i', '700', '700i'],
-          popularity: 85,
-          pairing: ['Open Sans', 'Source Sans Pro', 'Montserrat']
-        },
-        {
-          family: 'Montserrat',
-          category: 'sans-serif',
-          variants: ['300', '400', '500', '600', '700'],
-          popularity: 90,
-          pairing: ['Lora', 'Playfair Display', 'Crimson Text']
-        },
-        {
-          family: 'Roboto',
-          category: 'sans-serif',
-          variants: ['300', '400', '500', '700'],
-          popularity: 98,
-          pairing: ['Playfair Display', 'Merriweather', 'Lora']
-        },
-        {
-          family: 'Merriweather',
-          category: 'serif',
-          variants: ['300', '400', '700', '900'],
-          popularity: 80,
-          pairing: ['Open Sans', 'Source Sans Pro', 'Roboto']
-        }
-      ];
-      
+      const fonts = await themingService.getGoogleFonts();
       res.json(fonts);
     } catch (error) {
       console.error('Error fetching Google Fonts:', error);
@@ -305,24 +375,50 @@ export const themingController = {
 
   async getFontPairings(req: Request, res: Response) {
     try {
-      const { fontFamily } = req.query;
-      
-      // TODO: Implement intelligent font pairing algorithm
-      // For now, return predefined pairings
-      const pairings: Record<string, string[]> = {
-        'Playfair Display': ['Open Sans', 'Source Sans Pro', 'Lato', 'Roboto'],
-        'Open Sans': ['Playfair Display', 'Merriweather', 'Lora', 'Crimson Text'],
-        'Lora': ['Open Sans', 'Source Sans Pro', 'Montserrat', 'Roboto'],
-        'Montserrat': ['Lora', 'Playfair Display', 'Crimson Text', 'Merriweather'],
-        'Roboto': ['Playfair Display', 'Merriweather', 'Lora', 'Crimson Text'],
-        'Merriweather': ['Open Sans', 'Source Sans Pro', 'Roboto', 'Montserrat']
-      };
-      
-      const suggestions = pairings[fontFamily as string] || [];
-      res.json({ suggestions });
+      const fontFamily = req.query.fontFamily as string;
+      const pairings = await themingService.getFontPairings(fontFamily);
+      res.json({ suggestions: pairings });
     } catch (error) {
       console.error('Error fetching font pairings:', error);
       res.status(500).json({ error: 'Failed to fetch font pairings' });
+    }
+  },
+
+  async getDefaultTypographyConfigs(req: Request, res: Response) {
+    try {
+      const configs = await themingService.getDefaultTypographyConfigs();
+      res.json(configs);
+    } catch (error) {
+      console.error('Error fetching default typography configs:', error);
+      res.status(500).json({ error: 'Failed to fetch default typography configs' });
+    }
+  },
+
+  async createDefaultTypographyConfig(req: Request, res: Response) {
+    try {
+      const restaurantId = parseInt(req.params.restaurantId);
+      const { style } = req.body;
+      
+      if (!style) {
+        return res.status(400).json({ error: 'Typography style is required' });
+      }
+      
+      const config = await themingService.createDefaultTypographyConfig(restaurantId, style);
+      res.status(201).json(config);
+    } catch (error) {
+      console.error('Error creating default typography config:', error);
+      res.status(500).json({ error: 'Failed to create default typography config' });
+    }
+  },
+
+  async validateTypography(req: Request, res: Response) {
+    try {
+      const data: TypographyConfigData = req.body;
+      const validation = themingService.validateTypographyAccessibility(data);
+      res.json(validation);
+    } catch (error) {
+      console.error('Error validating typography:', error);
+      res.status(500).json({ error: 'Failed to validate typography' });
     }
   }
 }; 

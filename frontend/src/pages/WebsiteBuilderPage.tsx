@@ -100,6 +100,8 @@ import { buildRestaurantUrl } from '../utils/subdomain';
 import { SubdomainInfo } from '../components/SubdomainInfo';
 import TemplateSelector from '../components/TemplateSelector';
 import AdvancedColorPalette from '../components/AdvancedColorPalette';
+import AdvancedTypographySelector from '../components/AdvancedTypographySelector';
+import { themingService, ColorPalette, TypographyConfig } from '../services/themingService';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -1747,45 +1749,19 @@ const WebsiteBuilderPage: React.FC = () => {
             </Grid>
 
             <Grid item xs={12} sx={{ mt: 3 }}>
-              <Typography variant="h6" gutterBottom>Typography</Typography>
-              <Divider sx={{ mb: 2 }} />
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Primary Font</InputLabel>
-                <Select
-                  value={websiteData.settings.fontPrimary || 'Roboto, sans-serif'}
-                  onChange={(e) => handleSettingsChange('fontPrimary', e.target.value)}
-                  label="Primary Font"
-                >
-                  <MenuItem value="Roboto, sans-serif">Roboto</MenuItem>
-                  <MenuItem value="Open Sans, sans-serif">Open Sans</MenuItem>
-                  <MenuItem value="Lato, sans-serif">Lato</MenuItem>
-                  <MenuItem value="Montserrat, sans-serif">Montserrat</MenuItem>
-                  <MenuItem value="Playfair Display, serif">Playfair Display</MenuItem>
-                  <MenuItem value="Georgia, serif">Georgia</MenuItem>
-                  <MenuItem value="Merriweather, serif">Merriweather</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Secondary Font</InputLabel>
-                <Select
-                  value={websiteData.settings.fontSecondary || 'Playfair Display, serif'}
-                  onChange={(e) => handleSettingsChange('fontSecondary', e.target.value)}
-                  label="Secondary Font"
-                >
-                  <MenuItem value="Playfair Display, serif">Playfair Display</MenuItem>
-                  <MenuItem value="Georgia, serif">Georgia</MenuItem>
-                  <MenuItem value="Merriweather, serif">Merriweather</MenuItem>
-                  <MenuItem value="Roboto, sans-serif">Roboto</MenuItem>
-                  <MenuItem value="Open Sans, sans-serif">Open Sans</MenuItem>
-                  <MenuItem value="Lato, sans-serif">Lato</MenuItem>
-                  <MenuItem value="Montserrat, sans-serif">Montserrat</MenuItem>
-                </Select>
-              </FormControl>
+              <AdvancedTypographySelector
+                restaurantId={currentRestaurant?.id || 0}
+                onTypographyChange={(config) => {
+                  if (config) {
+                    handleSettingsChange('fontPrimary', config.headingFontFamily);
+                    handleSettingsChange('fontSecondary', config.bodyFontFamily);
+                  }
+                }}
+                currentFonts={{
+                  fontPrimary: websiteData.settings.fontPrimary,
+                  fontSecondary: websiteData.settings.fontSecondary
+                }}
+              />
             </Grid>
 
             <Grid item xs={12} sx={{ mt: 3 }}>

@@ -32,4 +32,9 @@ router.post('/extract-colors', themingController.extractColorsFromImage);
 router.get('/google-fonts', themingController.getGoogleFonts);
 router.get('/font-pairings', themingController.getFontPairings);
 
+// Typography Utility Routes
+router.get('/default-typography-configs', themingController.getDefaultTypographyConfigs);
+router.post('/restaurants/:restaurantId/default-typography-configs', themingController.createDefaultTypographyConfig);
+router.post('/validate-typography', themingController.validateTypography);
+
 export default router; 

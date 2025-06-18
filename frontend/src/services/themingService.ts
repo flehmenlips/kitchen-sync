@@ -66,6 +66,7 @@ export interface TypographyConfig {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  validation?: TypographyValidation;
 }
 
 export interface TypographyConfigData {
@@ -140,6 +141,14 @@ export interface GoogleFont {
   pairing: string[];
 }
 
+export interface FontPairing {
+  heading: string;
+  body: string;
+  category: string;
+  style: string;
+  description: string;
+}
+
 export interface PredefinedColorScheme {
   name: string;
   primaryColor: string;
@@ -147,6 +156,16 @@ export interface PredefinedColorScheme {
   accentColor: string;
   backgroundColor: string;
   textColor: string;
+}
+
+export interface TypographyValidation {
+  isValid: boolean;
+  warnings: string[];
+  suggestions: string[];
+}
+
+export interface DefaultTypographyConfigs {
+  [key: string]: TypographyConfigData;
 }
 
 export const themingService = {
@@ -254,10 +273,25 @@ export const themingService = {
     return response.data;
   },
 
-  async getFontPairings(fontFamily: string): Promise<string[]> {
-    const response = await api.get('/theming/font-pairings', {
-      params: { fontFamily }
-    });
+  async getFontPairings(fontFamily?: string): Promise<FontPairing[]> {
+    const params = fontFamily ? { fontFamily } : {};
+    const response = await api.get('/theming/font-pairings', { params });
     return response.data.suggestions;
+  },
+
+  // Typography Utility Methods
+  async getDefaultTypographyConfigs(): Promise<DefaultTypographyConfigs> {
+    const response = await api.get('/theming/default-typography-configs');
+    return response.data;
+  },
+
+  async createDefaultTypographyConfig(restaurantId: number, style: string): Promise<TypographyConfig> {
+    const response = await api.post(`/theming/restaurants/${restaurantId}/default-typography-configs`, { style });
+    return response.data;
+  },
+
+  async validateTypography(data: TypographyConfigData): Promise<TypographyValidation> {
+    const response = await api.post('/theming/validate-typography', data);
+    return response.data;
   }
 }; 
