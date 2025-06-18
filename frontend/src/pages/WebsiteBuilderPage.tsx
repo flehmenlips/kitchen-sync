@@ -92,6 +92,8 @@ import {
   BlockCreationData 
 } from '../services/websiteBuilderService';
 import ContentBlockEditor from '../components/ContentBlockEditor';
+import VisualBlockPalette from '../components/VisualBlockPalette';
+import VisualCanvas from '../components/VisualCanvas';
 import { useSnackbar } from '../context/SnackbarContext';
 import { useRestaurant } from '../context/RestaurantContext';
 import { buildRestaurantUrl } from '../utils/subdomain';
@@ -127,7 +129,7 @@ const WebsiteBuilderPage: React.FC = () => {
   const [editingBlockId, setEditingBlockId] = useState<number | null>(null);
   const [blockMenuAnchor, setBlockMenuAnchor] = useState<null | HTMLElement>(null);
   const [selectedBlockId, setSelectedBlockId] = useState<number | null>(null);
-  const [tabValue, setTabValue] = useState(0); // 0: Settings, 1: Pages, 2: Branding, 3: SEO, 4: Navigation
+  const [tabValue, setTabValue] = useState(0); // 0: Settings, 1: Pages, 2: Visual Editor, 3: Branding, 4: SEO, 5: Navigation
   const [hasChanges, setHasChanges] = useState(false);
   const [templateSelectorOpen, setTemplateSelectorOpen] = useState(false);
   const [pageDialogOpen, setPageDialogOpen] = useState(false);
@@ -502,7 +504,7 @@ const WebsiteBuilderPage: React.FC = () => {
       // Note: Don't set hasChanges for block updates since they're already saved individually
       // The main save button is only for website settings, not content blocks
       
-      // Only reset editingBlockId if we were in explicit edit mode
+      // Only reset editingBlockId if we were in explicit edit mode (manual save)
       if (editingBlockId) {
         setEditingBlockId(null);
         showSnackbar('Block updated successfully', 'success');
@@ -512,6 +514,54 @@ const WebsiteBuilderPage: React.FC = () => {
       if (editingBlockId) {
         showSnackbar('Failed to update block', 'error');
       }
+    }
+  };
+
+  // Separate handler for auto-save that never closes the editor
+  const handleAutoSaveBlock = async (blockData: Partial<WBBlock>) => {
+    const blockId = editingBlockId || blockData.id;
+    if (!selectedPage || !blockId) return;
+
+    try {
+      const updatedBlock = await websiteBuilderService.updateContentBlock(
+        selectedPage.slug,
+        blockId,
+        blockData
+      );
+
+      // Update the block in local state
+      setWebsiteData(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          pages: prev.pages.map(page =>
+            page.slug === selectedPage.slug
+              ? {
+                  ...page,
+                  blocks: page.blocks.map(block =>
+                    block.id === blockId ? updatedBlock : block
+                  )
+                }
+              : page
+          )
+        };
+      });
+
+      // Update selected page
+      setSelectedPage(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          blocks: prev.blocks.map(block =>
+            block.id === blockId ? updatedBlock : block
+          )
+        };
+      });
+
+      // Auto-save: Never close the editor, no notifications
+    } catch (error) {
+      console.error('Auto-save failed:', error);
+      // Silently fail auto-save to not interrupt user experience
     }
   };
 
@@ -864,6 +914,179 @@ const WebsiteBuilderPage: React.FC = () => {
     }
   };
 
+  // Visual Canvas Handlers
+  const handleVisualBlockAdd = async (blockType: string, position: number) => {
+    if (!selectedPage) {
+      showSnackbar('Please select a page first', 'error');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      
+      // Create new block data
+      const newBlockData: BlockCreationData = {
+        blockType: blockType,
+        title: getDefaultBlockTitle(blockType),
+        content: getDefaultBlockContent(blockType)
+      };
+
+      // Calculate display order based on position
+      const pageBlocks = selectedPage.blocks || [];
+      const sortedBlocks = [...pageBlocks].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+      
+      let displayOrder = 0;
+      if (position === 0) {
+        // Insert at beginning
+        displayOrder = sortedBlocks.length > 0 ? (sortedBlocks[0].displayOrder || 0) - 1 : 0;
+      } else if (position >= sortedBlocks.length) {
+        // Insert at end
+        displayOrder = sortedBlocks.length > 0 ? (sortedBlocks[sortedBlocks.length - 1].displayOrder || 0) + 1 : 0;
+      } else {
+        // Insert between blocks
+        const prevOrder = sortedBlocks[position - 1]?.displayOrder || 0;
+        const nextOrder = sortedBlocks[position]?.displayOrder || 0;
+        displayOrder = (prevOrder + nextOrder) / 2;
+      }
+
+      await websiteBuilderService.createContentBlock(selectedPage.slug, newBlockData);
+
+      await fetchWebsiteData();
+      showSnackbar(`Added ${blockType} block successfully`, 'success');
+    } catch (error) {
+      console.error('Failed to add block:', error);
+      showSnackbar('Failed to add block', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleVisualBlockDuplicate = async (block: WBBlock) => {
+    if (!selectedPage) return;
+
+    try {
+      setSaving(true);
+      
+      const duplicateData: BlockCreationData = {
+        blockType: block.blockType,
+        title: block.title ? `${block.title} (Copy)` : '',
+        content: block.content || '',
+        imageUrl: block.imageUrl,
+        buttonText: block.buttonText,
+        buttonLink: block.buttonLink
+      };
+
+      await websiteBuilderService.createContentBlock(selectedPage.slug, duplicateData);
+      await fetchWebsiteData();
+      showSnackbar('Block duplicated successfully', 'success');
+    } catch (error) {
+      console.error('Failed to duplicate block:', error);
+      showSnackbar('Failed to duplicate block', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleVisualBlockMove = async (blockId: number, direction: 'up' | 'down') => {
+    if (!selectedPage) return;
+
+    try {
+      setSaving(true);
+      
+      const pageBlocks = selectedPage.blocks || [];
+      const sortedBlocks = [...pageBlocks].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+      const blockIndex = sortedBlocks.findIndex(b => b.id === blockId);
+      
+      if (blockIndex === -1) return;
+      
+      let newDisplayOrder: number;
+      
+      if (direction === 'up' && blockIndex > 0) {
+        // Move up (swap with previous block)
+        const prevBlock = sortedBlocks[blockIndex - 1];
+        newDisplayOrder = prevBlock.displayOrder || 0;
+        
+        // Update the previous block to take current block's position
+        await websiteBuilderService.updateContentBlock(selectedPage.slug, prevBlock.id, {
+          displayOrder: sortedBlocks[blockIndex].displayOrder || 0
+        });
+      } else if (direction === 'down' && blockIndex < sortedBlocks.length - 1) {
+        // Move down (swap with next block)
+        const nextBlock = sortedBlocks[blockIndex + 1];
+        newDisplayOrder = nextBlock.displayOrder || 0;
+        
+        // Update the next block to take current block's position
+        await websiteBuilderService.updateContentBlock(selectedPage.slug, nextBlock.id, {
+          displayOrder: sortedBlocks[blockIndex].displayOrder || 0
+        });
+      } else {
+        return; // Can't move further
+      }
+      
+      // Update current block's position
+      await websiteBuilderService.updateContentBlock(selectedPage.slug, blockId, {
+        displayOrder: newDisplayOrder
+      });
+      
+      await fetchWebsiteData();
+      showSnackbar(`Block moved ${direction} successfully`, 'success');
+    } catch (error) {
+      console.error('Failed to move block:', error);
+      showSnackbar('Failed to move block', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Helper functions for default block content
+  const getDefaultBlockTitle = (blockType: string): string => {
+    switch (blockType) {
+      case 'hero': return 'Welcome to Our Restaurant';
+      case 'features': return 'Our Features';
+      case 'text': return 'Text Content';
+      case 'contact': return 'Contact Information';
+      case 'hours': return 'Opening Hours';
+      case 'image': return 'Image';
+      case 'gallery': return 'Photo Gallery';
+      case 'button': return 'Click Here';
+      case 'cta': return 'Special Offer';
+      case 'map': return 'Find Us';
+      case 'menu_preview': return 'Our Menu';
+      default: return 'New Block';
+    }
+  };
+
+  const getDefaultBlockContent = (blockType: string): string => {
+    switch (blockType) {
+      case 'hero': return 'Experience amazing food and great atmosphere at our restaurant.';
+      case 'features': return 'Discover what makes us special.';
+      case 'text': return 'Add your content here...';
+      case 'contact': return 'Get in touch with us for reservations and inquiries.';
+      case 'hours': return 'Visit us during our opening hours.';
+      case 'image': return 'Upload an image to showcase your content.';
+      case 'gallery': return 'A collection of beautiful photos.';
+      case 'button': return 'Learn More';
+      case 'cta': return 'Don\'t miss our special offers and events!';
+      case 'map': return 'Visit our restaurant location.';
+      case 'menu_preview': return 'Check out our delicious menu items.';
+      default: return 'New content block';
+    }
+  };
+
+  // Page selection handler for Visual Canvas
+  const handleVisualPageSelect = (pageSlug: string) => {
+    if (!websiteData) return;
+    const page = websiteData.pages.find(p => p.slug === pageSlug);
+    if (page) {
+      setSelectedPage(page);
+    }
+  };
+
+  // Visual Canvas edit handler
+  const handleVisualBlockEdit = (block: WBBlock) => {
+    setEditingBlockId(block.id);
+  };
+
   if (loading) {
     return (
       <Container maxWidth="lg">
@@ -876,16 +1099,16 @@ const WebsiteBuilderPage: React.FC = () => {
 
   if (!websiteData) {
     return (
-      <Container maxWidth="lg">
+      <Box sx={{ width: '100%', px: { xs: 2, sm: 3, md: 4 } }}>
         <Alert severity="error">Failed to load website data</Alert>
-      </Container>
+      </Box>
     );
   }
 
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
   return (
-    <Container maxWidth="lg">
+    <Box sx={{ width: '100%', px: { xs: 2, sm: 3, md: 4 } }}>
       {/* Show subdomain info in development */}
       {process.env.NODE_ENV === 'development' && <SubdomainInfo />}
       
@@ -952,6 +1175,7 @@ const WebsiteBuilderPage: React.FC = () => {
         <Tabs value={tabValue} onChange={handleTabChange}>
           <Tab icon={<SettingsIcon />} label="Settings" />
           <Tab icon={<PagesIcon />} label="Pages" />
+          <Tab icon={<DragHandleIcon />} label="Visual Editor" />
           <Tab icon={<PaletteIcon />} label="Branding" />
           <Tab icon={<SeoIcon />} label="SEO" />
           <Tab icon={<MenuIcon />} label="Navigation" />
@@ -1248,6 +1472,7 @@ const WebsiteBuilderPage: React.FC = () => {
                             key={block.id}
                             block={block}
                             onSave={handleSaveBlock}
+                            onAutoSave={handleAutoSaveBlock}
                             onDelete={() => handleDeleteBlock(block.id)}
                             onPostCreateImageUpload={handlePostCreateImageUpload}
                             isEditing={editingBlockId === block.id}
@@ -1294,8 +1519,94 @@ const WebsiteBuilderPage: React.FC = () => {
           </Grid>
         </TabPanel>
 
-        {/* Branding Tab - Website Branding, Theme Colors, Typography */}
+        {/* Visual Editor Tab - Visual Content Block Editor */}
         <TabPanel value={tabValue} index={2}>
+          <Box sx={{ display: 'flex', gap: 2, height: 'calc(100vh - 200px)' }}>
+            {/* Block Palette Sidebar */}
+            <VisualBlockPalette 
+              onBlockDrop={(blockType, category) => {
+                console.log(`Dropped ${blockType} from ${category} category`);
+                // This will be handled by the VisualCanvas drop zones
+              }}
+            />
+            
+            {/* Visual Canvas */}
+            <Box sx={{ flex: 1, position: 'relative' }}>
+              <VisualCanvas
+                pageBlocks={selectedPage?.blocks || []}
+                onBlockAdd={handleVisualBlockAdd}
+                onBlockEdit={handleVisualBlockEdit}
+                onBlockDelete={handleDeleteBlock}
+                onBlockDuplicate={handleVisualBlockDuplicate}
+                onBlockMove={handleVisualBlockMove}
+                selectedPageId={selectedPage?.id ? parseInt(selectedPage.id) : undefined}
+                availablePages={websiteData?.pages || []}
+                selectedPageSlug={selectedPage?.slug}
+                onSave={async () => {
+                  // Trigger a data refresh to save any pending changes
+                  await fetchWebsiteData();
+                  showSnackbar('Changes saved successfully', 'success');
+                }}
+                isLoading={saving}
+                onPageSelect={handleVisualPageSelect}
+                onImageUpload={handlePostCreateImageUpload}
+                restaurantSlug={currentRestaurant?.slug}
+                onAutoSave={handleAutoSaveBlock}
+              />
+              
+              {/* Block Editor Overlay - appears when editing a block */}
+              {editingBlockId && selectedPage && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    bgcolor: 'rgba(0, 0, 0, 0.5)',
+                    zIndex: 1000,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    p: 2
+                  }}
+                >
+                  <Paper
+                    sx={{
+                      maxWidth: '90vw',
+                      maxHeight: '90vh',
+                      overflow: 'auto',
+                      p: 2,
+                      minWidth: 600
+                    }}
+                  >
+                    {(() => {
+                      const editingBlock = selectedPage.blocks.find(b => b.id === editingBlockId);
+                      return editingBlock ? (
+                        <ContentBlockEditor
+                          block={editingBlock}
+                          onSave={handleSaveBlock}
+                          onAutoSave={handleAutoSaveBlock}
+                          onDelete={() => handleDeleteBlock(editingBlock.id)}
+                          onPostCreateImageUpload={handlePostCreateImageUpload}
+                          isEditing={true}
+                          setIsEditing={(editing) => {
+                            if (!editing) {
+                              setEditingBlockId(null);
+                            }
+                          }}
+                        />
+                      ) : null;
+                    })()}
+                  </Paper>
+                </Box>
+              )}
+            </Box>
+          </Box>
+        </TabPanel>
+
+        {/* Branding Tab - Website Branding, Theme Colors, Typography */}
+        <TabPanel value={tabValue} index={3}>
           <Grid container spacing={3}>
             <Grid item xs={12}>
               <Typography variant="h6" gutterBottom>Website Branding</Typography>
@@ -1499,7 +1810,7 @@ const WebsiteBuilderPage: React.FC = () => {
         </TabPanel>
 
         {/* SEO Tab - Social Media, Footer, SEO Settings */}
-        <TabPanel value={tabValue} index={3}>
+        <TabPanel value={tabValue} index={4}>
           <Grid container spacing={3}>
             <Grid item xs={12}>
               <Typography variant="h6" gutterBottom>Social Media</Typography>
@@ -1678,7 +1989,7 @@ const WebsiteBuilderPage: React.FC = () => {
         </TabPanel>
 
         {/* Navigation Tab - Menu Customization */}
-        <TabPanel value={tabValue} index={4}>
+        <TabPanel value={tabValue} index={5}>
           <Grid container spacing={3}>
             <Grid item xs={12}>
               <Typography variant="h6" gutterBottom>Navigation Layout</Typography>
@@ -2317,7 +2628,7 @@ const WebsiteBuilderPage: React.FC = () => {
           setTemplateSelectorOpen(false);
         }}
       />
-    </Container>
+    </Box>
   );
 };
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, Button, Stack, Container, Paper, Grid } from '@mui/material';
+import { Box, Typography, Button, Stack, Paper, Grid } from '@mui/material';
 import { Link as RouterLink, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext'; // Import useAuth hook
 import AddIcon from '@mui/icons-material/Add';
@@ -47,7 +47,7 @@ const DashboardPage: React.FC = () => {
   }, []);
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 2 }}>
+    <Box sx={{ width: '100%', px: { xs: 2, sm: 3, md: 4 }, mt: 2 }}>
       {/* Welcome Card that stands out more */}
       <Paper 
         elevation={3} 
@@ -162,7 +162,7 @@ const DashboardPage: React.FC = () => {
         {/* Main Content Area Removed/Merged */}
         {/* <Grid item xs={12} md={8}> ... </Grid> */}
       </Grid>
-    </Container>
+    </Box>
   );
 };
 

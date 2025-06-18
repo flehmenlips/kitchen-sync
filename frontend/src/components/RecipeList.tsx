@@ -206,7 +206,7 @@ const RecipeList: React.FC = () => {
   }
 
   return (
-    <Box sx={{ width: '100%', maxWidth: 800, margin: 'auto', mt: 2 }}> {/* Basic container */} 
+    <Box sx={{ width: '100%', px: { xs: 2, sm: 3, md: 4 }, mt: 2 }}> {/* Full width responsive container */} 
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h4" component="h2">
           Recipes

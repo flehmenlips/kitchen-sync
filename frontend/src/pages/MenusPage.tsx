@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { getMenus, Menu, deleteMenu, archiveMenu, duplicateMenu } from '../services/apiService';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
-  Box, Container, Typography, Button, Card, CardContent, CardActions, 
+  Box, Typography, Button, Card, CardContent, CardActions, 
   Grid, IconButton, Dialog, DialogActions, DialogContent, 
   DialogContentText, DialogTitle, Chip, CircularProgress, CardMedia,
   Paper, CardHeader, Tooltip, Divider, Avatar
@@ -191,7 +191,7 @@ const MenusPage: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 6 }}>
+    <Box sx={{ width: '100%', px: { xs: 2, sm: 3, md: 4 }, mt: 4, mb: 6 }}>
       <Box 
         sx={{ 
           display: 'flex', 
@@ -460,7 +460,7 @@ const MenusPage: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Container>
+    </Box>
   );
 };
 

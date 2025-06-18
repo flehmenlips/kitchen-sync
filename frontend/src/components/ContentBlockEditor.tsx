@@ -34,6 +34,7 @@ import { WBBlock } from '../services/websiteBuilderService';
 interface ContentBlockEditorProps {
   block: WBBlock;
   onSave: (blockData: Partial<WBBlock>) => Promise<void>;
+  onAutoSave?: (blockData: Partial<WBBlock>) => Promise<void>;
   onDelete: () => void;
   onCancel?: () => void;
   isEditing?: boolean;
@@ -99,6 +100,7 @@ const quillFormats = [
 const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
   block,
   onSave,
+  onAutoSave,
   onDelete,
   onCancel,
   isEditing = false,
@@ -138,15 +140,23 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
       setAutoSaving(true);
       // Ensure the block ID is included in the data for auto-save
       const dataWithId = { ...data, id: block.id };
-      await onSave(dataWithId);
+      
+      // Use dedicated auto-save handler if available, otherwise use regular save
+      if (onAutoSave) {
+        await onAutoSave(dataWithId);
+      } else {
+        await onSave(dataWithId);
+      }
+      
       setLastSaved(new Date());
+      // NOTE: Auto-save should never close the editor
     } catch (error) {
       console.error('Auto-save failed:', error);
       // Don't show error for auto-save failures to avoid interrupting user
     } finally {
       setAutoSaving(false);
     }
-  }, [editMode, saving, onSave, block.id]);
+  }, [editMode, saving, onSave, onAutoSave, block.id]);
 
   // Debounced auto-save
   const scheduleAutoSave = useCallback((data: Partial<WBBlock>) => {

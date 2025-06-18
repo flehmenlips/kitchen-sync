@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Container,
   Box,
   Tabs,
   Tab,
@@ -57,7 +56,7 @@ const AdminDashboard: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+    <Box sx={{ width: '100%', px: { xs: 2, sm: 3, md: 4 }, mt: 4, mb: 4 }}>
       <Box sx={{ mb: 4 }}>
         <Typography variant="h3" component="h1" gutterBottom>
           Admin Dashboard
@@ -108,7 +107,7 @@ const AdminDashboard: React.FC = () => {
           <StaffManagement />
         </TabPanel>
       </Paper>
-    </Container>
+    </Box>
   );
 };
 

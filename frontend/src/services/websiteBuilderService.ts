@@ -102,6 +102,16 @@ export interface WBBlock {
   buttonLink?: string;
   buttonStyle?: string;
   settings?: any;
+  styles?: {
+    backgroundColor?: string;
+    borderWidth?: string;
+    borderStyle?: string;
+    borderColor?: string;
+    borderRadius?: string;
+    boxShadow?: string;
+    padding?: string;
+    margin?: string;
+  };
   displayOrder: number;
   isActive: boolean;
 }

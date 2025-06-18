@@ -162,11 +162,11 @@ const BillingPage: React.FC = () => {
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Box sx={{ width: '100%', px: { xs: 2, sm: 3, md: 4 }, mt: 4, mb: 4 }}>
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
           <CircularProgress />
         </Box>
-      </Container>
+      </Box>
     );
   }
 
@@ -177,7 +177,7 @@ const BillingPage: React.FC = () => {
     : null;
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <Box sx={{ width: '100%', px: { xs: 2, sm: 3, md: 4 }, mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom>
         Billing & Subscription
       </Typography>
@@ -427,7 +427,7 @@ const BillingPage: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Container>
+    </Box>
   );
 };
 
