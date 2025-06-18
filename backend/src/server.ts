@@ -26,6 +26,7 @@ import subscriptionRoutes from './routes/subscriptionRoutes'; // Import subscrip
 import templateRoutes from './routes/templateRoutes'; // Import template routes
 import pageRoutes from './routes/pageRoutes'; // Import page routes
 import websiteBuilderRoutes from './routes/websiteBuilderRoutes'; // Import website builder routes
+import themingRoutes from './routes/themingRoutes'; // Import theming routes
 import { Request, Response, NextFunction } from 'express';
 import { protect } from './middleware/authMiddleware';
 import { setRestaurantContext } from './middleware/restaurantContext';
@@ -147,6 +148,7 @@ app.use('/api/website-builder', websiteBuilderRoutes); // Mount website builder 
 app.use('/api/admin', adminRoutes); // Mount admin routes
 app.use('/api/platform', platformRoutes); // Mount platform routes
 app.use('/api/templates', templateRoutes); // Mount template routes
+app.use('/api/theming', themingRoutes); // Mount theming routes
 
 // Serve static files ONLY for non-API routes (AFTER API routes)
 app.use((req, res, next) => {

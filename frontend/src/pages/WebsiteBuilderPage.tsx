@@ -99,6 +99,7 @@ import { useRestaurant } from '../context/RestaurantContext';
 import { buildRestaurantUrl } from '../utils/subdomain';
 import { SubdomainInfo } from '../components/SubdomainInfo';
 import TemplateSelector from '../components/TemplateSelector';
+import AdvancedColorPalette from '../components/AdvancedColorPalette';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -1664,9 +1665,33 @@ const WebsiteBuilderPage: React.FC = () => {
               </Box>
             </Grid>
 
+            {/* Advanced Color Palette System */}
             <Grid item xs={12} sx={{ mt: 3 }}>
-              <Typography variant="h6" gutterBottom>Theme Colors</Typography>
+              <AdvancedColorPalette
+                restaurantId={currentRestaurant?.id || 0}
+                currentColors={{
+                  primaryColor: websiteData.settings.primaryColor,
+                  secondaryColor: websiteData.settings.secondaryColor,
+                  accentColor: websiteData.settings.accentColor
+                }}
+                onPaletteChange={(palette) => {
+                  if (palette) {
+                    // Update website settings with selected palette colors
+                    handleSettingsChange('primaryColor', palette.primaryColor);
+                    handleSettingsChange('secondaryColor', palette.secondaryColor);
+                    handleSettingsChange('accentColor', palette.accentColor);
+                  }
+                }}
+              />
+            </Grid>
+
+            {/* Basic Color Controls (kept for manual adjustments) */}
+            <Grid item xs={12} sx={{ mt: 3 }}>
+              <Typography variant="h6" gutterBottom>Manual Color Adjustments</Typography>
               <Divider sx={{ mb: 2 }} />
+              <Alert severity="info" sx={{ mb: 2 }}>
+                These controls allow fine-tuning of individual colors. For comprehensive color schemes, use the Advanced Color Palettes above.
+              </Alert>
             </Grid>
 
             <Grid item xs={12} md={4}>
