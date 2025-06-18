@@ -23,6 +23,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { customerAuthService, RegisterData } from '../../services/customerAuthService';
+import { useMobileResponsive, mobileResponsiveStyles } from '../../utils/mobileUtils';
 
 interface CustomerRegisterFormProps {
   onSuccess?: () => void;
@@ -30,6 +31,7 @@ interface CustomerRegisterFormProps {
 
 export const CustomerRegisterForm: React.FC<CustomerRegisterFormProps> = ({ onSuccess }) => {
   const navigate = useNavigate();
+  const { isMobile } = useMobileResponsive();
   const [formData, setFormData] = useState<RegisterData>({
     email: '',
     password: '',
@@ -123,13 +125,33 @@ export const CustomerRegisterForm: React.FC<CustomerRegisterFormProps> = ({ onSu
   };
 
   return (
-    <Paper elevation={3} sx={{ p: 4, maxWidth: 500, mx: 'auto' }}>
+    <Paper 
+      elevation={3} 
+      sx={{
+        ...mobileResponsiveStyles.card(isMobile),
+        maxWidth: isMobile ? '100%' : 500,
+        mx: isMobile ? 0 : 'auto',
+        p: isMobile ? 3 : 4,
+      }}
+    >
       <Box component="form" onSubmit={handleSubmit} noValidate>
-        <Typography variant="h4" component="h1" gutterBottom align="center">
+        <Typography 
+          variant={isMobile ? "h5" : "h4"} 
+          component="h1" 
+          gutterBottom 
+          align="center"
+          sx={mobileResponsiveStyles.typography.h4}
+        >
           Create Account
         </Typography>
         
-        <Typography variant="body2" color="text.secondary" align="center" mb={3}>
+        <Typography 
+          variant="body2" 
+          color="text.secondary" 
+          align="center" 
+          mb={3}
+          sx={mobileResponsiveStyles.typography.body2}
+        >
           Join Seabreeze Kitchen for easy online reservations
         </Typography>
 
@@ -148,6 +170,7 @@ export const CustomerRegisterForm: React.FC<CustomerRegisterFormProps> = ({ onSu
           helperText={fieldErrors.name}
           margin="normal"
           required
+          sx={mobileResponsiveStyles.textField(isMobile)}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -167,6 +190,7 @@ export const CustomerRegisterForm: React.FC<CustomerRegisterFormProps> = ({ onSu
           helperText={fieldErrors.email}
           margin="normal"
           required
+          sx={mobileResponsiveStyles.textField(isMobile)}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -184,6 +208,7 @@ export const CustomerRegisterForm: React.FC<CustomerRegisterFormProps> = ({ onSu
           error={!!fieldErrors.phone}
           helperText={fieldErrors.phone || 'Optional - for reservation confirmations'}
           margin="normal"
+          sx={mobileResponsiveStyles.textField(isMobile)}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -203,6 +228,7 @@ export const CustomerRegisterForm: React.FC<CustomerRegisterFormProps> = ({ onSu
           helperText={fieldErrors.password || 'At least 8 characters'}
           margin="normal"
           required
+          sx={mobileResponsiveStyles.textField(isMobile)}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -214,6 +240,7 @@ export const CustomerRegisterForm: React.FC<CustomerRegisterFormProps> = ({ onSu
                 <IconButton
                   onClick={() => setShowPassword(!showPassword)}
                   edge="end"
+                  sx={mobileResponsiveStyles.iconButton(isMobile)}
                 >
                   {showPassword ? <VisibilityOff /> : <Visibility />}
                 </IconButton>
@@ -233,6 +260,7 @@ export const CustomerRegisterForm: React.FC<CustomerRegisterFormProps> = ({ onSu
           }}
           margin="normal"
           required
+          sx={mobileResponsiveStyles.textField(isMobile)}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -244,6 +272,7 @@ export const CustomerRegisterForm: React.FC<CustomerRegisterFormProps> = ({ onSu
                 <IconButton
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   edge="end"
+                  sx={mobileResponsiveStyles.iconButton(isMobile)}
                 >
                   {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
                 </IconButton>
@@ -261,10 +290,11 @@ export const CustomerRegisterForm: React.FC<CustomerRegisterFormProps> = ({ onSu
                 setError(null);
               }}
               color="primary"
+              sx={mobileResponsiveStyles.iconButton(isMobile)}
             />
           }
           label={
-            <Typography variant="body2">
+            <Typography variant="body2" sx={mobileResponsiveStyles.typography.body2}>
               I accept the{' '}
               <Link href="/terms" target="_blank">
                 Terms and Conditions
@@ -282,9 +312,13 @@ export const CustomerRegisterForm: React.FC<CustomerRegisterFormProps> = ({ onSu
           type="submit"
           fullWidth
           variant="contained"
-          size="large"
+          size={isMobile ? "large" : "large"}
           disabled={loading}
-          sx={{ mt: 2, mb: 2 }}
+          sx={{
+            ...mobileResponsiveStyles.button(isMobile),
+            mt: 2,
+            mb: 2,
+          }}
         >
           {loading ? <CircularProgress size={24} /> : 'Create Account'}
         </Button>

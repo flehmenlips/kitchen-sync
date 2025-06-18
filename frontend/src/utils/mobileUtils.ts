@@ -128,6 +128,19 @@ export const mobileResponsiveStyles = {
         fontSize: { xs: '0.85rem', sm: '0.875rem' },
       },
     },
+    // Mobile card layout for tables
+    mobileCard: (isMobile: boolean) => ({
+      display: isMobile ? 'block' : 'none',
+      '& .MuiCard-root': {
+        mb: 2,
+        p: 2,
+        borderRadius: MOBILE_CONSTANTS.MOBILE_BORDER_RADIUS,
+      }
+    }),
+    // Hide table on mobile
+    desktopTable: (isMobile: boolean) => ({
+      display: isMobile ? 'none' : 'block',
+    }),
   },
   
   // Navigation styles

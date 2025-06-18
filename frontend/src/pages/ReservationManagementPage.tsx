@@ -24,7 +24,11 @@ import {
   DialogContent,
   DialogActions,
   Tooltip,
-  Alert
+  Alert,
+  Card,
+  CardContent,
+  Stack,
+  Divider
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -41,6 +45,7 @@ import {
 import { format, parseISO } from 'date-fns';
 import { reservationService, Reservation, ReservationStatus } from '../services/reservationService';
 import { useSnackbar } from '../context/SnackbarContext';
+import { useMobileResponsive, mobileResponsiveStyles } from '../utils/mobileUtils';
 
 // Reservation form dialog
 interface ReservationFormDialogProps {
@@ -223,13 +228,14 @@ const ReservationFormDialog: React.FC<ReservationFormDialogProps> = ({
 };
 
 const ReservationManagementPage: React.FC = () => {
-  const { showSnackbar } = useSnackbar();
+  const { isMobile } = useMobileResponsive();
   const [reservations, setReservations] = useState<Reservation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState('');  // Empty means show all dates
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [formDialogOpen, setFormDialogOpen] = useState(false);
-  const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingReservation, setEditingReservation] = useState<Reservation | null>(null);
+  const [selectedDate, setSelectedDate] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const { showSnackbar } = useSnackbar();
 
   const fetchReservations = async () => {
     setLoading(true);
@@ -251,8 +257,8 @@ const ReservationManagementPage: React.FC = () => {
   }, [selectedDate, statusFilter]);
 
   const handleEdit = (reservation: Reservation) => {
-    setSelectedReservation(reservation);
-    setFormDialogOpen(true);
+    setEditingReservation(reservation);
+    setDialogOpen(true);
   };
 
   const handleDelete = async (id: number) => {
@@ -293,6 +299,111 @@ const ReservationManagementPage: React.FC = () => {
       .reduce((sum, r) => sum + r.partySize, 0);
   };
 
+  // Mobile card layout for reservations
+  const renderMobileCard = (reservation: Reservation) => (
+    <Card key={reservation.id} sx={mobileResponsiveStyles.card(isMobile)}>
+      <CardContent>
+        <Stack spacing={2}>
+          {/* Header with customer name and time */}
+          <Box display="flex" justifyContent="space-between" alignItems="flex-start">
+            <Box>
+              <Typography variant="h6" component="div" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+                {reservation.customerName}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
+                <TimeIcon fontSize="small" sx={{ mr: 0.5 }} />
+                {reservation.reservationTime}
+              </Typography>
+            </Box>
+            <Chip
+              icon={<GroupIcon />}
+              label={`${reservation.partySize} ${reservation.partySize === 1 ? 'Guest' : 'Guests'}`}
+              size="small"
+              variant="outlined"
+            />
+          </Box>
+
+          <Divider />
+
+          {/* Contact information */}
+          <Stack spacing={1}>
+            {reservation.customerEmail && (
+              <Box display="flex" alignItems="center">
+                <EmailIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
+                <Typography variant="body2">{reservation.customerEmail}</Typography>
+              </Box>
+            )}
+            {reservation.customerPhone && (
+              <Box display="flex" alignItems="center">
+                <PhoneIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
+                <Typography variant="body2">{reservation.customerPhone}</Typography>
+              </Box>
+            )}
+          </Stack>
+
+          {/* Status and notes */}
+          <Box>
+            <FormControl fullWidth size="small" sx={{ mb: 1 }}>
+              <InputLabel>Status</InputLabel>
+              <Select
+                value={reservation.status}
+                onChange={(e) => handleStatusChange(reservation.id, e.target.value as ReservationStatus)}
+                label="Status"
+              >
+                {Object.values(ReservationStatus).map(status => (
+                  <MenuItem key={status} value={status}>
+                    <Chip 
+                      label={status} 
+                      size="small" 
+                      color={getStatusColor(status) as any}
+                      sx={{ minWidth: 100 }}
+                    />
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            
+            {reservation.notes && (
+              <Typography variant="body2" color="text.secondary" sx={{ 
+                fontStyle: 'italic',
+                p: 1,
+                bgcolor: 'grey.50',
+                borderRadius: 1,
+                border: '1px solid',
+                borderColor: 'grey.200'
+              }}>
+                "{reservation.notes}"
+              </Typography>
+            )}
+          </Box>
+
+          {/* Actions */}
+          <Box display="flex" gap={1} justifyContent="flex-end">
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<EditIcon />}
+              onClick={() => handleEdit(reservation)}
+              sx={mobileResponsiveStyles.button(isMobile)}
+            >
+              Edit
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              size="small"
+              startIcon={<DeleteIcon />}
+              onClick={() => handleDelete(reservation.id)}
+              sx={mobileResponsiveStyles.button(isMobile)}
+            >
+              Delete
+            </Button>
+          </Box>
+        </Stack>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <Container maxWidth="lg">
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
@@ -301,8 +412,8 @@ const ReservationManagementPage: React.FC = () => {
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => {
-            setSelectedReservation(null);
-            setFormDialogOpen(true);
+            setEditingReservation(null);
+            setDialogOpen(true);
           }}
         >
           New Reservation
@@ -360,9 +471,9 @@ const ReservationManagementPage: React.FC = () => {
         </Grid>
       </Paper>
 
-      {/* Reservations Table */}
-      <TableContainer component={Paper}>
-        <Table>
+      {/* Reservations Table - Desktop */}
+      <TableContainer component={Paper} sx={mobileResponsiveStyles.table.desktopTable(isMobile)}>
+        <Table sx={mobileResponsiveStyles.table.root}>
           <TableHead>
             <TableRow>
               <TableCell>Time</TableCell>
@@ -387,7 +498,7 @@ const ReservationManagementPage: React.FC = () => {
                   No reservations found
                 </TableCell>
               </TableRow>
-            ) : (
+            ) :
               reservations.map((reservation) => (
                 <TableRow key={reservation.id}>
                   <TableCell>
@@ -468,17 +579,35 @@ const ReservationManagementPage: React.FC = () => {
                     </IconButton>
                   </TableCell>
                 </TableRow>
-              ))
-            )}
+              ))}
           </TableBody>
         </Table>
       </TableContainer>
 
+      {/* Reservations Cards - Mobile */}
+      <Box sx={mobileResponsiveStyles.table.mobileCard(isMobile)}>
+        {loading ? (
+          <Card sx={mobileResponsiveStyles.card(isMobile)}>
+            <CardContent>
+              <Typography align="center">Loading...</Typography>
+            </CardContent>
+          </Card>
+        ) : reservations.length === 0 ? (
+          <Card sx={mobileResponsiveStyles.card(isMobile)}>
+            <CardContent>
+              <Typography align="center">No reservations found</Typography>
+            </CardContent>
+          </Card>
+        ) : (
+          reservations.map((reservation) => renderMobileCard(reservation))
+        )}
+      </Box>
+
       {/* Reservation Form Dialog */}
       <ReservationFormDialog
-        open={formDialogOpen}
-        onClose={() => setFormDialogOpen(false)}
-        reservation={selectedReservation}
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        reservation={editingReservation}
         onSave={fetchReservations}
       />
     </Container>
