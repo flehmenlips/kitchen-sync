@@ -98,10 +98,11 @@ import { useSnackbar } from '../context/SnackbarContext';
 import { useRestaurant } from '../context/RestaurantContext';
 import { buildRestaurantUrl } from '../utils/subdomain';
 import { SubdomainInfo } from '../components/SubdomainInfo';
-import TemplateSelector from '../components/TemplateSelector';
+import RestaurantTemplateSelector from '../components/RestaurantTemplateSelector';
 import AdvancedColorPalette from '../components/AdvancedColorPalette';
 import AdvancedTypographySelector from '../components/AdvancedTypographySelector';
 import { themingService, ColorPalette, TypographyConfig } from '../services/themingService';
+import TemplateSelector from '../components/TemplateSelector';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -2620,8 +2621,8 @@ const WebsiteBuilderPage: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Template Selector */}
-      <TemplateSelector
+      {/* Restaurant Template Selector */}
+      <RestaurantTemplateSelector
         open={templateSelectorOpen}
         onClose={() => setTemplateSelectorOpen(false)}
         onTemplateApplied={() => {

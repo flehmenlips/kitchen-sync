@@ -24,6 +24,7 @@ import platformRoutes from './routes/platformRoutes'; // Import platform routes
 import restaurantOnboardingRoutes from './routes/restaurantOnboardingRoutes'; // Import restaurant onboarding routes
 import subscriptionRoutes from './routes/subscriptionRoutes'; // Import subscription routes
 import templateRoutes from './routes/templateRoutes'; // Import template routes
+import restaurantTemplateRoutes from './routes/restaurantTemplateRoutes'; // Import restaurant template routes
 import pageRoutes from './routes/pageRoutes'; // Import page routes
 import websiteBuilderRoutes from './routes/websiteBuilderRoutes'; // Import website builder routes
 import themingRoutes from './routes/themingRoutes'; // Import theming routes
@@ -148,6 +149,7 @@ app.use('/api/website-builder', websiteBuilderRoutes); // Mount website builder 
 app.use('/api/admin', adminRoutes); // Mount admin routes
 app.use('/api/platform', platformRoutes); // Mount platform routes
 app.use('/api/templates', templateRoutes); // Mount template routes
+app.use('/api/restaurant-templates', restaurantTemplateRoutes); // Mount restaurant template routes
 app.use('/api/theming', themingRoutes); // Mount theming routes
 
 // Serve static files ONLY for non-API routes (AFTER API routes)
