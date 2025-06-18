@@ -7,17 +7,21 @@
     "dev": "npm run dev:backend",
     "dev:backend": "cd backend && npm run dev:local",
     "dev:frontend": "cd frontend && npm run dev",
-    "dev:all": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:all": "concurrently \"npm run backend\" \"npm run frontend\"",
     "backend": "cd backend && npm run dev:local",
     "frontend": "cd frontend && npm run dev",
     "build": "npm run build:backend && npm run build:frontend",
     "build:backend": "cd backend && npm run build",
     "build:frontend": "cd frontend && npm run build",
+    "build:all": "npm run build:backend && npm run build:frontend",
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
-    "db:studio": "cd backend && npm run prisma:studio",
+    "db:studio": "cd backend && npm run db:studio",
     "db:migrate": "cd backend && npx prisma migrate dev",
-    "db:check": "cd backend && npm run db:check:multi-tenant",
-    "test": "cd backend && npm test"
+    "db:check": "cd backend && npm run db:check",
+    "db:backup:local": "cd backend && npm run db:backup:local",
+    "test": "cd backend && npm test",
+    "test:production-data": "cd backend && node scripts/production-data-testing-setup.js",
+    "deploy:production": "echo '🚀 Starting production deployment...' && cd backend && node scripts/production-deployment-backup.js && echo '✅ Backup complete. Proceeding with deployment...' && git checkout main && git merge feature/website-builder-advanced-theming && git push origin main && echo '🎉 Deployment initiated! Monitor Render dashboard.'"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

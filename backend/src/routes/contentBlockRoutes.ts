@@ -7,7 +7,8 @@ import {
   deleteContentBlock,
   reorderContentBlocks,
   uploadContentBlockImage,
-  duplicateContentBlock
+  duplicateContentBlock,
+  debugContentBlocks
 } from '../controllers/contentBlockController';
 import { protect } from '../middleware/authMiddleware';
 const multer = require('multer');
@@ -32,6 +33,7 @@ const upload = multer({
 
 // Public routes
 router.get('/public', getContentBlocks); // Get blocks for a specific page
+router.get('/debug', debugContentBlocks); // Debug endpoint
 
 // Protected routes (admin only)
 router.get('/', protect, getAllContentBlocks); // Get all blocks for admin

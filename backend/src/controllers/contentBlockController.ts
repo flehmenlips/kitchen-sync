@@ -382,4 +382,58 @@ export const duplicateContentBlock = async (req: Request, res: Response): Promis
     console.error('Error duplicating content block:', error);
     res.status(500).json({ error: 'Failed to duplicate content block' });
   }
+};
+
+// Debug endpoint to verify deployment and database connection
+export const debugContentBlocks = async (req: Request, res: Response) => {
+  try {
+    const { restaurantSlug = 'coq-au-vin' } = req.query;
+    
+    // Test 1: Basic response
+    const debugInfo: any = {
+      timestamp: new Date().toISOString(),
+      endpoint: 'debugContentBlocks',
+      version: '2.0', // Update this when changes are deployed
+      query: req.query
+    };
+
+    // Test 2: Database connection
+    const restaurantCount = await prisma.restaurant.count();
+    debugInfo.restaurantCount = restaurantCount;
+
+    // Test 3: Find specific restaurant
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { slug: restaurantSlug as string },
+      select: { id: true, name: true, slug: true }
+    });
+    debugInfo.restaurant = restaurant;
+
+    // Test 4: Content blocks for this restaurant
+    if (restaurant) {
+      const contentBlocks = await prisma.contentBlock.findMany({
+        where: {
+          restaurantId: restaurant.id,
+          page: 'home',
+          isActive: true
+        },
+        select: {
+          id: true,
+          blockType: true,
+          title: true,
+          displayOrder: true,
+          isActive: true
+        },
+        orderBy: { displayOrder: 'asc' }
+      });
+      debugInfo.contentBlocks = contentBlocks;
+    }
+
+    res.json(debugInfo);
+  } catch (error) {
+    res.status(500).json({
+      error: 'Debug endpoint failed',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
 }; 
