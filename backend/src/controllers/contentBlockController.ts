@@ -421,8 +421,15 @@ export const duplicateContentBlock = async (req: Request, res: Response): Promis
 
     const duplicatedBlock = await prisma.contentBlock.create({
       data: {
-        ...blockData,
+        restaurantId: blockData.restaurantId,
+        page: blockData.page,
+        blockType: blockData.blockType,
         title: `${blockData.title} (Copy)`,
+        subtitle: blockData.subtitle,
+        content: blockData.content,
+        imageUrl: blockData.imageUrl,
+        buttonText: blockData.buttonText,
+        buttonLink: blockData.buttonLink,
         displayOrder: blockData.displayOrder + 1,
         isActive: false // Start as inactive
       }
