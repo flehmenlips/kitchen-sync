@@ -393,13 +393,21 @@ export const debugContentBlocks = async (req: Request, res: Response) => {
     const debugInfo: any = {
       timestamp: new Date().toISOString(),
       endpoint: 'debugContentBlocks',
-      version: '2.1', // Update this when changes are deployed
+      version: '2.2', // Update this when changes are deployed
       query: req.query
     };
 
     // Test 2: Database connection
     const restaurantCount = await prisma.restaurant.count();
     debugInfo.restaurantCount = restaurantCount;
+
+    // Test 2.5: Database URL info (for debugging)
+    debugInfo.databaseInfo = {
+      // Don't expose full URL, just show if it's set and what type
+      hasUrl: !!process.env.DATABASE_URL,
+      urlPrefix: process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 20) + '...' : 'not set',
+      nodeEnv: process.env.NODE_ENV
+    };
 
     // Test 3: Find specific restaurant
     const restaurant = await prisma.restaurant.findUnique({
