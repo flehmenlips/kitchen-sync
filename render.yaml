@@ -4,7 +4,7 @@ services:
     name: kitchen-sync-api
     runtime: node
     repo: https://github.com/flehmenlips/kitchen-sync
-    branch: feature/modular-platform-restructure
+    branch: main
     rootDir: backend
     buildCommand: |
       # Build both frontend and backend
@@ -34,7 +34,7 @@ services:
     name: kitchen-sync-app
     runtime: static
     repo: https://github.com/flehmenlips/kitchen-sync
-    branch: feature/modular-platform-restructure
+    branch: main
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
