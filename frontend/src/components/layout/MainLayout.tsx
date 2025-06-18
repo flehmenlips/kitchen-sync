@@ -39,12 +39,15 @@ import PersonIcon from '@mui/icons-material/Person';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import PaymentIcon from '@mui/icons-material/Payment';
 
-// Constants
+// Constants - Mobile-optimized sizing
 const DRAWER_WIDTH = 280;
+const MOBILE_APPBAR_HEIGHT = 56; // Standard mobile AppBar height
+const MOBILE_TOUCH_TARGET = 48; // Minimum touch target size per Material Design
 
 const MainLayout: React.FC = () => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+    const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const { user, logout } = useAuth();
     const location = useLocation();
     
@@ -63,6 +66,13 @@ const MainLayout: React.FC = () => {
         await logout();
     };
 
+    // Auto-close mobile drawer when navigating (better UX)
+    React.useEffect(() => {
+        if (isMobile && mobileOpen) {
+            setMobileOpen(false);
+        }
+    }, [location.pathname]);
+
     // Determine if current path is under a module
     const getCurrentModule = () => {
         return modules.find(module => 
@@ -73,16 +83,17 @@ const MainLayout: React.FC = () => {
 
     const drawer = (
         <Box>
+            {/* Mobile-optimized header */}
             <Toolbar sx={{ 
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'flex-start',
-                px: [2],
+                px: 2,
                 background: theme.palette.primary.main,
                 color: 'white',
-                minHeight: '64px !important'
+                minHeight: isMobile ? `${MOBILE_APPBAR_HEIGHT}px !important` : '64px !important'
             }}>
-                {/* KitchenSync Logo */}
+                {/* KitchenSync Logo - Responsive sizing */}
                 <Box sx={{ 
                     display: 'flex', 
                     alignItems: 'center', 
@@ -93,12 +104,12 @@ const MainLayout: React.FC = () => {
                         src="/logo-white.svg" 
                         alt="KitchenSync Logo" 
                         style={{ 
-                            height: '32px',
+                            height: isMobile ? '28px' : '32px',
                             width: 'auto'
                         }}
                     />
                     <Typography 
-                        variant="h6" 
+                        variant={isMobile ? "subtitle1" : "h6"}
                         noWrap 
                         component="div" 
                         sx={{ 
@@ -110,19 +121,60 @@ const MainLayout: React.FC = () => {
                     </Typography>
                 </Box>
                 {isMobile && (
-                    <IconButton onClick={handleDrawerToggle} sx={{ color: 'white' }}>
+                    <IconButton 
+                        onClick={handleDrawerToggle} 
+                        sx={{ 
+                            color: 'white',
+                            minWidth: MOBILE_TOUCH_TARGET,
+                            minHeight: MOBILE_TOUCH_TARGET,
+                            p: 1.5
+                        }}
+                        size="large"
+                    >
                         <ChevronLeftIcon />
                     </IconButton>
                 )}
             </Toolbar>
             <Divider />
             
-            {/* Module-based navigation */}
-            <SidebarItems />
+            {/* Module-based navigation - Mobile optimized */}
+            <Box sx={{ 
+                px: isMobile ? 1 : 0,
+                '& .MuiListItemButton-root': {
+                    minHeight: isMobile ? MOBILE_TOUCH_TARGET : 'auto',
+                    borderRadius: isMobile ? 2 : 0,
+                    mx: isMobile ? 1 : 0,
+                    mb: isMobile ? 0.5 : 0,
+                    '&:hover': {
+                        backgroundColor: isMobile ? 'rgba(0, 0, 0, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+                    }
+                },
+                '& .MuiListItemIcon-root': {
+                    minWidth: isMobile ? 44 : 56,
+                },
+                '& .MuiListItemText-primary': {
+                    fontSize: isMobile ? '0.95rem' : '1rem',
+                    fontWeight: isMobile ? 500 : 400,
+                }
+            }}>
+                <SidebarItems />
+            </Box>
             
             <Divider sx={{ my: 1 }} />
             
-            <List>
+            {/* Admin sections - Mobile optimized */}
+            <List sx={{ 
+                px: isMobile ? 1 : 0,
+                '& .MuiListItemButton-root': {
+                    minHeight: isMobile ? MOBILE_TOUCH_TARGET : 'auto',
+                    borderRadius: isMobile ? 2 : 0,
+                    mx: isMobile ? 1 : 0,
+                    mb: isMobile ? 0.5 : 0,
+                },
+                '& .MuiListItemIcon-root': {
+                    minWidth: isMobile ? 44 : 56,
+                }
+            }}>
                 {/* Admin Dashboard - Only visible to admin/owner */}
                 {(user?.role === 'ADMIN' || user?.role === 'SUPERADMIN') && (
                     <>
@@ -153,41 +205,81 @@ const MainLayout: React.FC = () => {
         <Box sx={{ display: 'flex', minHeight: '100vh' }}>
             <CssBaseline />
             
-            {/* Top App Bar */}
+            {/* Top App Bar - Mobile optimized */}
             <AppBar
                 position="fixed"
                 sx={{
                     width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
                     ml: { md: `${DRAWER_WIDTH}px` },
+                    height: isMobile ? MOBILE_APPBAR_HEIGHT : 64,
                 }}
             >
-                <Toolbar>
+                <Toolbar sx={{
+                    minHeight: isMobile ? `${MOBILE_APPBAR_HEIGHT}px !important` : '64px !important',
+                    px: isMobile ? 1 : 3,
+                }}>
+                    {/* Mobile menu button - Enhanced touch target */}
                     <IconButton
                         color="inherit"
                         aria-label="open drawer"
                         edge="start"
                         onClick={handleDrawerToggle}
-                        sx={{ mr: 2, display: { md: 'none' } }}
+                        sx={{ 
+                            mr: isMobile ? 1 : 2, 
+                            display: { md: 'none' },
+                            minWidth: MOBILE_TOUCH_TARGET,
+                            minHeight: MOBILE_TOUCH_TARGET,
+                            p: 1.5
+                        }}
+                        size={isMobile ? "large" : "medium"}
                     >
                         <MenuIcon />
                     </IconButton>
 
-                    {/* Current Module Title */}
-                    <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+                    {/* Current Module Title - Responsive typography */}
+                    <Typography 
+                        variant={isMobile ? "h6" : "h6"} 
+                        noWrap 
+                        component="div" 
+                        sx={{ 
+                            flexGrow: 1,
+                            fontSize: isMobile ? '1.1rem' : '1.25rem',
+                            fontWeight: isMobile ? 600 : 500,
+                        }}
+                    >
                         {getCurrentModule()?.name || 'Dashboard'}
                     </Typography>
 
-                    {/* Restaurant Selector */}
-                    <Box sx={{ mr: 2 }}>
+                    {/* Restaurant Selector - Mobile responsive */}
+                    <Box sx={{ 
+                        mr: isMobile ? 0.5 : 2,
+                        '& .MuiSelect-select': {
+                            fontSize: isMobile ? '0.875rem' : '1rem',
+                        }
+                    }}>
                         <RestaurantSelector />
                     </Box>
 
-                    {/* User Menu */}
+                    {/* User Menu - Mobile optimized */}
                     {user && (
                         <>
                             <Tooltip title="Account settings">
-                                <IconButton onClick={handleProfileClick} size="small" sx={{ ml: 2 }}>
-                                    <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
+                                <IconButton 
+                                    onClick={handleProfileClick} 
+                                    sx={{ 
+                                        ml: isMobile ? 0.5 : 2,
+                                        minWidth: MOBILE_TOUCH_TARGET,
+                                        minHeight: MOBILE_TOUCH_TARGET,
+                                        p: isMobile ? 1 : 0.5
+                                    }}
+                                    size={isMobile ? "large" : "small"}
+                                >
+                                    <Avatar sx={{ 
+                                        width: isMobile ? 36 : 32, 
+                                        height: isMobile ? 36 : 32, 
+                                        bgcolor: 'secondary.main',
+                                        fontSize: isMobile ? '1.1rem' : '1rem'
+                                    }}>
                                         {user.name?.[0]?.toUpperCase() || user.email[0]?.toUpperCase()}
                                     </Avatar>
                                 </IconButton>
@@ -199,22 +291,23 @@ const MainLayout: React.FC = () => {
                                 onClick={handleProfileClose}
                                 transformOrigin={{ horizontal: 'right', vertical: 'top' }}
                                 anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+                                sx={{
+                                    '& .MuiMenuItem-root': {
+                                        minHeight: isMobile ? MOBILE_TOUCH_TARGET : 'auto',
+                                        fontSize: isMobile ? '0.95rem' : '0.875rem',
+                                        px: isMobile ? 2 : 1.5,
+                                    }
+                                }}
                             >
-                                <MenuItem disabled sx={{ fontStyle: 'italic' }}>
-                                    {user.email}
-                                </MenuItem>
-                                <MenuItem disabled sx={{ color: 'text.secondary' }}>
-                                    Role: {user.role?.charAt(0) + user.role?.slice(1).toLowerCase() || 'User'}
-                                </MenuItem>
-                                <Divider />
                                 <MenuItem component={RouterLink} to="/profile">
-                                    <ListItemIcon>
+                                    <ListItemIcon sx={{ minWidth: isMobile ? 44 : 40 }}>
                                         <PersonIcon fontSize="small" />
                                     </ListItemIcon>
-                                    Profile Settings
+                                    Profile
                                 </MenuItem>
+
                                 <MenuItem onClick={handleLogout}>
-                                    <ListItemIcon>
+                                    <ListItemIcon sx={{ minWidth: isMobile ? 44 : 40 }}>
                                         <Logout fontSize="small" />
                                     </ListItemIcon>
                                     Logout
@@ -225,12 +318,12 @@ const MainLayout: React.FC = () => {
                 </Toolbar>
             </AppBar>
 
-            {/* Sidebar Navigation */}
+            {/* Sidebar Navigation - Mobile optimized */}
             <Box
                 component="nav"
                 sx={{ width: { md: DRAWER_WIDTH }, flexShrink: { md: 0 } }}
             >
-                {/* Mobile drawer */}
+                {/* Mobile drawer - Enhanced */}
                 <Drawer
                     variant="temporary"
                     open={mobileOpen}
@@ -240,7 +333,8 @@ const MainLayout: React.FC = () => {
                         display: { xs: 'block', md: 'none' },
                         '& .MuiDrawer-paper': { 
                             boxSizing: 'border-box', 
-                            width: DRAWER_WIDTH 
+                            width: isSmallMobile ? '100vw' : DRAWER_WIDTH,
+                            maxWidth: '100vw'
                         },
                     }}
                 >
@@ -263,14 +357,14 @@ const MainLayout: React.FC = () => {
                 </Drawer>
             </Box>
 
-            {/* Main Content */}
+            {/* Main Content - Mobile optimized */}
             <Box
                 component="main"
                 sx={{
                     flexGrow: 1,
-                    p: 3,
+                    p: isMobile ? 2 : 3,
                     width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
-                    mt: '64px', // Height of AppBar
+                    mt: `${isMobile ? MOBILE_APPBAR_HEIGHT : 64}px`,
                     backgroundColor: theme.palette.grey[100],
                     minHeight: '100vh'
                 }}

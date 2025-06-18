@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { getRecipes } from '../services/apiService';
+import { useMobileResponsive, mobileResponsiveStyles, MOBILE_CONSTANTS } from '../utils/mobileUtils';
 
 // Import MUI components
 import List from '@mui/material/List';
@@ -65,6 +66,7 @@ const getThumbUrl = (photoUrl: string | null | undefined): string | undefined =>
 };
 
 const RecipeList: React.FC = () => {
+  const { isMobile, getTouchTargetSize, getResponsivePadding } = useMobileResponsive();
   const [recipes, setRecipes] = useState<RecipeListItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -206,25 +208,47 @@ const RecipeList: React.FC = () => {
   }
 
   return (
-    <Box sx={{ width: '100%', px: { xs: 2, sm: 3, md: 4 }, mt: 2 }}> {/* Full width responsive container */} 
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h4" component="h2">
+    <Box sx={mobileResponsiveStyles.container(isMobile)}> {/* Mobile-optimized responsive container */} 
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: isMobile ? 'flex-start' : 'center', 
+        mb: 2,
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: isMobile ? 2 : 0
+      }}>
+        <Typography 
+          variant={isMobile ? "h5" : "h4"} 
+          component="h2"
+          sx={mobileResponsiveStyles.typography.h4}
+        >
           Recipes
         </Typography>
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          gap: isMobile ? 1 : 2, 
+          flexDirection: isMobile ? 'column' : 'row',
+          width: isMobile ? '100%' : 'auto'
+        }}>
           <Button 
             variant="outlined"
+            size={isMobile ? "medium" : "small"}
             startIcon={<FileUploadIcon />}
             component={RouterLink}
             to="/recipes/import"
+            sx={mobileResponsiveStyles.button(isMobile)}
+            fullWidth={isMobile}
           >
             Import Recipe
           </Button>
           <Button 
             variant="contained" 
+            size={isMobile ? "medium" : "small"}
             startIcon={<AddIcon />} 
             component={RouterLink} 
             to="/recipes/new"
+            sx={mobileResponsiveStyles.button(isMobile)}
+            fullWidth={isMobile}
           >
             Add Recipe
           </Button>
@@ -240,42 +264,82 @@ const RecipeList: React.FC = () => {
         >
           {sortedCategoryNames.map((categoryName) => (
             <React.Fragment key={categoryName}>
-              <ListItemButton onClick={() => handleCategoryClick(categoryName)}>
+              <ListItemButton 
+                onClick={() => handleCategoryClick(categoryName)}
+                sx={{
+                  minHeight: isMobile ? MOBILE_CONSTANTS.TOUCH_TARGET_SIZE : 'auto',
+                  py: isMobile ? 1.5 : 1,
+                  px: isMobile ? 2 : 1,
+                }}
+              >
                  {/* Optional Icon */}
                  {/* <ListItemIcon><FolderIcon /></ListItemIcon> */}
-                <ListItemText primary={categoryName} primaryTypographyProps={{ fontWeight: 'medium' }} />
+                <ListItemText 
+                  primary={categoryName} 
+                  primaryTypographyProps={{ 
+                    fontWeight: 'medium',
+                    fontSize: isMobile ? '1rem' : '0.875rem'
+                  }} 
+                />
                 {!!openCategories[categoryName] ? <ExpandLess /> : <ExpandMore />}
               </ListItemButton>
               <Collapse in={!!openCategories[categoryName]} timeout="auto" unmountOnExit>
                 <List component="div" disablePadding sx={{ pl: 4 }}> {/* Indent recipes */} 
                   {groupedRecipes[categoryName].map((recipe) => (
                     <ListItem key={recipe.id} disablePadding>
-                      <ListItemButton component={RouterLink} to={`/recipes/${recipe.id}`}>
+                      <ListItemButton 
+                        component={RouterLink} 
+                        to={`/recipes/${recipe.id}`}
+                        sx={{
+                          minHeight: isMobile ? MOBILE_CONSTANTS.TOUCH_TARGET_SIZE : 'auto',
+                          py: isMobile ? 1 : 0.5,
+                          px: isMobile ? 2 : 1,
+                        }}
+                      >
                         <ListItemAvatar>
                           {recipe.photoUrl ? (
                             <Avatar 
                               src={getThumbUrl(recipe.photoUrl)} 
                               alt={recipe.name}
                               variant="rounded"
-                              sx={{ width: 56, height: 56 }}
+                              sx={{ 
+                                width: isMobile ? 64 : 56, 
+                                height: isMobile ? 64 : 56,
+                                borderRadius: isMobile ? 2 : 1
+                              }}
                             />
                           ) : (
                             <Avatar 
                               variant="rounded"
-                              sx={{ width: 56, height: 56, bgcolor: 'primary.light' }}
+                              sx={{ 
+                                width: isMobile ? 64 : 56, 
+                                height: isMobile ? 64 : 56, 
+                                bgcolor: 'primary.light',
+                                borderRadius: isMobile ? 2 : 1
+                              }}
                             >
-                              <RestaurantIcon />
+                              <RestaurantIcon sx={{ fontSize: isMobile ? '2rem' : '1.5rem' }} />
                             </Avatar>
                           )}
                         </ListItemAvatar>
                         <ListItemText
                           primary={recipe.name}
                           secondary={recipe.description || ''}
-                          secondaryTypographyProps={{ 
-                            noWrap: true, 
-                            sx: { display: 'block' } 
+                          primaryTypographyProps={{
+                            fontSize: isMobile ? '1rem' : '0.875rem',
+                            fontWeight: isMobile ? 500 : 400,
                           }}
-                          sx={{ ml: 1 }}
+                          secondaryTypographyProps={{ 
+                            noWrap: !isMobile, 
+                            sx: { 
+                              display: 'block',
+                              fontSize: isMobile ? '0.875rem' : '0.75rem',
+                              lineHeight: isMobile ? 1.4 : 1.2,
+                              maxHeight: isMobile ? '2.8em' : 'auto',
+                              overflow: isMobile ? 'hidden' : 'visible'
+                            } 
+                          }}
+                          sx={{ ml: isMobile ? 1.5 : 1 }}
                         />
                       </ListItemButton>
                     </ListItem>
