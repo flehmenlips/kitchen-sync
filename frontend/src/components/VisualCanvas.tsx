@@ -21,7 +21,8 @@ import {
   InputLabel,
   Select,
   Collapse,
-  Grid
+  Grid,
+  Slider
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -1141,6 +1142,813 @@ const VisualBlock: React.FC<VisualBlockProps> = ({
                         </Select>
                       </FormControl>
                     </Grid>
+                  </Grid>
+                </Box>
+              )}
+
+              {/* Hero Typography Controls */}
+              {block.blockType === 'hero' && (
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+                    🔤 Typography
+                  </Typography>
+                  
+                  <Grid container spacing={2}>
+                    {/* Title Typography */}
+                    <Grid item xs={12}>
+                      <Typography variant="caption" display="block" gutterBottom sx={{ fontWeight: 600 }}>
+                        Title Styling
+                      </Typography>
+                    </Grid>
+                    
+                    {/* Title Font Family */}
+                    <Grid item xs={12} sm={6}>
+                      <FormControl size="small" fullWidth>
+                        <InputLabel>Title Font</InputLabel>
+                        <Select
+                          value={block.settings?.titleFontFamily || 'default'}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            const updatedBlock = {
+                              ...block,
+                              settings: {
+                                ...block.settings,
+                                titleFontFamily: e.target.value
+                              }
+                            };
+                            onAutoSave(updatedBlock);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          label="Title Font"
+                        >
+                          <MenuItem value="default">Default</MenuItem>
+                          <MenuItem value="'Playfair Display', serif">Playfair Display (Elegant)</MenuItem>
+                          <MenuItem value="'Montserrat', sans-serif">Montserrat (Modern)</MenuItem>
+                          <MenuItem value="'Dancing Script', cursive">Dancing Script (Script)</MenuItem>
+                          <MenuItem value="'Roboto Slab', serif">Roboto Slab (Strong)</MenuItem>
+                          <MenuItem value="'Oswald', sans-serif">Oswald (Bold)</MenuItem>
+                          <MenuItem value="'Lora', serif">Lora (Classic)</MenuItem>
+                          <MenuItem value="'Poppins', sans-serif">Poppins (Clean)</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+
+                    {/* Title Font Size */}
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        size="small"
+                        label="Title Size"
+                        value={block.settings?.titleFontSize || '3.75rem'}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          const updatedBlock = {
+                            ...block,
+                            settings: {
+                              ...block.settings,
+                              titleFontSize: e.target.value
+                            }
+                          };
+                          onAutoSave(updatedBlock);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        placeholder="e.g., 3.75rem, 48px"
+                        fullWidth
+                      />
+                    </Grid>
+
+                    {/* Title Font Weight */}
+                    <Grid item xs={12} sm={6}>
+                      <FormControl size="small" fullWidth>
+                        <InputLabel>Title Weight</InputLabel>
+                        <Select
+                          value={block.settings?.titleFontWeight || 'bold'}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            const updatedBlock = {
+                              ...block,
+                              settings: {
+                                ...block.settings,
+                                titleFontWeight: e.target.value
+                              }
+                            };
+                            onAutoSave(updatedBlock);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          label="Title Weight"
+                        >
+                          <MenuItem value="300">Light (300)</MenuItem>
+                          <MenuItem value="400">Normal (400)</MenuItem>
+                          <MenuItem value="500">Medium (500)</MenuItem>
+                          <MenuItem value="600">Semi-Bold (600)</MenuItem>
+                          <MenuItem value="700">Bold (700)</MenuItem>
+                          <MenuItem value="800">Extra Bold (800)</MenuItem>
+                          <MenuItem value="900">Black (900)</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+
+                    {/* Title Color */}
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="caption" display="block" gutterBottom>
+                        Title Color
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <TextField
+                          size="small"
+                          type="color"
+                          value={block.settings?.titleColor || '#ffffff'}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            const updatedBlock = {
+                              ...block,
+                              settings: {
+                                ...block.settings,
+                                titleColor: e.target.value
+                              }
+                            };
+                            onAutoSave(updatedBlock);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          sx={{ width: 60 }}
+                        />
+                        <TextField
+                          size="small"
+                          value={block.settings?.titleColor || '#ffffff'}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            const updatedBlock = {
+                              ...block,
+                              settings: {
+                                ...block.settings,
+                                titleColor: e.target.value
+                              }
+                            };
+                            onAutoSave(updatedBlock);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          placeholder="#ffffff"
+                          sx={{ flex: 1 }}
+                        />
+                      </Box>
+                    </Grid>
+
+                    {/* Subtitle Typography */}
+                    <Grid item xs={12}>
+                      <Typography variant="caption" display="block" gutterBottom sx={{ fontWeight: 600, mt: 2 }}>
+                        Subtitle Styling
+                      </Typography>
+                    </Grid>
+
+                    {/* Subtitle Font Family */}
+                    <Grid item xs={12} sm={6}>
+                      <FormControl size="small" fullWidth>
+                        <InputLabel>Subtitle Font</InputLabel>
+                        <Select
+                          value={block.settings?.subtitleFontFamily || 'default'}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            const updatedBlock = {
+                              ...block,
+                              settings: {
+                                ...block.settings,
+                                subtitleFontFamily: e.target.value
+                              }
+                            };
+                            onAutoSave(updatedBlock);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          label="Subtitle Font"
+                        >
+                          <MenuItem value="default">Default</MenuItem>
+                          <MenuItem value="'Open Sans', sans-serif">Open Sans (Clean)</MenuItem>
+                          <MenuItem value="'Lato', sans-serif">Lato (Friendly)</MenuItem>
+                          <MenuItem value="'Source Sans Pro', sans-serif">Source Sans Pro</MenuItem>
+                          <MenuItem value="'Nunito', sans-serif">Nunito (Rounded)</MenuItem>
+                          <MenuItem value="'Roboto', sans-serif">Roboto (Modern)</MenuItem>
+                          <MenuItem value="'Inter', sans-serif">Inter (Tech)</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+
+                    {/* Subtitle Font Size */}
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        size="small"
+                        label="Subtitle Size"
+                        value={block.settings?.subtitleFontSize || '1.5rem'}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          const updatedBlock = {
+                            ...block,
+                            settings: {
+                              ...block.settings,
+                              subtitleFontSize: e.target.value
+                            }
+                          };
+                          onAutoSave(updatedBlock);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        placeholder="e.g., 1.5rem, 24px"
+                        fullWidth
+                      />
+                    </Grid>
+
+                    {/* Subtitle Font Weight */}
+                    <Grid item xs={12} sm={6}>
+                      <FormControl size="small" fullWidth>
+                        <InputLabel>Subtitle Weight</InputLabel>
+                        <Select
+                          value={block.settings?.subtitleFontWeight || '400'}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            const updatedBlock = {
+                              ...block,
+                              settings: {
+                                ...block.settings,
+                                subtitleFontWeight: e.target.value
+                              }
+                            };
+                            onAutoSave(updatedBlock);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          label="Subtitle Weight"
+                        >
+                          <MenuItem value="300">Light (300)</MenuItem>
+                          <MenuItem value="400">Normal (400)</MenuItem>
+                          <MenuItem value="500">Medium (500)</MenuItem>
+                          <MenuItem value="600">Semi-Bold (600)</MenuItem>
+                          <MenuItem value="700">Bold (700)</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+
+                    {/* Subtitle Color */}
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="caption" display="block" gutterBottom>
+                        Subtitle Color
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <TextField
+                          size="small"
+                          type="color"
+                          value={block.settings?.subtitleColor || '#ffffff'}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            const updatedBlock = {
+                              ...block,
+                              settings: {
+                                ...block.settings,
+                                subtitleColor: e.target.value
+                              }
+                            };
+                            onAutoSave(updatedBlock);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          sx={{ width: 60 }}
+                        />
+                        <TextField
+                          size="small"
+                          value={block.settings?.subtitleColor || '#ffffff'}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            const updatedBlock = {
+                              ...block,
+                              settings: {
+                                ...block.settings,
+                                subtitleColor: e.target.value
+                              }
+                            };
+                            onAutoSave(updatedBlock);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          placeholder="#ffffff"
+                          sx={{ flex: 1 }}
+                        />
+                      </Box>
+                    </Grid>
+
+                    {/* Text Shadow Controls */}
+                    <Grid item xs={12}>
+                      <Typography variant="caption" display="block" gutterBottom sx={{ fontWeight: 600, mt: 2 }}>
+                        Text Effects
+                      </Typography>
+                    </Grid>
+
+                    {/* Text Shadow Toggle */}
+                    <Grid item xs={12} sm={6}>
+                      <FormControl size="small" fullWidth>
+                        <InputLabel>Text Shadow</InputLabel>
+                        <Select
+                          value={block.settings?.textShadowMode || 'default'}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            const updatedBlock = {
+                              ...block,
+                              settings: {
+                                ...block.settings,
+                                textShadowMode: e.target.value
+                              }
+                            };
+                            onAutoSave(updatedBlock);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          label="Text Shadow"
+                        >
+                          <MenuItem value="none">None</MenuItem>
+                          <MenuItem value="default">Default</MenuItem>
+                          <MenuItem value="light">Light Shadow</MenuItem>
+                          <MenuItem value="medium">Medium Shadow</MenuItem>
+                          <MenuItem value="heavy">Heavy Shadow</MenuItem>
+                          <MenuItem value="custom">Custom</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+
+                    {/* Custom Text Shadow (if selected) */}
+                    {block.settings?.textShadowMode === 'custom' && (
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          size="small"
+                          label="Custom Shadow"
+                          value={block.settings?.customTextShadow || '2px 2px 4px rgba(0,0,0,0.5)'}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            const updatedBlock = {
+                              ...block,
+                              settings: {
+                                ...block.settings,
+                                customTextShadow: e.target.value
+                              }
+                            };
+                            onAutoSave(updatedBlock);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          placeholder="2px 2px 4px rgba(0,0,0,0.5)"
+                          fullWidth
+                        />
+                      </Grid>
+                    )}
+                  </Grid>
+                </Box>
+              )}
+
+              {/* Hero Parallax Effects */}
+              {block.blockType === 'hero' && (
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+                    🌟 Parallax Effects
+                  </Typography>
+                  
+                  <Grid container spacing={2}>
+                    {/* Parallax Enable/Disable */}
+                    <Grid item xs={12} sm={6}>
+                      <FormControl size="small" fullWidth>
+                        <InputLabel>Parallax Mode</InputLabel>
+                        <Select
+                          value={block.settings?.parallaxMode || 'disabled'}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            const updatedBlock = {
+                              ...block,
+                              settings: {
+                                ...block.settings,
+                                parallaxMode: e.target.value
+                              }
+                            };
+                            onAutoSave(updatedBlock);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          label="Parallax Mode"
+                        >
+                          <MenuItem value="disabled">Disabled</MenuItem>
+                          <MenuItem value="standard">Standard Parallax</MenuItem>
+                          <MenuItem value="smooth">Smooth Parallax</MenuItem>
+                          <MenuItem value="subtle">Subtle Motion</MenuItem>
+                          <MenuItem value="dramatic">Dramatic Effect</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+
+                    {/* Parallax Intensity (if enabled) */}
+                    {block.settings?.parallaxMode && block.settings.parallaxMode !== 'disabled' && (
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="caption" display="block" gutterBottom>
+                          Parallax Intensity
+                        </Typography>
+                        <Box sx={{ px: 1 }}>
+                          <Slider
+                            value={parseFloat(block.settings?.parallaxIntensity) || 0.5}
+                            onChange={(e, value) => {
+                              e.stopPropagation();
+                              const updatedBlock = {
+                                ...block,
+                                settings: {
+                                  ...block.settings,
+                                  parallaxIntensity: value.toString()
+                                }
+                              };
+                              onAutoSave(updatedBlock);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            min={0.1}
+                            max={1.0}
+                            step={0.1}
+                            marks={[
+                              { value: 0.1, label: 'Subtle' },
+                              { value: 0.5, label: 'Medium' },
+                              { value: 1.0, label: 'Strong' }
+                            ]}
+                            valueLabelDisplay="auto"
+                            size="small"
+                          />
+                        </Box>
+                      </Grid>
+                    )}
+
+                    {/* Parallax Performance Mode */}
+                    {block.settings?.parallaxMode && block.settings.parallaxMode !== 'disabled' && (
+                      <Grid item xs={12} sm={6}>
+                        <FormControl size="small" fullWidth>
+                          <InputLabel>Performance</InputLabel>
+                          <Select
+                            value={block.settings?.parallaxPerformance || 'auto'}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              const updatedBlock = {
+                                ...block,
+                                settings: {
+                                  ...block.settings,
+                                  parallaxPerformance: e.target.value
+                                }
+                              };
+                              onAutoSave(updatedBlock);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            label="Performance"
+                          >
+                            <MenuItem value="auto">Auto (Recommended)</MenuItem>
+                            <MenuItem value="smooth">Smooth (High CPU)</MenuItem>
+                            <MenuItem value="performance">Performance (Low CPU)</MenuItem>
+                            <MenuItem value="mobile-off">Mobile Disabled</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                    )}
+
+                    {/* Background Attachment Override */}
+                    {block.settings?.parallaxMode && block.settings.parallaxMode !== 'disabled' && (
+                      <Grid item xs={12} sm={6}>
+                        <FormControl size="small" fullWidth>
+                          <InputLabel>Background Style</InputLabel>
+                          <Select
+                            value={block.settings?.backgroundAttachment || 'scroll'}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              const updatedBlock = {
+                                ...block,
+                                settings: {
+                                  ...block.settings,
+                                  backgroundAttachment: e.target.value
+                                }
+                              };
+                              onAutoSave(updatedBlock);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            label="Background Style"
+                          >
+                            <MenuItem value="scroll">Normal Scroll</MenuItem>
+                            <MenuItem value="fixed">Fixed Background</MenuItem>
+                            <MenuItem value="local">Local Attachment</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                    )}
+
+                    {/* Parallax Help Text */}
+                    {block.settings?.parallaxMode && block.settings.parallaxMode !== 'disabled' && (
+                      <Grid item xs={12}>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic', display: 'block', mt: 1 }}>
+                          💡 Parallax creates a depth effect by moving the background slower than the page scroll. 
+                          Use "Subtle Motion" for elegant effects, "Dramatic Effect" for bold impact.
+                        </Typography>
+                        <Box sx={{ mt: 1, p: 1, backgroundColor: 'rgba(25, 118, 210, 0.1)', borderRadius: 1, border: '1px solid rgba(25, 118, 210, 0.2)' }}>
+                          <Typography variant="caption" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                            🌟 Parallax Status: Active
+                          </Typography>
+                          <Typography variant="caption" display="block" color="text.secondary">
+                            Mode: {block.settings.parallaxMode} | Performance: {block.settings?.parallaxPerformance || 'auto'}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                    )}
+                  </Grid>
+                </Box>
+              )}
+
+              {/* Hero Video Background */}
+              {block.blockType === 'hero' && (
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+                    🎬 Video Background
+                  </Typography>
+                  
+                  <Grid container spacing={2}>
+                    {/* Video Background Enable/Disable */}
+                    <Grid item xs={12} sm={6}>
+                      <FormControl size="small" fullWidth>
+                        <InputLabel>Background Type</InputLabel>
+                        <Select
+                          value={block.settings?.backgroundType || 'image'}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            const updatedBlock = {
+                              ...block,
+                              settings: {
+                                ...block.settings,
+                                backgroundType: e.target.value
+                              }
+                            };
+                            onAutoSave(updatedBlock);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          label="Background Type"
+                        >
+                          <MenuItem value="image">Image Background</MenuItem>
+                          <MenuItem value="video">Video Background</MenuItem>
+                          <MenuItem value="gradient">Gradient Only</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+
+                    {/* Video Upload Field */}
+                    {block.settings?.backgroundType === 'video' && (
+                      <>
+                        <Grid item xs={12} sm={6}>
+                          <TextField
+                            size="small"
+                            label="Video URL (MP4)"
+                            value={block.settings?.videoUrl || ''}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              const updatedBlock = {
+                                ...block,
+                                settings: {
+                                  ...block.settings,
+                                  videoUrl: e.target.value
+                                }
+                              };
+                              onAutoSave(updatedBlock);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            placeholder="https://example.com/video.mp4"
+                            fullWidth
+                          />
+                        </Grid>
+
+                        {/* WebM Alternative */}
+                        <Grid item xs={12} sm={6}>
+                          <TextField
+                            size="small"
+                            label="WebM URL (Optional)"
+                            value={block.settings?.videoUrlWebm || ''}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              const updatedBlock = {
+                                ...block,
+                                settings: {
+                                  ...block.settings,
+                                  videoUrlWebm: e.target.value
+                                }
+                              };
+                              onAutoSave(updatedBlock);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            placeholder="https://example.com/video.webm"
+                            fullWidth
+                          />
+                        </Grid>
+
+                        {/* Fallback Image */}
+                        <Grid item xs={12} sm={6}>
+                          <TextField
+                            size="small"
+                            label="Fallback Image URL"
+                            value={block.settings?.videoFallbackImage || ''}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              const updatedBlock = {
+                                ...block,
+                                settings: {
+                                  ...block.settings,
+                                  videoFallbackImage: e.target.value
+                                }
+                              };
+                              onAutoSave(updatedBlock);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            placeholder="https://example.com/fallback.jpg"
+                            fullWidth
+                          />
+                        </Grid>
+
+                        {/* Video Playback Controls */}
+                        <Grid item xs={12}>
+                          <Typography variant="caption" display="block" gutterBottom sx={{ fontWeight: 600, mt: 2 }}>
+                            Playback Settings
+                          </Typography>
+                        </Grid>
+
+                        {/* Autoplay */}
+                        <Grid item xs={12} sm={6}>
+                          <FormControl size="small" fullWidth>
+                            <InputLabel>Autoplay</InputLabel>
+                            <Select
+                              value={block.settings?.videoAutoplay || 'true'}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                const updatedBlock = {
+                                  ...block,
+                                  settings: {
+                                    ...block.settings,
+                                    videoAutoplay: e.target.value
+                                  }
+                                };
+                                onAutoSave(updatedBlock);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              label="Autoplay"
+                            >
+                              <MenuItem value="true">Auto-play (Recommended)</MenuItem>
+                              <MenuItem value="false">Manual Start</MenuItem>
+                              <MenuItem value="mobile-off">Desktop Only</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </Grid>
+
+                        {/* Loop */}
+                        <Grid item xs={12} sm={6}>
+                          <FormControl size="small" fullWidth>
+                            <InputLabel>Loop Video</InputLabel>
+                            <Select
+                              value={block.settings?.videoLoop || 'true'}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                const updatedBlock = {
+                                  ...block,
+                                  settings: {
+                                    ...block.settings,
+                                    videoLoop: e.target.value
+                                  }
+                                };
+                                onAutoSave(updatedBlock);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              label="Loop Video"
+                            >
+                              <MenuItem value="true">Continuous Loop</MenuItem>
+                              <MenuItem value="false">Play Once</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </Grid>
+
+                        {/* Muted */}
+                        <Grid item xs={12} sm={6}>
+                          <FormControl size="small" fullWidth>
+                            <InputLabel>Audio</InputLabel>
+                            <Select
+                              value={block.settings?.videoMuted || 'true'}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                const updatedBlock = {
+                                  ...block,
+                                  settings: {
+                                    ...block.settings,
+                                    videoMuted: e.target.value
+                                  }
+                                };
+                                onAutoSave(updatedBlock);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              label="Audio"
+                            >
+                              <MenuItem value="true">Muted (Recommended)</MenuItem>
+                              <MenuItem value="false">Audio Enabled</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </Grid>
+
+                        {/* Playback Speed */}
+                        <Grid item xs={12} sm={6}>
+                          <Typography variant="caption" display="block" gutterBottom>
+                            Playback Speed
+                          </Typography>
+                          <Box sx={{ px: 1 }}>
+                            <Slider
+                              value={parseFloat(block.settings?.videoPlaybackRate) || 1.0}
+                              onChange={(e, value) => {
+                                e.stopPropagation();
+                                const updatedBlock = {
+                                  ...block,
+                                  settings: {
+                                    ...block.settings,
+                                    videoPlaybackRate: value.toString()
+                                  }
+                                };
+                                onAutoSave(updatedBlock);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              min={0.25}
+                              max={2.0}
+                              step={0.25}
+                              marks={[
+                                { value: 0.5, label: '0.5x' },
+                                { value: 1.0, label: '1x' },
+                                { value: 1.5, label: '1.5x' },
+                                { value: 2.0, label: '2x' }
+                              ]}
+                              valueLabelDisplay="auto"
+                              size="small"
+                            />
+                          </Box>
+                        </Grid>
+
+                        {/* Video Quality/Performance */}
+                        <Grid item xs={12} sm={6}>
+                          <FormControl size="small" fullWidth>
+                            <InputLabel>Video Quality</InputLabel>
+                            <Select
+                              value={block.settings?.videoQuality || 'auto'}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                const updatedBlock = {
+                                  ...block,
+                                  settings: {
+                                    ...block.settings,
+                                    videoQuality: e.target.value
+                                  }
+                                };
+                                onAutoSave(updatedBlock);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              label="Video Quality"
+                            >
+                              <MenuItem value="auto">Auto (Recommended)</MenuItem>
+                              <MenuItem value="high">High Quality</MenuItem>
+                              <MenuItem value="medium">Medium Quality</MenuItem>
+                              <MenuItem value="low">Low Quality (Fast)</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </Grid>
+
+                        {/* Mobile Behavior */}
+                        <Grid item xs={12} sm={6}>
+                          <FormControl size="small" fullWidth>
+                            <InputLabel>Mobile Behavior</InputLabel>
+                            <Select
+                              value={block.settings?.videoMobileBehavior || 'fallback'}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                const updatedBlock = {
+                                  ...block,
+                                  settings: {
+                                    ...block.settings,
+                                    videoMobileBehavior: e.target.value
+                                  }
+                                };
+                                onAutoSave(updatedBlock);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              label="Mobile Behavior"
+                            >
+                              <MenuItem value="video">Show Video</MenuItem>
+                              <MenuItem value="fallback">Use Fallback Image</MenuItem>
+                              <MenuItem value="poster">Show Video Poster</MenuItem>
+                              <MenuItem value="gradient">Gradient Only</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </Grid>
+
+                        {/* Video Help Text */}
+                        <Grid item xs={12}>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic', display: 'block', mt: 1 }}>
+                            🎬 Video backgrounds create stunning, cinematic experiences. Use MP4 for best compatibility, WebM for optimization.
+                            Always provide a fallback image for mobile devices and slower connections.
+                          </Typography>
+                          
+                          {/* Video Status Indicator */}
+                          {block.settings?.videoUrl && (
+                            <Box sx={{ mt: 1, p: 1, backgroundColor: 'rgba(156, 39, 176, 0.1)', borderRadius: 1, border: '1px solid rgba(156, 39, 176, 0.2)' }}>
+                              <Typography variant="caption" sx={{ fontWeight: 600, color: 'secondary.main' }}>
+                                🎬 Video Background: Active
+                              </Typography>
+                              <Typography variant="caption" display="block" color="text.secondary">
+                                Autoplay: {block.settings.videoAutoplay || 'true'} | Loop: {block.settings.videoLoop || 'true'} | Speed: {block.settings.videoPlaybackRate || '1.0'}x
+                              </Typography>
+                            </Box>
+                          )}
+                        </Grid>
+                      </>
+                    )}
                   </Grid>
                 </Box>
               )}

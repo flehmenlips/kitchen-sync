@@ -21,10 +21,15 @@ import {
   TableRow,
   Divider,
   TextField,
-  Avatar
+  Avatar,
+  Rating,
+  ListItemIcon,
+  Chip
 } from '@mui/material';
 import { ContentBlock, BLOCK_TYPES } from '../../services/contentBlockService';
 import { CheckCircle, EventSeat, LocationOn, Instagram, Star } from '@mui/icons-material';
+import { useParallax } from '../../hooks/useParallax';
+import { useVideoBackground } from '../../hooks/useVideoBackground';
 
 interface ContentBlockRendererProps {
   blocks: ContentBlock[];
@@ -193,15 +198,91 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
         const justifyContent = heroStyles.justifyContent || heroSettings.justifyContent || 'center';
         const alignItems = heroStyles.alignItems || heroSettings.alignItems || 'center';
 
+        // Typography settings
+        const getTitleFontFamily = () => {
+          if (heroSettings.titleFontFamily && heroSettings.titleFontFamily !== 'default') {
+            return heroSettings.titleFontFamily;
+          }
+          return undefined;
+        };
+
+        const getSubtitleFontFamily = () => {
+          if (heroSettings.subtitleFontFamily && heroSettings.subtitleFontFamily !== 'default') {
+            return heroSettings.subtitleFontFamily;
+          }
+          return undefined;
+        };
+
+        const getTextShadow = () => {
+          switch (heroSettings.textShadowMode) {
+            case 'none':
+              return 'none';
+            case 'light':
+              return '1px 1px 2px rgba(0,0,0,0.3)';
+            case 'medium':
+              return '2px 2px 4px rgba(0,0,0,0.5)';
+            case 'heavy':
+              return '3px 3px 6px rgba(0,0,0,0.7)';
+            case 'custom':
+              return heroSettings.customTextShadow || '2px 2px 4px rgba(0,0,0,0.5)';
+            case 'default':
+            default:
+              return '2px 2px 4px rgba(0,0,0,0.5)';
+          }
+        };
+
+        // Parallax hook integration
+        const parallaxOptions = {
+          mode: heroSettings.parallaxMode || 'disabled',
+          intensity: parseFloat(heroSettings.parallaxIntensity) || 0.5,
+          performance: heroSettings.parallaxPerformance || 'auto'
+        };
+        
+        const parallax = useParallax(parallaxOptions);
+
+        // Video background hook integration
+        const videoOptions = {
+          videoUrl: heroSettings.videoUrl,
+          videoUrlWebm: heroSettings.videoUrlWebm,
+          fallbackImage: heroSettings.videoFallbackImage || block.imageUrl,
+          autoplay: heroSettings.videoAutoplay || 'true',
+          loop: heroSettings.videoLoop || 'true',
+          muted: heroSettings.videoMuted || 'true',
+          playbackRate: heroSettings.videoPlaybackRate || '1.0',
+          quality: heroSettings.videoQuality || 'auto',
+          mobileBehavior: heroSettings.videoMobileBehavior || 'fallback'
+        };
+
+        const video = useVideoBackground(videoOptions);
+
+        // Determine background mode and source
+        const backgroundType = heroSettings.backgroundType || 'image';
+        const getBackgroundSource = () => {
+          if (backgroundType === 'video' && video.showVideo) {
+            return null; // Video will be rendered separately
+          } else if (backgroundType === 'video' && video.showFallback) {
+            return heroSettings.videoFallbackImage || block.imageUrl;
+          } else if (backgroundType === 'image') {
+            return block.imageUrl;
+          } else if (backgroundType === 'gradient') {
+            return null; // Pure gradient
+          }
+          return block.imageUrl; // Default fallback
+        };
+
+        const backgroundImage = getBackgroundSource();
+        const showVideoElement = backgroundType === 'video' && video.showVideo;
+
         return (
           <Box
+            ref={parallax.ref}
             sx={{
               position: 'relative',
               height: getHeroHeight(),
-              backgroundImage: block.imageUrl ? `url(${safeRender(block.imageUrl)})` : 'linear-gradient(to right, #1976d2, #42a5f5)',
+              backgroundImage: backgroundImage ? `url(${safeRender(backgroundImage)})` : 'linear-gradient(to right, #1976d2, #42a5f5)',
               backgroundSize: 'cover',
               backgroundPosition: 'center',
-              backgroundAttachment: heroSettings.parallax ? 'fixed' : 'scroll',
+              backgroundAttachment: heroSettings.backgroundAttachment || (heroSettings.parallaxMode === 'disabled' ? 'scroll' : 'fixed'),
               display: 'flex',
               justifyContent: justifyContent,
               alignItems: alignItems,
@@ -225,6 +306,81 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
               }
             }}
           >
+            {/* Video Background Element */}
+            {showVideoElement && (
+              <video
+                ref={video.videoRef}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  zIndex: 0,
+                  pointerEvents: 'none' // Prevent interference with content interaction
+                }}
+                playsInline
+                disablePictureInPicture
+                controlsList="nodownload"
+                poster={heroSettings.videoFallbackImage || block.imageUrl}
+              />
+            )}
+
+            {/* Video Controls Overlay (when not auto-playing) */}
+            {showVideoElement && !video.isVideoPlaying && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  bottom: 20,
+                  right: 20,
+                  zIndex: 3,
+                  display: 'flex',
+                  gap: 1,
+                  opacity: 0.8,
+                  '&:hover': { opacity: 1 }
+                }}
+              >
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    video.togglePlayPause();
+                  }}
+                  sx={{
+                    minWidth: 'auto',
+                    backgroundColor: 'rgba(0,0,0,0.7)',
+                    color: 'white',
+                    '&:hover': {
+                      backgroundColor: 'rgba(0,0,0,0.9)'
+                    }
+                  }}
+                >
+                  ▶️
+                </Button>
+              </Box>
+            )}
+
+            {/* Video Error Display */}
+            {showVideoElement && video.videoError && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 20,
+                  left: 20,
+                  zIndex: 3,
+                  backgroundColor: 'rgba(244, 67, 54, 0.9)',
+                  color: 'white',
+                  padding: 1,
+                  borderRadius: 1,
+                  fontSize: '0.8rem'
+                }}
+              >
+                🎬 {video.videoError}
+              </Box>
+            )}
+
             <Container 
               maxWidth={heroSettings.containerWidth || "lg"} 
               sx={{ 
@@ -240,10 +396,11 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
                   component="h1"
                   sx={{
                     color: heroSettings.titleColor || 'white',
-                    fontWeight: heroSettings.titleWeight || 'bold',
-                    fontSize: heroSettings.titleSize || undefined,
+                    fontFamily: getTitleFontFamily(),
+                    fontWeight: heroSettings.titleFontWeight || 'bold',
+                    fontSize: heroSettings.titleFontSize || undefined,
                     mb: 2,
-                    textShadow: heroSettings.textShadow !== false ? '2px 2px 4px rgba(0,0,0,0.5)' : 'none'
+                    textShadow: getTextShadow()
                   }}
                 >
                   {safeRender(block.title)}
@@ -254,10 +411,11 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
                   variant="h5"
                   sx={{
                     color: heroSettings.subtitleColor || 'white',
-                    fontWeight: heroSettings.subtitleWeight || 'normal',
-                    fontSize: heroSettings.subtitleSize || undefined,
+                    fontFamily: getSubtitleFontFamily(),
+                    fontWeight: heroSettings.subtitleFontWeight || 'normal',
+                    fontSize: heroSettings.subtitleFontSize || undefined,
                     mb: 4,
-                    textShadow: heroSettings.textShadow !== false ? '1px 1px 2px rgba(0,0,0,0.5)' : 'none'
+                    textShadow: getTextShadow()
                   }}
                 >
                   {safeRender(block.subtitle)}

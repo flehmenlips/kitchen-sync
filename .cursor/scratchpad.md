@@ -2055,3 +2055,108 @@ Following the successful implementation of global responsive design for desktop 
 - [ ] **7.6** Add button styling controls for Hero CTA
 - [ ] **7.7** Consider video background support for Hero sections
 - [ ] **7.8** Apply similar advanced styling to other block types
+
+### 🚀 Active Tasks
+- [ ] **7.1** Hero Section Typography Enhancement - PHASE 1 🔤
+  - [x] **7.1.1** Add Typography Controls Section to VisualCanvas
+    - ✅ Title typography controls (font family, size, weight, color)
+    - ✅ Subtitle typography controls (font family, size, weight, color)  
+    - ✅ Text shadow controls (presets + custom)
+    - ✅ All controls include stopPropagation to prevent panel closing
+  - [x] **7.1.2** Update ContentBlockRenderer for Typography Support
+    - ✅ Added typography helper functions (getTitleFontFamily, getSubtitleFontFamily, getTextShadow)
+    - ✅ Applied font family, size, weight, color to title and subtitle Typography components
+    - ✅ Enhanced text shadow with preset modes (none, light, medium, heavy, custom)
+  - [x] **7.1.3** Add Google Fonts Support
+    - ✅ Updated index.html with comprehensive Google Fonts import
+    - ✅ Added all typography control fonts: Playfair Display, Montserrat, Dancing Script, Roboto Slab, Oswald, Lora, Poppins, Open Sans, Lato, Source Sans Pro, Nunito, Inter
+  - [ ] **7.1.4** Test Typography Controls
+    - [ ] Verify all font families load and apply correctly
+    - [ ] Test font size changes (rem, px values)
+    - [ ] Test font weight options (300-900)
+    - [ ] Test color pickers for title and subtitle
+    - [ ] Test text shadow presets and custom values
+  
+  **Success Criteria:** 
+  - ✅ Typography section appears in Hero block Visual Design panel
+  - ✅ All font family dropdowns show elegant previews
+  - ✅ Font changes apply immediately to live website
+  - ✅ Text shadows enhance readability over background images
+  - [ ] Typography changes persist after page reload
+
+- [ ] **7.2** Hero Section Parallax Effects - PHASE 1.2 🌟
+  - [x] **7.2.1** Create Advanced Parallax Controls
+    - ✅ Parallax mode selector (Disabled, Standard, Smooth, Subtle, Dramatic)
+    - ✅ Intensity slider control (0.1 to 1.0 with visual markers)
+    - ✅ Performance optimization options (Auto, Smooth, Performance, Mobile-off)
+    - ✅ Background attachment override controls
+    - ✅ Helpful tooltips and status indicators
+  - [x] **7.2.2** Build Custom Parallax Hook
+    - ✅ Created `useParallax` hook with mobile detection
+    - ✅ Hardware acceleration support (translate3d vs translateY)
+    - ✅ Performance optimization with requestAnimationFrame
+    - ✅ Viewport-based activation (only applies when element is visible)
+    - ✅ Browser compatibility detection
+    - ✅ Configurable scroll thresholds for different modes
+  - [x] **7.2.3** Integrate Parallax into Hero Renderer
+    - ✅ Applied parallax hook to Hero Box container
+    - ✅ Dynamic parallax settings from visual controls
+    - ✅ Smart background attachment handling
+    - ✅ Parallax status indicator in controls panel
+  - [ ] **7.2.4** Test Parallax Effects
+    - [ ] Verify smooth parallax scrolling on desktop
+    - [ ] Test performance modes (smooth vs performance)
+    - [ ] Verify mobile detection and mobile-off mode
+    - [ ] Test different intensity levels
+    - [ ] Test all parallax modes (subtle, dramatic, etc.)
+    - [ ] Verify background attachment options work correctly
+  
+  **Success Criteria:**
+  - ✅ Parallax Effects section appears in Hero Visual Design panel
+  - ✅ Smooth parallax motion without performance issues
+  - ✅ Mobile optimization automatically applied
+  - ✅ Different parallax modes provide distinct visual effects
+  - [ ] Parallax works across different browsers and devices
+
+- [ ] **7.3** Hero Section Video Backgrounds - PHASE 1.3 🎬
+  - [x] **7.3.1** Create Advanced Video Background Controls
+    - ✅ Background type selector (Image, Video, Gradient Only)
+    - ✅ Multiple video format support (MP4 primary, WebM optional)
+    - ✅ Fallback image configuration for mobile/errors
+    - ✅ Comprehensive playback controls (autoplay, loop, muted, speed)
+    - ✅ Video quality optimization settings
+    - ✅ Mobile behavior customization (video, fallback, poster, gradient)
+    - ✅ Real-time video status indicator with playback details
+  - [x] **7.3.2** Build Comprehensive Video Background Hook
+    - ✅ Created `useVideoBackground` hook with mobile detection
+    - ✅ Multiple video source support (MP4 + WebM fallback)
+    - ✅ Intelligent autoplay with fallback strategies
+    - ✅ Performance optimization with viewport intersection
+    - ✅ Error handling and fallback image support
+    - ✅ Quality-based optimization (blur filter for low quality)
+    - ✅ Accessibility features (poster, controls, error messages)
+  - [x] **7.3.3** Integrate Video Backgrounds into Hero Renderer
+    - ✅ Applied video background hook to Hero section
+    - ✅ Dynamic background switching (image/video/gradient)
+    - ✅ Video element with proper positioning and styling
+    - ✅ Smart overlay and controls system
+    - ✅ Error display and fallback handling
+    - ✅ Mobile-optimized behavior
+  - [ ] **7.3.4** Test Video Background Features
+    - [ ] Verify MP4 video backgrounds load and play correctly
+    - [ ] Test WebM format support and fallback logic
+    - [ ] Verify mobile behavior settings work properly
+    - [ ] Test autoplay, loop, and muted controls
+    - [ ] Test playback speed control (0.25x to 2x)
+    - [ ] Verify fallback image displays on mobile/errors
+    - [ ] Test video quality optimization settings
+    - [ ] Verify video controls overlay functionality
+  
+  **Success Criteria:**
+  - ✅ Video Background section appears in Hero Visual Design panel
+  - ✅ Smooth video playback with proper performance optimization
+  - ✅ Mobile intelligence with configurable fallback behavior
+  - ✅ Multiple video format support with automatic fallback
+  - ✅ Accessibility features and error handling
+  - [ ] Video backgrounds work across different browsers and devices
+  - [ ] Performance remains smooth with large video files
