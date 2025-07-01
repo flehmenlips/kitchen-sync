@@ -91,6 +91,7 @@ export interface WebsiteBuilderBlock {
   buttonLink?: string;
   buttonStyle?: string;
   settings?: any;
+  styles?: any;
   displayOrder: number;
   isActive: boolean;
 }
@@ -226,6 +227,132 @@ export const CONTENT_BLOCK_SCHEMAS: ContentBlockSchema[] = [
     fields: [
       { name: 'title', type: 'text', label: 'Section Title', maxLength: 100 },
       { name: 'columns', type: 'select', label: 'Columns', options: ['2', '3', '4'] }
+    ]
+  },
+  // NEW ENHANCED CONTENT BLOCKS
+  {
+    type: 'video',
+    name: 'Video Block',
+    description: 'Embed videos from YouTube, Vimeo, or upload directly',
+    category: 'media',
+    icon: 'play_circle',
+    fields: [
+      { name: 'title', type: 'text', label: 'Video Title', maxLength: 100 },
+      { name: 'videoUrl', type: 'url', label: 'Video URL (YouTube/Vimeo)', required: true },
+      { name: 'autoplay', type: 'boolean', label: 'Autoplay Video' },
+      { name: 'controls', type: 'boolean', label: 'Show Controls' },
+      { name: 'aspectRatio', type: 'select', label: 'Aspect Ratio', options: ['16:9', '4:3', '1:1', 'auto'] }
+    ]
+  },
+  {
+    type: 'menu_display',
+    name: 'Menu Display',
+    description: 'Dynamic restaurant menu with categories and items',
+    category: 'interactive',
+    icon: 'restaurant_menu',
+    fields: [
+      { name: 'title', type: 'text', label: 'Menu Title', maxLength: 100 },
+      { name: 'layout', type: 'select', label: 'Layout Style', options: ['grid', 'list', 'cards', 'minimal'] },
+      { name: 'showPrices', type: 'boolean', label: 'Show Prices' },
+      { name: 'showDescriptions', type: 'boolean', label: 'Show Descriptions' },
+      { name: 'showImages', type: 'boolean', label: 'Show Item Images' },
+      { name: 'maxItems', type: 'number', label: 'Max Items to Show' }
+    ]
+  },
+  {
+    type: 'testimonials',
+    name: 'Customer Testimonials',
+    description: 'Display customer reviews and testimonials',
+    category: 'content',
+    icon: 'rate_review',
+    fields: [
+      { name: 'title', type: 'text', label: 'Section Title', maxLength: 100 },
+      { name: 'layout', type: 'select', label: 'Layout', options: ['carousel', 'grid', 'list'] },
+      { name: 'showStars', type: 'boolean', label: 'Show Star Ratings' },
+      { name: 'showPhotos', type: 'boolean', label: 'Show Customer Photos' },
+      { name: 'autoRotate', type: 'boolean', label: 'Auto-rotate Testimonials' }
+    ]
+  },
+  {
+    type: 'newsletter',
+    name: 'Newsletter Signup',
+    description: 'Email capture form with marketing consent',
+    category: 'interactive',
+    icon: 'email',
+    fields: [
+      { name: 'title', type: 'text', label: 'Form Title', required: true, maxLength: 100 },
+      { name: 'subtitle', type: 'textarea', label: 'Description', maxLength: 200 },
+      { name: 'buttonText', type: 'text', label: 'Button Text', maxLength: 30 },
+      { name: 'placeholder', type: 'text', label: 'Email Placeholder', maxLength: 50 },
+      { name: 'consentText', type: 'textarea', label: 'Privacy Consent Text', maxLength: 300 }
+    ]
+  },
+  {
+    type: 'map_location',
+    name: 'Location & Map',
+    description: 'Interactive map with business location and directions',
+    category: 'interactive',
+    icon: 'map',
+    fields: [
+      { name: 'title', type: 'text', label: 'Section Title', maxLength: 100 },
+      { name: 'address', type: 'textarea', label: 'Full Address', required: true },
+      { name: 'mapHeight', type: 'select', label: 'Map Height', options: ['300', '400', '500', '600'] },
+      { name: 'showDirections', type: 'boolean', label: 'Show Directions Button' },
+      { name: 'mapStyle', type: 'select', label: 'Map Style', options: ['roadmap', 'satellite', 'hybrid', 'terrain'] }
+    ]
+  },
+  {
+    type: 'social_feed',
+    name: 'Social Media Feed',
+    description: 'Display Instagram or Facebook posts',
+    category: 'media',
+    icon: 'share',
+    fields: [
+      { name: 'title', type: 'text', label: 'Feed Title', maxLength: 100 },
+      { name: 'platform', type: 'select', label: 'Platform', options: ['instagram', 'facebook', 'twitter'], required: true },
+      { name: 'username', type: 'text', label: 'Username/Handle', required: true, maxLength: 50 },
+      { name: 'postCount', type: 'number', label: 'Number of Posts' },
+      { name: 'layout', type: 'select', label: 'Layout', options: ['grid', 'list', 'carousel'] }
+    ]
+  },
+  {
+    type: 'reservation_widget',
+    name: 'Reservation Widget',
+    description: 'Embedded table booking form',
+    category: 'interactive',
+    icon: 'event_seat',
+    fields: [
+      { name: 'title', type: 'text', label: 'Widget Title', maxLength: 100 },
+      { name: 'subtitle', type: 'textarea', label: 'Description', maxLength: 200 },
+      { name: 'theme', type: 'select', label: 'Theme', options: ['light', 'dark', 'accent'] },
+      { name: 'showAvailability', type: 'boolean', label: 'Show Real-time Availability' },
+      { name: 'defaultPartySize', type: 'number', label: 'Default Party Size' }
+    ]
+  },
+  {
+    type: 'spacer',
+    name: 'Spacer/Divider',
+    description: 'Add spacing or visual dividers between sections',
+    category: 'layout',
+    icon: 'horizontal_rule',
+    fields: [
+      { name: 'height', type: 'select', label: 'Spacing Height', options: ['small', 'medium', 'large', 'extra-large'] },
+      { name: 'showDivider', type: 'boolean', label: 'Show Divider Line' },
+      { name: 'dividerStyle', type: 'select', label: 'Divider Style', options: ['solid', 'dashed', 'dotted', 'gradient'] }
+    ]
+  },
+  {
+    type: 'pricing_menu',
+    name: 'Pricing Menu',
+    description: 'Display services or items with pricing',
+    category: 'interactive',
+    icon: 'receipt_long',
+    fields: [
+      { name: 'title', type: 'text', label: 'Menu Title', maxLength: 100 },
+      { name: 'layout', type: 'select', label: 'Layout', options: ['table', 'cards', 'list'] },
+      { name: 'currency', type: 'text', label: 'Currency Symbol', maxLength: 5 },
+      { name: 'showImages', type: 'boolean', label: 'Show Item Images' },
+      { name: 'allowSorting', type: 'boolean', label: 'Allow Price Sorting' }
     ]
   }
 ];
@@ -778,6 +905,14 @@ export const websiteBuilderService = {
     blockData: Partial<WebsiteBuilderBlock>
   ): Promise<WebsiteBuilderBlock> {
     try {
+      // Add debug logging
+      console.log('[updateContentBlock] Received data:', {
+        restaurantId,
+        pageSlug,
+        blockId,
+        blockData: JSON.stringify(blockData, null, 2)
+      });
+      
       const updatedBlock = await prisma.contentBlock.update({
         where: {
           id: blockId,
@@ -794,11 +929,17 @@ export const websiteBuilderService = {
           buttonLink: blockData.buttonLink,
           buttonStyle: blockData.buttonStyle,
           isActive: blockData.isActive,
+          displayOrder: blockData.displayOrder,
           settings: blockData.settings ? JSON.stringify(blockData.settings) : undefined
         }
       });
 
-      return this.transformContentBlockToBuilderBlock(updatedBlock);
+      console.log('[updateContentBlock] Updated block in database:', JSON.stringify(updatedBlock, null, 2));
+      
+      const transformedBlock = this.transformContentBlockToBuilderBlock(updatedBlock);
+      console.log('[updateContentBlock] Transformed block for frontend:', JSON.stringify(transformedBlock, null, 2));
+      
+      return transformedBlock;
     } catch (error) {
       console.error('Error in updateContentBlock:', error);
       throw error;
@@ -1049,9 +1190,14 @@ export const websiteBuilderService = {
   // Helper method to transform ContentBlock to WebsiteBuilderBlock
   transformContentBlockToBuilderBlock(block: any): WebsiteBuilderBlock {
     let settings = {};
+    let styles = {};
     if (block.settings) {
       try {
         settings = typeof block.settings === 'string' ? JSON.parse(block.settings) : block.settings;
+        // Extract styles from settings if they exist
+        if (settings && (settings as any).styles) {
+          styles = (settings as any).styles;
+        }
       } catch (error) {
         console.warn('Failed to parse block settings, using empty object:', error);
         settings = {};
@@ -1071,6 +1217,7 @@ export const websiteBuilderService = {
       buttonLink: block.buttonLink,
       buttonStyle: block.buttonStyle,
       settings: settings,
+      styles: styles,
       displayOrder: block.displayOrder || 0,
       isActive: block.isActive || false
     };

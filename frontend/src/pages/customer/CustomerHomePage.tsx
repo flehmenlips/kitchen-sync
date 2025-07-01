@@ -19,13 +19,14 @@ import {
   Email as EmailIcon,
   Restaurant as RestaurantIcon
 } from '@mui/icons-material';
-import { unifiedContentService, UnifiedRestaurantContent } from '../../services/unifiedContentService';
 import { contentBlockService, ContentBlock } from '../../services/contentBlockService';
+import { restaurantSettingsService, RestaurantSettings } from '../../services/restaurantSettingsService';
 import ContentBlockRenderer from '../../components/customer/ContentBlockRenderer';
+import { getCurrentRestaurantSlug } from '../../utils/subdomain';
 
 const CustomerHomePage: React.FC = () => {
-  const [content, setContent] = useState<UnifiedRestaurantContent | null>(null);
   const [contentBlocks, setContentBlocks] = useState<ContentBlock[]>([]);
+  const [restaurantSettings, setRestaurantSettings] = useState<RestaurantSettings | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -34,16 +35,15 @@ const CustomerHomePage: React.FC = () => {
 
   const fetchData = async () => {
     try {
-      // Fetch unified content for hero, info cards, etc.
-      const unifiedContent = await unifiedContentService.getUnifiedContent('home');
-      console.log('[CustomerHomePage] Fetched content:', unifiedContent);
-      console.log('[CustomerHomePage] Opening hours data:', unifiedContent?.contact?.openingHours);
-      setContent(unifiedContent);
-
-      // Fetch content blocks separately for proper typing
+      // Fetch content blocks (primary source for website content)
       const blocks = await contentBlockService.getPublicBlocks('home');
       console.log('[CustomerHomePage] Fetched content blocks:', blocks);
       setContentBlocks(blocks);
+
+      // Fetch restaurant settings only for contact info and branding
+      const settings = await restaurantSettingsService.getPublicSettings();
+      console.log('[CustomerHomePage] Fetched restaurant settings for contact/branding:', settings);
+      setRestaurantSettings(settings);
     } catch (error) {
       console.error('Error fetching content:', error);
     } finally {
@@ -52,36 +52,22 @@ const CustomerHomePage: React.FC = () => {
   };
 
   const formatAddress = () => {
-    if (!content) return '';
+    if (!restaurantSettings) return '';
     const parts = [
-      content.contact.address,
-      content.contact.city,
-      content.contact.state,
-      content.contact.zip
+      restaurantSettings.contactAddress,
+      restaurantSettings.contactCity,
+      restaurantSettings.contactState,
+      restaurantSettings.contactZip
     ].filter(Boolean);
     return parts.join(', ');
   };
 
-  // Safe rendering helper to prevent objects as React children
-  const safeRender = (value: any): string => {
-    if (value === null || value === undefined) return '';
-    if (typeof value === 'string' || typeof value === 'number') return String(value);
-    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
-    if (typeof value === 'object') {
-      // If it's an object, try to extract meaningful content
-      if (Array.isArray(value)) return value.join(', ');
-      if (value.toString && typeof value.toString === 'function') return value.toString();
-      return JSON.stringify(value);
-    }
-    return String(value);
-  };
-
   const getTodayHours = () => {
     try {
-      if (!content?.contact?.openingHours) return 'Hours not available';
+      if (!restaurantSettings?.openingHours) return 'Hours not available';
       const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
       const today = days[new Date().getDay()];
-      const hours = content.contact.openingHours[today];
+      const hours = restaurantSettings.openingHours[today];
       
       if (!hours || typeof hours !== 'object') return 'Closed today';
       
@@ -125,133 +111,168 @@ const CustomerHomePage: React.FC = () => {
     );
   }
 
-  // Separate hero block from other content blocks
+  // Separate content blocks by type
   const heroBlock = contentBlocks.find(block => block.blockType === 'hero');
-  const otherBlocks = contentBlocks.filter(block => block.blockType !== 'hero');
+  const otherBlocks = contentBlocks
+    .filter(block => block.blockType !== 'hero')
+    .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
 
   return (
     <Box>
       {/* Hero Section from ContentBlocks */}
       {heroBlock && <ContentBlockRenderer blocks={[heroBlock]} />}
 
-      {/* Restaurant Info Cards */}
-      <Container maxWidth="lg" sx={{ mt: -8, position: 'relative', zIndex: 2 }}>
-        <Grid container spacing={3}>
-          {/* Opening Hours Card */}
-          <Grid item xs={12} md={4}>
-            <Card sx={{ height: '100%' }}>
-              <CardContent sx={{ textAlign: 'center', p: 3 }}>
-                <AccessTimeIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
-                <Typography variant="h6" gutterBottom>
-                  {content?.seo?.hoursCardTitle || 'Opening Hours'}
-                </Typography>
-                <Typography variant="body1" color="text.secondary" gutterBottom>
-                  Today: <strong>{getTodayHours()}</strong>
-                </Typography>
-                {content?.contact.openingHours && (
-                  <Box sx={{ mt: 2 }}>
-                    {(() => {
-                      try {
-                        if (!content?.contact?.openingHours || typeof content.contact.openingHours !== 'object') {
+      {/* Restaurant Info Cards - only show if we have restaurant settings */}
+      {restaurantSettings && (
+        <Container maxWidth="lg" sx={{ mt: -8, position: 'relative', zIndex: 2 }}>
+          <Grid container spacing={3}>
+            {/* Opening Hours Card */}
+            {restaurantSettings.openingHours && (
+              <Grid item xs={12} md={4}>
+                <Card sx={{ height: '100%' }}>
+                  <CardContent sx={{ textAlign: 'center', p: 3 }}>
+                    <AccessTimeIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
+                    <Typography variant="h6" gutterBottom>
+                      {restaurantSettings.hoursCardTitle || 'Opening Hours'}
+                    </Typography>
+                    <Typography variant="body1" color="text.secondary" gutterBottom>
+                      Today: <strong>{getTodayHours()}</strong>
+                    </Typography>
+                    <Box sx={{ mt: 2 }}>
+                      {(() => {
+                        try {
+                          if (!restaurantSettings?.openingHours || typeof restaurantSettings.openingHours !== 'object') {
+                            return <Typography variant="body2">Hours not available</Typography>;
+                          }
+                          
+                          const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+                          const validEntries = days
+                            .filter(day => restaurantSettings.openingHours[day])
+                            .map(day => {
+                              const hours = restaurantSettings.openingHours[day];
+                              
+                              if (!hours || typeof hours !== 'object') {
+                                return { day, formattedHours: 'Closed' };
+                              }
+                              
+                              const open = hours.open ? String(hours.open) : '';
+                              const close = hours.close ? String(hours.close) : '';
+                              
+                              if (!open || !close) {
+                                return { day, formattedHours: 'Closed' };
+                              }
+                              
+                              return { day, formattedHours: `${open} - ${close}` };
+                            });
+                          
+                          return validEntries.map(({ day, formattedHours }) => (
+                            <Typography key={day} variant="body2" sx={{ textTransform: 'capitalize' }}>
+                              {day}: {formattedHours}
+                            </Typography>
+                          ));
+                        } catch (error) {
+                          console.error('Error rendering opening hours:', error);
                           return <Typography variant="body2">Hours not available</Typography>;
                         }
-                        
-                        const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-                        const validEntries = days
-                          .filter(day => content.contact.openingHours[day])
-                          .map(day => {
-                            const hours = content.contact.openingHours[day];
-                            
-                            if (!hours || typeof hours !== 'object') {
-                              return { day, formattedHours: 'Closed' };
-                            }
-                            
-                            const open = hours.open ? String(hours.open) : '';
-                            const close = hours.close ? String(hours.close) : '';
-                            
-                            if (!open || !close) {
-                              return { day, formattedHours: 'Closed' };
-                            }
-                            
-                            return { day, formattedHours: `${open} - ${close}` };
-                          });
-                        
-                        return validEntries.map(({ day, formattedHours }) => (
-                          <Typography key={day} variant="body2" sx={{ textTransform: 'capitalize' }}>
-                            {day}: {formattedHours}
-                          </Typography>
-                        ));
-                      } catch (error) {
-                        console.error('Error rendering opening hours:', error);
-                        return <Typography variant="body2">Hours not available</Typography>;
-                      }
-                    })()}
-                  </Box>
-                )}
-              </CardContent>
-            </Card>
-          </Grid>
+                      })()}
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            )}
 
-          {/* Location Card */}
-          <Grid item xs={12} md={4}>
-            <Card sx={{ height: '100%' }}>
-              <CardContent sx={{ textAlign: 'center', p: 3 }}>
-                <LocationOnIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
-                <Typography variant="h6" gutterBottom>
-                  {content?.seo?.locationCardTitle || 'Our Location'}
-                </Typography>
-                <Typography variant="body1" color="text.secondary">
-                  {formatAddress() || '123 Main Street, City, State 12345'}
-                </Typography>
-                <Button
-                  variant="text"
-                  color="primary"
-                  sx={{ mt: 2 }}
-                  href={`https://maps.google.com/?q=${encodeURIComponent(formatAddress())}`}
-                  target="_blank"
-                >
-                  Get Directions
-                </Button>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          {/* Contact Card */}
-          <Grid item xs={12} md={4}>
-            <Card sx={{ height: '100%' }}>
-              <CardContent sx={{ textAlign: 'center', p: 3 }}>
-                <PhoneIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
-                <Typography variant="h6" gutterBottom>
-                  {content?.seo?.contactCardTitle || 'Contact Us'}
-                </Typography>
-                {content?.contact.phone && (
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
-                    <PhoneIcon sx={{ mr: 1, fontSize: 20 }} />
-                    <Typography variant="body1">
-                      <a href={`tel:${content.contact.phone}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                        {safeRender(content.contact.phone)}
-                      </a>
+            {/* Location Card */}
+            {(restaurantSettings.contactAddress || restaurantSettings.contactCity) && (
+              <Grid item xs={12} md={4}>
+                <Card sx={{ height: '100%' }}>
+                  <CardContent sx={{ textAlign: 'center', p: 3 }}>
+                    <LocationOnIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
+                    <Typography variant="h6" gutterBottom>
+                      {restaurantSettings.locationCardTitle || 'Our Location'}
                     </Typography>
-                  </Box>
-                )}
-                {content?.contact.email && (
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <EmailIcon sx={{ mr: 1, fontSize: 20 }} />
-                    <Typography variant="body1">
-                      <a href={`mailto:${content.contact.email}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                        {safeRender(content.contact.email)}
-                      </a>
+                    <Typography variant="body1" color="text.secondary">
+                      {formatAddress() || '123 Main Street, City, State 12345'}
                     </Typography>
-                  </Box>
-                )}
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      </Container>
+                    <Button
+                      variant="text"
+                      color="primary"
+                      sx={{ mt: 2 }}
+                      href={`https://maps.google.com/?q=${encodeURIComponent(formatAddress())}`}
+                      target="_blank"
+                    >
+                      Get Directions
+                    </Button>
+                  </CardContent>
+                </Card>
+              </Grid>
+            )}
 
-      {/* Other Content Blocks (About, Contact, Menu Preview, etc.) */}
-      <ContentBlockRenderer blocks={otherBlocks} />
+            {/* Contact Card */}
+            {(restaurantSettings.contactPhone || restaurantSettings.contactEmail) && (
+              <Grid item xs={12} md={4}>
+                <Card sx={{ height: '100%' }}>
+                  <CardContent sx={{ textAlign: 'center', p: 3 }}>
+                    <PhoneIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
+                    <Typography variant="h6" gutterBottom>
+                      {restaurantSettings.contactCardTitle || 'Contact Us'}
+                    </Typography>
+                    {restaurantSettings.contactPhone && (
+                      <Typography variant="body1" color="text.secondary" gutterBottom>
+                        <PhoneIcon sx={{ fontSize: 16, mr: 1, verticalAlign: 'middle' }} />
+                        {restaurantSettings.contactPhone}
+                      </Typography>
+                    )}
+                    {restaurantSettings.contactEmail && (
+                      <Typography variant="body1" color="text.secondary">
+                        <EmailIcon sx={{ fontSize: 16, mr: 1, verticalAlign: 'middle' }} />
+                        {restaurantSettings.contactEmail}
+                      </Typography>
+                    )}
+                    {restaurantSettings.contactPhone && (
+                      <Button
+                        variant="text"
+                        color="primary"
+                        sx={{ mt: 2 }}
+                        href={`tel:${restaurantSettings.contactPhone}`}
+                      >
+                        Call Now
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              </Grid>
+            )}
+          </Grid>
+        </Container>
+      )}
+
+      {/* All other content blocks from Website Builder */}
+      {otherBlocks.length > 0 && (
+        <Container maxWidth="lg" sx={{ my: 4 }}>
+          <ContentBlockRenderer blocks={otherBlocks} />
+        </Container>
+      )}
+
+      {/* Fallback content if no content blocks */}
+      {contentBlocks.length === 0 && (
+        <Container maxWidth="lg" sx={{ my: 8, textAlign: 'center' }}>
+          <Typography variant="h4" gutterBottom>
+            {restaurantSettings?.websiteName || 'Welcome to Our Restaurant'}
+          </Typography>
+          <Typography variant="body1" paragraph sx={{ fontSize: '1.1rem', mb: 4 }}>
+            {restaurantSettings?.tagline || 'Experience culinary excellence with fresh, locally-sourced ingredients.'}
+          </Typography>
+          <Button
+            component={Link}
+            to="/menu"
+            variant="contained"
+            size="large"
+            startIcon={<RestaurantIcon />}
+          >
+            View Our Menu
+          </Button>
+        </Container>
+      )}
     </Box>
   );
 };

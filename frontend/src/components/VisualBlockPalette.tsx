@@ -29,7 +29,13 @@ import {
   Campaign as CTAIcon,
   Map as MapIcon,
   Restaurant as MenuIcon,
-  Article as HeroIcon
+  Article as HeroIcon,
+  PlayCircleOutlined,
+  Share,
+  ReceiptLong,
+  Email,
+  EventSeat,
+  Star
 } from '@mui/icons-material';
 // Content block types with their metadata and visual information
 const CONTENT_BLOCK_TYPES: Record<string, BlockType[]> = {
@@ -50,6 +56,14 @@ const CONTENT_BLOCK_TYPES: Record<string, BlockType[]> = {
       icon: <FeaturesIcon />,
       color: '#7b1fa2',
       preview: 'Three-column feature grid with icons'
+    },
+    {
+      id: 'spacer',
+      name: 'Spacer/Divider',
+      description: 'Add spacing or visual dividers between sections',
+      icon: <DragIcon />,
+      color: '#757575',
+      preview: 'Spacing control with optional divider line'
     }
   ],
   // Content blocks
@@ -61,6 +75,14 @@ const CONTENT_BLOCK_TYPES: Record<string, BlockType[]> = {
       icon: <TextIcon />,
       color: '#388e3c',
       preview: 'Formatted text with headings and paragraphs'
+    },
+    {
+      id: 'about',
+      name: 'About Section',
+      description: 'Rich content section with title and optional image',
+      icon: <TextIcon />,
+      color: '#2e7d32',
+      preview: 'About section with image and description'
     },
     {
       id: 'contact',
@@ -77,6 +99,14 @@ const CONTENT_BLOCK_TYPES: Record<string, BlockType[]> = {
       icon: <HoursIcon />,
       color: '#5d4037',
       preview: 'Weekly schedule with opening times'
+    },
+    {
+      id: 'testimonials',
+      name: 'Customer Testimonials',
+      description: 'Display customer reviews and testimonials',
+      icon: <Star />,
+      color: '#ff6f00',
+      preview: 'Customer reviews with ratings and photos'
     }
   ],
   // Media blocks
@@ -96,6 +126,22 @@ const CONTENT_BLOCK_TYPES: Record<string, BlockType[]> = {
       icon: <GalleryIcon />,
       color: '#00695c',
       preview: 'Grid of photos with lightbox viewing'
+    },
+    {
+      id: 'video',
+      name: 'Video Block',
+      description: 'Embed videos from YouTube, Vimeo, or upload directly',
+      icon: <PlayCircleOutlined />,
+      color: '#d32f2f',
+      preview: 'Responsive video player with controls'
+    },
+    {
+      id: 'social_feed',
+      name: 'Social Media Feed',
+      description: 'Display Instagram or Facebook posts',
+      icon: <Share />,
+      color: '#e91e63',
+      preview: 'Live social media posts in grid layout'
     }
   ],
   // Interactive blocks
@@ -117,20 +163,44 @@ const CONTENT_BLOCK_TYPES: Record<string, BlockType[]> = {
       preview: 'Eye-catching CTA with background and button'
     },
     {
-      id: 'map',
+      id: 'menu_display',
+      name: 'Menu Display',
+      description: 'Dynamic restaurant menu with categories and items',
+      icon: <MenuIcon />,
+      color: '#689f38',
+      preview: 'Menu items with prices and descriptions'
+    },
+    {
+      id: 'pricing_menu',
+      name: 'Pricing Menu',
+      description: 'Display services or items with pricing',
+      icon: <ReceiptLong />,
+      color: '#5e35b1',
+      preview: 'Pricing table with sortable items'
+    },
+    {
+      id: 'map_location',
       name: 'Location Map',
-      description: 'Embedded map showing business location',
+      description: 'Interactive map showing business location',
       icon: <MapIcon />,
       color: '#303f9f',
       preview: 'Interactive map with location marker'
     },
     {
-      id: 'menu_preview',
-      name: 'Menu Preview',
-      description: 'Preview of restaurant menu items',
-      icon: <MenuIcon />,
-      color: '#689f38',
-      preview: 'Menu items with prices and descriptions'
+      id: 'newsletter',
+      name: 'Newsletter Signup',
+      description: 'Email capture form with marketing consent',
+      icon: <Email />,
+      color: '#1565c0',
+      preview: 'Email signup form with privacy compliance'
+    },
+    {
+      id: 'reservation_widget',
+      name: 'Reservation Widget',
+      description: 'Embedded table booking form',
+      icon: <EventSeat />,
+      color: '#8d6e63',
+      preview: 'Table booking form with availability'
     }
   ]
 };

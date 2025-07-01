@@ -176,9 +176,19 @@ const WebsiteBuilderPage: React.FC = () => {
     fetchWebsiteData();
   }, []);
 
+  // Debug: Track editingBlockId changes
+  useEffect(() => {
+    console.log('[DEBUG] editingBlockId changed to:', editingBlockId);
+  }, [editingBlockId]);
+
   const fetchWebsiteData = async () => {
     try {
       setLoading(true);
+      
+      // Preserve current state before refresh
+      const currentSelectedPageSlug = selectedPage?.slug;
+      const currentEditingBlockId = editingBlockId;
+      
       const data = await websiteBuilderService.getWebsiteBuilderData();
       
       // Synchronize pages and navigation items
@@ -204,10 +214,31 @@ const WebsiteBuilderPage: React.FC = () => {
       setWebsiteData(data);
       setHasChanges(false); // Reset changes state when data is loaded
       
-      // Select the first page by default
-      if (data.pages.length > 0) {
+      // Restore previous page selection or select first page as fallback
+      if (currentSelectedPageSlug) {
+        const previousPage = data.pages.find(p => p.slug === currentSelectedPageSlug);
+        if (previousPage) {
+          setSelectedPage(previousPage);
+        } else {
+          // Page was deleted, select first available page
+          setSelectedPage(data.pages.length > 0 ? data.pages[0] : null);
+        }
+      } else if (data.pages.length > 0) {
+        // Initial load - select first page
         setSelectedPage(data.pages[0]);
       }
+      
+      // Restore editing state if the block still exists
+      if (currentEditingBlockId && currentSelectedPageSlug) {
+        const restoredPage = data.pages.find(p => p.slug === currentSelectedPageSlug);
+        const blockStillExists = restoredPage?.blocks.some(b => b.id === currentEditingBlockId);
+        if (blockStillExists) {
+          setEditingBlockId(currentEditingBlockId);
+        } else {
+          setEditingBlockId(null);
+        }
+      }
+      
     } catch (error) {
       console.error('Error fetching website data:', error);
       showSnackbar('Failed to load website data', 'error');
@@ -275,8 +306,34 @@ const WebsiteBuilderPage: React.FC = () => {
 
       await handleSaveBlock(updatedBlockData);
       
-      // Refresh data to reflect changes
-      await fetchWebsiteData();
+      // Update local state instead of full refresh to preserve editing state
+      setWebsiteData(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          pages: prev.pages.map(page =>
+            page.slug === 'home'
+              ? {
+                  ...page,
+                  blocks: page.blocks.map(b =>
+                    b.id === block.id ? { ...b, [blockField]: value } : b
+                  )
+                }
+              : page
+          )
+        };
+      });
+
+      // Update selected page if it's the home page
+      setSelectedPage(prev => {
+        if (!prev || prev.slug !== 'home') return prev;
+        return {
+          ...prev,
+          blocks: prev.blocks.map(b =>
+            b.id === block.id ? { ...b, [blockField]: value } : b
+          )
+        };
+      });
       
     } catch (error) {
       console.error(`Error updating ${blockType} block:`, error);
@@ -526,12 +583,16 @@ const WebsiteBuilderPage: React.FC = () => {
     const blockId = editingBlockId || blockData.id;
     if (!selectedPage || !blockId) return;
 
+    console.log('[DEBUG] handleAutoSaveBlock called with:', { blockId, editingBlockId, blockData });
+
     try {
       const updatedBlock = await websiteBuilderService.updateContentBlock(
         selectedPage.slug,
         blockId,
         blockData
       );
+
+      console.log('[DEBUG] Block updated successfully:', updatedBlock);
 
       // Update the block in local state
       setWebsiteData(prev => {
@@ -561,6 +622,8 @@ const WebsiteBuilderPage: React.FC = () => {
           )
         };
       });
+
+      console.log('[DEBUG] Local state updated, editingBlockId should remain:', editingBlockId);
 
       // Auto-save: Never close the editor, no notifications
     } catch (error) {
@@ -712,8 +775,34 @@ const WebsiteBuilderPage: React.FC = () => {
       
       const data = response.data;
       
-      // Refresh the website data to show the updated block
-      await fetchWebsiteData();
+      // Update local state instead of full refresh to preserve editing state
+      setWebsiteData(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          pages: prev.pages.map(page => ({
+            ...page,
+            blocks: page.blocks.map(block =>
+              block.id === blockId 
+                ? { ...block, imageUrl: data.imageUrl, imagePublicId: data.publicId }
+                : block
+            )
+          }))
+        };
+      });
+
+      // Update selected page
+      setSelectedPage(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          blocks: prev.blocks.map(block =>
+            block.id === blockId 
+              ? { ...block, imageUrl: data.imageUrl, imagePublicId: data.publicId }
+              : block
+          )
+        };
+      });
       
       return {
         imageUrl: data.imageUrl,
@@ -866,55 +955,115 @@ const WebsiteBuilderPage: React.FC = () => {
   // Helper function to recreate missing navigation items for existing pages
   const handleSyncNavigationItems = async () => {
     if (!websiteData) return;
-    
+
     try {
+      setSaving(true);
+      
+      // Get all current pages
+      const pages = websiteData.pages;
+      
+      // Create navigation items for pages that don't have them
       const currentNavItems = websiteData.settings.navigationItems || [];
       const existingPaths = new Set(currentNavItems.map(item => item.path));
       
-      // Find pages without navigation items
-      const pagesWithoutNavItems = websiteData.pages.filter(page => 
-        !existingPaths.has(`/${page.slug}`)
-      );
+      const newNavItems = pages
+        .filter(page => !existingPaths.has(`/${page.slug}`))
+        .map(page => ({
+          id: `nav-page-${page.id}`,
+          label: page.name,
+          path: `/${page.slug}`,
+          icon: '',
+          isActive: true,
+          displayOrder: currentNavItems.length + 1,
+          isSystem: page.isSystem
+        }));
       
-      if (pagesWithoutNavItems.length === 0) {
-        showSnackbar('All pages already have navigation items', 'info');
-        return;
+      if (newNavItems.length > 0) {
+        const updatedNavItems = [...currentNavItems, ...newNavItems];
+        
+        // Save to database
+        await websiteBuilderService.updateSettings({
+          navigationItems: updatedNavItems
+        });
+        
+        // Update local state
+        setWebsiteData(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            settings: {
+              ...prev.settings,
+              navigationItems: updatedNavItems
+            }
+          };
+        });
+        
+        showSnackbar(`Added ${newNavItems.length} navigation items`, 'success');
+      } else {
+        showSnackbar('Navigation items are already synchronized', 'info');
       }
-      
-      // Create navigation items for missing pages
-      const newNavItems = pagesWithoutNavItems.map((page, index) => ({
-        id: `nav-page-${page.id}`,
-        label: page.name,
-        path: `/${page.slug}`,
-        icon: '',
-        isActive: true,
-        displayOrder: currentNavItems.length + index + 1,
-        isSystem: false
-      }));
-      
-      const updatedNavItems = [...currentNavItems, ...newNavItems];
-      
-      // Save to database
-      await websiteBuilderService.updateSettings({
-        navigationItems: updatedNavItems
-      });
-      
-      // Update local state
-      setWebsiteData(prev => {
-        if (!prev) return null;
-        return {
-          ...prev,
-          settings: {
-            ...prev.settings,
-            navigationItems: updatedNavItems
-          }
-        };
-      });
-      
-      showSnackbar(`Added ${newNavItems.length} missing navigation items`, 'success');
     } catch (error) {
       console.error('Error syncing navigation items:', error);
       showSnackbar('Failed to sync navigation items', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Helper functions for default block content - moved here to be available for use
+  const getDefaultBlockTitle = (blockType: string): string => {
+    switch (blockType) {
+      case 'hero': return 'Welcome to Our Restaurant';
+      case 'features': return 'Our Features';
+      case 'text': return 'Text Content';
+      case 'about': return 'About Us';
+      case 'contact': return 'Contact Information';
+      case 'hours': return 'Opening Hours';
+      case 'image': return 'Image';
+      case 'gallery': return 'Photo Gallery';
+      case 'button': return 'Click Here';
+      case 'cta': return 'Special Offer';
+      case 'video': return 'Featured Video';
+      case 'menu_display': return 'Our Menu';
+      case 'testimonials': return 'What Our Customers Say';
+      case 'newsletter': return 'Stay Updated';
+      case 'map_location': return 'Find Us';
+      case 'social_feed': return 'Follow Us';
+      case 'reservation_widget': return 'Book a Table';
+      case 'pricing_menu': return 'Our Prices';
+      case 'spacer': return '';
+      // Legacy support
+      case 'map': return 'Find Us';
+      case 'menu_preview': return 'Our Menu';
+      default: return 'New Block';
+    }
+  };
+
+  const getDefaultBlockContent = (blockType: string): string => {
+    switch (blockType) {
+      case 'hero': return 'Experience amazing food and great atmosphere at our restaurant.';
+      case 'features': return 'Discover what makes us special.';
+      case 'text': return 'Add your content here...';
+      case 'about': return 'Learn about our story, our passion for food, and what makes our restaurant unique.';
+      case 'contact': return 'Get in touch with us for reservations and inquiries.';
+      case 'hours': return 'Visit us during our opening hours.';
+      case 'image': return 'Upload an image to showcase your content.';
+      case 'gallery': return 'A collection of beautiful photos from our restaurant.';
+      case 'button': return 'Learn More';
+      case 'cta': return 'Don\'t miss our special offers and events!';
+      case 'video': return 'Watch our featured video to learn more about our restaurant.';
+      case 'menu_display': return 'Explore our carefully crafted menu featuring fresh, local ingredients.';
+      case 'testimonials': return 'See what our satisfied customers have to say about their dining experience.';
+      case 'newsletter': return 'Subscribe to our newsletter for special offers, events, and culinary updates.';
+      case 'map_location': return 'Visit our restaurant location and get directions.';
+      case 'social_feed': return 'Connect with us on social media for the latest updates and behind-the-scenes content.';
+      case 'reservation_widget': return 'Reserve your table for an unforgettable dining experience.';
+      case 'pricing_menu': return 'View our current pricing for services and special offerings.';
+      case 'spacer': return '';
+      // Legacy support
+      case 'map': return 'Visit our restaurant location.';
+      case 'menu_preview': return 'Check out our delicious menu items.';
+      default: return 'New content block';
     }
   };
 
@@ -953,9 +1102,27 @@ const WebsiteBuilderPage: React.FC = () => {
         displayOrder = (prevOrder + nextOrder) / 2;
       }
 
-      await websiteBuilderService.createContentBlock(selectedPage.slug, newBlockData);
+      const newBlock = await websiteBuilderService.createContentBlock(selectedPage.slug, newBlockData);
 
-      await fetchWebsiteData();
+      // Update local state instead of full refresh
+      setWebsiteData(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          pages: prev.pages.map(page => 
+            page.slug === selectedPage.slug 
+              ? { ...page, blocks: [...page.blocks, newBlock] }
+              : page
+          )
+        };
+      });
+      
+      // Update selected page with new block
+      setSelectedPage(prev => {
+        if (!prev || prev.slug !== selectedPage.slug) return prev;
+        return { ...prev, blocks: [...prev.blocks, newBlock] };
+      });
+
       showSnackbar(`Added ${blockType} block successfully`, 'success');
     } catch (error) {
       console.error('Failed to add block:', error);
@@ -980,8 +1147,27 @@ const WebsiteBuilderPage: React.FC = () => {
         buttonLink: block.buttonLink
       };
 
-      await websiteBuilderService.createContentBlock(selectedPage.slug, duplicateData);
-      await fetchWebsiteData();
+      const newBlock = await websiteBuilderService.createContentBlock(selectedPage.slug, duplicateData);
+      
+      // Update local state instead of full refresh
+      setWebsiteData(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          pages: prev.pages.map(page => 
+            page.slug === selectedPage.slug 
+              ? { ...page, blocks: [...page.blocks, newBlock] }
+              : page
+          )
+        };
+      });
+      
+      // Update selected page with duplicated block
+      setSelectedPage(prev => {
+        if (!prev || prev.slug !== selectedPage.slug) return prev;
+        return { ...prev, blocks: [...prev.blocks, newBlock] };
+      });
+
       showSnackbar('Block duplicated successfully', 'success');
     } catch (error) {
       console.error('Failed to duplicate block:', error);
@@ -1003,36 +1189,53 @@ const WebsiteBuilderPage: React.FC = () => {
       
       if (blockIndex === -1) return;
       
-      let newDisplayOrder: number;
+      let newIndex: number;
       
       if (direction === 'up' && blockIndex > 0) {
-        // Move up (swap with previous block)
-        const prevBlock = sortedBlocks[blockIndex - 1];
-        newDisplayOrder = prevBlock.displayOrder || 0;
-        
-        // Update the previous block to take current block's position
-        await websiteBuilderService.updateContentBlock(selectedPage.slug, prevBlock.id, {
-          displayOrder: sortedBlocks[blockIndex].displayOrder || 0
-        });
+        newIndex = blockIndex - 1;
       } else if (direction === 'down' && blockIndex < sortedBlocks.length - 1) {
-        // Move down (swap with next block)
-        const nextBlock = sortedBlocks[blockIndex + 1];
-        newDisplayOrder = nextBlock.displayOrder || 0;
-        
-        // Update the next block to take current block's position
-        await websiteBuilderService.updateContentBlock(selectedPage.slug, nextBlock.id, {
-          displayOrder: sortedBlocks[blockIndex].displayOrder || 0
-        });
+        newIndex = blockIndex + 1;
       } else {
         return; // Can't move further
       }
       
-      // Update current block's position
-      await websiteBuilderService.updateContentBlock(selectedPage.slug, blockId, {
-        displayOrder: newDisplayOrder
+      // Create new array with the block moved to the new position
+      const reorderedBlocks = [...sortedBlocks];
+      const [movedBlock] = reorderedBlocks.splice(blockIndex, 1);
+      reorderedBlocks.splice(newIndex, 0, movedBlock);
+      
+      // Assign sequential displayOrder values (1, 2, 3, 4...)
+      const updates = reorderedBlocks.map((block, index) => ({
+        ...block,
+        displayOrder: index + 1
+      }));
+      
+      // Update all blocks to ensure clean sequential ordering
+      for (const updatedBlock of updates) {
+        await websiteBuilderService.updateContentBlock(selectedPage.slug, updatedBlock.id, {
+          displayOrder: updatedBlock.displayOrder
+        });
+      }
+      
+      // Update local state instead of full refresh
+      setWebsiteData(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          pages: prev.pages.map(page => 
+            page.slug === selectedPage.slug 
+              ? { ...page, blocks: updates }
+              : page
+          )
+        };
       });
       
-      await fetchWebsiteData();
+      // Update selected page with reordered blocks
+      setSelectedPage(prev => {
+        if (!prev || prev.slug !== selectedPage.slug) return prev;
+        return { ...prev, blocks: updates };
+      });
+
       showSnackbar(`Block moved ${direction} successfully`, 'success');
     } catch (error) {
       console.error('Failed to move block:', error);
@@ -1042,38 +1245,64 @@ const WebsiteBuilderPage: React.FC = () => {
     }
   };
 
-  // Helper functions for default block content
-  const getDefaultBlockTitle = (blockType: string): string => {
-    switch (blockType) {
-      case 'hero': return 'Welcome to Our Restaurant';
-      case 'features': return 'Our Features';
-      case 'text': return 'Text Content';
-      case 'contact': return 'Contact Information';
-      case 'hours': return 'Opening Hours';
-      case 'image': return 'Image';
-      case 'gallery': return 'Photo Gallery';
-      case 'button': return 'Click Here';
-      case 'cta': return 'Special Offer';
-      case 'map': return 'Find Us';
-      case 'menu_preview': return 'Our Menu';
-      default: return 'New Block';
-    }
-  };
+  // Handle block reordering via drag and drop
+  const handleVisualBlockReorder = async (draggedBlockId: number, targetPosition: number) => {
+    if (!selectedPage) return;
 
-  const getDefaultBlockContent = (blockType: string): string => {
-    switch (blockType) {
-      case 'hero': return 'Experience amazing food and great atmosphere at our restaurant.';
-      case 'features': return 'Discover what makes us special.';
-      case 'text': return 'Add your content here...';
-      case 'contact': return 'Get in touch with us for reservations and inquiries.';
-      case 'hours': return 'Visit us during our opening hours.';
-      case 'image': return 'Upload an image to showcase your content.';
-      case 'gallery': return 'A collection of beautiful photos.';
-      case 'button': return 'Learn More';
-      case 'cta': return 'Don\'t miss our special offers and events!';
-      case 'map': return 'Visit our restaurant location.';
-      case 'menu_preview': return 'Check out our delicious menu items.';
-      default: return 'New content block';
+    try {
+      setSaving(true);
+      
+      const pageBlocks = selectedPage.blocks || [];
+      const sortedBlocks = [...pageBlocks].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+      const draggedBlock = sortedBlocks.find(b => b.id === draggedBlockId);
+      
+      if (!draggedBlock) return;
+      
+      // Remove dragged block from array
+      const otherBlocks = sortedBlocks.filter(b => b.id !== draggedBlockId);
+      
+      // Insert at target position
+      const reorderedBlocks = [...otherBlocks];
+      reorderedBlocks.splice(targetPosition, 0, draggedBlock);
+      
+      // Assign sequential displayOrder values (1, 2, 3, 4...)
+      const updates = reorderedBlocks.map((block, index) => ({
+        ...block,
+        displayOrder: index + 1
+      }));
+      
+      // Update all blocks to ensure clean sequential ordering
+      for (const updatedBlock of updates) {
+        await websiteBuilderService.updateContentBlock(selectedPage.slug, updatedBlock.id, {
+          displayOrder: updatedBlock.displayOrder
+        });
+      }
+      
+      // Update local state instead of full refresh
+      setWebsiteData(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          pages: prev.pages.map(page => 
+            page.slug === selectedPage.slug 
+              ? { ...page, blocks: updates }
+              : page
+          )
+        };
+      });
+      
+      // Update selected page with reordered blocks
+      setSelectedPage(prev => {
+        if (!prev || prev.slug !== selectedPage.slug) return prev;
+        return { ...prev, blocks: updates };
+      });
+
+      showSnackbar('Block reordered successfully', 'success');
+    } catch (error) {
+      console.error('Failed to reorder block:', error);
+      showSnackbar('Failed to reorder block', 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -1088,6 +1317,7 @@ const WebsiteBuilderPage: React.FC = () => {
 
   // Visual Canvas edit handler
   const handleVisualBlockEdit = (block: WBBlock) => {
+    console.log('[DEBUG] handleVisualBlockEdit called for block:', block.id);
     setEditingBlockId(block.id);
   };
 
@@ -1481,9 +1711,9 @@ const WebsiteBuilderPage: React.FC = () => {
                             onPostCreateImageUpload={handlePostCreateImageUpload}
                             isEditing={editingBlockId === block.id}
                             setIsEditing={(editing) => {
-                              if (editing) {
-                                setEditingBlockId(block.id);
-                              } else {
+                              console.log('[DEBUG] ContentBlockEditor setIsEditing called with:', editing);
+                              if (!editing) {
+                                console.log('[DEBUG] Closing modal because setIsEditing(false) was called');
                                 setEditingBlockId(null);
                               }
                             }}
@@ -1543,6 +1773,7 @@ const WebsiteBuilderPage: React.FC = () => {
                 onBlockDelete={handleDeleteBlock}
                 onBlockDuplicate={handleVisualBlockDuplicate}
                 onBlockMove={handleVisualBlockMove}
+                onBlockReorder={handleVisualBlockReorder}
                 selectedPageId={selectedPage?.id ? parseInt(selectedPage.id) : undefined}
                 availablePages={websiteData?.pages || []}
                 selectedPageSlug={selectedPage?.slug}
@@ -1556,6 +1787,7 @@ const WebsiteBuilderPage: React.FC = () => {
                 onImageUpload={handlePostCreateImageUpload}
                 restaurantSlug={currentRestaurant?.slug}
                 onAutoSave={handleAutoSaveBlock}
+                editingBlockId={editingBlockId} // Pass the editing block ID to prevent conflicts
               />
               
               {/* Block Editor Overlay - appears when editing a block */}
@@ -1574,6 +1806,12 @@ const WebsiteBuilderPage: React.FC = () => {
                     justifyContent: 'center',
                     p: 2
                   }}
+                  onClick={(e) => {
+                    // Only close if clicking on the backdrop (not the modal content)
+                    if (e.target === e.currentTarget) {
+                      setEditingBlockId(null);
+                    }
+                  }}
                 >
                   <Paper
                     sx={{
@@ -1582,6 +1820,10 @@ const WebsiteBuilderPage: React.FC = () => {
                       overflow: 'auto',
                       p: 2,
                       minWidth: 600
+                    }}
+                    onClick={(e) => {
+                      // Prevent clicks inside the modal from bubbling up to the overlay
+                      e.stopPropagation();
                     }}
                   >
                     {(() => {
@@ -1595,7 +1837,9 @@ const WebsiteBuilderPage: React.FC = () => {
                           onPostCreateImageUpload={handlePostCreateImageUpload}
                           isEditing={true}
                           setIsEditing={(editing) => {
+                            console.log('[DEBUG] ContentBlockEditor setIsEditing called with:', editing);
                             if (!editing) {
+                              console.log('[DEBUG] Closing modal because setIsEditing(false) was called');
                               setEditingBlockId(null);
                             }
                           }}

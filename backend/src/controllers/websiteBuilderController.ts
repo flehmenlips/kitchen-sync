@@ -106,6 +106,14 @@ export const updateContentBlock = async (req: Request, res: Response) => {
     const restaurantId = req.restaurantId;
     const { slug, blockId } = req.params;
     
+    // Add debug logging
+    console.log('[updateContentBlock] Received data:', {
+      restaurantId,
+      slug,
+      blockId,
+      body: JSON.stringify(req.body, null, 2)
+    });
+    
     if (!restaurantId) {
       return res.status(400).json({ message: 'Restaurant not found' });
     }
@@ -116,6 +124,9 @@ export const updateContentBlock = async (req: Request, res: Response) => {
       parseInt(blockId), 
       req.body
     );
+    
+    console.log('[updateContentBlock] Service returned:', JSON.stringify(updatedBlock, null, 2));
+    
     res.json(updatedBlock);
   } catch (error) {
     console.error('Error updating content block:', error);
@@ -196,5 +207,15 @@ export const reorderContentBlocks = async (req: Request, res: Response) => {
       message: 'Failed to reorder content blocks',
       error: process.env.NODE_ENV === 'development' ? error : undefined
     });
+  }
+};
+
+export const getContentBlockSchemas = async (req: Request, res: Response) => {
+  try {
+    const schemas = await websiteBuilderService.getContentBlockSchemas();
+    res.json(schemas);
+  } catch (error) {
+    console.error('Error fetching content block schemas:', error);
+    res.status(500).json({ error: 'Failed to fetch content block schemas' });
   }
 }; 

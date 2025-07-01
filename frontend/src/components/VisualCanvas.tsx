@@ -65,42 +65,89 @@ const inlineQuillFormats = [
   'bold', 'italic', 'underline', 'list', 'bullet', 'link'
 ];
 
-// Drop zone component for empty canvas areas
+// Drop zone component for empty canvas areas and reordering
 interface DropZoneProps {
   onDrop: (blockType: string, position: number) => void;
+  onBlockReorder?: (draggedBlockId: number, targetPosition: number) => void;
   position: number;
   isActive: boolean;
+  isReorderZone?: boolean;
 }
 
-const DropZone: React.FC<DropZoneProps> = ({ onDrop, position, isActive }) => {
+const DropZone: React.FC<DropZoneProps> = ({ onDrop, onBlockReorder, position, isActive, isReorderZone = false }) => {
   const [isDragOver, setIsDragOver] = useState(false);
+  const [dragType, setDragType] = useState<'block' | 'reorder' | null>(null);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(true);
+    
+    // Determine if this is a new block or reordering
+    const blockType = e.dataTransfer.getData('text/plain');
+    const blockId = e.dataTransfer.getData('application/block-id');
+    
+    if (blockId) {
+      setDragType('reorder');
+    } else if (blockType) {
+      setDragType('block');
+    }
   };
 
   const handleDragLeave = () => {
     setIsDragOver(false);
+    setDragType(null);
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation(); // Prevent event from bubbling up to parent elements
     setIsDragOver(false);
     
     const blockType = e.dataTransfer.getData('text/plain');
-    if (blockType) {
+    const blockId = e.dataTransfer.getData('application/block-id');
+    
+    if (blockId && onBlockReorder) {
+      // Handle block reordering
+      onBlockReorder(parseInt(blockId), position);
+    } else if (blockType) {
+      // Handle new block addition
       onDrop(blockType, position);
     }
+    
+    setDragType(null);
+  };
+
+  const getDropZoneText = () => {
+    if (!isDragOver) return isReorderZone ? 'Reorder zone' : 'Drop zone';
+    
+    if (dragType === 'reorder') {
+      return 'Move block here';
+    } else if (dragType === 'block') {
+      return 'Drop block here';
+    }
+    
+    return 'Drop here';
+  };
+
+  const getDropZoneColor = () => {
+    if (!isDragOver) return 'grey.400';
+    
+    if (dragType === 'reorder') {
+      return 'secondary.main';
+    } else if (dragType === 'block') {
+      return 'primary.main';
+    }
+    
+    return 'primary.main';
   };
 
   return (
     <Box
       sx={{
-        minHeight: isDragOver ? 120 : 60,
+        minHeight: isDragOver ? 120 : isReorderZone ? 40 : 60,
         border: '2px dashed',
-        borderColor: isDragOver ? 'primary.main' : isActive ? 'grey.400' : 'transparent',
-        bgcolor: isDragOver ? 'primary.lighter' : isActive ? 'grey.100' : 'transparent',
+        borderColor: isDragOver ? getDropZoneColor() : isActive ? 'grey.400' : 'transparent',
+        bgcolor: isDragOver ? (dragType === 'reorder' ? 'secondary.lighter' : 'primary.lighter') : isActive ? 'grey.100' : 'transparent',
         borderRadius: 2,
         display: 'flex',
         alignItems: 'center',
@@ -111,8 +158,8 @@ const DropZone: React.FC<DropZoneProps> = ({ onDrop, position, isActive }) => {
         opacity: isActive ? 1 : 0.3,
         '&:hover': {
           opacity: 1,
-          borderColor: 'primary.light',
-          bgcolor: 'primary.lighter'
+          borderColor: isReorderZone ? 'secondary.light' : 'primary.light',
+          bgcolor: isReorderZone ? 'secondary.lighter' : 'primary.lighter'
         }
       }}
       onDragOver={handleDragOver}
@@ -120,9 +167,13 @@ const DropZone: React.FC<DropZoneProps> = ({ onDrop, position, isActive }) => {
       onDrop={handleDrop}
     >
       <Box textAlign="center">
-        <AddIcon sx={{ fontSize: 32, color: isDragOver ? 'primary.main' : 'grey.400', mb: 1 }} />
-        <Typography variant="caption" color={isDragOver ? 'primary.main' : 'text.secondary'}>
-          {isDragOver ? 'Drop block here' : 'Drop zone'}
+        <AddIcon sx={{ 
+          fontSize: isReorderZone ? 24 : 32, 
+          color: isDragOver ? getDropZoneColor() : 'grey.400', 
+          mb: isReorderZone ? 0 : 1 
+        }} />
+        <Typography variant="caption" color={isDragOver ? getDropZoneColor() : 'text.secondary'}>
+          {getDropZoneText()}
         </Typography>
       </Box>
     </Box>
@@ -139,6 +190,15 @@ interface VisualBlockProps {
   onInlineEdit?: (blockId: number, field: string, value: string) => void;
   onImageUpload?: (blockId: number, file: File) => Promise<{ imageUrl: string; publicId: string }>;
   onAutoSave: (block: WBBlock) => void;
+  onReorder?: (draggedBlockId: number, targetPosition: number) => void;
+  index: number;
+  total: number;
+  globalDragState: boolean;
+  onGlobalDragStart: () => void;
+  onGlobalDragEnd: () => void;
+  editingBlockId?: number | null; // Add this to prevent inline editing conflicts
+  expanded: boolean;
+  onExpandedChange: (expanded: boolean) => void;
 }
 
 const VisualBlock: React.FC<VisualBlockProps> = ({ 
@@ -149,15 +209,42 @@ const VisualBlock: React.FC<VisualBlockProps> = ({
   onMove,
   onInlineEdit,
   onImageUpload,
-  onAutoSave
+  onAutoSave,
+  onReorder,
+  index,
+  total,
+  globalDragState,
+  onGlobalDragStart,
+  onGlobalDragEnd,
+  editingBlockId,
+  expanded,
+  onExpandedChange
 }) => {
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
-  const [editingField, setEditingField] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState<string>('');
-  const [isHovering, setIsHovering] = useState(false);
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const [dragOver, setDragOver] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [inlineEditing, setInlineEditing] = useState<{ field: string; value: string } | null>(null);
+  const [showImageUpload, setShowImageUpload] = useState(false);
+  const [isDragPreview, setIsDragPreview] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Handle card clicks - but only if not during any drag operation
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Prevent expansion during any drag operation
+    if (globalDragState || isDragging) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    
+    // Prevent expansion when another block is being edited in a modal
+    if (editingBlockId && editingBlockId !== block.id) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    
+    // Direct expansion without setTimeout to avoid delayed issues
+    onExpandedChange(!expanded);
+  };
 
   const handleMenuClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setMenuAnchor(event.currentTarget);
@@ -168,22 +255,19 @@ const VisualBlock: React.FC<VisualBlockProps> = ({
   };
 
   const handleInlineEditStart = (field: string, currentValue: string) => {
-    setEditingField(field);
-    setEditValue(currentValue);
-    setIsExpanded(true); // Auto-expand when editing
+    setInlineEditing({ field, value: currentValue });
+    onExpandedChange(true); // Auto-expand when editing
   };
 
   const handleInlineEditSave = () => {
-    if (editingField && onInlineEdit && editValue.trim() !== '') {
-      onInlineEdit(block.id, editingField, editValue);
+    if (inlineEditing && onInlineEdit && inlineEditing.value.trim() !== '') {
+      onInlineEdit(block.id, inlineEditing.field, inlineEditing.value);
     }
-    setEditingField(null);
-    setEditValue('');
+    setInlineEditing(null);
   };
 
   const handleInlineEditCancel = () => {
-    setEditingField(null);
-    setEditValue('');
+    setInlineEditing(null);
   };
 
   const handleInlineEditKeyPress = (e: React.KeyboardEvent) => {
@@ -196,14 +280,42 @@ const VisualBlock: React.FC<VisualBlockProps> = ({
   };
 
   const handleRichTextChange = (value: string) => {
-    setEditValue(value);
+    if (inlineEditing) {
+      setInlineEditing({ ...inlineEditing, value });
+    }
+  };
+
+  // Drag and drop handlers for block reordering
+  const handleDragStart = (e: React.DragEvent) => {
+    e.stopPropagation(); // Prevent bubbling
+    setIsDragging(true);
+    onGlobalDragStart(); // Set global drag state
+    e.dataTransfer.setData('application/block-id', block.id.toString());
+    e.dataTransfer.effectAllowed = 'move';
+    
+    // Add some visual feedback to the card, not the drag element
+    const card = (e.target as HTMLElement).closest('[data-block-id]') as HTMLElement;
+    if (card) {
+      card.style.opacity = '0.5';
+    }
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    e.stopPropagation(); // Prevent bubbling
+    setIsDragging(false);
+    onGlobalDragEnd(); // Clear global drag state
+    
+    // Restore opacity to the card
+    const card = (e.target as HTMLElement).closest('[data-block-id]') as HTMLElement;
+    if (card) {
+      card.style.opacity = '1';
+    }
   };
 
   const handleImageUpload = async (file: File) => {
     if (!onImageUpload) return;
     
     try {
-      setIsUploadingImage(true);
       const result = await onImageUpload(block.id, file);
       
       if (onInlineEdit) {
@@ -212,14 +324,12 @@ const VisualBlock: React.FC<VisualBlockProps> = ({
     } catch (error) {
       console.error('Error uploading image:', error);
       alert('Failed to upload image. Please try again.');
-    } finally {
-      setIsUploadingImage(false);
     }
   };
 
   const handleImageDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    setDragOver(false);
+    setShowImageUpload(false);
     
     const files = Array.from(e.dataTransfer.files);
     const imageFile = files.find(file => file.type.startsWith('image/'));
@@ -231,11 +341,11 @@ const VisualBlock: React.FC<VisualBlockProps> = ({
 
   const handleImageDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    setDragOver(true);
+    setShowImageUpload(true);
   };
 
   const handleImageDragLeave = () => {
-    setDragOver(false);
+    setShowImageUpload(false);
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -251,6 +361,8 @@ const VisualBlock: React.FC<VisualBlockProps> = ({
         return { title: 'Hero Section', color: '#1976d2', icon: '🎯' };
       case 'text':
         return { title: 'Text Content', color: '#388e3c', icon: '📝' };
+      case 'about':
+        return { title: 'About Section', color: '#2e7d32', icon: 'ℹ️' };
       case 'contact':
         return { title: 'Contact Info', color: '#f57c00', icon: '📞' };
       case 'hours':
@@ -263,6 +375,24 @@ const VisualBlock: React.FC<VisualBlockProps> = ({
         return { title: 'Button', color: '#d32f2f', icon: '🔘' };
       case 'features':
         return { title: 'Features', color: '#7b1fa2', icon: '⭐' };
+      case 'video':
+        return { title: 'Video Block', color: '#d32f2f', icon: '🎥' };
+      case 'menu_display':
+        return { title: 'Menu Display', color: '#689f38', icon: '🍽️' };
+      case 'testimonials':
+        return { title: 'Testimonials', color: '#ff6f00', icon: '💬' };
+      case 'newsletter':
+        return { title: 'Newsletter', color: '#1565c0', icon: '📧' };
+      case 'map_location':
+        return { title: 'Location Map', color: '#303f9f', icon: '🗺️' };
+      case 'social_feed':
+        return { title: 'Social Feed', color: '#e91e63', icon: '📱' };
+      case 'reservation_widget':
+        return { title: 'Reservations', color: '#8d6e63', icon: '🪑' };
+      case 'pricing_menu':
+        return { title: 'Pricing Menu', color: '#5e35b1', icon: '💰' };
+      case 'spacer':
+        return { title: 'Spacer', color: '#757575', icon: '〰️' };
       default:
         return { title: 'Content Block', color: '#757575', icon: '📄' };
     }
@@ -272,19 +402,21 @@ const VisualBlock: React.FC<VisualBlockProps> = ({
 
   return (
     <Card 
+      data-block-id={block.id}
       sx={{ 
         mb: 1, 
         mx: 1,
         border: '1px solid',
-        borderColor: isHovering ? 'primary.light' : 'grey.300',
+        borderColor: isDragging ? 'secondary.main' : 'grey.300',
         transition: 'all 0.2s ease',
+        opacity: isDragging ? 0.8 : 1,
+        transform: isDragging ? 'rotate(2deg)' : 'none',
         '&:hover': {
           borderColor: 'primary.main',
           boxShadow: 1
         }
       }}
-      onMouseEnter={() => setIsHovering(true)}
-      onMouseLeave={() => setIsHovering(false)}
+      onClick={handleCardClick}
     >
       {/* Compact Header - Always Visible */}
       <Box 
@@ -295,10 +427,39 @@ const VisualBlock: React.FC<VisualBlockProps> = ({
           p: 1.5,
           cursor: 'pointer'
         }}
-        onClick={() => setIsExpanded(!isExpanded)}
       >
         <Box display="flex" alignItems="center" gap={1} flex={1}>
-          <DragIcon sx={{ color: 'grey.400', fontSize: '1.2rem' }} />
+          <Box
+            draggable={!inlineEditing} // Only draggable when not editing
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            onClick={(e) => e.stopPropagation()} // Prevent expand/collapse when clicking drag handle
+            sx={{
+              cursor: !inlineEditing ? 'grab' : 'default',
+              '&:active': { cursor: !inlineEditing ? 'grabbing' : 'default' },
+              '&:hover .drag-icon': { color: 'primary.main' },
+              display: 'flex',
+              alignItems: 'center',
+              padding: '4px', // Add some padding for better grab area
+              borderRadius: '4px',
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.04)'
+              },
+              userSelect: 'none', // Prevent text selection
+              webkitUserSelect: 'none',
+              mozUserSelect: 'none',
+              msUserSelect: 'none'
+            }}
+          >
+            <DragIcon 
+              className="drag-icon"
+              sx={{ 
+                color: isDragging ? 'secondary.main' : 'grey.400', 
+                fontSize: '1.2rem',
+                pointerEvents: 'none' // Prevent the icon itself from interfering with drag
+              }} 
+            />
+          </Box>
           <Typography variant="body2" sx={{ fontWeight: 500 }}>
             {preview.icon} {block.title || preview.title}
           </Typography>
@@ -319,16 +480,33 @@ const VisualBlock: React.FC<VisualBlockProps> = ({
         </Box>
         
         <Box display="flex" alignItems="center" gap={0.5}>
-          {/* Quick Actions - Only show on hover */}
-          {isHovering && (
+          {/* Quick Actions - Only show when NOT dragging */}
+          {!isDragging && !globalDragState && (
             <>
-              <Tooltip title="Edit">
+              <Tooltip title="Move up">
                 <IconButton 
                   size="small" 
-                  onClick={(e) => { e.stopPropagation(); onEdit(block); }}
+                  disabled={index === 0}
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    onMove(block.id, 'up'); 
+                  }}
                   sx={{ p: 0.5 }}
                 >
-                  <EditIcon fontSize="small" />
+                  <MoveUpIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Move down">
+                <IconButton 
+                  size="small" 
+                  disabled={index === total - 1}
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    onMove(block.id, 'down'); 
+                  }}
+                  sx={{ p: 0.5 }}
+                >
+                  <MoveDownIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
               <Tooltip title="More actions">
@@ -344,22 +522,33 @@ const VisualBlock: React.FC<VisualBlockProps> = ({
           )}
           
           {/* Expand/Collapse Icon */}
-          <IconButton size="small" sx={{ p: 0.5 }}>
-            {isExpanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+          <IconButton 
+            size="small" 
+            sx={{ p: 0.5 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onExpandedChange(!expanded);
+            }}
+          >
+            {expanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
           </IconButton>
         </Box>
       </Box>
 
       {/* Expandable Content */}
-      <Collapse in={isExpanded}>
+      <Collapse in={expanded}>
         <Box sx={{ px: 1.5, pb: 1.5, borderTop: '1px solid', borderColor: 'grey.200' }}>
           {/* Inline Editing Area */}
           <Box sx={{ mt: 1 }}>
             {/* Editable Title */}
-            {editingField === 'title' ? (
+            {inlineEditing?.field === 'title' ? (
               <TextField
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
+                value={inlineEditing.value}
+                onChange={(e) => {
+                  if (inlineEditing) {
+                    setInlineEditing({ ...inlineEditing, value: e.target.value });
+                  }
+                }}
                 onKeyDown={handleInlineEditKeyPress}
                 onBlur={handleInlineEditSave}
                 autoFocus
@@ -390,10 +579,10 @@ const VisualBlock: React.FC<VisualBlockProps> = ({
             )}
             
             {/* Editable Content */}
-            {editingField === 'content' ? (
+            {inlineEditing?.field === 'content' ? (
               <Box>
                 <ReactQuill
-                  value={editValue}
+                  value={inlineEditing.value}
                   onChange={handleRichTextChange}
                   modules={inlineQuillModules}
                   formats={inlineQuillFormats}
@@ -430,10 +619,10 @@ const VisualBlock: React.FC<VisualBlockProps> = ({
                     sx={{
                       position: 'relative',
                       border: '1px solid',
-                      borderColor: dragOver ? 'primary.main' : 'grey.300',
+                      borderColor: showImageUpload ? 'primary.main' : 'grey.300',
                       borderRadius: 1,
                       overflow: 'hidden',
-                      bgcolor: dragOver ? 'primary.lighter' : 'transparent',
+                      bgcolor: showImageUpload ? 'primary.lighter' : 'transparent',
                       transition: 'all 0.3s ease'
                     }}
                     onDrop={handleImageDrop}
@@ -451,7 +640,7 @@ const VisualBlock: React.FC<VisualBlockProps> = ({
                         display: 'block'
                       }}
                     />
-                    {isUploadingImage && (
+                    {showImageUpload && (
                       <Box
                         sx={{
                           position: 'absolute',
@@ -470,33 +659,16 @@ const VisualBlock: React.FC<VisualBlockProps> = ({
                         Uploading...
                       </Box>
                     )}
-                    {dragOver && (
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          top: 8,
-                          right: 8,
-                          bgcolor: 'rgba(0, 0, 0, 0.7)',
-                          color: 'white',
-                          px: 1,
-                          py: 0.5,
-                          borderRadius: 1,
-                          fontSize: '0.75rem'
-                        }}
-                      >
-                        Drop to replace
-                      </Box>
-                    )}
                   </Box>
                 ) : (
                   <Box
                     sx={{
                       border: '1px dashed',
-                      borderColor: dragOver ? 'primary.main' : 'grey.400',
+                      borderColor: showImageUpload ? 'primary.main' : 'grey.400',
                       borderRadius: 1,
                       p: 2,
                       textAlign: 'center',
-                      bgcolor: dragOver ? 'primary.lighter' : 'grey.50',
+                      bgcolor: showImageUpload ? 'primary.lighter' : 'grey.50',
                       cursor: 'pointer',
                       transition: 'all 0.3s ease',
                       '&:hover': {
@@ -509,13 +681,13 @@ const VisualBlock: React.FC<VisualBlockProps> = ({
                     onDragLeave={handleImageDragLeave}
                     onClick={() => document.getElementById(`image-upload-${block.id}`)?.click()}
                   >
-                    {isUploadingImage ? (
+                    {showImageUpload ? (
                       <Typography variant="caption" color="primary">
                         Uploading...
                       </Typography>
                     ) : (
                       <Typography variant="caption" color="text.secondary">
-                        📷 {dragOver ? 'Drop image' : 'Click to upload'}
+                        📷 {showImageUpload ? 'Drop image' : 'Click to upload'}
                       </Typography>
                     )}
                     <input
@@ -531,7 +703,7 @@ const VisualBlock: React.FC<VisualBlockProps> = ({
             )}
             
             {/* Inline Edit Actions */}
-            {editingField && (
+            {inlineEditing && (
               <Box sx={{ mt: 1, display: 'flex', gap: 1 }}>
                 <Button size="small" variant="contained" onClick={handleInlineEditSave}>
                   Save
@@ -563,30 +735,47 @@ const VisualBlock: React.FC<VisualBlockProps> = ({
                       type="color"
                       value={block.styles?.backgroundColor || '#ffffff'}
                       onChange={(e) => {
+                        e.stopPropagation(); // Prevent event bubbling
+                        console.log('[DEBUG] Background color change triggered:', e.target.value);
+                        console.log('[DEBUG] Current block:', block);
+                        
                         const updatedBlock = {
                           ...block,
-                          styles: {
-                            ...block.styles,
-                            backgroundColor: e.target.value
+                          settings: {
+                            ...block.settings,
+                            styles: {
+                              ...block.styles,
+                              backgroundColor: e.target.value
+                            }
                           }
                         };
+                        
+                        console.log('[DEBUG] Updated block:', updatedBlock);
+                        console.log('[DEBUG] Calling onAutoSave with updated block');
+                        
                         onAutoSave(updatedBlock);
                       }}
+                      onClick={(e) => e.stopPropagation()} // Prevent click from bubbling
                       sx={{ width: 60 }}
                     />
                     <TextField
                       size="small"
                       value={block.styles?.backgroundColor || '#ffffff'}
                       onChange={(e) => {
+                        e.stopPropagation(); // Prevent event bubbling
                         const updatedBlock = {
                           ...block,
-                          styles: {
-                            ...block.styles,
-                            backgroundColor: e.target.value
+                          settings: {
+                            ...block.settings,
+                            styles: {
+                              ...block.styles,
+                              backgroundColor: e.target.value
+                            }
                           }
                         };
                         onAutoSave(updatedBlock);
                       }}
+                      onClick={(e) => e.stopPropagation()} // Prevent click from bubbling
                       placeholder="#ffffff"
                       sx={{ flex: 1 }}
                     />
@@ -606,15 +795,20 @@ const VisualBlock: React.FC<VisualBlockProps> = ({
                     type="number"
                     value={parseInt(block.styles?.borderWidth || '0')}
                     onChange={(e) => {
+                      e.stopPropagation(); // Prevent event bubbling
                       const updatedBlock = {
                         ...block,
-                        styles: {
-                          ...block.styles,
-                          borderWidth: `${e.target.value}px`
+                        settings: {
+                          ...block.settings,
+                          styles: {
+                            ...block.styles,
+                            borderWidth: `${e.target.value}px`
+                          }
                         }
                       };
                       onAutoSave(updatedBlock);
                     }}
+                    onClick={(e) => e.stopPropagation()} // Prevent click from bubbling
                     inputProps={{ min: 0, max: 10 }}
                     sx={{ width: 80 }}
                   />
@@ -623,15 +817,20 @@ const VisualBlock: React.FC<VisualBlockProps> = ({
                     <Select
                       value={block.styles?.borderStyle || 'solid'}
                       onChange={(e) => {
+                        e.stopPropagation(); // Prevent event bubbling
                         const updatedBlock = {
                           ...block,
-                          styles: {
-                            ...block.styles,
-                            borderStyle: e.target.value
+                          settings: {
+                            ...block.settings,
+                            styles: {
+                              ...block.styles,
+                              borderStyle: e.target.value
+                            }
                           }
                         };
                         onAutoSave(updatedBlock);
                       }}
+                      onClick={(e) => e.stopPropagation()} // Prevent click from bubbling
                       label="Style"
                     >
                       <MenuItem value="solid">Solid</MenuItem>
@@ -645,15 +844,20 @@ const VisualBlock: React.FC<VisualBlockProps> = ({
                   type="color"
                   value={block.styles?.borderColor || '#000000'}
                   onChange={(e) => {
+                    e.stopPropagation(); // Prevent event bubbling
                     const updatedBlock = {
                       ...block,
-                      styles: {
-                        ...block.styles,
-                        borderColor: e.target.value
+                      settings: {
+                        ...block.settings,
+                        styles: {
+                          ...block.styles,
+                          borderColor: e.target.value
+                        }
                       }
                     };
                     onAutoSave(updatedBlock);
                   }}
+                  onClick={(e) => e.stopPropagation()} // Prevent click from bubbling
                   sx={{ width: 60 }}
                 />
               </Grid>
@@ -669,15 +873,20 @@ const VisualBlock: React.FC<VisualBlockProps> = ({
                     <Select
                       value={block.styles?.boxShadow || 'none'}
                       onChange={(e) => {
+                        e.stopPropagation(); // Prevent event bubbling
                         const updatedBlock = {
                           ...block,
-                          styles: {
-                            ...block.styles,
-                            boxShadow: e.target.value
+                          settings: {
+                            ...block.settings,
+                            styles: {
+                              ...block.styles,
+                              boxShadow: e.target.value
+                            }
                           }
                         };
                         onAutoSave(updatedBlock);
                       }}
+                      onClick={(e) => e.stopPropagation()} // Prevent click from bubbling
                       label="Preset"
                     >
                       <MenuItem value="none">None</MenuItem>
@@ -702,15 +911,20 @@ const VisualBlock: React.FC<VisualBlockProps> = ({
                     type="number"
                     value={parseInt(block.styles?.padding || '16')}
                     onChange={(e) => {
+                      e.stopPropagation(); // Prevent event bubbling
                       const updatedBlock = {
                         ...block,
-                        styles: {
-                          ...block.styles,
-                          padding: `${e.target.value}px`
+                        settings: {
+                          ...block.settings,
+                          styles: {
+                            ...block.styles,
+                            padding: `${e.target.value}px`
+                          }
                         }
                       };
                       onAutoSave(updatedBlock);
                     }}
+                    onClick={(e) => e.stopPropagation()} // Prevent click from bubbling
                     inputProps={{ min: 0, max: 100 }}
                     sx={{ width: 100 }}
                   />
@@ -720,38 +934,216 @@ const VisualBlock: React.FC<VisualBlockProps> = ({
                     type="number"
                     value={parseInt(block.styles?.margin || '0')}
                     onChange={(e) => {
+                      e.stopPropagation(); // Prevent event bubbling
                       const updatedBlock = {
                         ...block,
-                        styles: {
-                          ...block.styles,
-                          margin: `${e.target.value}px`
+                        settings: {
+                          ...block.settings,
+                          styles: {
+                            ...block.styles,
+                            margin: `${e.target.value}px`
+                          }
                         }
                       };
                       onAutoSave(updatedBlock);
                     }}
+                    onClick={(e) => e.stopPropagation()} // Prevent click from bubbling
                     inputProps={{ min: 0, max: 100 }}
                     sx={{ width: 100 }}
                   />
-                  <TextField
-                    size="small"
-                    label="Border Radius"
-                    type="number"
-                    value={parseInt(block.styles?.borderRadius || '0')}
-                    onChange={(e) => {
-                      const updatedBlock = {
-                        ...block,
-                        styles: {
-                          ...block.styles,
-                          borderRadius: `${e.target.value}px`
-                        }
-                      };
-                      onAutoSave(updatedBlock);
-                    }}
-                    inputProps={{ min: 0, max: 50 }}
-                    sx={{ width: 120 }}
-                  />
                 </Box>
               </Grid>
+
+              {/* Hero-Specific Controls */}
+              {block.blockType === 'hero' && (
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+                    🎯 Hero Settings
+                  </Typography>
+                  
+                  <Grid container spacing={2}>
+                    {/* Height Mode */}
+                    <Grid item xs={12} sm={6}>
+                      <FormControl size="small" fullWidth>
+                        <InputLabel>Height Mode</InputLabel>
+                        <Select
+                          value={block.settings?.heightMode || 'default'}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            const updatedBlock = {
+                              ...block,
+                              settings: {
+                                ...block.settings,
+                                heightMode: e.target.value
+                              }
+                            };
+                            onAutoSave(updatedBlock);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          label="Height Mode"
+                        >
+                          <MenuItem value="default">Default (500px)</MenuItem>
+                          <MenuItem value="fullscreen">Full Screen (100vh)</MenuItem>
+                          <MenuItem value="custom">Custom Height</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+
+                    {/* Custom Height (if selected) */}
+                    {block.settings?.heightMode === 'custom' && (
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          size="small"
+                          label="Custom Height"
+                          value={block.settings?.customHeight || '500px'}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            const updatedBlock = {
+                              ...block,
+                              settings: {
+                                ...block.settings,
+                                customHeight: e.target.value
+                              }
+                            };
+                            onAutoSave(updatedBlock);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          placeholder="e.g., 600px, 80vh"
+                          fullWidth
+                        />
+                      </Grid>
+                    )}
+
+                    {/* Overlay Controls */}
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="caption" display="block" gutterBottom>
+                        Overlay Color
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <TextField
+                          size="small"
+                          type="color"
+                          value={block.settings?.overlayColor || '#000000'}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            const updatedBlock = {
+                              ...block,
+                              settings: {
+                                ...block.settings,
+                                overlayColor: e.target.value
+                              }
+                            };
+                            onAutoSave(updatedBlock);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          sx={{ width: 60 }}
+                        />
+                        <TextField
+                          size="small"
+                          label="Opacity"
+                          type="number"
+                          value={parseFloat(block.settings?.overlayOpacity || '0.4')}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            const updatedBlock = {
+                              ...block,
+                              settings: {
+                                ...block.settings,
+                                overlayOpacity: e.target.value
+                              }
+                            };
+                            onAutoSave(updatedBlock);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          inputProps={{ min: 0, max: 1, step: 0.1 }}
+                          sx={{ width: 100 }}
+                        />
+                      </Box>
+                    </Grid>
+
+                    {/* Text Alignment */}
+                    <Grid item xs={12} sm={6}>
+                      <FormControl size="small" fullWidth>
+                        <InputLabel>Text Alignment</InputLabel>
+                        <Select
+                          value={block.settings?.textAlign || 'center'}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            const updatedBlock = {
+                              ...block,
+                              settings: {
+                                ...block.settings,
+                                textAlign: e.target.value
+                              }
+                            };
+                            onAutoSave(updatedBlock);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          label="Text Alignment"
+                        >
+                          <MenuItem value="left">Left</MenuItem>
+                          <MenuItem value="center">Center</MenuItem>
+                          <MenuItem value="right">Right</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+
+                    {/* Vertical Position */}
+                    <Grid item xs={12} sm={6}>
+                      <FormControl size="small" fullWidth>
+                        <InputLabel>Vertical Position</InputLabel>
+                        <Select
+                          value={block.settings?.alignItems || 'center'}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            const updatedBlock = {
+                              ...block,
+                              settings: {
+                                ...block.settings,
+                                alignItems: e.target.value
+                              }
+                            };
+                            onAutoSave(updatedBlock);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          label="Vertical Position"
+                        >
+                          <MenuItem value="flex-start">Top</MenuItem>
+                          <MenuItem value="center">Center</MenuItem>
+                          <MenuItem value="flex-end">Bottom</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+
+                    {/* Horizontal Position */}
+                    <Grid item xs={12} sm={6}>
+                      <FormControl size="small" fullWidth>
+                        <InputLabel>Horizontal Position</InputLabel>
+                        <Select
+                          value={block.settings?.justifyContent || 'center'}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            const updatedBlock = {
+                              ...block,
+                              settings: {
+                                ...block.settings,
+                                justifyContent: e.target.value
+                              }
+                            };
+                            onAutoSave(updatedBlock);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          label="Horizontal Position"
+                        >
+                          <MenuItem value="flex-start">Left</MenuItem>
+                          <MenuItem value="center">Center</MenuItem>
+                          <MenuItem value="flex-end">Right</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                  </Grid>
+                </Box>
+              )}
             </Grid>
           </Box>
         </Box>
@@ -797,6 +1189,7 @@ interface VisualCanvasProps {
   onBlockDelete: (blockId: number) => void;
   onBlockDuplicate: (block: WBBlock) => void;
   onBlockMove: (blockId: number, direction: 'up' | 'down') => void;
+  onBlockReorder?: (draggedBlockId: number, targetPosition: number) => void;
   selectedPageId?: number;
   onSave: () => void;
   isLoading?: boolean;
@@ -806,6 +1199,7 @@ interface VisualCanvasProps {
   onImageUpload?: (blockId: number, file: File) => Promise<{ imageUrl: string; publicId: string }>;
   restaurantSlug?: string;
   onAutoSave: (block: WBBlock) => void;
+  editingBlockId?: number | null; // Add this to prevent inline editing conflicts
 }
 
 const VisualCanvas: React.FC<VisualCanvasProps> = ({
@@ -815,6 +1209,7 @@ const VisualCanvas: React.FC<VisualCanvasProps> = ({
   onBlockDelete,
   onBlockDuplicate,
   onBlockMove,
+  onBlockReorder,
   selectedPageId,
   onSave,
   isLoading = false,
@@ -823,13 +1218,16 @@ const VisualCanvas: React.FC<VisualCanvasProps> = ({
   onPageSelect,
   onImageUpload,
   restaurantSlug,
-  onAutoSave
+  onAutoSave,
+  editingBlockId // Add this parameter
 }) => {
   const [showDropZones, setShowDropZones] = useState(true);
   const [showPreview, setShowPreview] = useState(false);
   const [previewKey, setPreviewKey] = useState(0);
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [previewCollapsed, setPreviewCollapsed] = useState(false);
+  const [globalDragState, setGlobalDragState] = useState(false); // Global drag state for all blocks
+  const [expandedBlocks, setExpandedBlocks] = useState(new Set<number>());
 
   // Sort blocks by display order
   const sortedBlocks = [...pageBlocks].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
@@ -851,6 +1249,27 @@ const VisualCanvas: React.FC<VisualCanvasProps> = ({
     }
   };
 
+  // Handle block reordering via drag and drop
+  const handleBlockReorder = (draggedBlockId: number, targetPosition: number) => {
+    // Use the parent's reorder function which handles the sequential logic properly
+    if (onBlockReorder) {
+      onBlockReorder(draggedBlockId, targetPosition);
+    }
+  };
+
+  // Handle block expansion state
+  const handleBlockExpansion = (blockId: number, expanded: boolean) => {
+    setExpandedBlocks(prev => {
+      const newSet = new Set(prev);
+      if (expanded) {
+        newSet.add(blockId);
+      } else {
+        newSet.delete(blockId);
+      }
+      return newSet;
+    });
+  };
+
   // Generate preview URL
   const getPreviewUrl = () => {
     if (!restaurantSlug || !selectedPageSlug) return '';
@@ -858,19 +1277,16 @@ const VisualCanvas: React.FC<VisualCanvasProps> = ({
       ? `https://${restaurantSlug}.kitchensync.restaurant`
       : `http://localhost:3001/customer`;
     
-    return selectedPageSlug === 'home' 
-      ? baseUrl 
-      : `${baseUrl}/${selectedPageSlug}`;
+    return selectedPageSlug === 'home' ? baseUrl : `${baseUrl}/${selectedPageSlug}`;
   };
 
+  // Handle preview toggle
   const handlePreviewToggle = () => {
     setShowPreview(!showPreview);
-    if (!showPreview) {
-      setPreviewKey(prev => prev + 1);
-    }
+    setPreviewKey(prev => prev + 1); // Force refresh
   };
 
-  // Get device dimensions for responsive preview
+  // Get device dimensions for preview
   const getDeviceDimensions = () => {
     switch (previewDevice) {
       case 'mobile':
@@ -883,9 +1299,9 @@ const VisualCanvas: React.FC<VisualCanvasProps> = ({
     }
   };
 
+  // Handle device change
   const handleDeviceChange = (device: 'desktop' | 'tablet' | 'mobile') => {
     setPreviewDevice(device);
-    setPreviewKey(prev => prev + 1);
   };
 
   return (
@@ -1037,14 +1453,29 @@ const VisualCanvas: React.FC<VisualCanvasProps> = ({
                     onInlineEdit={handleInlineEdit}
                     onImageUpload={onImageUpload}
                     onAutoSave={onAutoSave}
+                    onReorder={handleBlockReorder}
+                    index={index}
+                    total={sortedBlocks.length}
+                    globalDragState={globalDragState}
+                    onGlobalDragStart={() => {
+                      setGlobalDragState(true);
+                    }}
+                    onGlobalDragEnd={() => {
+                      setGlobalDragState(false);
+                    }}
+                    editingBlockId={editingBlockId}
+                    expanded={expandedBlocks.has(block.id)}
+                    onExpandedChange={(expanded) => handleBlockExpansion(block.id, expanded)}
                   />
                   
                   {/* Drop zone after each block */}
                   {showDropZones && (
                     <DropZone 
-                      onDrop={onBlockAdd} 
+                      onDrop={onBlockAdd}
+                      onBlockReorder={handleBlockReorder}
                       position={index + 1} 
                       isActive={true}
+                      isReorderZone={true}
                     />
                   )}
                 </React.Fragment>
@@ -1152,7 +1583,7 @@ const VisualCanvas: React.FC<VisualCanvasProps> = ({
                     overflow: 'hidden',
                     boxShadow: previewDevice === 'desktop' ? 'none' : 2,
                     bgcolor: 'white',
-                    minHeight: previewDevice === 'desktop' ? '100%' : 'auto'
+                    minHeight: previewDevice === 'desktop' ? '100%' : '400px'
                   }}
                 >
                   <iframe

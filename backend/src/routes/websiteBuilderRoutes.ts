@@ -9,7 +9,8 @@ import {
   updateContentBlock,
   createContentBlock,
   deleteContentBlock,
-  reorderContentBlocks
+  reorderContentBlocks,
+  getContentBlockSchemas
 } from '../controllers/websiteBuilderController';
 import { protect } from '../middleware/authMiddleware';
 import { setRestaurantContext, requireRestaurantContext } from '../middleware/restaurantContext';
@@ -35,5 +36,8 @@ router.put('/pages/:slug/blocks/reorder', protect, setRestaurantContext, require
 
 // Get page templates (public endpoint)
 router.get('/templates', getPageTemplates);
+
+// Get content block schemas (public endpoint)
+router.get('/schemas', getContentBlockSchemas);
 
 export default router; 
