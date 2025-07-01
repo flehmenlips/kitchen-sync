@@ -57,7 +57,7 @@ export const useVideoBackground = (options: VideoBackgroundOptions): VideoBackgr
         case 'gradient':
           return false;
         default:
-          return false; // Default to fallback on mobile
+          return true; // Changed: Default to showing video on mobile
       }
     }
     
@@ -92,6 +92,14 @@ export const useVideoBackground = (options: VideoBackgroundOptions): VideoBackgr
     video.autoplay = options.autoplay !== 'false';
     video.playsInline = true; // Important for mobile
     video.preload = 'metadata';
+    
+    // Mobile-specific optimizations
+    if (isMobile) {
+      video.muted = true; // Force muted on mobile for autoplay to work
+      video.setAttribute('playsinline', 'true'); // Prevent fullscreen on iOS
+      video.setAttribute('webkit-playsinline', 'true'); // Legacy iOS support
+      video.controls = false; // Hide controls on mobile background videos
+    }
 
     // Set playback rate
     if (options.playbackRate) {
@@ -115,16 +123,32 @@ export const useVideoBackground = (options: VideoBackgroundOptions): VideoBackgr
       setVideoError(null);
       
       // Auto-play logic
-      if (options.autoplay !== 'false' && !isMobile || options.autoplay === 'true') {
-        video.play().catch((error) => {
-          console.warn('Video autoplay failed:', error);
-          // Try muted autoplay
+      if (options.autoplay !== 'false') {
+        if (isMobile) {
+          // Mobile autoplay strategy - ensure muted and try multiple times
           video.muted = true;
-          video.play().catch((err) => {
-            console.warn('Muted autoplay also failed:', err);
-            setVideoError('Autoplay failed - click to play');
+          video.play().catch((error) => {
+            console.warn('Mobile video autoplay failed, retrying...', error);
+            // Try again after a short delay
+            setTimeout(() => {
+              video.play().catch((err) => {
+                console.warn('Mobile video autoplay retry failed:', err);
+                setVideoError('Tap to play video');
+              });
+            }, 100);
           });
-        });
+        } else {
+          // Desktop autoplay
+          video.play().catch((error) => {
+            console.warn('Video autoplay failed:', error);
+            // Try muted autoplay
+            video.muted = true;
+            video.play().catch((err) => {
+              console.warn('Muted autoplay also failed:', err);
+              setVideoError('Autoplay failed - click to play');
+            });
+          });
+        }
       }
     };
 
