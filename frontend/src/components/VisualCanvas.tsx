@@ -1952,6 +1952,366 @@ const VisualBlock: React.FC<VisualBlockProps> = ({
                   </Grid>
                 </Box>
               )}
+
+              {/* Universal Typography Controls for Text-Containing Blocks */}
+              {['text', 'cta', 'features', 'testimonial', 'contact', 'about'].includes(block.blockType) && (
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+                    🔤 Typography Controls
+                  </Typography>
+                  
+                  <Grid container spacing={2}>
+                    {/* Text Alignment */}
+                    <Grid item xs={12}>
+                      <FormControl size="small" fullWidth>
+                        <InputLabel>Text Alignment</InputLabel>
+                        <Select
+                          value={block.settings?.textAlign || 'left'}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            const updatedBlock = {
+                              ...block,
+                              settings: {
+                                ...block.settings,
+                                textAlign: e.target.value
+                              }
+                            };
+                            onAutoSave(updatedBlock);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          label="Text Alignment"
+                        >
+                          <MenuItem value="left">Left</MenuItem>
+                          <MenuItem value="center">Center</MenuItem>
+                          <MenuItem value="right">Right</MenuItem>
+                          <MenuItem value="justify">Justify</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+
+                    {/* Title Typography Controls */}
+                    {(block.title || block.blockType === 'cta') && (
+                      <>
+                        <Grid item xs={12}>
+                          <Typography variant="caption" display="block" gutterBottom sx={{ fontWeight: 600, mt: 2 }}>
+                            Title Styling
+                          </Typography>
+                        </Grid>
+                        
+                        {/* Title Font Family */}
+                        <Grid item xs={12} sm={6}>
+                          <FormControl size="small" fullWidth>
+                            <InputLabel>Title Font</InputLabel>
+                            <Select
+                              value={block.settings?.titleFontFamily || 'default'}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                const updatedBlock = {
+                                  ...block,
+                                  settings: {
+                                    ...block.settings,
+                                    titleFontFamily: e.target.value
+                                  }
+                                };
+                                onAutoSave(updatedBlock);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              label="Title Font"
+                            >
+                              <MenuItem value="default">Default</MenuItem>
+                              <MenuItem value="playfair">Playfair Display (Elegant)</MenuItem>
+                              <MenuItem value="montserrat">Montserrat (Modern)</MenuItem>
+                              <MenuItem value="dancing">Dancing Script (Script)</MenuItem>
+                              <MenuItem value="roboto-slab">Roboto Slab (Strong)</MenuItem>
+                              <MenuItem value="oswald">Oswald (Bold)</MenuItem>
+                              <MenuItem value="lora">Lora (Classic)</MenuItem>
+                              <MenuItem value="poppins">Poppins (Clean)</MenuItem>
+                              <MenuItem value="open-sans">Open Sans (Friendly)</MenuItem>
+                              <MenuItem value="lato">Lato (Smooth)</MenuItem>
+                              <MenuItem value="inter">Inter (Tech)</MenuItem>
+                              <MenuItem value="nunito">Nunito (Rounded)</MenuItem>
+                              <MenuItem value="raleway">Raleway (Stylish)</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </Grid>
+
+                        {/* Title Font Size */}
+                        <Grid item xs={12} sm={6}>
+                          <TextField
+                            size="small"
+                            label="Title Size"
+                            value={block.settings?.titleFontSize || '2rem'}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              const updatedBlock = {
+                                ...block,
+                                settings: {
+                                  ...block.settings,
+                                  titleFontSize: e.target.value
+                                }
+                              };
+                              onAutoSave(updatedBlock);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            placeholder="e.g., 2rem, 32px"
+                            fullWidth
+                          />
+                        </Grid>
+
+                        {/* Title Font Weight */}
+                        <Grid item xs={12} sm={6}>
+                          <FormControl size="small" fullWidth>
+                            <InputLabel>Title Weight</InputLabel>
+                            <Select
+                              value={block.settings?.titleFontWeight || '600'}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                const updatedBlock = {
+                                  ...block,
+                                  settings: {
+                                    ...block.settings,
+                                    titleFontWeight: e.target.value
+                                  }
+                                };
+                                onAutoSave(updatedBlock);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              label="Title Weight"
+                            >
+                              <MenuItem value="300">Light (300)</MenuItem>
+                              <MenuItem value="400">Normal (400)</MenuItem>
+                              <MenuItem value="500">Medium (500)</MenuItem>
+                              <MenuItem value="600">Semi-Bold (600)</MenuItem>
+                              <MenuItem value="700">Bold (700)</MenuItem>
+                              <MenuItem value="800">Extra Bold (800)</MenuItem>
+                              <MenuItem value="900">Black (900)</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </Grid>
+
+                        {/* Title Color */}
+                        <Grid item xs={12} sm={6}>
+                          <Typography variant="caption" display="block" gutterBottom>
+                            Title Color
+                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <TextField
+                              size="small"
+                              type="color"
+                              value={block.settings?.titleColor || '#000000'}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                const updatedBlock = {
+                                  ...block,
+                                  settings: {
+                                    ...block.settings,
+                                    titleColor: e.target.value
+                                  }
+                                };
+                                onAutoSave(updatedBlock);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              sx={{ width: 60 }}
+                            />
+                            <TextField
+                              size="small"
+                              value={block.settings?.titleColor || '#000000'}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                const updatedBlock = {
+                                  ...block,
+                                  settings: {
+                                    ...block.settings,
+                                    titleColor: e.target.value
+                                  }
+                                };
+                                onAutoSave(updatedBlock);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              placeholder="#000000"
+                              sx={{ flex: 1 }}
+                            />
+                          </Box>
+                        </Grid>
+                      </>
+                    )}
+
+                    {/* Content Typography Controls */}
+                    {(block.content || block.blockType === 'text') && (
+                      <>
+                        <Grid item xs={12}>
+                          <Typography variant="caption" display="block" gutterBottom sx={{ fontWeight: 600, mt: 2 }}>
+                            Content Styling
+                          </Typography>
+                        </Grid>
+                        
+                        {/* Content Font Family */}
+                        <Grid item xs={12} sm={6}>
+                          <FormControl size="small" fullWidth>
+                            <InputLabel>Content Font</InputLabel>
+                            <Select
+                              value={block.settings?.contentFontFamily || 'default'}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                const updatedBlock = {
+                                  ...block,
+                                  settings: {
+                                    ...block.settings,
+                                    contentFontFamily: e.target.value
+                                  }
+                                };
+                                onAutoSave(updatedBlock);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              label="Content Font"
+                            >
+                              <MenuItem value="default">Default</MenuItem>
+                              <MenuItem value="open-sans">Open Sans (Clean)</MenuItem>
+                              <MenuItem value="lato">Lato (Friendly)</MenuItem>
+                              <MenuItem value="source-sans">Source Sans Pro</MenuItem>
+                              <MenuItem value="nunito">Nunito (Rounded)</MenuItem>
+                              <MenuItem value="inter">Inter (Tech)</MenuItem>
+                              <MenuItem value="poppins">Poppins (Modern)</MenuItem>
+                              <MenuItem value="lora">Lora (Readable)</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </Grid>
+
+                        {/* Content Font Size */}
+                        <Grid item xs={12} sm={6}>
+                          <TextField
+                            size="small"
+                            label="Content Size"
+                            value={block.settings?.contentFontSize || '1rem'}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              const updatedBlock = {
+                                ...block,
+                                settings: {
+                                  ...block.settings,
+                                  contentFontSize: e.target.value
+                                }
+                              };
+                              onAutoSave(updatedBlock);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            placeholder="e.g., 1rem, 16px"
+                            fullWidth
+                          />
+                        </Grid>
+
+                        {/* Content Font Weight */}
+                        <Grid item xs={12} sm={6}>
+                          <FormControl size="small" fullWidth>
+                            <InputLabel>Content Weight</InputLabel>
+                            <Select
+                              value={block.settings?.contentFontWeight || '400'}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                const updatedBlock = {
+                                  ...block,
+                                  settings: {
+                                    ...block.settings,
+                                    contentFontWeight: e.target.value
+                                  }
+                                };
+                                onAutoSave(updatedBlock);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              label="Content Weight"
+                            >
+                              <MenuItem value="300">Light (300)</MenuItem>
+                              <MenuItem value="400">Normal (400)</MenuItem>
+                              <MenuItem value="500">Medium (500)</MenuItem>
+                              <MenuItem value="600">Semi-Bold (600)</MenuItem>
+                              <MenuItem value="700">Bold (700)</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </Grid>
+
+                        {/* Content Color */}
+                        <Grid item xs={12} sm={6}>
+                          <Typography variant="caption" display="block" gutterBottom>
+                            Content Color
+                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <TextField
+                              size="small"
+                              type="color"
+                              value={block.settings?.contentColor || '#333333'}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                const updatedBlock = {
+                                  ...block,
+                                  settings: {
+                                    ...block.settings,
+                                    contentColor: e.target.value
+                                  }
+                                };
+                                onAutoSave(updatedBlock);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              sx={{ width: 60 }}
+                            />
+                            <TextField
+                              size="small"
+                              value={block.settings?.contentColor || '#333333'}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                const updatedBlock = {
+                                  ...block,
+                                  settings: {
+                                    ...block.settings,
+                                    contentColor: e.target.value
+                                  }
+                                };
+                                onAutoSave(updatedBlock);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              placeholder="#333333"
+                              sx={{ flex: 1 }}
+                            />
+                          </Box>
+                        </Grid>
+                      </>
+                    )}
+
+                    {/* Text Shadow Controls */}
+                    <Grid item xs={12}>
+                      <Typography variant="caption" display="block" gutterBottom sx={{ fontWeight: 600, mt: 2 }}>
+                        Text Effects
+                      </Typography>
+                    </Grid>
+                    
+                    <Grid item xs={12}>
+                      <FormControl size="small" fullWidth>
+                        <InputLabel>Text Shadow</InputLabel>
+                        <Select
+                          value={block.settings?.textShadowMode || 'none'}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            const updatedBlock = {
+                              ...block,
+                              settings: {
+                                ...block.settings,
+                                textShadowMode: e.target.value
+                              }
+                            };
+                            onAutoSave(updatedBlock);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          label="Text Shadow"
+                        >
+                          <MenuItem value="none">None</MenuItem>
+                          <MenuItem value="light">Light Shadow</MenuItem>
+                          <MenuItem value="medium">Medium Shadow</MenuItem>
+                          <MenuItem value="heavy">Heavy Shadow</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                  </Grid>
+                </Box>
+              )}
             </Grid>
           </Box>
         </Box>

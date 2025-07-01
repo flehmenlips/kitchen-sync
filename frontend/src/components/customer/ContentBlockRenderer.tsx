@@ -35,6 +35,314 @@ interface ContentBlockRendererProps {
   blocks: ContentBlock[];
 }
 
+// ===== UNIVERSAL STYLING INTERFACES =====
+interface UniversalCustomStyles {
+  backgroundColor?: string;
+  borderWidth?: string;
+  borderStyle?: string;
+  borderColor?: string;
+  boxShadow?: string;
+  margin?: string;
+  padding?: string;
+  borderRadius?: string;
+  height?: string;
+  overlayOpacity?: string;
+  overlayColor?: string;
+  textAlign?: string;
+  justifyContent?: string;
+  alignItems?: string;
+}
+
+interface UniversalTypographySettings {
+  // Title Typography
+  titleFontFamily?: string;
+  titleFontSize?: string;
+  titleFontWeight?: string;
+  titleColor?: string;
+  titleTextShadow?: string;
+  titleLineHeight?: string;
+  titleLetterSpacing?: string;
+  
+  // Subtitle Typography  
+  subtitleFontFamily?: string;
+  subtitleFontSize?: string;
+  subtitleFontWeight?: string;
+  subtitleColor?: string;
+  subtitleTextShadow?: string;
+  subtitleLineHeight?: string;
+  subtitleLetterSpacing?: string;
+  
+  // Content Typography
+  contentFontFamily?: string;
+  contentFontSize?: string;
+  contentFontWeight?: string;
+  contentColor?: string;
+  contentLineHeight?: string;
+  contentLetterSpacing?: string;
+  
+  // Text Shadow Mode
+  textShadowMode?: 'none' | 'light' | 'medium' | 'heavy' | 'custom' | 'default';
+  customTextShadow?: string;
+}
+
+interface UniversalSettings extends UniversalTypographySettings {
+  // Visual settings
+  backgroundType?: 'color' | 'image' | 'gradient' | 'video';
+  backgroundColor?: string;
+  backgroundImage?: string;
+  backgroundGradient?: string;
+  
+  // Video background
+  videoUrl?: string;
+  videoUrlWebm?: string;
+  videoFallbackImage?: string;
+  videoAutoplay?: string;
+  videoLoop?: string;
+  videoMuted?: string;
+  videoPlaybackRate?: string;
+  videoQuality?: string;
+  videoMobileBehavior?: string;
+  
+  // Parallax
+  parallaxMode?: string;
+  parallaxIntensity?: string;
+  parallaxPerformance?: string;
+  
+  // Mobile responsiveness
+  mobileTitleFontSize?: string;
+  mobileSubtitleFontSize?: string;
+  mobileContentFontSize?: string;
+  mobilePadding?: string;
+  mobileMargin?: string;
+  mobileTextAlign?: string;
+  
+  // Advanced styling
+  overlayOpacity?: string;
+  overlayColor?: string;
+  heightMode?: string;
+  customHeight?: string;
+  textAlign?: string;
+  justifyContent?: string;
+  alignItems?: string;
+  
+  // Button styling properties
+  buttonBackgroundColor?: string;
+  buttonTextColor?: string;
+  buttonFontSize?: string;
+  buttonFontWeight?: string;
+  buttonBorderRadius?: string;
+  buttonHoverColor?: string;
+  
+  // Image styling properties
+  shadowLevel?: number;
+  imageMaxWidth?: string;
+  hoverEffect?: 'none' | 'zoom' | 'lift' | 'scale';
+  objectFit?: 'cover' | 'contain' | 'fill' | 'scale-down' | 'none';
+  
+  // Features block styling properties
+  gridColumns?: number;
+  gridSpacing?: number;
+  cardStyle?: 'elevated' | 'flat' | 'outlined';
+  cardPadding?: number;
+  iconPosition?: 'top' | 'left';
+  iconSize?: string;
+  iconColor?: string;
+  featureTitleFontFamily?: string;
+  featureTitleFontSize?: string;
+  featureTitleFontWeight?: string;
+  featureTitleColor?: string;
+  featureDescriptionFontFamily?: string;
+  featureDescriptionFontSize?: string;
+  featureDescriptionFontWeight?: string;
+  featureDescriptionColor?: string;
+}
+
+// ===== UNIVERSAL HELPER FUNCTIONS =====
+
+/**
+ * Parse block settings and styles safely
+ */
+const parseBlockSettings = (block: ContentBlock): { styles: UniversalCustomStyles; settings: UniversalSettings } => {
+  let styles: UniversalCustomStyles = {};
+  let settings: UniversalSettings = {};
+  
+  if (block.settings) {
+    try {
+      const parsedSettings = typeof block.settings === 'string' ? JSON.parse(block.settings) : block.settings;
+      styles = parsedSettings.styles || {};
+      settings = { ...parsedSettings, ...styles }; // Merge for backward compatibility
+    } catch (e) {
+      console.error('Failed to parse block settings:', e);
+    }
+  }
+  
+  // Also check block.styles for direct styling
+  if (block.styles) {
+    styles = { ...styles, ...block.styles };
+  }
+  
+  return { styles, settings };
+};
+
+/**
+ * Get font family string for CSS
+ */
+const getFontFamily = (fontFamily?: string): string | undefined => {
+  if (!fontFamily || fontFamily === 'default') return undefined;
+  
+  // Handle Google Fonts and system fonts
+  const fontMap: Record<string, string> = {
+    'playfair': '"Playfair Display", serif',
+    'montserrat': '"Montserrat", sans-serif',
+    'dancing': '"Dancing Script", cursive',
+    'roboto-slab': '"Roboto Slab", serif',
+    'oswald': '"Oswald", sans-serif',
+    'lora': '"Lora", serif',
+    'poppins': '"Poppins", sans-serif',
+    'open-sans': '"Open Sans", sans-serif',
+    'lato': '"Lato", sans-serif',
+    'source-sans': '"Source Sans Pro", sans-serif',
+    'nunito': '"Nunito", sans-serif',
+    'inter': '"Inter", sans-serif',
+    'raleway': '"Raleway", sans-serif'
+  };
+  
+  return fontMap[fontFamily] || fontFamily;
+};
+
+/**
+ * Get text shadow CSS value
+ */
+const getTextShadow = (mode?: string, customShadow?: string): string => {
+  switch (mode) {
+    case 'none':
+      return 'none';
+    case 'light':
+      return '1px 1px 2px rgba(0,0,0,0.3)';
+    case 'medium':
+      return '2px 2px 4px rgba(0,0,0,0.5)';
+    case 'heavy':
+      return '3px 3px 6px rgba(0,0,0,0.7)';
+    case 'custom':
+      return customShadow || '2px 2px 4px rgba(0,0,0,0.5)';
+    case 'default':
+    default:
+      return '2px 2px 4px rgba(0,0,0,0.5)';
+  }
+};
+
+/**
+ * Get responsive font size with mobile fallback
+ */
+const getResponsiveFontSize = (desktopSize?: string, mobileSize?: string): any => {
+  if (!desktopSize) return undefined;
+  
+  if (mobileSize) {
+    return {
+      xs: mobileSize,
+      sm: mobileSize,
+      md: desktopSize
+    };
+  }
+  
+  return desktopSize;
+};
+
+/**
+ * Filter out undefined values from object
+ */
+const filterUndefinedValues = (obj: Record<string, any>) => {
+  const filtered: Record<string, any> = {};
+  Object.keys(obj).forEach(key => {
+    if (obj[key] !== undefined) {
+      filtered[key] = obj[key];
+    }
+  });
+  return filtered;
+};
+
+/**
+ * Get typography styles for title elements
+ */
+const getTitleTypographyStyles = (settings: UniversalSettings) => {
+  return filterUndefinedValues({
+    fontFamily: getFontFamily(settings.titleFontFamily),
+    fontSize: getResponsiveFontSize(settings.titleFontSize, settings.mobileTitleFontSize),
+    fontWeight: settings.titleFontWeight,
+    color: settings.titleColor,
+    textShadow: getTextShadow(settings.textShadowMode, settings.customTextShadow),
+    lineHeight: settings.titleLineHeight,
+    letterSpacing: settings.titleLetterSpacing
+  });
+};
+
+/**
+ * Get typography styles for subtitle elements
+ */
+const getSubtitleTypographyStyles = (settings: UniversalSettings) => {
+  return filterUndefinedValues({
+    fontFamily: getFontFamily(settings.subtitleFontFamily),
+    fontSize: getResponsiveFontSize(settings.subtitleFontSize, settings.mobileSubtitleFontSize),
+    fontWeight: settings.subtitleFontWeight,
+    color: settings.subtitleColor,
+    textShadow: getTextShadow(settings.textShadowMode, settings.customTextShadow),
+    lineHeight: settings.subtitleLineHeight,
+    letterSpacing: settings.subtitleLetterSpacing
+  });
+};
+
+/**
+ * Get typography styles for content elements
+ */
+const getContentTypographyStyles = (settings: UniversalSettings) => {
+  return filterUndefinedValues({
+    fontFamily: getFontFamily(settings.contentFontFamily),
+    fontSize: getResponsiveFontSize(settings.contentFontSize, settings.mobileContentFontSize),
+    fontWeight: settings.contentFontWeight,
+    color: settings.contentColor,
+    lineHeight: settings.contentLineHeight,
+    letterSpacing: settings.contentLetterSpacing
+  });
+};
+
+/**
+ * Get container styles with responsive padding and styling
+ */
+const getContainerStyles = (styles: UniversalCustomStyles, settings: UniversalSettings) => {
+  const baseStyles: any = {
+    py: 4, // Default padding
+  };
+  
+  // Apply custom styles
+  if (styles.backgroundColor) baseStyles.backgroundColor = styles.backgroundColor;
+  if (styles.padding) baseStyles.p = parseInt(styles.padding) / 8; // Convert px to theme spacing
+  if (styles.margin) baseStyles.m = parseInt(styles.margin) / 8;
+  if (styles.borderRadius) baseStyles.borderRadius = styles.borderRadius;
+  if (styles.boxShadow && styles.boxShadow !== 'none') baseStyles.boxShadow = styles.boxShadow;
+  
+  // Apply border if specified
+  if (styles.borderWidth && parseInt(styles.borderWidth) > 0) {
+    baseStyles.border = `${styles.borderWidth} ${styles.borderStyle || 'solid'} ${styles.borderColor || '#000000'}`;
+  }
+  
+  // Mobile responsiveness
+  if (settings.mobilePadding) {
+    baseStyles.p = {
+      xs: parseInt(settings.mobilePadding) / 8,
+      md: baseStyles.p || 4
+    };
+  }
+  
+  if (settings.mobileMargin) {
+    baseStyles.m = {
+      xs: parseInt(settings.mobileMargin) / 8,
+      md: baseStyles.m || 0
+    };
+  }
+  
+  return baseStyles;
+};
+
 const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) => {
   // Safe rendering helper to prevent objects as React children
   const safeRender = (value: any): string => {
@@ -52,24 +360,55 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
   const renderBlock = (block: ContentBlock) => {
     switch (block.blockType) {
       case BLOCK_TYPES.TEXT:
+        // Enhanced TEXT block with universal styling system
+        const { styles: textStyles, settings: textSettings } = parseBlockSettings(block);
+        const containerStyles = getContainerStyles(textStyles, textSettings);
+        const titleTypography = getTitleTypographyStyles(textSettings);
+        const subtitleTypography = getSubtitleTypographyStyles(textSettings);
+        const contentTypography = getContentTypographyStyles(textSettings);
+        
         return (
-          <Container maxWidth="lg" sx={{ py: 4 }}>
-            {block.title && (
-              <Typography variant="h4" component="h2" gutterBottom align="center">
-                {safeRender(block.title)}
-              </Typography>
-            )}
-            {block.subtitle && (
-              <Typography variant="h6" color="text.secondary" gutterBottom align="center">
-                {safeRender(block.subtitle)}
-              </Typography>
-            )}
-            {block.content && (
-              <Typography variant="body1" paragraph>
-                {safeRender(block.content)}
-              </Typography>
-            )}
-          </Container>
+          <Box sx={containerStyles}>
+            <Container maxWidth="lg">
+              {block.title && (
+                <Typography 
+                  variant="h4" 
+                  component="h2" 
+                  gutterBottom 
+                  sx={{
+                    textAlign: textSettings.textAlign || 'center',
+                    ...titleTypography
+                  }}
+                >
+                  {safeRender(block.title)}
+                </Typography>
+              )}
+              {block.subtitle && (
+                <Typography 
+                  variant="h6" 
+                  color="text.secondary" 
+                  gutterBottom 
+                  sx={{
+                    textAlign: textSettings.textAlign || 'center',
+                    ...subtitleTypography
+                  }}
+                >
+                  {safeRender(block.subtitle)}
+                </Typography>
+              )}
+              {block.content && (
+                <Typography 
+                  variant="body1" 
+                  paragraph
+                  sx={{
+                    ...contentTypography,
+                    textAlign: textSettings.textAlign || 'left'
+                  }}
+                  dangerouslySetInnerHTML={{ __html: safeRender(block.content) }}
+                />
+              )}
+            </Container>
+          </Box>
         );
 
       case BLOCK_TYPES.HTML:
@@ -87,38 +426,143 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
         );
 
       case BLOCK_TYPES.IMAGE:
+        // Enhanced IMAGE block with universal styling system
+        const { styles: imageStyles, settings: imageSettings } = parseBlockSettings(block);
+        const imageContainerStyles = getContainerStyles(imageStyles, imageSettings);
+        const imageTitleTypography = getTitleTypographyStyles(imageSettings);
+        
         return (
-          <Container maxWidth="lg" sx={{ py: 4 }}>
-            {block.title && (
-              <Typography variant="h4" component="h2" gutterBottom align="center">
-                {safeRender(block.title)}
-              </Typography>
-            )}
-            {block.imageUrl && (
-              <Box display="flex" justifyContent="center">
-                <Paper elevation={3} sx={{ overflow: 'hidden', borderRadius: 2 }}>
-                  <img
-                    src={safeRender(block.imageUrl)}
-                    alt={safeRender(block.title) || 'Image'}
-                    style={{ maxWidth: '100%', height: 'auto' }}
-                  />
-                </Paper>
-              </Box>
-            )}
-          </Container>
+          <Box sx={imageContainerStyles}>
+            <Container maxWidth="lg">
+              {block.title && (
+                <Typography 
+                  variant="h4" 
+                  component="h2" 
+                  gutterBottom 
+                  sx={{
+                    textAlign: imageSettings.textAlign || 'center',
+                    ...imageTitleTypography
+                  }}
+                >
+                  {safeRender(block.title)}
+                </Typography>
+              )}
+              {block.imageUrl && (
+                <Box 
+                  display="flex" 
+                  justifyContent={imageSettings.textAlign === 'left' ? 'flex-start' : 
+                                 imageSettings.textAlign === 'right' ? 'flex-end' : 'center'}
+                >
+                  <Paper 
+                    elevation={imageSettings.shadowLevel || 3} 
+                    sx={{ 
+                      overflow: 'hidden', 
+                      borderRadius: imageStyles.borderRadius || 2,
+                      border: imageStyles.borderWidth && parseInt(imageStyles.borderWidth) > 0 ? 
+                        `${imageStyles.borderWidth} ${imageStyles.borderStyle || 'solid'} ${imageStyles.borderColor || '#000000'}` : 'none',
+                      maxWidth: imageSettings.imageMaxWidth || '100%',
+                      transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                      '&:hover': {
+                        transform: imageSettings.hoverEffect === 'zoom' ? 'scale(1.05)' : 
+                                  imageSettings.hoverEffect === 'lift' ? 'translateY(-8px)' : 'none',
+                        boxShadow: imageSettings.hoverEffect ? '0 8px 25px rgba(0,0,0,0.15)' : undefined
+                      }
+                    }}
+                  >
+                    <img
+                      src={safeRender(block.imageUrl)}
+                      alt={safeRender(block.title) || 'Image'}
+                      style={{ 
+                        width: '100%', 
+                        height: 'auto',
+                        display: 'block',
+                        objectFit: imageSettings.objectFit || 'cover'
+                      }}
+                    />
+                  </Paper>
+                </Box>
+              )}
+              {block.subtitle && (
+                <Typography 
+                  variant="body2" 
+                  color="text.secondary" 
+                  sx={{ 
+                    mt: 2, 
+                    textAlign: imageSettings.textAlign || 'center',
+                    fontStyle: 'italic'
+                  }}
+                >
+                  {safeRender(block.subtitle)}
+                </Typography>
+              )}
+            </Container>
+          </Box>
         );
 
       case BLOCK_TYPES.CTA:
+        // Enhanced CTA block with universal styling system
+        const { styles: ctaStyles, settings: ctaSettings } = parseBlockSettings(block);
+        const ctaContainerStyles = getContainerStyles(ctaStyles, ctaSettings);
+        const ctaTitleTypography = getTitleTypographyStyles(ctaSettings);
+        const ctaSubtitleTypography = getSubtitleTypographyStyles(ctaSettings);
+        
+        // Default CTA styling if no custom background is set
+        const defaultCtaStyles = {
+          backgroundColor: ctaStyles.backgroundColor || ctaSettings.backgroundColor || 'primary.main',
+          color: 'white',
+          py: 6,
+          position: 'relative',
+          overflow: 'hidden'
+        };
+        
+        const finalCtaStyles = {
+          ...defaultCtaStyles,
+          ...ctaContainerStyles,
+          textAlign: ctaSettings.textAlign || 'center'
+        };
+        
+        // Button styling
+        const buttonStyles = {
+          backgroundColor: ctaSettings.buttonBackgroundColor || 'white',
+          color: ctaSettings.buttonTextColor || 'primary.main',
+          px: 4,
+          py: 1.5,
+          fontSize: ctaSettings.buttonFontSize || '1rem',
+          fontWeight: ctaSettings.buttonFontWeight || '600',
+          borderRadius: ctaSettings.buttonBorderRadius || '4px',
+          textTransform: 'none' as const,
+          '&:hover': {
+            backgroundColor: ctaSettings.buttonHoverColor || 'grey.100',
+            transform: 'translateY(-2px)',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+          },
+          transition: 'all 0.3s ease'
+        };
+        
         return (
-          <Box sx={{ backgroundColor: 'primary.main', color: 'white', py: 6 }}>
-            <Container maxWidth="lg" sx={{ textAlign: 'center' }}>
+          <Box sx={finalCtaStyles}>
+            <Container maxWidth="lg">
               {block.title && (
-                <Typography variant="h4" gutterBottom>
+                <Typography 
+                  variant="h4" 
+                  gutterBottom
+                  sx={{
+                    ...ctaTitleTypography,
+                    color: ctaSettings.titleColor || 'white'
+                  }}
+                >
                   {safeRender(block.title)}
                 </Typography>
               )}
               {block.subtitle && (
-                <Typography variant="h6" sx={{ mb: 3 }}>
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    mb: 3,
+                    ...ctaSubtitleTypography,
+                    color: ctaSettings.subtitleColor || 'rgba(255,255,255,0.9)'
+                  }}
+                >
                   {safeRender(block.subtitle)}
                 </Typography>
               )}
@@ -128,15 +572,7 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
                   to={safeRender(block.buttonLink)}
                   variant="contained"
                   size="large"
-                  sx={{
-                    backgroundColor: 'white',
-                    color: 'primary.main',
-                    px: 4,
-                    py: 1.5,
-                    '&:hover': {
-                      backgroundColor: 'grey.100',
-                    }
-                  }}
+                  sx={buttonStyles}
                 >
                   {safeRender(block.buttonText)}
                 </Button>
@@ -678,6 +1114,12 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
         );
 
       case BLOCK_TYPES.FEATURES:
+        // Enhanced FEATURES block with universal styling system
+        const { styles: featuresStyles, settings: featuresSettings } = parseBlockSettings(block);
+        const featuresContainerStyles = getContainerStyles(featuresStyles, featuresSettings);
+        const featuresTitleTypography = getTitleTypographyStyles(featuresSettings);
+        const featuresSubtitleTypography = getSubtitleTypographyStyles(featuresSettings);
+        
         // For features, we expect the content to be JSON with feature items
         let features = [];
         try {
@@ -686,37 +1128,133 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
           console.error('Failed to parse features content:', e);
         }
         
-
+        // Grid layout options
+        const gridColumns = featuresSettings.gridColumns || 3;
+        const cardStyle = featuresSettings.cardStyle || 'elevated';
+        const iconPosition = featuresSettings.iconPosition || 'top';
+        
+        // Card styling based on settings
+        const getCardStyles = () => {
+          const baseStyles = {
+            height: '100%',
+            transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+            '&:hover': {
+              transform: featuresSettings.hoverEffect === 'lift' ? 'translateY(-8px)' : 
+                        featuresSettings.hoverEffect === 'scale' ? 'scale(1.05)' : 'none',
+              boxShadow: featuresSettings.hoverEffect ? '0 8px 25px rgba(0,0,0,0.15)' : undefined
+            }
+          };
+          
+          switch (cardStyle) {
+            case 'flat':
+              return { ...baseStyles, boxShadow: 'none', border: '1px solid rgba(0,0,0,0.1)' };
+            case 'outlined':
+              return { ...baseStyles, boxShadow: 'none', border: '2px solid', borderColor: 'primary.main' };
+            case 'elevated':
+            default:
+              return { ...baseStyles, boxShadow: 3 };
+          }
+        };
         
         return (
-          <Container maxWidth="lg" sx={{ py: 6 }}>
-            {block.title && (
-              <Typography variant="h4" component="h2" gutterBottom align="center">
-                {safeRender(block.title)}
-              </Typography>
-            )}
-            {block.subtitle && (
-              <Typography variant="h6" color="text.secondary" gutterBottom align="center" sx={{ mb: 4 }}>
-                {safeRender(block.subtitle)}
-              </Typography>
-            )}
-            <Grid container spacing={4}>
-              {features.map((feature: any, index: number) => (
-                <Grid item xs={12} md={4} key={index}>
-                  <Card sx={{ height: '100%' }}>
-                    <CardContent sx={{ textAlign: 'center', p: 3 }}>
-                      <Typography variant="h6" gutterBottom>
-                        {safeRender(feature.title)}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {safeRender(feature.description)}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-          </Container>
+          <Box sx={featuresContainerStyles}>
+            <Container maxWidth="lg">
+              {block.title && (
+                <Typography 
+                  variant="h4" 
+                  component="h2" 
+                  gutterBottom 
+                  sx={{
+                    textAlign: featuresSettings.textAlign || 'center',
+                    ...featuresTitleTypography
+                  }}
+                >
+                  {safeRender(block.title)}
+                </Typography>
+              )}
+              {block.subtitle && (
+                <Typography 
+                  variant="h6" 
+                  color="text.secondary" 
+                  gutterBottom 
+                  sx={{ 
+                    mb: 4,
+                    textAlign: featuresSettings.textAlign || 'center',
+                    ...featuresSubtitleTypography
+                  }}
+                >
+                  {safeRender(block.subtitle)}
+                </Typography>
+              )}
+              <Grid container spacing={featuresSettings.gridSpacing || 4}>
+                {features.map((feature: any, index: number) => (
+                  <Grid 
+                    item 
+                    xs={12} 
+                    sm={gridColumns === 2 ? 6 : gridColumns === 4 ? 6 : 12}
+                    md={12 / gridColumns} 
+                    key={index}
+                  >
+                    <Card sx={getCardStyles()}>
+                      <CardContent 
+                        sx={{ 
+                          textAlign: featuresSettings.textAlign || 'center', 
+                          p: featuresSettings.cardPadding || 3,
+                          display: 'flex',
+                          flexDirection: iconPosition === 'left' ? 'row' : 'column',
+                          alignItems: iconPosition === 'left' ? 'flex-start' : 'center',
+                          gap: iconPosition === 'left' ? 2 : 1
+                        }}
+                      >
+                        {/* Feature Icon/Image */}
+                        {feature.icon && (
+                          <Box 
+                            sx={{ 
+                              fontSize: featuresSettings.iconSize || '3rem',
+                              color: featuresSettings.iconColor || 'primary.main',
+                              mb: iconPosition === 'top' ? 2 : 0,
+                              flexShrink: 0
+                            }}
+                          >
+                            {feature.icon}
+                          </Box>
+                        )}
+                        
+                        <Box sx={{ flex: 1 }}>
+                          <Typography 
+                            variant="h6" 
+                            gutterBottom
+                            sx={{
+                              fontFamily: getFontFamily(featuresSettings.featureTitleFontFamily),
+                              fontSize: featuresSettings.featureTitleFontSize || '1.25rem',
+                              fontWeight: featuresSettings.featureTitleFontWeight || '600',
+                              color: featuresSettings.featureTitleColor || 'text.primary',
+                              textAlign: iconPosition === 'left' ? 'left' : 'inherit'
+                            }}
+                          >
+                            {safeRender(feature.title)}
+                          </Typography>
+                          <Typography 
+                            variant="body2" 
+                            color="text.secondary"
+                            sx={{
+                              fontFamily: getFontFamily(featuresSettings.featureDescriptionFontFamily),
+                              fontSize: featuresSettings.featureDescriptionFontSize || '0.875rem',
+                              fontWeight: featuresSettings.featureDescriptionFontWeight || '400',
+                              color: featuresSettings.featureDescriptionColor || 'text.secondary',
+                              textAlign: iconPosition === 'left' ? 'left' : 'inherit'
+                            }}
+                          >
+                            {safeRender(feature.description)}
+                          </Typography>
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            </Container>
+          </Box>
         );
 
       case 'video':

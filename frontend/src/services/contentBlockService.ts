@@ -17,6 +17,7 @@ export interface ContentBlock {
   buttonLink?: string;
   buttonStyle?: string;
   settings?: any;
+  styles?: any; // Add styles property for Phase 2 enhancement system
   displayOrder: number;
   isActive: boolean;
   createdAt: string;
