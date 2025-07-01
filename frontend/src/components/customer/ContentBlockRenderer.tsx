@@ -686,7 +686,7 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
           muted: heroSettings.videoMuted || 'true',
           playbackRate: heroSettings.videoPlaybackRate || '1.0',
           quality: heroSettings.videoQuality || 'auto',
-          mobileBehavior: heroSettings.videoMobileBehavior || 'fallback'
+          mobileBehavior: heroSettings.videoMobileBehavior || 'video'
         };
 
         const video = useVideoBackground(videoOptions);
@@ -814,6 +814,30 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
                 }}
               >
                 🎬 {video.videoError}
+              </Box>
+            )}
+
+            {/* Mobile Debug Info - Temporary */}
+            {process.env.NODE_ENV === 'development' && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 20,
+                  right: 20,
+                  zIndex: 3,
+                  backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                  color: 'white',
+                  padding: 1,
+                  borderRadius: 1,
+                  fontSize: '0.7rem',
+                  maxWidth: '200px'
+                }}
+              >
+                📱 Mobile: {video.isMobile ? 'YES' : 'NO'}<br/>
+                🎬 Show Video: {video.showVideo ? 'YES' : 'NO'}<br/>
+                🖼️ Show Fallback: {video.showFallback ? 'YES' : 'NO'}<br/>
+                🎯 Behavior: {videoOptions.mobileBehavior}<br/>
+                📺 Loaded: {video.isVideoLoaded ? 'YES' : 'NO'}
               </Box>
             )}
 
