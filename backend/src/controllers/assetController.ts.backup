@@ -81,7 +81,7 @@ export const getAssets = asyncHandler(async (req: Request, res: Response) => {
   console.log('[AssetController] Using safe sort:', { safeSortBy, safeSortOrder });
 
   try {
-    // Use enhanced select fields that work in production
+    // Use enhanced select fields that work in production (without cloudinaryPublicId)
     const selectFields = {
       id: true,
       restaurantId: true,
@@ -94,7 +94,7 @@ export const getAssets = asyncHandler(async (req: Request, res: Response) => {
       isPrimary: true,
       createdAt: true,
       updatedAt: true,
-      // Enhanced fields confirmed working in production
+      // Enhanced fields confirmed working in production (except cloudinaryPublicId)
       tags: true,
       description: true,
       folderId: true,
@@ -288,7 +288,7 @@ export const uploadAsset = asyncHandler(async (req: Request, res: Response) => {
         mimeType: req.file.mimetype,
         altText: altText || req.file.originalname,
         isPrimary: false,
-        // Enhanced fields now enabled for production
+        // Enhanced fields enabled for production (except cloudinaryPublicId which is missing)
         description: description || null,
         folderId: validatedFolderId,
         folderPath: folderPath,
@@ -447,12 +447,12 @@ export const importAllCloudinaryAssets = async (req: Request, res: Response) => 
     // Get existing assets from database
     const existingAssets = await prisma.brandAsset.findMany({
       where: { restaurantId },
-      select: { id: true, fileName: true }
+      select: { cloudinaryPublicId: true }
     });
 
     const existingPublicIds = new Set(
       existingAssets
-        .map(asset => asset.fileName)
+        .map(asset => asset.cloudinaryPublicId)
         .filter(Boolean)
     );
 
@@ -508,9 +508,9 @@ export const importAllCloudinaryAssets = async (req: Request, res: Response) => 
 
     // Filter out assets already in database and demo assets
     const assetsToImport = allAssets.filter(
-      asset => !existingPublicIds.has(asset.fileName) && 
-                !asset.fileName.startsWith('demo_') &&
-                !asset.fileName.startsWith('restaurants/') // Exclude current restaurant-specific assets
+      asset => !existingPublicIds.has(asset.publicId) && 
+                !asset.publicId.startsWith('demo_') &&
+                !asset.publicId.startsWith('restaurants/') // Exclude current restaurant-specific assets
     );
 
     console.log(`📥 Importing ${assetsToImport.length} historical assets`);
@@ -526,7 +526,7 @@ export const importAllCloudinaryAssets = async (req: Request, res: Response) => 
         totalCloudinary: allAssets.length,
         totalDatabase: existingAssets.length,
         skipped: 0,
-        alreadyImported: allAssets.filter(asset => existingPublicIds.has(asset.fileName)).length,
+        alreadyImported: allAssets.filter(asset => existingPublicIds.has(asset.publicId)).length,
         categories: {
           recipes: 0,
           contentBlocks: 0,
@@ -538,7 +538,7 @@ export const importAllCloudinaryAssets = async (req: Request, res: Response) => 
           foundInCloudinary: allAssets.length,
           eligibleForImport: 0,
           successfullyImported: 0,
-          alreadyImported: allAssets.filter(asset => existingPublicIds.has(asset.fileName)).length,
+          alreadyImported: allAssets.filter(asset => existingPublicIds.has(asset.publicId)).length,
           message: "No new assets to import - everything is already in your library!"
         }
       });
@@ -566,8 +566,8 @@ export const importAllCloudinaryAssets = async (req: Request, res: Response) => 
         // let folderId: string | null = null;
         let category = 'other';
 
-        if (asset.fileName.includes('recipe') || asset.fileName.includes('food') || 
-            asset.fileName.includes('cooking') || asset.fileName.includes('ingredient')) {
+        if (asset.publicId.includes('recipe') || asset.publicId.includes('food') || 
+            asset.publicId.includes('cooking') || asset.publicId.includes('ingredient')) {
           // const recipeFolder = assetFolders.find(f => 
           //   f.name.toLowerCase().includes('recipe') || 
           //   f.name.toLowerCase().includes('photo')
@@ -575,8 +575,8 @@ export const importAllCloudinaryAssets = async (req: Request, res: Response) => 
           // folderId = recipeFolder?.id || null;
           category = 'recipes';
           importStats.recipes++;
-        } else if (asset.fileName.includes('content-block') || asset.fileName.includes('hero') ||
-                   asset.fileName.includes('website') || asset.fileName.includes('dining')) {
+        } else if (asset.publicId.includes('content-block') || asset.publicId.includes('hero') ||
+                   asset.publicId.includes('website') || asset.publicId.includes('dining')) {
           // const websiteFolder = assetFolders.find(f => 
           //   f.name.toLowerCase().includes('website') || 
           //   f.name.toLowerCase().includes('hero')
@@ -596,7 +596,7 @@ export const importAllCloudinaryAssets = async (req: Request, res: Response) => 
         }
 
         // Generate appropriate filename
-        const originalName = asset.original_filename || asset.fileName.split('/').pop() || 'imported-asset';
+        const originalName = asset.original_filename || asset.publicId.split('/').pop() || 'imported-asset';
         const fileExtension = asset.format ? `.${asset.format}` : '';
         const fileName = originalName.includes('.') ? originalName : `${originalName}${fileExtension}`;
 
@@ -627,7 +627,7 @@ export const importAllCloudinaryAssets = async (req: Request, res: Response) => 
         }
 
       } catch (assetError: any) {
-        console.error(`❌ Error importing asset ${asset.fileName}:`, assetError.message);
+        console.error(`❌ Error importing asset ${asset.publicId}:`, assetError.message);
         // Continue with other assets
       }
     }
