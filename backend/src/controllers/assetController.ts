@@ -56,7 +56,9 @@ export const getAssets = asyncHandler(async (req: Request, res: Response) => {
   };
 
   if (assetType) {
-    where.assetType = assetType;
+    // Handle case insensitive asset type filtering by converting to uppercase
+    const normalizedAssetType = (assetType as string).toUpperCase();
+    where.assetType = normalizedAssetType;
   }
 
   if (search) {
@@ -107,14 +109,14 @@ export const uploadAsset = asyncHandler(async (req: Request, res: Response) => {
   let tempPath: string | null = null;
 
   try {
-    // Determine asset type from MIME type
-    let assetType = 'other';
+    // Determine asset type from MIME type and normalize to uppercase
+    let assetType = 'OTHER';
     if (req.file.mimetype.startsWith('image/')) {
-      assetType = 'image';
+      assetType = 'IMAGE';
     } else if (req.file.mimetype.startsWith('video/')) {
-      assetType = 'video';
+      assetType = 'VIDEO';
     } else if (req.file.mimetype === 'application/pdf') {
-      assetType = 'document';
+      assetType = 'DOCUMENT';
     }
 
     // Write file to temp location for cloudinary upload
