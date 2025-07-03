@@ -408,6 +408,35 @@ export const importAllCloudinaryAssets = async (req: Request, res: Response) => 
 
     console.log(`📥 Importing ${assetsToImport.length} historical assets`);
 
+    // Special case: No assets to import (everything already imported)
+    if (assetsToImport.length === 0) {
+      console.log(`✅ All Cloudinary assets already imported! Database has ${existingAssets.length} assets.`);
+      
+      return res.json({
+        success: true,
+        message: `🎉 Import check complete! All your Cloudinary assets (${allAssets.length} total) are already in your Asset Library.`,
+        imported: 0,
+        totalCloudinary: allAssets.length,
+        totalDatabase: existingAssets.length,
+        skipped: 0,
+        alreadyImported: allAssets.filter(asset => existingPublicIds.has(asset.public_id)).length,
+        categories: {
+          recipes: 0,
+          contentBlocks: 0,
+          videos: 0,
+          other: 0
+        },
+        details: {
+          existingInDb: existingAssets.length,
+          foundInCloudinary: allAssets.length,
+          eligibleForImport: 0,
+          successfullyImported: 0,
+          alreadyImported: allAssets.filter(asset => existingPublicIds.has(asset.public_id)).length,
+          message: "No new assets to import - everything is already in your library!"
+        }
+      });
+    }
+
     // Get available folders for categorization
     const assetFolders = await prisma.assetFolder.findMany({
       where: { restaurantId },
