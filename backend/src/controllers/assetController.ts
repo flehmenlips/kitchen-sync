@@ -1,3 +1,10 @@
+/**
+ * Asset Controller - Production Compatible Version
+ * This version is specifically configured for production database schema
+ * which does not include enhanced fields like tags, description, folderId, etc.
+ * Last updated: 2025-01-03 for production schema compatibility
+ */
+
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { asyncHandler } from '../utils/asyncHandler';
