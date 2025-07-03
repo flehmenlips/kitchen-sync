@@ -81,7 +81,7 @@ export const getAssets = asyncHandler(async (req: Request, res: Response) => {
   console.log('[AssetController] Using safe sort:', { safeSortBy, safeSortOrder });
 
   try {
-    // Use basic select fields that exist in both schemas
+    // Use enhanced select fields that work in production
     const selectFields = {
       id: true,
       restaurantId: true,
@@ -94,7 +94,14 @@ export const getAssets = asyncHandler(async (req: Request, res: Response) => {
       isPrimary: true,
       createdAt: true,
       updatedAt: true,
-      // Only include enhanced fields if they exist (graceful degradation)
+      // Enhanced fields confirmed working in production
+      cloudinaryPublicId: true,
+      tags: true,
+      description: true,
+      folderId: true,
+      folderPath: true,
+      usageCount: true,
+      lastUsedAt: true
     };
 
     const [assets, totalCount] = await Promise.all([
@@ -177,43 +184,47 @@ export const uploadAsset = asyncHandler(async (req: Request, res: Response) => {
     const cloudinaryResult = await uploadImage(tempPath, `restaurants/${restaurantId}/assets`);
 
     // Get folder path if folderId provided and validate it exists
-    // TEMPORARILY DISABLED - Enhanced folder management not available in production schema
     let folderPath = null;
     let validatedFolderId = null;
     
-    // if (folderId) {
-    //   console.log('[AssetController] Checking folderId:', folderId);
-    //   const folder = await prisma.assetFolder.findUnique({
-    //     where: { id: folderId },
-    //     select: { name: true, parentFolderId: true }
-    //   });
-    //   
-    //   if (folder) {
-    //     console.log('[AssetController] Valid folder found:', folder.name);
-    //     validatedFolderId = folderId;
-    //     folderPath = `/${folder.name}`;
-    //   } else {
-    //     console.log('[AssetController] Invalid folderId provided, uploading to root folder');
-    //     // Don't fail the upload, just upload to root folder
-    //     validatedFolderId = null;
-    //     folderPath = null;
-    //   }
-    // }
+    if (folderId) {
+      console.log('[AssetController] Checking folderId:', folderId);
+      try {
+        const folder = await prisma.assetFolder.findUnique({
+          where: { id: folderId },
+          select: { name: true, parentFolderId: true }
+        });
+        
+        if (folder) {
+          console.log('[AssetController] Valid folder found:', folder.name);
+          validatedFolderId = folderId;
+          folderPath = `/${folder.name}`;
+        } else {
+          console.log('[AssetController] Invalid folderId provided, uploading to root folder');
+          // Don't fail the upload, just upload to root folder
+          validatedFolderId = null;
+          folderPath = null;
+        }
+      } catch (folderError) {
+        console.log('[AssetController] Folder lookup failed, uploading to root folder');
+        validatedFolderId = null;
+        folderPath = null;
+      }
+    }
 
     // Parse tags if provided as string
-    // TEMPORARILY DISABLED - Tags not available in production schema
     let parsedTags: string[] = [];
-    // if (tags) {
-    //   try {
-    //     parsedTags = typeof tags === 'string' ? JSON.parse(tags) : tags;
-    //   } catch {
-    //     parsedTags = typeof tags === 'string' ? [tags] : tags;
-    //   }
-    // }
+    if (tags) {
+      try {
+        parsedTags = typeof tags === 'string' ? JSON.parse(tags) : tags;
+      } catch {
+        parsedTags = typeof tags === 'string' ? [tags] : tags;
+      }
+    }
 
-    console.log('[AssetController] Creating asset with basic schema compatibility');
+    console.log('[AssetController] Creating asset with enhanced schema fields');
 
-    // Create asset record in database with basic fields only (production-safe)
+    // Create asset record in database with enhanced fields
     const asset = await prisma.brandAsset.create({
       data: {
         restaurantId,
@@ -223,9 +234,14 @@ export const uploadAsset = asyncHandler(async (req: Request, res: Response) => {
         fileSize: req.file.size,
         mimeType: req.file.mimetype,
         altText: altText || req.file.originalname,
-        isPrimary: false
-        // Enhanced fields temporarily disabled for production compatibility:
-        // description, folderId, folderPath, tags, usageCount, cloudinaryPublicId
+        isPrimary: false,
+        // Enhanced fields now enabled for production
+        description: description || null,
+        folderId: validatedFolderId,
+        folderPath: folderPath,
+        tags: parsedTags,
+        usageCount: 0,
+        cloudinaryPublicId: cloudinaryResult.publicId
       }
     });
 
@@ -439,9 +455,9 @@ export const importAllCloudinaryAssets = async (req: Request, res: Response) => 
 
     // Filter out assets already in database and demo assets
     const assetsToImport = allAssets.filter(
-      asset => !existingPublicIds.has(asset.public_id) && 
-                !asset.public_id.startsWith('demo_') &&
-                !asset.public_id.startsWith('restaurants/') // Exclude current restaurant-specific assets
+      asset => !existingPublicIds.has(asset.publicId) && 
+                !asset.publicId.startsWith('demo_') &&
+                !asset.publicId.startsWith('restaurants/') // Exclude current restaurant-specific assets
     );
 
     console.log(`📥 Importing ${assetsToImport.length} historical assets`);
@@ -457,7 +473,7 @@ export const importAllCloudinaryAssets = async (req: Request, res: Response) => 
         totalCloudinary: allAssets.length,
         totalDatabase: existingAssets.length,
         skipped: 0,
-        alreadyImported: allAssets.filter(asset => existingPublicIds.has(asset.public_id)).length,
+        alreadyImported: allAssets.filter(asset => existingPublicIds.has(asset.publicId)).length,
         categories: {
           recipes: 0,
           contentBlocks: 0,
@@ -469,7 +485,7 @@ export const importAllCloudinaryAssets = async (req: Request, res: Response) => 
           foundInCloudinary: allAssets.length,
           eligibleForImport: 0,
           successfullyImported: 0,
-          alreadyImported: allAssets.filter(asset => existingPublicIds.has(asset.public_id)).length,
+          alreadyImported: allAssets.filter(asset => existingPublicIds.has(asset.publicId)).length,
           message: "No new assets to import - everything is already in your library!"
         }
       });
@@ -497,8 +513,8 @@ export const importAllCloudinaryAssets = async (req: Request, res: Response) => 
         // let folderId: string | null = null;
         let category = 'other';
 
-        if (asset.public_id.includes('recipe') || asset.public_id.includes('food') || 
-            asset.public_id.includes('cooking') || asset.public_id.includes('ingredient')) {
+        if (asset.publicId.includes('recipe') || asset.publicId.includes('food') || 
+            asset.publicId.includes('cooking') || asset.publicId.includes('ingredient')) {
           // const recipeFolder = assetFolders.find(f => 
           //   f.name.toLowerCase().includes('recipe') || 
           //   f.name.toLowerCase().includes('photo')
@@ -506,8 +522,8 @@ export const importAllCloudinaryAssets = async (req: Request, res: Response) => 
           // folderId = recipeFolder?.id || null;
           category = 'recipes';
           importStats.recipes++;
-        } else if (asset.public_id.includes('content-block') || asset.public_id.includes('hero') ||
-                   asset.public_id.includes('website') || asset.public_id.includes('dining')) {
+        } else if (asset.publicId.includes('content-block') || asset.publicId.includes('hero') ||
+                   asset.publicId.includes('website') || asset.publicId.includes('dining')) {
           // const websiteFolder = assetFolders.find(f => 
           //   f.name.toLowerCase().includes('website') || 
           //   f.name.toLowerCase().includes('hero')
@@ -527,7 +543,7 @@ export const importAllCloudinaryAssets = async (req: Request, res: Response) => 
         }
 
         // Generate appropriate filename
-        const originalName = asset.original_filename || asset.public_id.split('/').pop() || 'imported-asset';
+        const originalName = asset.original_filename || asset.publicId.split('/').pop() || 'imported-asset';
         const fileExtension = asset.format ? `.${asset.format}` : '';
         const fileName = originalName.includes('.') ? originalName : `${originalName}${fileExtension}`;
 
@@ -542,10 +558,10 @@ export const importAllCloudinaryAssets = async (req: Request, res: Response) => 
             assetType: asset.assetType.toUpperCase(),
             isPrimary: false
             // Enhanced fields temporarily disabled for production compatibility:
-            // cloudinaryPublicId: asset.public_id,
+            // cloudinaryPublicId: asset.publicId,
             // folderId,
             // tags: asset.tags || [],
-            // description: `Historical import from: ${asset.public_id}`,
+            // description: `Historical import from: ${asset.publicId}`,
             // usageCount: 0,
             // folderPath: asset.folder || null
           }
@@ -558,7 +574,7 @@ export const importAllCloudinaryAssets = async (req: Request, res: Response) => 
         }
 
       } catch (assetError: any) {
-        console.error(`❌ Error importing asset ${asset.public_id}:`, assetError.message);
+        console.error(`❌ Error importing asset ${asset.publicId}:`, assetError.message);
         // Continue with other assets
       }
     }
