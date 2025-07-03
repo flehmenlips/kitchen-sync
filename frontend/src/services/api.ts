@@ -49,15 +49,33 @@ api.interceptors.request.use(
         // Only skip customer auth interference for admin/website-builder routes
         const isAdminRoute = config.url?.includes('/website-builder') || 
                            config.url?.includes('/admin') || 
-                           window.location.pathname.includes('/admin');
+                           config.url?.includes('/assets') ||
+                           config.url?.includes('/asset-library') ||
+                           window.location.pathname.includes('/admin') ||
+                           window.location.pathname.includes('/website') ||
+                           window.location.pathname.includes('/asset-library');
+        
+        // Debug: log route detection for asset calls
+        if (config.url?.includes('/assets/restaurants')) {
+            console.log('[Auth Debug] Asset API call detected:', {
+                url: config.url,
+                isAdminRoute,
+                pathname: window.location.pathname,
+                hasCustomerAuth: !!sessionStorage.getItem('customerAuth'),
+                hasToken: !!token
+            });
+        }
         
         if (!isAdminRoute) {
             // Check if there's a customer auth in session storage - if so, skip this request
             const customerAuth = sessionStorage.getItem('customerAuth');
             if (customerAuth) {
+                console.log('[Auth Debug] Customer auth interference - token nullified for:', config.url);
                 // Don't set any auth header if customer is logged in
                 token = null;
             }
+        } else {
+            console.log('[Auth Debug] Admin route detected - preserving admin token for:', config.url);
         }
         
         if (token) {

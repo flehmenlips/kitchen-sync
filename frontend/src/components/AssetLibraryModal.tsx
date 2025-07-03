@@ -478,6 +478,20 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
     try {
       console.log('[AssetLibrary] Testing API connection...');
       
+      // First check for auth interference
+      const customerAuth = sessionStorage.getItem('customerAuth');
+      const adminToken = localStorage.getItem('token') || JSON.parse(localStorage.getItem('kitchenSyncUserInfo') || '{}').token;
+      
+      console.log('[AssetLibrary] Auth status:', {
+        hasCustomerAuth: !!customerAuth,
+        hasAdminToken: !!adminToken,
+        pathname: window.location.pathname
+      });
+      
+      if (customerAuth) {
+        console.warn('[AssetLibrary] Customer auth detected in sessionStorage - this may interfere with admin API calls');
+      }
+      
       const response = await api.get(`/assets/restaurants/${currentRestaurant.id}/test`);
       console.log('[AssetLibrary] Test API response:', response.data);
       
@@ -487,7 +501,19 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
     } catch (error: any) {
       console.error('[AssetLibrary] Test API error:', error);
       const errorMessage = error.response?.data?.message || error.message;
-      alert(`❌ API Test Error: ${errorMessage}`);
+      alert(`❌ API Test Error: ${errorMessage}\n\nIf you see 401 errors, try clicking "Clear Auth Interference" below.`);
+    }
+  };
+
+  // Clear customer auth interference
+  const handleClearAuthInterference = () => {
+    const customerAuth = sessionStorage.getItem('customerAuth');
+    if (customerAuth) {
+      sessionStorage.removeItem('customerAuth');
+      console.log('[AssetLibrary] Cleared customer auth from sessionStorage');
+      alert('✅ Customer auth interference cleared! Try refreshing the Asset Library now.');
+    } else {
+      alert('ℹ️ No customer auth found in sessionStorage.');
     }
   };
 
@@ -747,6 +773,14 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
           sx={{ mr: 1 }}
         >
           🧪 Test API
+        </Button>
+        <Button
+          onClick={handleClearAuthInterference}
+          variant="outlined"
+          size="small"
+          sx={{ mr: 1 }}
+        >
+          Clear Auth Interference
         </Button>
         <Button
           onClick={handleImportAssets}
