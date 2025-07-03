@@ -11,7 +11,8 @@ import {
   trackAssetUsage,
   getAssetAnalytics,
   upload,
-  importAllCloudinaryAssets
+  importAllCloudinaryAssets,
+  testAssetApi
 } from '../controllers/assetController';
 import { protect } from '../middleware/authMiddleware';
 
@@ -20,9 +21,12 @@ const router = express.Router();
 // Apply authentication middleware to all routes
 router.use(protect);
 
+// Test endpoint (should be first for debugging)
+router.get('/restaurants/:restaurantId/test', testAssetApi);
+
 // Main asset routes
 router.get('/restaurants/:restaurantId/assets', getAssets);
-router.post('/restaurants/:restaurantId/assets/upload', upload.single('file'), uploadAsset);
+router.post('/restaurants/:restaurantId/assets', upload.single('file'), uploadAsset);
 router.put('/restaurants/:restaurantId/assets/:id', updateAsset);
 router.delete('/restaurants/:restaurantId/assets/:id', deleteAsset);
 

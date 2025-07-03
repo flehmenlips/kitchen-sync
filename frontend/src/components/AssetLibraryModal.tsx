@@ -515,6 +515,39 @@ Found in Cloudinary: ${result.totalCloudinary} assets`;
     handleAssetMenuClose();
   };
 
+  // Test API connection
+  const handleTestApi = async () => {
+    if (!currentRestaurant) {
+      setError('No restaurant selected');
+      return;
+    }
+    
+    try {
+      console.log('[AssetLibrary] Testing API connection...');
+      
+      const response = await fetch(`/api/assets/restaurants/${currentRestaurant.id}/test`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const responseText = await response.text();
+      console.log('[AssetLibrary] Test API response:', responseText);
+      
+      if (response.ok) {
+        const result = JSON.parse(responseText);
+        alert(`✅ API Test Success!\n\nRestaurant ID: ${result.restaurantId}\nUser ID: ${result.userId}\nEnvironment: ${result.environment}\nTimestamp: ${result.timestamp}`);
+      } else {
+        alert(`❌ API Test Failed!\n\nStatus: ${response.status}\nResponse: ${responseText}`);
+      }
+    } catch (error: any) {
+      console.error('[AssetLibrary] Test API error:', error);
+      alert(`❌ API Test Error: ${error.message}`);
+    }
+  };
+
   return (
     <Dialog
       open={open}
@@ -764,6 +797,14 @@ Found in Cloudinary: ${result.totalCloudinary} assets`;
         <Typography variant="caption" color="text.secondary" sx={{ mr: 'auto' }}>
           {assets.length} assets • Folder management in development
         </Typography>
+        <Button
+          onClick={handleTestApi}
+          variant="outlined"
+          size="small"
+          sx={{ mr: 1 }}
+        >
+          🧪 Test API
+        </Button>
         <Button
           onClick={handleImportAssets}
           disabled={importing}

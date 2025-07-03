@@ -581,4 +581,33 @@ export const deleteAssetSecure = async (req: Request, res: Response) => {
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
+};
+
+/**
+ * Simple test endpoint to verify API routing and authentication
+ */
+export const testAssetApi = async (req: Request, res: Response) => {
+  try {
+    const restaurantId = parseInt(req.params.restaurantId);
+    
+    console.log(`🧪 Test API called for restaurant ${restaurantId}`);
+    console.log(`🧪 User ID: ${req.user?.id}`);
+    console.log(`🧪 Request headers:`, Object.keys(req.headers));
+    
+    res.json({
+      success: true,
+      message: 'Asset API is working correctly',
+      restaurantId,
+      userId: req.user?.id,
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV
+    });
+  } catch (error) {
+    console.error('❌ Test API error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Test API failed',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
 }; 
