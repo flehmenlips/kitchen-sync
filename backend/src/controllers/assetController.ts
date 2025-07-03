@@ -21,13 +21,13 @@ const prisma = new PrismaClient();
 const multer = require('multer');
 
 /**
- * PRODUCTION COMPATIBILITY HELPER
- * Filters out enhanced schema fields that don't exist in production
+ * PRODUCTION COMPATIBILITY HELPER - RAW SQL VERSION
+ * Uses raw SQL to bypass Prisma schema validation for production compatibility
  */
 const createProductionSafeAsset = async (assetData: any) => {
   // Only use fields that exist in production database
   const productionSafeData = {
-    id: assetData.id,
+    id: assetData.id || undefined, // Let database generate if not provided
     restaurantId: assetData.restaurantId,
     assetType: assetData.assetType,
     fileName: assetData.fileName,
@@ -37,18 +37,43 @@ const createProductionSafeAsset = async (assetData: any) => {
     dimensions: assetData.dimensions || null,
     altText: assetData.altText || null,
     isPrimary: assetData.isPrimary || false,
-    // Explicitly exclude enhanced fields: tags, description, folderId, etc.
   };
   
-  console.log('🔧 Creating production-safe asset:', {
+  console.log('🔧 Creating production-safe asset with RAW SQL:', {
     fileName: productionSafeData.fileName,
     assetType: productionSafeData.assetType,
     fieldsUsed: Object.keys(productionSafeData)
   });
   
-  return await prisma.brandAsset.create({
-    data: productionSafeData
-  });
+  // Use raw SQL to bypass Prisma schema validation
+  const query = `
+    INSERT INTO brand_assets (
+      restaurant_id, asset_type, file_name, file_url, 
+      file_size, mime_type, dimensions, alt_text, is_primary,
+      created_at, updated_at
+    ) VALUES (
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW()
+    ) RETURNING *
+  `;
+  
+  const values = [
+    productionSafeData.restaurantId,
+    productionSafeData.assetType,
+    productionSafeData.fileName,
+    productionSafeData.fileUrl,
+    productionSafeData.fileSize,
+    productionSafeData.mimeType,
+    JSON.stringify(productionSafeData.dimensions),
+    productionSafeData.altText,
+    productionSafeData.isPrimary
+  ];
+  
+  console.log('🔧 Executing raw SQL with values:', values);
+  
+  const result = await prisma.$queryRawUnsafe(query, ...values);
+  console.log('✅ Raw SQL asset creation successful:', result);
+  
+  return Array.isArray(result) ? result[0] : result;
 };
 
 // Configure multer for memory storage
