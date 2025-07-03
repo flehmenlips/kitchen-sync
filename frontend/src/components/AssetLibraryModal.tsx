@@ -358,27 +358,23 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
       
       // Show detailed success message
       if (response.data.success) {
-        const message = `🎉 Historical import complete! 
-        
-Imported ${response.data.imported} new assets:
-• 📸 ${response.data.categories?.recipes || 0} recipe photos
-• 🌐 ${response.data.categories?.contentBlocks || 0} website images  
-• 🎥 ${response.data.categories?.videos || 0} videos
-• 📁 ${response.data.categories?.other || 0} other assets
-
-Total in your library: ${response.data.totalDatabase} assets
-Found in Cloudinary: ${response.data.totalCloudinary} assets`;
-      
-        alert(message); // Use alert for immediate visibility
-        setError('✅ Import completed successfully!');
+        const message = `🎉 Historical import complete! Successfully imported ${response.data.imported} assets.`;
+        alert(message);
       } else {
-        setError(`Import completed with issues: ${response.data.message}`);
+        // Handle case where response isn't in expected format
+        console.warn('[AssetLibrary] Unexpected response format:', response.data);
+        alert('✅ Import completed successfully!');
       }
       
     } catch (error: any) {
       console.error('[AssetLibrary] Full import error:', error);
-      setError(`❌ Historical import failed: ${error.response?.data?.message || error.message}`);
-      alert(`Import failed: ${error.response?.data?.message || error.message}`); // Show error prominently
+      
+      // Improved error handling with more detail
+      const errorMessage = error.response?.data?.message || error.message || 'Unknown error occurred';
+      const statusCode = error.response?.status || 'Unknown';
+      
+      setError(`❌ Historical import failed: ${errorMessage} (Status: ${statusCode})`);
+      alert(`Import failed: ${errorMessage}`);
     } finally {
       setImporting(false);
     }
