@@ -81,7 +81,7 @@ export const getAssets = asyncHandler(async (req: Request, res: Response) => {
   console.log('[AssetController] Using safe sort:', { safeSortBy, safeSortOrder });
 
   try {
-    // Use enhanced select fields that work in production
+    // Use basic select fields that work in production
     const selectFields = {
       id: true,
       restaurantId: true,
@@ -93,14 +93,8 @@ export const getAssets = asyncHandler(async (req: Request, res: Response) => {
       altText: true,
       isPrimary: true,
       createdAt: true,
-      updatedAt: true,
-      // Enhanced fields confirmed working in production
-      tags: true,
-      description: true,
-      folderId: true,
-      folderPath: true,
-      usageCount: true,
-      lastUsedAt: true
+      updatedAt: true
+      // All enhanced fields (tags, description, folderId, etc.) disabled for production
     };
 
     console.log('[AssetController] Executing enhanced query with params:', { 
@@ -287,14 +281,14 @@ export const uploadAsset = asyncHandler(async (req: Request, res: Response) => {
         fileSize: req.file.size,
         mimeType: req.file.mimetype,
         altText: altText || req.file.originalname,
-        isPrimary: false,
-        // Enhanced fields now enabled for production
-        description: description || null,
-        folderId: validatedFolderId,
-        folderPath: folderPath,
-        tags: parsedTags,
-        usageCount: 0
-        // cloudinaryPublicId: cloudinaryResult.publicId // DISABLED - field missing in production
+        isPrimary: false
+        // All enhanced fields disabled for production compatibility:
+        // description: description || null,
+        // folderId: validatedFolderId, 
+        // folderPath: folderPath,
+        // tags: parsedTags,
+        // usageCount: 0,
+        // cloudinaryPublicId: cloudinaryResult.publicId
       }
     });
 
@@ -610,10 +604,7 @@ export const importAllCloudinaryAssets = async (req: Request, res: Response) => 
             mimeType: asset.format ? `${asset.resource_type}/${asset.format}` : 'unknown',
             assetType: asset.assetType.toUpperCase(),
             isPrimary: false
-            // Enhanced fields temporarily disabled for production compatibility:
-            // cloudinaryPublicId: asset.publicId,
-            // folderId,
-            // tags: asset.tags || [],
+            // All enhanced fields disabled for production compatibility:
             // description: `Historical import from: ${asset.publicId}`,
             // usageCount: 0,
             // folderPath: asset.folder || null
