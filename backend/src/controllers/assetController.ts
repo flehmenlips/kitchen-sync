@@ -71,30 +71,49 @@ export const getAssets = asyncHandler(async (req: Request, res: Response) => {
   console.log('[AssetController] Where conditions:', JSON.stringify(where, null, 2));
   console.log('[AssetController] About to query database...');
 
-  const [assets, totalCount] = await Promise.all([
-    prisma.brandAsset.findMany({
-      where,
-      orderBy: {
-        [sortBy as string]: sortOrder
-      },
-      skip,
-      take: parseInt(limit as string)
-    }),
-    prisma.brandAsset.count({ where })
-  ]);
+  // Validate sortBy field to prevent Prisma errors
+  const validSortFields = ['createdAt', 'fileName', 'fileSize', 'updatedAt'];
+  const safeSortBy = validSortFields.includes(sortBy as string) ? (sortBy as string) : 'createdAt';
+  const safeSortOrder = (sortOrder === 'asc' || sortOrder === 'desc') ? sortOrder : 'desc';
 
-  console.log('[AssetController] Query results:', assets.length, 'assets found');
-  console.log('[AssetController] Assets:', assets.map(a => ({ fileName: a.fileName, id: a.id })));
+  console.log('[AssetController] Using safe sort:', { safeSortBy, safeSortOrder });
 
-  res.json({
-    assets,
-    pagination: {
-      page: parseInt(page as string),
-      limit: parseInt(limit as string),
-      total: totalCount,
-      pages: Math.ceil(totalCount / parseInt(limit as string))
-    }
-  });
+  try {
+    const [assets, totalCount] = await Promise.all([
+      prisma.brandAsset.findMany({
+        where,
+        orderBy: {
+          [safeSortBy]: safeSortOrder
+        },
+        skip,
+        take: parseInt(limit as string)
+      }),
+      prisma.brandAsset.count({ where })
+    ]);
+
+    console.log('[AssetController] Query results:', assets.length, 'assets found');
+    console.log('[AssetController] Assets:', assets.map(a => ({ fileName: a.fileName, id: a.id })));
+
+    res.json({
+      assets,
+      pagination: {
+        page: parseInt(page as string),
+        limit: parseInt(limit as string),
+        total: totalCount,
+        pages: Math.ceil(totalCount / parseInt(limit as string))
+      }
+    });
+  } catch (dbError: any) {
+    console.error('[AssetController] Database query error:', dbError);
+    console.error('[AssetController] Where conditions that failed:', where);
+    console.error('[AssetController] Sort parameters that failed:', { safeSortBy, safeSortOrder });
+    
+    res.status(500).json({
+      error: 'Database query failed',
+      message: dbError.message || 'Unknown database error',
+      details: 'Check server logs for more information'
+    });
+  }
 });
 
 // Upload new asset with enhanced database integration
