@@ -104,6 +104,14 @@ export const getAssets = asyncHandler(async (req: Request, res: Response) => {
       lastUsedAt: true
     };
 
+    console.log('[AssetController] Executing enhanced query with params:', { 
+      where: JSON.stringify(where), 
+      safeSortBy, 
+      safeSortOrder, 
+      skip, 
+      limit: parseInt(limit as string) 
+    });
+
     const [assets, totalCount] = await Promise.all([
       prisma.brandAsset.findMany({
         where,
@@ -134,11 +142,57 @@ export const getAssets = asyncHandler(async (req: Request, res: Response) => {
     console.error('[AssetController] Where conditions that failed:', where);
     console.error('[AssetController] Sort parameters that failed:', { safeSortBy, safeSortOrder });
     
-    res.status(500).json({
-      error: 'Database query failed',
-      message: dbError.message || 'Unknown database error',
-      details: 'Check server logs for more information'
-    });
+    // Fallback to basic query if enhanced query fails
+    try {
+      console.log('[AssetController] Attempting fallback with basic fields...');
+      
+      const basicSelectFields = {
+        id: true,
+        restaurantId: true,
+        assetType: true,
+        fileName: true,
+        fileUrl: true,
+        fileSize: true,
+        mimeType: true,
+        altText: true,
+        isPrimary: true,
+        createdAt: true,
+        updatedAt: true
+      };
+
+      const [fallbackAssets, fallbackCount] = await Promise.all([
+        prisma.brandAsset.findMany({
+          where,
+          select: basicSelectFields,
+          orderBy: {
+            [safeSortBy]: safeSortOrder
+          },
+          skip,
+          take: parseInt(limit as string)
+        }),
+        prisma.brandAsset.count({ where })
+      ]);
+
+      console.log('[AssetController] Fallback query successful:', fallbackAssets.length, 'assets found');
+
+      res.json({
+        assets: fallbackAssets,
+        pagination: {
+          page: parseInt(page as string),
+          limit: parseInt(limit as string),
+          total: fallbackCount,
+          pages: Math.ceil(fallbackCount / parseInt(limit as string))
+        }
+      });
+    } catch (fallbackError: any) {
+      console.error('[AssetController] Fallback query also failed:', fallbackError);
+      
+      res.status(500).json({
+        error: 'Database query failed',
+        message: fallbackError.message || 'Unknown database error',
+        details: 'Check server logs for more information'
+      });
+    }
   }
 });
 
