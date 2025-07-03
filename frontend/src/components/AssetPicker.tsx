@@ -78,7 +78,7 @@ const AssetPicker: React.FC<AssetPickerProps> = ({
       
       // Filter by allowed types
       const filteredAssets = response.assets.filter(asset => 
-        allowedTypes.includes(asset.assetType)
+        allowedTypes.includes(asset.assetType.toLowerCase())
       );
       
       console.log('[AssetPicker] Filtered assets:', filteredAssets);

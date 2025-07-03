@@ -56,9 +56,11 @@ export const getAssets = asyncHandler(async (req: Request, res: Response) => {
   };
 
   if (assetType) {
-    // Handle case insensitive asset type filtering by converting to uppercase
-    const normalizedAssetType = (assetType as string).toUpperCase();
-    where.assetType = normalizedAssetType;
+    // Handle case insensitive asset type filtering by using Prisma's insensitive mode
+    where.assetType = {
+      equals: assetType as string,
+      mode: 'insensitive'
+    };
   }
 
   if (search) {
