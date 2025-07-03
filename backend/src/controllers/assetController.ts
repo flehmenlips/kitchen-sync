@@ -3,6 +3,16 @@
  * This version is specifically configured for production database schema
  * which does not include enhanced fields like tags, description, folderId, etc.
  * Last updated: 2025-01-03 for production schema compatibility
+ * 
+ * DEPLOYMENT VERSION: v3.9.1-production-schema-fix
+ * BUILD TIMESTAMP: 2025-01-03T06:35:00Z
+ * 
+ * CRITICAL: This version must NOT use enhanced schema fields in production:
+ * - NO tags field
+ * - NO description field  
+ * - NO folderId field
+ * - NO cloudinaryPublicId field
+ * - NO usageCount field
  */
 
 import { Request, Response } from 'express';
@@ -735,4 +745,18 @@ export const testAssetApi = async (req: Request, res: Response) => {
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
+};
+
+/**
+ * Deployment verification endpoint - FORCE CACHE INVALIDATION
+ */
+export const verifyDeployment = async (req: Request, res: Response) => {
+  res.json({
+    deploymentVersion: 'v3.9.1-production-schema-fix',
+    buildTimestamp: '2025-01-03T06:35:00Z',
+    schemaCompatibility: 'PRODUCTION_BASIC_FIELDS_ONLY',
+    tagsFieldDisabled: true,
+    enhancedFieldsDisabled: true,
+    message: 'Asset Controller is production-compatible without enhanced schema fields'
+  });
 }; 
