@@ -502,9 +502,9 @@ export const importAllCloudinaryAssets = async (req: Request, res: Response) => 
 
     // Filter out assets already in database and demo assets
     const assetsToImport = allAssets.filter(
-      asset => !existingPublicIds.has(asset.fileName) && 
-                !asset.fileName.startsWith('demo_') &&
-                !asset.fileName.startsWith('restaurants/') // Exclude current restaurant-specific assets
+      asset => !existingPublicIds.has(asset.public_id) && 
+                !asset.public_id.startsWith('demo_') &&
+                !asset.public_id.startsWith('restaurants/') // Exclude current restaurant-specific assets
     );
 
     console.log(`📥 Importing ${assetsToImport.length} historical assets`);
@@ -520,7 +520,7 @@ export const importAllCloudinaryAssets = async (req: Request, res: Response) => 
         totalCloudinary: allAssets.length,
         totalDatabase: existingAssets.length,
         skipped: 0,
-        alreadyImported: allAssets.filter(asset => existingPublicIds.has(asset.fileName)).length,
+        alreadyImported: allAssets.filter(asset => existingPublicIds.has(asset.public_id)).length,
         categories: {
           recipes: 0,
           contentBlocks: 0,
@@ -532,7 +532,7 @@ export const importAllCloudinaryAssets = async (req: Request, res: Response) => 
           foundInCloudinary: allAssets.length,
           eligibleForImport: 0,
           successfullyImported: 0,
-          alreadyImported: allAssets.filter(asset => existingPublicIds.has(asset.fileName)).length,
+          alreadyImported: allAssets.filter(asset => existingPublicIds.has(asset.public_id)).length,
           message: "No new assets to import - everything is already in your library!"
         }
       });
@@ -560,29 +560,17 @@ export const importAllCloudinaryAssets = async (req: Request, res: Response) => 
         // let folderId: string | null = null;
         let category = 'other';
 
-        if (asset.fileName.includes('recipe') || asset.fileName.includes('food') || 
-            asset.fileName.includes('cooking') || asset.fileName.includes('ingredient')) {
-          // const recipeFolder = assetFolders.find(f => 
-          //   f.name.toLowerCase().includes('recipe') || 
-          //   f.name.toLowerCase().includes('photo')
-          // );
-          // folderId = recipeFolder?.id || null;
+        if (asset.public_id.includes('recipe') || asset.public_id.includes('food') || 
+            asset.public_id.includes('cooking') || asset.public_id.includes('ingredient') ||
+            (asset.original_filename && asset.original_filename.includes('recipe'))) {
           category = 'recipes';
           importStats.recipes++;
-        } else if (asset.fileName.includes('content-block') || asset.fileName.includes('hero') ||
-                   asset.fileName.includes('website') || asset.fileName.includes('dining')) {
-          // const websiteFolder = assetFolders.find(f => 
-          //   f.name.toLowerCase().includes('website') || 
-          //   f.name.toLowerCase().includes('hero')
-          // );
-          // folderId = websiteFolder?.id || null;
+        } else if (asset.public_id.includes('content-block') || asset.public_id.includes('hero') ||
+                   asset.public_id.includes('website') || asset.public_id.includes('dining') ||
+                   (asset.original_filename && (asset.original_filename.includes('hero') || asset.original_filename.includes('dining')))) {
           category = 'contentBlocks';
           importStats.contentBlocks++;
         } else if (asset.assetType === 'video') {
-          // const videoFolder = assetFolders.find(f => 
-          //   f.name.toLowerCase().includes('video')
-          // );
-          // folderId = videoFolder?.id || null;
           category = 'videos';
           importStats.videos++;
         } else {
@@ -590,7 +578,7 @@ export const importAllCloudinaryAssets = async (req: Request, res: Response) => 
         }
 
         // Generate appropriate filename
-        const originalName = asset.original_filename || asset.fileName.split('/').pop() || 'imported-asset';
+        const originalName = asset.original_filename || asset.public_id.split('/').pop() || 'imported-asset';
         const fileExtension = asset.format ? `.${asset.format}` : '';
         const fileName = originalName.includes('.') ? originalName : `${originalName}${fileExtension}`;
 
@@ -618,7 +606,7 @@ export const importAllCloudinaryAssets = async (req: Request, res: Response) => 
         }
 
       } catch (assetError: any) {
-        console.error(`❌ Error importing asset ${asset.fileName}:`, assetError.message);
+        console.error(`❌ Error importing asset ${asset.public_id}:`, assetError.message);
         // Continue with other assets
       }
     }
