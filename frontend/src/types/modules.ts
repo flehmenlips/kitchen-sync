@@ -13,6 +13,8 @@ import ClassIcon from '@mui/icons-material/Class';
 import ScaleIcon from '@mui/icons-material/Scale';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import BugReportIcon from '@mui/icons-material/BugReport';
+import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
+import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
 
 export type ModuleType = 'core' | 'optional';
 export type SubscriptionTier = 'TRIAL' | 'FREE' | 'HOME' | 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE';
@@ -116,6 +118,7 @@ export const modules: Module[] = [
     subModules: [
       { id: 'website-builder', name: 'Website Builder', icon: WebIcon, path: '/website' },
       { id: 'content-blocks', name: 'Content Blocks', icon: WebIcon, path: '/website/content' },
+      { id: 'asset-library', name: 'Asset Library', icon: PhotoLibraryIcon, path: '/asset-library' },
       { id: 'website-settings', name: 'Settings', icon: SettingsIcon, path: '/website/settings' }
     ]
   }

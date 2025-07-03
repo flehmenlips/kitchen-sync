@@ -103,6 +103,7 @@ import AdvancedColorPalette from '../components/AdvancedColorPalette';
 import AdvancedTypographySelector from '../components/AdvancedTypographySelector';
 import { themingService, ColorPalette, TypographyConfig } from '../services/themingService';
 import TemplateSelector from '../components/TemplateSelector';
+import AssetPicker from '../components/AssetPicker';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -171,6 +172,10 @@ const WebsiteBuilderPage: React.FC = () => {
   });
   const navigate = useNavigate();
   const { currentRestaurant } = useRestaurant();
+
+  // Asset Picker state
+  const [assetPickerOpen, setAssetPickerOpen] = useState(false);
+  const [assetPickerField, setAssetPickerField] = useState<'cover' | 'logo' | 'hero' | 'about'>('cover');
 
   useEffect(() => {
     fetchWebsiteData();

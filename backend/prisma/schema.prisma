@@ -583,6 +583,7 @@ model Restaurant {
   website_builder_enabled Boolean               @default(false)
   websiteSettings         Json?                 @map("website_settings")
   brandAssets             BrandAsset[]
+  assetFolders            AssetFolder[]
   categories              Category[]
   colorPalettes           ColorPalette[]
   contentBlocks           ContentBlock[]
@@ -1039,24 +1040,85 @@ model RestaurantTemplate {
 }
 
 model BrandAsset {
-  id           String     @id @default(uuid())
-  restaurantId Int        @map("restaurant_id")
-  assetType    String     @map("asset_type") @db.VarChar(50)
-  fileName     String     @map("file_name") @db.VarChar(255)
-  fileUrl      String     @map("file_url") @db.VarChar(255)
-  fileSize     Int?       @map("file_size")
-  mimeType     String?    @map("mime_type") @db.VarChar(100)
+  id           String        @id @default(uuid())
+  restaurantId Int           @map("restaurant_id")
+  assetType    String        @map("asset_type") @db.VarChar(50)
+  fileName     String        @map("file_name") @db.VarChar(255)
+  fileUrl      String        @map("file_url") @db.VarChar(255)
+  fileSize     Int?          @map("file_size")
+  mimeType     String?       @map("mime_type") @db.VarChar(100)
   dimensions   Json?
-  altText      String?    @map("alt_text") @db.VarChar(255)
-  isPrimary    Boolean    @default(false) @map("is_primary")
-  createdAt    DateTime   @default(now()) @map("created_at")
-  updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at")
-  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  altText      String?       @map("alt_text") @db.VarChar(255)
+  isPrimary    Boolean       @default(false) @map("is_primary")
+  
+  // Enhanced Asset Management fields
+  folderId     String?       @map("folder_id")
+  folderPath   String?       @map("folder_path") @db.VarChar(255)
+  tags         String[]      @default([])
+  description  String?       @db.Text
+  usageCount   Int           @default(0) @map("usage_count")
+  lastUsedAt   DateTime?     @map("last_used_at")
+  cloudinaryPublicId String? @map("cloudinary_public_id") @db.VarChar(255)
+  
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @default(now()) @updatedAt @map("updated_at")
+  
+  // Relations
+  restaurant   Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  folder       AssetFolder?  @relation(fields: [folderId], references: [id])
+  usageRecords AssetUsage[]
 
   @@index([restaurantId])
   @@index([assetType])
   @@index([isPrimary])
+  @@index([folderId])
+  @@index([tags])
+  @@index([usageCount])
+  @@index([lastUsedAt])
   @@map("brand_assets")
+}
+
+model AssetFolder {
+  id               String        @id @default(uuid())
+  restaurantId     Int           @map("restaurant_id")
+  name             String        @db.VarChar(255)
+  parentFolderId   String?       @map("parent_folder_id")
+  colorHex         String        @default("#1976d2") @map("color_hex") @db.VarChar(7)
+  sortOrder        Int           @default(0) @map("sort_order")
+  description      String?       @db.Text
+  isSystemFolder   Boolean       @default(false) @map("is_system_folder")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @default(now()) @updatedAt @map("updated_at")
+  
+  // Relations
+  restaurant       Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  parentFolder     AssetFolder?  @relation("FolderHierarchy", fields: [parentFolderId], references: [id])
+  subFolders       AssetFolder[] @relation("FolderHierarchy")
+  assets           BrandAsset[]
+
+  @@unique([restaurantId, name, parentFolderId])
+  @@index([restaurantId])
+  @@index([parentFolderId])
+  @@index([sortOrder])
+  @@map("asset_folders")
+}
+
+model AssetUsage {
+  id            String     @id @default(uuid())
+  assetId       String     @map("asset_id")
+  moduleName    String     @map("module_name") @db.VarChar(50)
+  referenceId   String     @map("reference_id") @db.VarChar(50)
+  referenceType String     @map("reference_type") @db.VarChar(50)
+  usedAt        DateTime   @default(now()) @map("used_at")
+  
+  // Relations
+  asset         BrandAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@index([moduleName])
+  @@index([referenceType])
+  @@index([usedAt])
+  @@map("asset_usage")
 }
 
 model TemplateApplication {

@@ -155,6 +155,48 @@ interface UniversalSettings extends UniversalTypographySettings {
   featureDescriptionFontSize?: string;
   featureDescriptionFontWeight?: string;
   featureDescriptionColor?: string;
+  
+  // Video block properties
+  controls?: boolean;
+  aspectRatio?: string;
+  showCustomControls?: boolean;
+  
+  // Testimonial block properties
+  layout?: string;
+  showStars?: boolean;
+  showPhotos?: boolean;
+  starColor?: string;
+  starSize?: string;
+  maxTestimonials?: number;
+  animationEffect?: string;
+  autoRotate?: string;
+  rotationSpeed?: string;
+  photoSize?: number;
+  
+  // Contact block properties
+  showMap?: boolean;
+  showContactForm?: boolean;
+  showSocialLinks?: boolean;
+  mapHeight?: string;
+  formStyle?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  hours?: string;
+  website?: string;
+  socialLinks?: Record<string, string>;
+  
+  // Gallery block properties
+  galleryLayout?: string;
+  imageSpacing?: number;
+  columnsDesktop?: number;
+  columnsTablet?: number;
+  columnsMobile?: number;
+  showCaptions?: boolean;
+  lightboxEnabled?: boolean;
+  imageAspectRatio?: string;
+  hoverOverlay?: boolean;
+  filterEnabled?: boolean;
 }
 
 // ===== UNIVERSAL HELPER FUNCTIONS =====
@@ -344,16 +386,9 @@ const getContainerStyles = (styles: UniversalCustomStyles, settings: UniversalSe
 };
 
 const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) => {
-  // Safe rendering helper to prevent objects as React children
   const safeRender = (value: any): string => {
     if (value === null || value === undefined) return '';
-    if (typeof value === 'string' || typeof value === 'number') return String(value);
-    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
-    if (typeof value === 'object') {
-      if (Array.isArray(value)) return value.join(', ');
-      if (value.toString && typeof value.toString === 'function') return value.toString();
-      return JSON.stringify(value);
-    }
+    if (typeof value === 'object') return JSON.stringify(value);
     return String(value);
   };
 
@@ -399,7 +434,7 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
               {block.content && (
                 <Typography 
                   variant="body1" 
-                  paragraph
+                  paragraph 
                   sx={{
                     ...contentTypography,
                     textAlign: textSettings.textAlign || 'left'
@@ -412,17 +447,47 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
         );
 
       case BLOCK_TYPES.HTML:
+        // Enhanced HTML block with universal styling system
+        const { styles: htmlStyles, settings: htmlSettings } = parseBlockSettings(block);
+        const htmlContainerStyles = getContainerStyles(htmlStyles, htmlSettings);
+        const htmlTitleTypography = getTitleTypographyStyles(htmlSettings);
+        const htmlContentTypography = getContentTypographyStyles(htmlSettings);
+        
         return (
-          <Container maxWidth="lg" sx={{ py: 4 }}>
-            {block.title && (
-              <Typography variant="h4" component="h2" gutterBottom align="center">
-                {safeRender(block.title)}
-              </Typography>
-            )}
-            {block.content && (
-              <Box dangerouslySetInnerHTML={{ __html: safeRender(block.content) }} />
-            )}
-          </Container>
+          <Box sx={htmlContainerStyles}>
+            <Container maxWidth="lg">
+              {block.title && (
+                <Typography 
+                  variant="h4" 
+                  component="h2" 
+                  gutterBottom 
+                  sx={{
+                    textAlign: htmlSettings.textAlign || 'center',
+                    ...htmlTitleTypography
+                  }}
+                >
+                  {safeRender(block.title)}
+                </Typography>
+              )}
+              {block.content && (
+                <Box 
+                  dangerouslySetInnerHTML={{ __html: safeRender(block.content) }} 
+                  sx={{
+                    textAlign: htmlSettings.textAlign || 'left',
+                    ...htmlContentTypography,
+                    '& *': {
+                      fontFamily: htmlContentTypography.fontFamily || 'inherit',
+                      fontSize: htmlContentTypography.fontSize || 'inherit',
+                      fontWeight: htmlContentTypography.fontWeight || 'inherit',
+                      color: htmlContentTypography.color || 'inherit',
+                      lineHeight: htmlContentTypography.lineHeight || 'inherit',
+                      letterSpacing: htmlContentTypography.letterSpacing || 'inherit'
+                    }
+                  }}
+                />
+              )}
+            </Container>
+          </Box>
         );
 
       case BLOCK_TYPES.IMAGE:
@@ -1052,89 +1117,298 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
         );
 
       case BLOCK_TYPES.CONTACT:
-        // Parse contact settings for better display options
-        let contactSettings = {};
-        try {
-          contactSettings = block.settings ? JSON.parse(block.settings) : {};
-        } catch (e) {
-          console.error('Failed to parse contact settings:', e);
-        }
+        // Enhanced CONTACT block with universal styling system
+        const { styles: contactStyles, settings: contactSettings } = parseBlockSettings(block);
+        const contactContainerStyles = getContainerStyles(contactStyles, contactSettings);
+        const contactTitleTypography = getTitleTypographyStyles(contactSettings);
+        const contactContentTypography = getContentTypographyStyles(contactSettings);
+        
+        // Advanced contact settings with defaults
+        const contactLayout = contactSettings.layout || 'two-column';
+        const showMap = contactSettings.showMap !== false;
+        const showContactForm = contactSettings.showContactForm || false;
+        const showSocialLinks = contactSettings.showSocialLinks || false;
+        const mapHeight = contactSettings.mapHeight || '300px';
+        const formStyle = contactSettings.formStyle || 'standard';
+        
+        // Parse additional contact data from settings
+        const contactData = {
+          phone: contactSettings.phone || '',
+          email: contactSettings.email || '',
+          address: contactSettings.address || '',
+          hours: contactSettings.hours || '',
+          website: contactSettings.website || '',
+          socialLinks: contactSettings.socialLinks || {}
+        };
 
         return (
-          <Container maxWidth="lg" sx={{ py: 6 }}>
-            {block.title && (
-              <Typography variant="h4" component="h2" gutterBottom align="center" sx={{ mb: 4 }}>
-                {safeRender(block.title)}
-              </Typography>
-            )}
-            <Grid container spacing={4}>
-              <Grid item xs={12} md={6}>
-                <Paper elevation={2} sx={{ p: 4, height: '100%' }}>
-                  <Typography variant="h6" gutterBottom>
-                    Get in Touch
-                  </Typography>
-                  
-                  {/* Contact Information */}
-                  {block.content && (
-                    <Typography 
-                      variant="body1" 
-                      paragraph
-                      dangerouslySetInnerHTML={{ __html: block.content }}
-                    />
-                  )}
-                  
-                  {/* Parse contact details from settings */}
-                  {(contactSettings as any).phone && (
-                    <Box sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
-                      <Typography variant="body1">
-                        <strong>Phone:</strong> {safeRender((contactSettings as any).phone)}
-                      </Typography>
-                    </Box>
-                  )}
-                  
-                  {(contactSettings as any).email && (
-                    <Box sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
-                      <Typography variant="body1">
-                        <strong>Email:</strong> {safeRender((contactSettings as any).email)}
-                      </Typography>
-                    </Box>
-                  )}
-                  
-                  {(contactSettings as any).address && (
-                    <Box sx={{ mb: 2, display: 'flex', alignItems: 'flex-start' }}>
-                      <Typography variant="body1">
-                        <strong>Address:</strong><br />
-                        {safeRender((contactSettings as any).address)}
-                      </Typography>
-                    </Box>
-                  )}
-                  
-                  {block.buttonText && block.buttonLink && (
-                    <Button
-                      component={Link}
-                      to={safeRender(block.buttonLink)}
-                      variant="contained"
-                      sx={{ mt: 2 }}
-                    >
-                      {safeRender(block.buttonText)}
-                    </Button>
-                  )}
-                </Paper>
-              </Grid>
+          <Box sx={contactContainerStyles}>
+            <Container maxWidth="lg">
+              {block.title && (
+                <Typography 
+                  variant="h4" 
+                  component="h2" 
+                  gutterBottom 
+                  sx={{
+                    textAlign: contactSettings.textAlign || 'center',
+                    mb: 4,
+                    ...contactTitleTypography
+                  }}
+                >
+                  {safeRender(block.title)}
+                </Typography>
+              )}
               
-              {block.imageUrl && (
-                <Grid item xs={12} md={6}>
-                  <Paper elevation={3} sx={{ overflow: 'hidden', borderRadius: 2, height: '100%' }}>
-                    <img
-                      src={safeRender(block.imageUrl)}
-                      alt={safeRender(block.title) || 'Contact us'}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                    />
+              <Grid container spacing={4}>
+                {/* Contact Information Section */}
+                <Grid item xs={12} md={contactLayout === 'single-column' ? 12 : 6}>
+                  <Paper 
+                    elevation={contactSettings.cardStyle === 'flat' ? 0 : 2} 
+                    sx={{ 
+                      p: 4, 
+                      height: '100%',
+                      border: contactSettings.cardStyle === 'outlined' ? '2px solid' : 'none',
+                      borderColor: contactSettings.cardStyle === 'outlined' ? 'primary.main' : 'transparent'
+                    }}
+                  >
+                    <Typography 
+                      variant="h6" 
+                      gutterBottom 
+                      sx={{
+                        color: contactSettings.titleColor || 'text.primary',
+                        fontWeight: 600
+                      }}
+                    >
+                      Get in Touch
+                    </Typography>
+                    
+                    {/* Contact Content */}
+                    {block.content && (
+                      <Typography 
+                        variant="body1" 
+                        paragraph
+                        sx={{
+                          ...contactContentTypography,
+                          mb: 3
+                        }}
+                        dangerouslySetInnerHTML={{ __html: safeRender(block.content) }}
+                      />
+                    )}
+                    
+                    {/* Contact Details */}
+                    <Box sx={{ mb: 3 }}>
+                      {contactData.phone && (
+                        <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="body1" sx={{ fontWeight: 500 }}>📞</Typography>
+                          <Typography variant="body1">
+                            <Link href={`tel:${contactData.phone}`} sx={{ textDecoration: 'none', color: 'inherit' }}>
+                              {safeRender(contactData.phone)}
+                            </Link>
+                          </Typography>
+                        </Box>
+                      )}
+                      
+                      {contactData.email && (
+                        <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="body1" sx={{ fontWeight: 500 }}>📧</Typography>
+                          <Typography variant="body1">
+                            <Link href={`mailto:${contactData.email}`} sx={{ textDecoration: 'none', color: 'inherit' }}>
+                              {safeRender(contactData.email)}
+                            </Link>
+                          </Typography>
+                        </Box>
+                      )}
+                      
+                      {contactData.address && (
+                        <Box sx={{ mb: 2, display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                          <Typography variant="body1" sx={{ fontWeight: 500, mt: 0.5 }}>📍</Typography>
+                          <Typography variant="body1">
+                            {safeRender(contactData.address)}
+                          </Typography>
+                        </Box>
+                      )}
+                      
+                      {contactData.hours && (
+                        <Box sx={{ mb: 2, display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                          <Typography variant="body1" sx={{ fontWeight: 500, mt: 0.5 }}>🕒</Typography>
+                          <Typography variant="body1">
+                            {safeRender(contactData.hours)}
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
+                    
+                    {/* Social Links */}
+                    {showSocialLinks && contactData.socialLinks && Object.keys(contactData.socialLinks).length > 0 && (
+                      <Box sx={{ mt: 3 }}>
+                        <Typography variant="h6" gutterBottom sx={{ fontSize: '1rem', fontWeight: 600 }}>
+                          Follow Us
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                          {Object.entries(contactData.socialLinks).map(([platform, url]: [string, any]) => (
+                            url && (
+                              <Button
+                                key={platform}
+                                component={Link}
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                variant="outlined"
+                                size="small"
+                                sx={{ textTransform: 'capitalize' }}
+                              >
+                                {platform}
+                              </Button>
+                            )
+                          ))}
+                        </Box>
+                      </Box>
+                    )}
+                    
+                    {/* CTA Button */}
+                    {block.buttonText && block.buttonLink && (
+                      <Button
+                        component={Link}
+                        href={safeRender(block.buttonLink)}
+                        variant="contained"
+                        sx={{ 
+                          mt: 3,
+                          backgroundColor: contactSettings.buttonBackgroundColor || 'primary.main',
+                          color: contactSettings.buttonTextColor || 'white',
+                          '&:hover': {
+                            backgroundColor: contactSettings.buttonHoverColor || 'primary.dark'
+                          }
+                        }}
+                      >
+                        {safeRender(block.buttonText)}
+                      </Button>
+                    )}
                   </Paper>
                 </Grid>
-              )}
-            </Grid>
-          </Container>
+                
+                {/* Map/Image Section */}
+                {contactLayout !== 'single-column' && (block.imageUrl || (showMap && contactData.address)) && (
+                  <Grid item xs={12} md={6}>
+                    <Paper 
+                      elevation={3} 
+                      sx={{ 
+                        overflow: 'hidden', 
+                        borderRadius: 2, 
+                        height: '100%',
+                        minHeight: mapHeight
+                      }}
+                    >
+                      {block.imageUrl ? (
+                        <img
+                          src={safeRender(block.imageUrl)}
+                          alt={safeRender(block.title) || 'Contact us'}
+                          style={{ 
+                            width: '100%', 
+                            height: '100%', 
+                            objectFit: 'cover', 
+                            display: 'block' 
+                          }}
+                        />
+                      ) : showMap && contactData.address ? (
+                        <iframe
+                          src={`https://www.google.com/maps/embed/v1/place?key=YOUR_API_KEY&q=${encodeURIComponent(contactData.address)}`}
+                          width="100%"
+                          height="100%"
+                          style={{ border: 0, minHeight: mapHeight }}
+                          allowFullScreen
+                          loading="lazy"
+                          referrerPolicy="no-referrer-when-downgrade"
+                          title="Location Map"
+                        />
+                      ) : (
+                        <Box 
+                          sx={{ 
+                            height: '100%', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            bgcolor: 'grey.100',
+                            minHeight: mapHeight
+                          }}
+                        >
+                          <Typography variant="body2" color="text.secondary">
+                            🗺️ Map placeholder - Add address to display map
+                          </Typography>
+                        </Box>
+                      )}
+                    </Paper>
+                  </Grid>
+                )}
+                
+                {/* Contact Form Section */}
+                {showContactForm && (
+                  <Grid item xs={12}>
+                    <Paper 
+                      elevation={2} 
+                      sx={{ 
+                        p: 4, 
+                        mt: 2,
+                        border: contactSettings.cardStyle === 'outlined' ? '2px solid' : 'none',
+                        borderColor: contactSettings.cardStyle === 'outlined' ? 'primary.main' : 'transparent'
+                      }}
+                    >
+                      <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
+                        Send us a Message
+                      </Typography>
+                      <Grid container spacing={3}>
+                        <Grid item xs={12} sm={6}>
+                          <TextField
+                            fullWidth
+                            label="Name"
+                            variant={formStyle === 'filled' ? 'filled' : 'outlined'}
+                            required
+                          />
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                          <TextField
+                            fullWidth
+                            label="Email"
+                            type="email"
+                            variant={formStyle === 'filled' ? 'filled' : 'outlined'}
+                            required
+                          />
+                        </Grid>
+                        <Grid item xs={12}>
+                          <TextField
+                            fullWidth
+                            label="Subject"
+                            variant={formStyle === 'filled' ? 'filled' : 'outlined'}
+                          />
+                        </Grid>
+                        <Grid item xs={12}>
+                          <TextField
+                            fullWidth
+                            label="Message"
+                            multiline
+                            rows={4}
+                            variant={formStyle === 'filled' ? 'filled' : 'outlined'}
+                            required
+                          />
+                        </Grid>
+                        <Grid item xs={12}>
+                          <Button
+                            variant="contained"
+                            size="large"
+                            sx={{
+                              backgroundColor: contactSettings.buttonBackgroundColor || 'primary.main',
+                              color: contactSettings.buttonTextColor || 'white'
+                            }}
+                          >
+                            Send Message
+                          </Button>
+                        </Grid>
+                      </Grid>
+                    </Paper>
+                  </Grid>
+                )}
+              </Grid>
+            </Container>
+          </Box>
         );
 
       case BLOCK_TYPES.FEATURES:
@@ -1305,6 +1579,9 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
       case 'pricing_menu':
         return renderPricingMenuBlock(block);
 
+      case 'gallery':
+        return renderGalleryBlock(block);
+
       case 'spacer':
         return renderSpacerBlock(block);
 
@@ -1314,10 +1591,25 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
   };
 
   const renderVideoBlock = (block: ContentBlock) => {
-    const { title, videoUrl, content, settings } = block;
-    const autoplay = settings?.autoplay || false;
-    const controls = settings?.controls !== false; // Default to true
-    const aspectRatio = settings?.aspectRatio || '16:9';
+    // Enhanced VIDEO block with universal styling system
+    const { styles: videoStyles, settings: videoSettings } = parseBlockSettings(block);
+    const videoContainerStyles = getContainerStyles(videoStyles, videoSettings);
+    const videoTitleTypography = getTitleTypographyStyles(videoSettings);
+    const videoContentTypography = getContentTypographyStyles(videoSettings);
+    
+    const { title, videoUrl, content } = block;
+    
+    // Video control settings with defaults
+    const autoplay = videoSettings.videoAutoplay === 'true' || false;
+    const loop = videoSettings.videoLoop === 'true' || false;
+    const muted = videoSettings.videoMuted === 'true' || true; // Default muted for autoplay
+    const controls = videoSettings.controls !== false; // Default to true
+    const aspectRatio = videoSettings.aspectRatio || '16:9';
+    const playbackRate = videoSettings.videoPlaybackRate || '1';
+    const quality = videoSettings.videoQuality || 'auto';
+    const mobileBehavior = videoSettings.videoMobileBehavior || 'autoplay';
+    const thumbnailUrl = videoSettings.videoFallbackImage;
+    const showCustomControls = videoSettings.showCustomControls || false;
     
     // Extract video ID from URL for embedding
     const getEmbedUrl = (url: string) => {
@@ -1325,20 +1617,52 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
         const videoId = url.includes('youtu.be') 
           ? url.split('youtu.be/')[1]?.split('?')[0]
           : url.split('v=')[1]?.split('&')[0];
-        return `https://www.youtube.com/embed/${videoId}?autoplay=${autoplay ? 1 : 0}&controls=${controls ? 1 : 0}`;
+        const params = new URLSearchParams({
+          autoplay: autoplay ? '1' : '0',
+          controls: controls ? '1' : '0',
+          loop: loop ? '1' : '0',
+          muted: muted ? '1' : '0',
+          playsinline: '1',
+          rel: '0',
+          modestbranding: '1'
+        });
+        return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
       } else if (url.includes('vimeo.com')) {
-        const videoId = url.split('vimeo.com/')[1];
-        return `https://player.vimeo.com/video/${videoId}?autoplay=${autoplay ? 1 : 0}`;
+        const videoId = url.split('vimeo.com/')[1]?.split('?')[0];
+        const params = new URLSearchParams({
+          autoplay: autoplay ? '1' : '0',
+          loop: loop ? '1' : '0',
+          muted: muted ? '1' : '0',
+          playsinline: '1',
+          title: '0',
+          byline: '0',
+          portrait: '0'
+        });
+        return `https://player.vimeo.com/video/${videoId}?${params.toString()}`;
       }
       return url;
     };
 
     if (!videoUrl) {
       return (
-        <Box sx={{ mb: 4, p: 4, textAlign: 'center', bgcolor: 'grey.100', borderRadius: 2 }}>
-          <Typography variant="body2" color="text.secondary">
-            No video URL provided
-          </Typography>
+        <Box sx={videoContainerStyles}>
+          <Container maxWidth="lg">
+            <Box sx={{ 
+              p: 4, 
+              textAlign: 'center', 
+              bgcolor: 'grey.100', 
+              borderRadius: 2,
+              border: '2px dashed',
+              borderColor: 'grey.300'
+            }}>
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                🎥 Video Block
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                No video URL provided. Add a YouTube or Vimeo URL to display your video.
+              </Typography>
+            </Box>
+          </Container>
         </Box>
       );
     }
@@ -1346,46 +1670,150 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
     const aspectRatioMap: Record<string, string> = {
       '16:9': '56.25%',
       '4:3': '75%',
+      '3:2': '66.67%',
       '1:1': '100%',
+      '21:9': '42.86%',
       'auto': 'auto'
     };
 
     return (
-      <Box sx={{ mb: 4 }}>
-        {title && (
-          <Typography variant="h4" component="h2" gutterBottom align="center">
-            {title}
-          </Typography>
-        )}
-        {content && (
-          <Typography variant="body1" sx={{ mb: 3, textAlign: 'center' }}>
-            {content}
-          </Typography>
-        )}
-        <Box 
-          sx={{ 
-            position: 'relative',
-            paddingBottom: aspectRatioMap[aspectRatio],
-            height: aspectRatio === 'auto' ? 'auto' : 0,
-            overflow: 'hidden',
-            borderRadius: 2,
-            boxShadow: 3
-          }}
-        >
-          <iframe
-            src={getEmbedUrl(videoUrl)}
-            frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            style={{
-              position: aspectRatio === 'auto' ? 'static' : 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: aspectRatio === 'auto' ? '400px' : '100%'
+      <Box sx={videoContainerStyles}>
+        <Container maxWidth="lg">
+          {title && (
+            <Typography 
+              variant="h4" 
+              component="h2" 
+              gutterBottom 
+              sx={{
+                textAlign: videoSettings.textAlign || 'center',
+                ...videoTitleTypography
+              }}
+            >
+              {safeRender(title)}
+            </Typography>
+          )}
+          {content && (
+            <Typography 
+              variant="body1" 
+              sx={{ 
+                mb: 3, 
+                textAlign: videoSettings.textAlign || 'center',
+                ...videoContentTypography
+              }}
+            >
+              {safeRender(content)}
+            </Typography>
+          )}
+          
+          {/* Video Container with Advanced Styling */}
+          <Box 
+            sx={{ 
+              position: 'relative',
+              paddingBottom: aspectRatioMap[aspectRatio],
+              height: aspectRatio === 'auto' ? 'auto' : 0,
+              overflow: 'hidden',
+              borderRadius: videoStyles.borderRadius || 2,
+              boxShadow: videoSettings.shadowLevel || 3,
+              border: videoStyles.borderWidth && parseInt(videoStyles.borderWidth) > 0 ? 
+                `${videoStyles.borderWidth} ${videoStyles.borderStyle || 'solid'} ${videoStyles.borderColor || '#000000'}` : 'none',
+              transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+              '&:hover': {
+                transform: videoSettings.hoverEffect === 'zoom' ? 'scale(1.02)' : 
+                          videoSettings.hoverEffect === 'lift' ? 'translateY(-4px)' : 'none',
+                boxShadow: videoSettings.hoverEffect ? '0 12px 30px rgba(0,0,0,0.15)' : undefined
+              },
+              // Thumbnail overlay before play
+              ...(thumbnailUrl && !autoplay && {
+                backgroundImage: `url(${thumbnailUrl})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                '&::before': {
+                  content: '"▶"',
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  fontSize: '4rem',
+                  color: 'white',
+                  textShadow: '0 2px 8px rgba(0,0,0,0.8)',
+                  zIndex: 1,
+                  cursor: 'pointer'
+                }
+              })
             }}
-          />
-        </Box>
+          >
+            <iframe
+              src={getEmbedUrl(videoUrl)}
+              title={safeRender(title) || 'Video'}
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+              loading="lazy"
+              style={{
+                position: aspectRatio === 'auto' ? 'static' : 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: aspectRatio === 'auto' ? '400px' : '100%',
+                borderRadius: 'inherit'
+              }}
+            />
+            
+            {/* Custom Video Overlay Controls (if enabled) */}
+            {showCustomControls && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  background: 'linear-gradient(transparent, rgba(0,0,0,0.7))',
+                  color: 'white',
+                  p: 2,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  opacity: 0,
+                  transition: 'opacity 0.3s ease',
+                  '&:hover': {
+                    opacity: 1
+                  }
+                }}
+              >
+                <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                  Quality: {quality} | Rate: {playbackRate}x
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                  {autoplay && (
+                    <Chip label="Auto" size="small" color="primary" variant="outlined" />
+                  )}
+                  {loop && (
+                    <Chip label="Loop" size="small" color="secondary" variant="outlined" />
+                  )}
+                  {muted && (
+                    <Chip label="Muted" size="small" color="default" variant="outlined" />
+                  )}
+                </Box>
+              </Box>
+            )}
+          </Box>
+          
+          {/* Mobile-specific notice */}
+          {mobileBehavior === 'click-to-play' && (
+            <Typography 
+              variant="caption" 
+              color="text.secondary" 
+              sx={{ 
+                display: { xs: 'block', md: 'none' }, 
+                textAlign: 'center', 
+                mt: 1, 
+                fontStyle: 'italic' 
+              }}
+            >
+              Tap video to play on mobile devices
+            </Typography>
+          )}
+        </Container>
       </Box>
     );
   };
@@ -1549,114 +1977,326 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
   };
 
   const renderTestimonialsBlock = (block: ContentBlock) => {
-    const { title, content, settings } = block;
-    const layout = settings?.layout || 'carousel';
-    const showStars = settings?.showStars !== false;
-    const showPhotos = settings?.showPhotos || false;
+    // Enhanced TESTIMONIALS block with universal styling system
+    const { styles: testimonialStyles, settings: testimonialSettings } = parseBlockSettings(block);
+    const testimonialContainerStyles = getContainerStyles(testimonialStyles, testimonialSettings);
+    const testimonialTitleTypography = getTitleTypographyStyles(testimonialSettings);
+    const testimonialContentTypography = getContentTypographyStyles(testimonialSettings);
+    
+    const { title, content } = block;
+    
+    // Advanced testimonial settings with defaults
+    const layout = testimonialSettings.layout || 'carousel';
+    const showStars = testimonialSettings.showStars !== false;
+    const showPhotos = testimonialSettings.showPhotos !== false; // Default to true for better visual
+    const cardStyle = testimonialSettings.cardStyle || 'elevated';
+    const cardPadding = testimonialSettings.cardPadding || 3;
+    const starColor = testimonialSettings.starColor || '#FFD700'; // Gold
+    const maxTestimonials = testimonialSettings.maxTestimonials || 3;
+    const animationEffect = testimonialSettings.animationEffect || 'none';
+    const autoRotate = testimonialSettings.autoRotate === 'true' || false;
+    const rotationSpeed = parseInt(testimonialSettings.rotationSpeed || '5000'); // 5 seconds
 
-    // Mock testimonials data
+    // Mock testimonials data - in real app, this would come from API
     const mockTestimonials = [
       {
         id: 1,
         name: 'Sarah Johnson',
-        content: 'Amazing food and excellent service! The atmosphere is perfect for a romantic dinner.',
+        content: 'Amazing food and excellent service! The atmosphere is perfect for a romantic dinner. Every dish was crafted to perfection.',
         rating: 5,
-        photo: '/api/placeholder/80/80'
+        photo: '/api/placeholder/80/80',
+        position: 'Food Blogger',
+        location: 'New York, NY'
       },
       {
         id: 2,
         name: 'Mike Chen',
-        content: 'Best restaurant in town! Fresh ingredients and creative dishes that never disappoint.',
+        content: 'Best restaurant in town! Fresh ingredients and creative dishes that never disappoint. The chef truly understands flavor.',
         rating: 5,
-        photo: '/api/placeholder/80/80'
+        photo: '/api/placeholder/80/80',
+        position: 'Chef',
+        location: 'Los Angeles, CA'
       },
       {
         id: 3,
         name: 'Emily Davis',
-        content: 'Wonderful experience from start to finish. Highly recommend the chef\'s special!',
+        content: 'Wonderful experience from start to finish. Highly recommend the chef\'s special! Outstanding service and ambiance.',
         rating: 5,
-        photo: '/api/placeholder/80/80'
+        photo: '/api/placeholder/80/80',
+        position: 'Food Critic',
+        location: 'Chicago, IL'
+      },
+      {
+        id: 4,
+        name: 'James Wilson',
+        content: 'Incredible dining experience! The attention to detail in every course was remarkable. Will definitely return.',
+        rating: 5,
+        photo: '/api/placeholder/80/80',
+        position: 'Restaurant Owner',
+        location: 'Miami, FL'
       }
-    ];
+    ].slice(0, maxTestimonials);
 
     const StarRating = ({ rating }: { rating: number }) => (
-      <Box display="flex" gap={0.5}>
+      <Box display="flex" gap={0.5} justifyContent={testimonialSettings.textAlign === 'center' ? 'center' : 'flex-start'}>
         {[1, 2, 3, 4, 5].map((star) => (
           <Star
             key={star}
             sx={{
-              color: star <= rating ? 'gold' : 'lightgray',
-              fontSize: '1rem'
+              color: star <= rating ? starColor : '#E0E0E0',
+              fontSize: testimonialSettings.starSize || '1.2rem',
+              filter: star <= rating ? 'drop-shadow(0 0 2px rgba(255,215,0,0.3))' : 'none'
             }}
           />
         ))}
       </Box>
     );
 
+    // Card styling based on cardStyle setting
+    const getCardStyles = () => {
+      const baseStyles = {
+        height: '100%',
+        p: cardPadding,
+        transition: 'all 0.3s ease',
+        borderRadius: testimonialStyles.borderRadius || 2,
+        border: testimonialStyles.borderWidth && parseInt(testimonialStyles.borderWidth) > 0 ? 
+          `${testimonialStyles.borderWidth} ${testimonialStyles.borderStyle || 'solid'} ${testimonialStyles.borderColor || '#E0E0E0'}` : 'none'
+      };
+
+      switch (cardStyle) {
+        case 'flat':
+          return {
+            ...baseStyles,
+            elevation: 0,
+            backgroundColor: testimonialStyles.backgroundColor || 'grey.50',
+            '&:hover': {
+              backgroundColor: 'grey.100',
+              transform: animationEffect === 'lift' ? 'translateY(-4px)' : 'none'
+            }
+          };
+        case 'outlined':
+          return {
+            ...baseStyles,
+            elevation: 0,
+            border: '1px solid',
+            borderColor: 'grey.300',
+            '&:hover': {
+              borderColor: 'primary.main',
+              transform: animationEffect === 'lift' ? 'translateY(-4px)' : 'none',
+              boxShadow: animationEffect === 'shadow' ? '0 4px 12px rgba(0,0,0,0.1)' : 'none'
+            }
+          };
+        default: // elevated
+          return {
+            ...baseStyles,
+            elevation: 2,
+            '&:hover': {
+              elevation: 6,
+              transform: animationEffect === 'lift' ? 'translateY(-4px)' : 
+                        animationEffect === 'scale' ? 'scale(1.02)' : 'none',
+              boxShadow: '0 8px 25px rgba(0,0,0,0.15)'
+            }
+          };
+      }
+    };
+
     return (
-      <Box sx={{ mb: 4 }}>
-        {title && (
-          <Typography variant="h4" component="h2" gutterBottom align="center">
-            {title}
-          </Typography>
-        )}
-        {content && (
-          <Typography variant="body1" sx={{ mb: 3, textAlign: 'center' }}>
-            {content}
-          </Typography>
-        )}
-        
-        {layout === 'grid' ? (
-          <Grid container spacing={3}>
-            {mockTestimonials.map((testimonial) => (
-              <Grid item xs={12} md={4} key={testimonial.id}>
-                <Card sx={{ height: '100%', p: 2 }}>
-                  <CardContent>
-                    {showStars && (
-                      <Box sx={{ mb: 2 }}>
-                        <StarRating rating={testimonial.rating} />
-                      </Box>
-                    )}
-                    <Typography variant="body1" sx={{ mb: 2, fontStyle: 'italic' }}>
-                      "{testimonial.content}"
-                    </Typography>
-                    <Box display="flex" alignItems="center" gap={2}>
-                      {showPhotos && (
-                        <Avatar src={testimonial.photo} alt={testimonial.name} />
+      <Box sx={testimonialContainerStyles}>
+        <Container maxWidth="lg">
+          {title && (
+            <Typography 
+              variant="h4" 
+              component="h2" 
+              gutterBottom 
+              sx={{
+                textAlign: testimonialSettings.textAlign || 'center',
+                mb: 3,
+                ...testimonialTitleTypography
+              }}
+            >
+              {safeRender(title)}
+            </Typography>
+          )}
+          {content && (
+            <Typography 
+              variant="body1" 
+              sx={{ 
+                mb: 4, 
+                textAlign: testimonialSettings.textAlign || 'center',
+                maxWidth: 600,
+                mx: 'auto',
+                ...testimonialContentTypography
+              }}
+            >
+              {safeRender(content)}
+            </Typography>
+          )}
+          
+          {layout === 'grid' ? (
+            <Grid container spacing={testimonialSettings.gridSpacing || 3}>
+              {mockTestimonials.map((testimonial, index) => (
+                <Grid item xs={12} sm={6} md={maxTestimonials <= 2 ? 6 : 4} key={testimonial.id}>
+                  <Card sx={getCardStyles()}>
+                    <CardContent sx={{ p: 0 }}>
+                      {/* Star Rating */}
+                      {showStars && (
+                        <Box sx={{ mb: 2 }}>
+                          <StarRating rating={testimonial.rating} />
+                        </Box>
                       )}
-                      <Typography variant="subtitle2" fontWeight="bold">
+                      
+                      {/* Testimonial Content */}
+                      <Typography 
+                        variant="body1" 
+                        sx={{ 
+                          mb: 3, 
+                          fontStyle: 'italic',
+                          fontSize: testimonialSettings.contentFontSize || '1rem',
+                          lineHeight: 1.6,
+                          textAlign: testimonialSettings.textAlign || 'left',
+                          '&::before': { content: '"\\201C"', fontSize: '1.5em', color: 'primary.main' },
+                          '&::after': { content: '"\\201D"', fontSize: '1.5em', color: 'primary.main' }
+                        }}
+                      >
+                        {testimonial.content}
+                      </Typography>
+                      
+                      {/* Author Info */}
+                      <Box display="flex" alignItems="center" gap={2}>
+                        {showPhotos && (
+                          <Avatar 
+                            src={testimonial.photo} 
+                            alt={testimonial.name}
+                            sx={{ 
+                              width: testimonialSettings.photoSize || 50,
+                              height: testimonialSettings.photoSize || 50,
+                              border: '2px solid',
+                              borderColor: 'primary.light'
+                            }}
+                          />
+                        )}
+                        <Box>
+                          <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 0.5 }}>
+                            {testimonial.name}
+                          </Typography>
+                          {testimonial.position && (
+                            <Typography variant="caption" color="text.secondary" display="block">
+                              {testimonial.position}
+                            </Typography>
+                          )}
+                          {testimonial.location && (
+                            <Typography variant="caption" color="text.secondary" display="block">
+                              {testimonial.location}
+                            </Typography>
+                          )}
+                        </Box>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          ) : (
+            // Carousel/List Layout
+            <Box sx={{ textAlign: testimonialSettings.textAlign || 'center' }}>
+              {mockTestimonials.map((testimonial, index) => (
+                <Paper 
+                  key={testimonial.id} 
+                  sx={{ 
+                    p: 4, 
+                    mb: 3, 
+                    maxWidth: 700, 
+                    mx: 'auto',
+                    ...getCardStyles(),
+                    position: 'relative',
+                    overflow: 'hidden',
+                    '&::before': testimonialStyles.backgroundColor ? {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: '4px',
+                      background: `linear-gradient(90deg, ${starColor}, transparent)`
+                    } : {}
+                  }}
+                >
+                  {/* Star Rating */}
+                  {showStars && (
+                    <Box sx={{ mb: 3 }}>
+                      <StarRating rating={testimonial.rating} />
+                    </Box>
+                  )}
+                  
+                  {/* Testimonial Content */}
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      mb: 3, 
+                      fontStyle: 'italic',
+                      fontSize: testimonialSettings.contentFontSize || '1.1rem',
+                      lineHeight: 1.6,
+                      fontWeight: 400,
+                      textAlign: testimonialSettings.textAlign || 'center',
+                      '&::before': { content: '"\\201C"', fontSize: '2em', color: 'primary.main', verticalAlign: 'top' },
+                      '&::after': { content: '"\\201D"', fontSize: '2em', color: 'primary.main', verticalAlign: 'top' }
+                    }}
+                  >
+                    {testimonial.content}
+                  </Typography>
+                  
+                  {/* Author Info */}
+                  <Box display="flex" alignItems="center" justifyContent="center" gap={2}>
+                    {showPhotos && (
+                      <Avatar 
+                        src={testimonial.photo} 
+                        alt={testimonial.name}
+                        sx={{ 
+                          width: testimonialSettings.photoSize || 60,
+                          height: testimonialSettings.photoSize || 60,
+                          border: '3px solid',
+                          borderColor: 'primary.light',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                        }}
+                      />
+                    )}
+                    <Box textAlign="left">
+                      <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 0.5 }}>
                         {testimonial.name}
                       </Typography>
+                      {testimonial.position && (
+                        <Typography variant="body2" color="text.secondary" display="block">
+                          {testimonial.position}
+                        </Typography>
+                      )}
+                      {testimonial.location && (
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          📍 {testimonial.location}
+                        </Typography>
+                      )}
                     </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        ) : (
-          <Box sx={{ textAlign: 'center' }}>
-            {mockTestimonials.map((testimonial, index) => (
-              <Paper key={testimonial.id} sx={{ p: 4, mb: 2, maxWidth: 600, mx: 'auto' }}>
-                {showStars && (
-                  <Box sx={{ mb: 2, display: 'flex', justifyContent: 'center' }}>
-                    <StarRating rating={testimonial.rating} />
                   </Box>
-                )}
-                <Typography variant="h6" sx={{ mb: 2, fontStyle: 'italic' }}>
-                  "{testimonial.content}"
-                </Typography>
-                <Box display="flex" alignItems="center" justifyContent="center" gap={2}>
-                  {showPhotos && (
-                    <Avatar src={testimonial.photo} alt={testimonial.name} />
-                  )}
-                  <Typography variant="subtitle1" fontWeight="bold">
-                    {testimonial.name}
-                  </Typography>
-                </Box>
-              </Paper>
-            ))}
-          </Box>
-        )}
+                </Paper>
+              ))}
+            </Box>
+          )}
+          
+          {/* Auto-rotation indicator */}
+          {autoRotate && layout === 'carousel' && (
+            <Typography 
+              variant="caption" 
+              color="text.secondary" 
+              sx={{ 
+                display: 'block', 
+                textAlign: 'center', 
+                mt: 2, 
+                fontStyle: 'italic' 
+              }}
+            >
+              ↻ Auto-rotating every {rotationSpeed/1000}s
+            </Typography>
+          )}
+        </Container>
       </Box>
     );
   };
@@ -2053,6 +2693,202 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
     );
   };
 
+  const renderGalleryBlock = (block: ContentBlock) => {
+    // Enhanced GALLERY block with universal styling system
+    const { styles: galleryStyles, settings: gallerySettings } = parseBlockSettings(block);
+    const galleryContainerStyles = getContainerStyles(galleryStyles, gallerySettings);
+    const galleryTitleTypography = getTitleTypographyStyles(gallerySettings);
+    const galleryContentTypography = getContentTypographyStyles(gallerySettings);
+    
+    const { title, content } = block;
+    
+    // Gallery settings
+    const layout = gallerySettings.galleryLayout || 'grid';
+    const imageSpacing = gallerySettings.imageSpacing || 20;
+    const columnsDesktop = gallerySettings.columnsDesktop || 3;
+    const columnsTablet = gallerySettings.columnsTablet || 2;
+    const columnsMobile = gallerySettings.columnsMobile || 1;
+    const showCaptions = gallerySettings.showCaptions || false;
+    const lightboxEnabled = gallerySettings.lightboxEnabled || false;
+    const imageAspectRatio = gallerySettings.imageAspectRatio || '16:9';
+    const hoverOverlay = gallerySettings.hoverOverlay || false;
+    const filterEnabled = gallerySettings.filterEnabled || false;
+    
+    // Mock gallery items
+    const mockGalleryItems = Array.from({ length: 10 }, (_, i) => ({
+      id: i + 1,
+      image: `/api/placeholder/300/200`,
+      caption: `Gallery item ${i + 1}`
+    }));
+    
+    return (
+      <Box sx={galleryContainerStyles}>
+        <Container maxWidth="lg">
+          {title && (
+            <Typography 
+              variant="h4" 
+              component="h2" 
+              gutterBottom 
+              sx={{
+                textAlign: gallerySettings.textAlign || 'center',
+                ...galleryTitleTypography
+              }}
+            >
+              {safeRender(title)}
+            </Typography>
+          )}
+          {content && (
+            <Typography 
+              variant="body1" 
+              sx={{ 
+                mb: 3, 
+                textAlign: gallerySettings.textAlign || 'center',
+                ...galleryContentTypography
+              }}
+            >
+              {safeRender(content)}
+            </Typography>
+          )}
+          
+          {layout === 'grid' ? (
+            <Grid container spacing={imageSpacing}>
+              {mockGalleryItems.map((item) => (
+                <Grid item xs={12} sm={6} md={4} key={item.id}>
+                  <Box 
+                    sx={{ 
+                      position: 'relative',
+                      overflow: 'hidden',
+                      borderRadius: galleryStyles.borderRadius || 2,
+                      boxShadow: gallerySettings.shadowLevel || 3,
+                      border: galleryStyles.borderWidth && parseInt(galleryStyles.borderWidth) > 0 ? 
+                        `${galleryStyles.borderWidth} ${galleryStyles.borderStyle || 'solid'} ${galleryStyles.borderColor || '#000000'}` : 'none',
+                      transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                      '&:hover': {
+                        transform: gallerySettings.hoverEffect === 'zoom' ? 'scale(1.02)' : 
+                                  gallerySettings.hoverEffect === 'lift' ? 'translateY(-4px)' : 'none',
+                        boxShadow: gallerySettings.hoverEffect ? '0 12px 30px rgba(0,0,0,0.15)' : undefined
+                      },
+                      ...(hoverOverlay && {
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          background: 'rgba(0,0,0,0.5)',
+                          opacity: 0,
+                          transition: 'opacity 0.3s ease',
+                          '&:hover': { opacity: 1 }
+                        }
+                      })
+                    }}
+                  >
+                    <img
+                      src={safeRender(item.image)}
+                      alt={safeRender(item.caption) || 'Gallery item'}
+                      style={{ 
+                        width: '100%', 
+                        height: 'auto',
+                        display: 'block',
+                        objectFit: gallerySettings.objectFit || 'cover'
+                      }}
+                    />
+                    {showCaptions && (
+                      <Typography 
+                        variant="body2" 
+                        color="text.secondary" 
+                        sx={{ 
+                          position: 'absolute',
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          background: 'rgba(0,0,0,0.5)',
+                          p: 1,
+                          color: 'white',
+                          textAlign: 'center'
+                        }}
+                      >
+                        {safeRender(item.caption)}
+                      </Typography>
+                    )}
+                  </Box>
+                </Grid>
+              ))}
+            </Grid>
+          ) : (
+            // Carousel/List Layout
+            <Box sx={{ textAlign: gallerySettings.textAlign || 'center' }}>
+              {mockGalleryItems.map((item) => (
+                <Box key={item.id} sx={{ mb: imageSpacing }}>
+                  <Box 
+                    sx={{ 
+                      position: 'relative',
+                      overflow: 'hidden',
+                      borderRadius: galleryStyles.borderRadius || 2,
+                      boxShadow: gallerySettings.shadowLevel || 3,
+                      border: galleryStyles.borderWidth && parseInt(galleryStyles.borderWidth) > 0 ? 
+                        `${galleryStyles.borderWidth} ${galleryStyles.borderStyle || 'solid'} ${galleryStyles.borderColor || '#000000'}` : 'none',
+                      transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                      '&:hover': {
+                        transform: gallerySettings.hoverEffect === 'zoom' ? 'scale(1.02)' : 
+                                  gallerySettings.hoverEffect === 'lift' ? 'translateY(-4px)' : 'none',
+                        boxShadow: gallerySettings.hoverEffect ? '0 12px 30px rgba(0,0,0,0.15)' : undefined
+                      },
+                      ...(hoverOverlay && {
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          background: 'rgba(0,0,0,0.5)',
+                          opacity: 0,
+                          transition: 'opacity 0.3s ease',
+                          '&:hover': { opacity: 1 }
+                        }
+                      })
+                    }}
+                  >
+                    <img
+                      src={safeRender(item.image)}
+                      alt={safeRender(item.caption) || 'Gallery item'}
+                      style={{ 
+                        width: '100%', 
+                        height: 'auto',
+                        display: 'block',
+                        objectFit: gallerySettings.objectFit || 'cover'
+                      }}
+                    />
+                    {showCaptions && (
+                      <Typography 
+                        variant="body2" 
+                        color="text.secondary" 
+                        sx={{ 
+                          position: 'absolute',
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          background: 'rgba(0,0,0,0.5)',
+                          p: 1,
+                          color: 'white',
+                          textAlign: 'center'
+                        }}
+                      >
+                        {safeRender(item.caption)}
+                      </Typography>
+                    )}
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+          )}
+        </Container>
+      </Box>
+    );
+  };
+
   const renderSpacerBlock = (block: ContentBlock) => {
     const { settings } = block;
     const height = settings?.height || 'medium';
@@ -2100,16 +2936,13 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
   };
 
   return (
-    <>
-      {blocks
-        .filter(block => block.isActive)
-        .sort((a, b) => a.displayOrder - b.displayOrder)
-        .map(block => (
-          <Box key={block.id}>
-            {renderBlock(block)}
-          </Box>
-        ))}
-    </>
+    <Box>
+      {blocks.map((block) => (
+        <Box key={block.id}>
+          {renderBlock(block)}
+        </Box>
+      ))}
+    </Box>
   );
 };
 

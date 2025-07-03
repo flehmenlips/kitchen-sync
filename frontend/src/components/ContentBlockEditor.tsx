@@ -16,7 +16,15 @@ import {
   Switch,
   FormControlLabel,
   Alert,
-  CircularProgress
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Card,
+  CardContent,
+  Collapse,
+  ButtonGroup
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -25,11 +33,16 @@ import {
   Delete as DeleteIcon,
   DragIndicator as DragIcon,
   CloudUpload as UploadIcon,
-  Visibility as PreviewIcon
+  Visibility as PreviewIcon,
+  ExpandLess as ExpandLessIcon,
+  ExpandMore as ExpandMoreIcon,
+  Palette as PaletteIcon,
+  PhotoLibrary as PhotoLibraryIcon
 } from '@mui/icons-material';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { WBBlock } from '../services/websiteBuilderService';
+import AssetLibraryModal from './AssetLibraryModal';
 
 interface ContentBlockEditorProps {
   block: WBBlock;
@@ -116,6 +129,8 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
+  const [assetPickerOpen, setAssetPickerOpen] = useState(false);
+  const [assetPickerField, setAssetPickerField] = useState<string>('');
   const [formData, setFormData] = useState<Partial<WBBlock>>({
     title: block.title || '',
     subtitle: block.subtitle || '',
@@ -341,6 +356,33 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
     }
   };
 
+  const handleAssetPickerOpen = (field: string) => {
+    setAssetPickerField(field);
+    setAssetPickerOpen(true);
+  };
+
+  const handleAssetPickerClose = () => {
+    setAssetPickerOpen(false);
+    setAssetPickerField('');
+  };
+
+  const handleAssetSelect = (asset: any) => {
+    // Update the form data with the selected asset
+    const newFormData = {
+      ...formData,
+      [assetPickerField]: asset.fileUrl,
+      [`${assetPickerField}PublicId`]: asset.cloudinaryPublicId || ''
+    };
+    setFormData(newFormData);
+    
+    // Trigger auto-save if in edit mode
+    if (editMode) {
+      scheduleAutoSave(newFormData);
+    }
+    
+    handleAssetPickerClose();
+  };
+
   const getBlockTypeDisplay = (blockType: string) => {
     const types: Record<string, { label: string; color: string }> = {
       hero: { label: 'Hero Section', color: 'primary' },
@@ -442,20 +484,29 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
               <Box>
                 <Typography variant="body2" gutterBottom>Hero Image</Typography>
                 <Box display="flex" alignItems="center" gap={2}>
-                  <Button
-                    variant="outlined"
-                    component="label"
-                    startIcon={uploadingImage ? <CircularProgress size={16} /> : <UploadIcon />}
-                    disabled={uploadingImage}
-                  >
-                    {uploadingImage ? 'Uploading...' : 'Upload Image'}
-                    <input
-                      type="file"
-                      hidden
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                    />
-                  </Button>
+                  <ButtonGroup variant="outlined">
+                    <Button
+                      component="label"
+                      startIcon={uploadingImage ? <CircularProgress size={16} /> : <UploadIcon />}
+                      disabled={uploadingImage}
+                    >
+                      {uploadingImage ? 'Uploading...' : 'Upload'}
+                      <input
+                        type="file"
+                        hidden
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                      />
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      startIcon={<PhotoLibraryIcon />}
+                      onClick={() => handleAssetPickerOpen('imageUrl')}
+                      disabled={uploadingImage}
+                    >
+                      Asset Library
+                    </Button>
+                  </ButtonGroup>
                   {formData.imageUrl && (
                     <Box
                       component="img"
@@ -576,20 +627,28 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
               <Box>
                 <Typography variant="body2" gutterBottom>Image</Typography>
                 <Box display="flex" alignItems="center" gap={2}>
-                  <Button
-                    variant="outlined"
-                    component="label"
-                    startIcon={uploadingImage ? <CircularProgress size={16} /> : <UploadIcon />}
-                    disabled={uploadingImage}
-                  >
-                    {uploadingImage ? 'Uploading...' : 'Upload Image'}
-                    <input
-                      type="file"
-                      hidden
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                    />
-                  </Button>
+                  <ButtonGroup variant="outlined">
+                    <Button
+                      component="label"
+                      startIcon={uploadingImage ? <CircularProgress size={16} /> : <UploadIcon />}
+                      disabled={uploadingImage}
+                    >
+                      {uploadingImage ? 'Uploading...' : 'Upload Image'}
+                      <input
+                        type="file"
+                        hidden
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                      />
+                    </Button>
+                    <Button
+                      startIcon={<PhotoLibraryIcon />}
+                      onClick={() => handleAssetPickerOpen('imageUrl')}
+                      disabled={uploadingImage}
+                    >
+                      Asset Library
+                    </Button>
+                  </ButtonGroup>
                   {formData.imageUrl && (
                     <Box
                       component="img"
@@ -1093,6 +1152,15 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
           renderBlockFields()
         )}
       </Grid>
+      
+      {/* Asset Picker Modal */}
+      <AssetLibraryModal
+        open={assetPickerOpen}
+        onClose={handleAssetPickerClose}
+        onSelect={handleAssetSelect}
+        allowedTypes={['image']}
+        title="Select Image from Asset Library"
+      />
     </Paper>
   );
 };

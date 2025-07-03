@@ -28,6 +28,7 @@ import restaurantTemplateRoutes from './routes/restaurantTemplateRoutes'; // Imp
 import pageRoutes from './routes/pageRoutes'; // Import page routes
 import websiteBuilderRoutes from './routes/websiteBuilderRoutes'; // Import website builder routes
 import themingRoutes from './routes/themingRoutes'; // Import theming routes
+import assetRoutes from './routes/assetRoutes'; // Import asset routes
 import { Request, Response, NextFunction } from 'express';
 import { protect } from './middleware/authMiddleware';
 import { setRestaurantContext } from './middleware/restaurantContext';
@@ -151,6 +152,7 @@ app.use('/api/platform', platformRoutes); // Mount platform routes
 app.use('/api/templates', templateRoutes); // Mount template routes
 app.use('/api/restaurant-templates', restaurantTemplateRoutes); // Mount restaurant template routes
 app.use('/api/theming', themingRoutes); // Mount theming routes
+app.use('/api/assets', assetRoutes); // Mount asset routes
 
 // Serve static files ONLY for non-API routes (AFTER API routes)
 app.use((req, res, next) => {

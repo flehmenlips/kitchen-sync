@@ -362,6 +362,8 @@ const VisualBlock: React.FC<VisualBlockProps> = ({
         return { title: 'Hero Section', color: '#1976d2', icon: '🎯' };
       case 'text':
         return { title: 'Text Content', color: '#388e3c', icon: '📝' };
+      case 'html':
+        return { title: 'HTML Block', color: '#e65100', icon: '💻' };
       case 'about':
         return { title: 'About Section', color: '#2e7d32', icon: 'ℹ️' };
       case 'contact':
@@ -1954,7 +1956,7 @@ const VisualBlock: React.FC<VisualBlockProps> = ({
               )}
 
               {/* Universal Typography Controls for Text-Containing Blocks */}
-              {['text', 'cta', 'features', 'testimonial', 'contact', 'about'].includes(block.blockType) && (
+              {['text', 'cta', 'features', 'testimonial', 'contact', 'about', 'html', 'video', 'gallery'].includes(block.blockType) && (
                 <Box sx={{ mb: 3 }}>
                   <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, display: 'flex', alignItems: 'center' }}>
                     🔤 Typography Controls

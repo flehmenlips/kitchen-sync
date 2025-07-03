@@ -12,20 +12,26 @@ cloudinary.config({
 });
 
 /**
- * Uploads a file to Cloudinary
+ * Uploads a file to Cloudinary with restaurant-specific folder isolation
  * @param filePath Local path to the file to upload
- * @param folder Optional folder name to organize uploads (default: 'recipe-photos')
+ * @param folder Restaurant-specific folder (format: restaurants/{restaurantId}/assets)
  * @returns Promise with the upload result
  */
 export const uploadImage = async (filePath: string, folder: string = 'recipe-photos'): Promise<{url: string, publicId: string}> => {
   try {
+    // Validate folder format for security
+    if (folder.startsWith('restaurants/') && !folder.match(/^restaurants\/\d+\/[a-zA-Z0-9_-]+$/)) {
+      throw new Error('Invalid folder format. Must be restaurants/{restaurantId}/{subfolder}');
+    }
+    
     // Upload the image
     const result = await cloudinary.uploader.upload(filePath, {
       folder: folder,
-      resource_type: 'image'
+      resource_type: 'auto', // Support images, videos, and documents
+      access_mode: 'public' // Ensure public access for web display
     });
     
-    console.log(`Uploaded image to Cloudinary: ${result.public_id}`);
+    console.log(`Uploaded to Cloudinary: ${result.public_id} in folder: ${folder}`);
     
     // Delete the local file after successful upload
     try {
@@ -46,13 +52,67 @@ export const uploadImage = async (filePath: string, folder: string = 'recipe-pho
 };
 
 /**
- * Deletes an image from Cloudinary
- * @param publicId The public ID of the image to delete
+ * Lists all assets in a restaurant-specific folder
+ * @param restaurantId The restaurant ID for folder isolation
+ * @param maxResults Maximum number of results to return (default: 100)
+ * @returns Promise with array of Cloudinary assets
  */
-export const deleteImage = async (publicId: string): Promise<void> => {
+export const listRestaurantAssets = async (restaurantId: number, maxResults: number = 100): Promise<any[]> => {
+  try {
+    const folderPrefix = `restaurants/${restaurantId}/`;
+    
+    // Search for all assets in the restaurant's folder
+    const result = await cloudinary.search
+      .expression(`folder:${folderPrefix}*`)
+      .sort_by([['created_at', 'desc']])
+      .max_results(maxResults)
+      .execute();
+    
+    console.log(`Found ${result.resources.length} existing assets for restaurant ${restaurantId}`);
+    
+    return result.resources.map((asset: any) => ({
+      publicId: asset.public_id,
+      url: asset.secure_url,
+      fileName: asset.filename || asset.public_id.split('/').pop(),
+      fileSize: asset.bytes,
+      mimeType: asset.format ? `${asset.resource_type}/${asset.format}` : 'unknown',
+      assetType: asset.resource_type,
+      createdAt: asset.created_at,
+      width: asset.width,
+      height: asset.height,
+      folder: asset.folder
+    }));
+  } catch (error) {
+    console.error(`Error listing assets for restaurant ${restaurantId}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Validates that a public_id belongs to a specific restaurant (security check)
+ * @param publicId The Cloudinary public ID to validate
+ * @param restaurantId The restaurant ID that should own this asset
+ * @returns boolean indicating if the asset belongs to the restaurant
+ */
+export const validateAssetOwnership = (publicId: string, restaurantId: number): boolean => {
+  const expectedPrefix = `restaurants/${restaurantId}/`;
+  return publicId.startsWith(expectedPrefix);
+};
+
+/**
+ * Deletes an image from Cloudinary with ownership validation
+ * @param publicId The public ID of the image to delete
+ * @param restaurantId The restaurant ID for security validation
+ */
+export const deleteImage = async (publicId: string, restaurantId?: number): Promise<void> => {
   if (!publicId) {
     console.warn('No publicId provided for deletion, skipping');
     return;
+  }
+  
+  // Security check: ensure the asset belongs to the restaurant
+  if (restaurantId && !validateAssetOwnership(publicId, restaurantId)) {
+    throw new Error(`Security violation: Asset ${publicId} does not belong to restaurant ${restaurantId}`);
   }
   
   try {
@@ -66,5 +126,7 @@ export const deleteImage = async (publicId: string): Promise<void> => {
 
 export default {
   uploadImage,
-  deleteImage
+  deleteImage,
+  listRestaurantAssets,
+  validateAssetOwnership
 }; 

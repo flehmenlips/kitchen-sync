@@ -35,6 +35,7 @@ import VerifyEmailSentPage from './pages/VerifyEmailSentPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import DashboardPage from './pages/DashboardPage';
 import ProfilePage from './pages/ProfilePage';
+import { AssetLibraryPage } from './pages/AssetLibraryPage';
 
 // Recipe Components
 import RecipeList from './components/RecipeList';
@@ -228,6 +229,9 @@ const App: React.FC = () => {
 
                             {/* Admin Dashboard */}
                             <Route path="admin-dashboard" element={<AdminDashboard />} />
+
+                            {/* Asset Library Page */}
+                            <Route path="asset-library" element={<AssetLibraryPage />} />
 
                             {/* Redirect any unknown routes to dashboard */}
                             <Route path="*" element={<Navigate to="/" replace />} />
