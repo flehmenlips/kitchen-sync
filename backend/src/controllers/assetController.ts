@@ -4,15 +4,10 @@
  * which does not include enhanced fields like tags, description, folderId, etc.
  * Last updated: 2025-01-03 for production schema compatibility
  * 
- * DEPLOYMENT VERSION: v3.9.1-production-schema-fix
- * BUILD TIMESTAMP: 2025-01-03T06:35:00Z
+ * DEPLOYMENT VERSION: v3.9.2-production-runtime-fix
+ * BUILD TIMESTAMP: 2025-01-03T06:45:00Z
  * 
- * CRITICAL: This version must NOT use enhanced schema fields in production:
- * - NO tags field
- * - NO description field  
- * - NO folderId field
- * - NO cloudinaryPublicId field
- * - NO usageCount field
+ * CRITICAL: This version uses runtime field filtering for production
  */
 
 import { Request, Response } from 'express';
@@ -24,6 +19,37 @@ const prisma = new PrismaClient();
 
 // Use require for multer to avoid TypeScript issues temporarily
 const multer = require('multer');
+
+/**
+ * PRODUCTION COMPATIBILITY HELPER
+ * Filters out enhanced schema fields that don't exist in production
+ */
+const createProductionSafeAsset = async (assetData: any) => {
+  // Only use fields that exist in production database
+  const productionSafeData = {
+    id: assetData.id,
+    restaurantId: assetData.restaurantId,
+    assetType: assetData.assetType,
+    fileName: assetData.fileName,
+    fileUrl: assetData.fileUrl,
+    fileSize: assetData.fileSize || null,
+    mimeType: assetData.mimeType || null,
+    dimensions: assetData.dimensions || null,
+    altText: assetData.altText || null,
+    isPrimary: assetData.isPrimary || false,
+    // Explicitly exclude enhanced fields: tags, description, folderId, etc.
+  };
+  
+  console.log('🔧 Creating production-safe asset:', {
+    fileName: productionSafeData.fileName,
+    assetType: productionSafeData.assetType,
+    fieldsUsed: Object.keys(productionSafeData)
+  });
+  
+  return await prisma.brandAsset.create({
+    data: productionSafeData
+  });
+};
 
 // Configure multer for memory storage
 const storage = multer.memoryStorage();
@@ -286,27 +312,20 @@ export const uploadAsset = asyncHandler(async (req: Request, res: Response) => {
       }
     }
 
-    console.log('[AssetController] Creating asset with enhanced schema fields');
+    console.log('[AssetController] Creating asset with production-safe fields');
 
-    // Create asset record in database with enhanced fields
-    const asset = await prisma.brandAsset.create({
-      data: {
-        restaurantId,
-        assetType,
-        fileName: req.file.originalname,
-        fileUrl: cloudinaryResult.url,
-        fileSize: req.file.size,
-        mimeType: req.file.mimetype,
-        altText: altText || req.file.originalname,
-        isPrimary: false
-        // All enhanced fields disabled for production compatibility:
-        // description: description || null,
-        // folderId: validatedFolderId, 
-        // folderPath: folderPath,
-        // tags: parsedTags,
-        // usageCount: 0,
-        // cloudinaryPublicId: cloudinaryResult.publicId
-      }
+    // Create asset record in database using production-safe helper
+    const asset = await createProductionSafeAsset({
+      id: undefined, // Let database generate ID
+      restaurantId,
+      assetType,
+      fileName: req.file.originalname,
+      fileUrl: cloudinaryResult.url,
+      fileSize: req.file.size,
+      mimeType: req.file.mimetype,
+      altText: altText || req.file.originalname,
+      isPrimary: false,
+      dimensions: null
     });
 
     // Clean up temp file
@@ -600,20 +619,17 @@ export const importAllCloudinaryAssets = async (req: Request, res: Response) => 
         const fileName = originalName.includes('.') ? originalName : `${originalName}${fileExtension}`;
 
         // Create asset with basic fields only (production-safe)
-        const newAsset = await prisma.brandAsset.create({
-          data: {
-            restaurantId,
-            fileName: fileName,
-            fileUrl: asset.secure_url,
-            fileSize: asset.bytes || 0,
-            mimeType: asset.format ? `${asset.resource_type}/${asset.format}` : 'unknown',
-            assetType: asset.assetType.toUpperCase(),
-            isPrimary: false
-            // All enhanced fields disabled for production compatibility:
-            // description: `Historical import from: ${asset.publicId}`,
-            // usageCount: 0,
-            // folderPath: asset.folder || null
-          }
+        const newAsset = await createProductionSafeAsset({
+          id: undefined, // Let database generate ID
+          restaurantId,
+          fileName: fileName,
+          fileUrl: asset.secure_url,
+          fileSize: asset.bytes || 0,
+          mimeType: asset.format ? `${asset.resource_type}/${asset.format}` : 'unknown',
+          assetType: asset.assetType.toUpperCase(),
+          isPrimary: false,
+          altText: null,
+          dimensions: null
         });
 
         importedAssets.push(newAsset);
@@ -752,8 +768,8 @@ export const testAssetApi = async (req: Request, res: Response) => {
  */
 export const verifyDeployment = async (req: Request, res: Response) => {
   res.json({
-    deploymentVersion: 'v3.9.1-production-schema-fix',
-    buildTimestamp: '2025-01-03T06:35:00Z',
+    deploymentVersion: 'v3.9.2-production-runtime-fix',
+    buildTimestamp: '2025-01-03T06:45:00Z',
     schemaCompatibility: 'PRODUCTION_BASIC_FIELDS_ONLY',
     tagsFieldDisabled: true,
     enhancedFieldsDisabled: true,
