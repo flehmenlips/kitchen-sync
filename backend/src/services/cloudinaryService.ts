@@ -64,7 +64,7 @@ export const listRestaurantAssets = async (restaurantId: number, maxResults: num
     // Search for all assets in the restaurant's folder
     const result = await cloudinary.search
       .expression(`folder:${folderPrefix}*`)
-      .sort_by([['created_at', 'desc']])
+      .sort_by('created_at', 'desc')
       .max_results(maxResults)
       .execute();
     
@@ -100,9 +100,9 @@ export const validateAssetOwnership = (publicId: string, restaurantId: number): 
 };
 
 /**
- * Deletes an image from Cloudinary with ownership validation
+ * Deletes an image from Cloudinary with optional ownership validation
  * @param publicId The public ID of the image to delete
- * @param restaurantId The restaurant ID for security validation
+ * @param restaurantId Optional restaurant ID for security validation (for new assets)
  */
 export const deleteImage = async (publicId: string, restaurantId?: number): Promise<void> => {
   if (!publicId) {
@@ -110,8 +110,8 @@ export const deleteImage = async (publicId: string, restaurantId?: number): Prom
     return;
   }
   
-  // Security check: ensure the asset belongs to the restaurant
-  if (restaurantId && !validateAssetOwnership(publicId, restaurantId)) {
+  // Security check: ensure the asset belongs to the restaurant (only for new assets with restaurant folder structure)
+  if (restaurantId && publicId.startsWith('restaurants/') && !validateAssetOwnership(publicId, restaurantId)) {
     throw new Error(`Security violation: Asset ${publicId} does not belong to restaurant ${restaurantId}`);
   }
   
