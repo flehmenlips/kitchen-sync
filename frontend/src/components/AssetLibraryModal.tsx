@@ -369,14 +369,32 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
         }
       });
       
+      console.log('[AssetLibrary] Response status:', response.status);
+      console.log('[AssetLibrary] Response headers:', response.headers);
+      
+      // Get the response text once
+      const responseText = await response.text();
+      console.log('[AssetLibrary] Raw response length:', responseText.length);
+      console.log('[AssetLibrary] Raw response preview:', responseText.substring(0, 200));
+      
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[AssetLibrary] Import failed:', response.status, errorText);
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        console.error('[AssetLibrary] Import failed:', response.status, responseText);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}. Response: ${responseText}`);
       }
       
-      const result = await response.json();
-      console.log('[AssetLibrary] Full import result:', result);
+      // Check if response is actually JSON
+      const contentType = response.headers.get('content-type');
+      console.log('[AssetLibrary] Content-Type:', contentType);
+      
+      let result;
+      try {
+        result = JSON.parse(responseText);
+        console.log('[AssetLibrary] Full import result:', result);
+      } catch (jsonError) {
+        console.error('[AssetLibrary] JSON parsing failed:', jsonError);
+        console.error('[AssetLibrary] Raw response:', responseText);
+        throw new Error(`JSON parsing failed: ${jsonError.message}. Raw response: ${responseText.substring(0, 500)}...`);
+      }
       
       // Refresh the asset list first
       await fetchAssets();
