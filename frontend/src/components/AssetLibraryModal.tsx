@@ -57,6 +57,7 @@ import {
   Add
 } from '@mui/icons-material';
 import { assetApi } from '../services/assetApi';
+import { api } from '../services/api';
 import { useRestaurant } from '../context/RestaurantContext';
 
 interface Asset {
@@ -319,30 +320,18 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
     try {
       console.log('[AssetLibrary] Starting asset import for restaurant:', currentRestaurant.id);
       
-      const response = await fetch(`/api/assets/restaurants/${currentRestaurant.id}/import`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const result = await response.json();
-      console.log('[AssetLibrary] Import result:', result);
+      const response = await api.post(`/assets/restaurants/${currentRestaurant.id}/import`);
+      console.log('[AssetLibrary] Import result:', response.data);
       
       // Show success message
-      setError(`✅ Successfully imported ${result.imported} assets from Cloudinary!`);
+      setError(`✅ Successfully imported ${response.data.imported} assets from Cloudinary!`);
       
       // Refresh the asset list
       fetchAssets();
       
     } catch (error: any) {
       console.error('[AssetLibrary] Import error:', error);
-      setError(`Import failed: ${error.message}`);
+      setError(`Import failed: ${error.response?.data?.message || error.message}`);
     } finally {
       setImporting(false);
     }
@@ -361,67 +350,35 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
     try {
       console.log('[AssetLibrary] Starting FULL historical import for restaurant:', currentRestaurant.id);
       
-      const response = await fetch(`/api/assets/restaurants/${currentRestaurant.id}/import-all`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      console.log('[AssetLibrary] Response status:', response.status);
-      console.log('[AssetLibrary] Response headers:', response.headers);
-      
-      // Get the response text once
-      const responseText = await response.text();
-      console.log('[AssetLibrary] Raw response length:', responseText.length);
-      console.log('[AssetLibrary] Raw response preview:', responseText.substring(0, 200));
-      
-      if (!response.ok) {
-        console.error('[AssetLibrary] Import failed:', response.status, responseText);
-        throw new Error(`HTTP ${response.status}: ${response.statusText}. Response: ${responseText}`);
-      }
-      
-      // Check if response is actually JSON
-      const contentType = response.headers.get('content-type');
-      console.log('[AssetLibrary] Content-Type:', contentType);
-      
-      let result;
-      try {
-        result = JSON.parse(responseText);
-        console.log('[AssetLibrary] Full import result:', result);
-      } catch (jsonError) {
-        console.error('[AssetLibrary] JSON parsing failed:', jsonError);
-        console.error('[AssetLibrary] Raw response:', responseText);
-        throw new Error(`JSON parsing failed: ${jsonError.message}. Raw response: ${responseText.substring(0, 500)}...`);
-      }
+      const response = await api.post(`/assets/restaurants/${currentRestaurant.id}/import-all`);
+      console.log('[AssetLibrary] Full import result:', response.data);
       
       // Refresh the asset list first
       await fetchAssets();
       
       // Show detailed success message
-      if (result.success) {
+      if (response.data.success) {
         const message = `🎉 Historical import complete! 
         
-Imported ${result.imported} new assets:
-• 📸 ${result.categories?.recipes || 0} recipe photos
-• 🌐 ${result.categories?.contentBlocks || 0} website images  
-• 🎥 ${result.categories?.videos || 0} videos
-• 📁 ${result.categories?.other || 0} other assets
+Imported ${response.data.imported} new assets:
+• 📸 ${response.data.categories?.recipes || 0} recipe photos
+• 🌐 ${response.data.categories?.contentBlocks || 0} website images  
+• 🎥 ${response.data.categories?.videos || 0} videos
+• 📁 ${response.data.categories?.other || 0} other assets
 
-Total in your library: ${result.totalDatabase} assets
-Found in Cloudinary: ${result.totalCloudinary} assets`;
+Total in your library: ${response.data.totalDatabase} assets
+Found in Cloudinary: ${response.data.totalCloudinary} assets`;
       
         alert(message); // Use alert for immediate visibility
         setError('✅ Import completed successfully!');
       } else {
-        setError(`Import completed with issues: ${result.message}`);
+        setError(`Import completed with issues: ${response.data.message}`);
       }
       
     } catch (error: any) {
       console.error('[AssetLibrary] Full import error:', error);
-      setError(`❌ Historical import failed: ${error.message}`);
-      alert(`Import failed: ${error.message}`); // Show error prominently
+      setError(`❌ Historical import failed: ${error.response?.data?.message || error.message}`);
+      alert(`Import failed: ${error.response?.data?.message || error.message}`); // Show error prominently
     } finally {
       setImporting(false);
     }
@@ -525,26 +482,16 @@ Found in Cloudinary: ${result.totalCloudinary} assets`;
     try {
       console.log('[AssetLibrary] Testing API connection...');
       
-      const response = await fetch(`/api/assets/restaurants/${currentRestaurant.id}/test`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.get(`/assets/restaurants/${currentRestaurant.id}/test`);
+      console.log('[AssetLibrary] Test API response:', response.data);
       
-      const responseText = await response.text();
-      console.log('[AssetLibrary] Test API response:', responseText);
+      const result = response.data;
+      alert(`✅ API Test Success!\n\nRestaurant ID: ${result.restaurantId}\nUser ID: ${result.userId}\nEnvironment: ${result.environment}\nTimestamp: ${result.timestamp}`);
       
-      if (response.ok) {
-        const result = JSON.parse(responseText);
-        alert(`✅ API Test Success!\n\nRestaurant ID: ${result.restaurantId}\nUser ID: ${result.userId}\nEnvironment: ${result.environment}\nTimestamp: ${result.timestamp}`);
-      } else {
-        alert(`❌ API Test Failed!\n\nStatus: ${response.status}\nResponse: ${responseText}`);
-      }
     } catch (error: any) {
       console.error('[AssetLibrary] Test API error:', error);
-      alert(`❌ API Test Error: ${error.message}`);
+      const errorMessage = error.response?.data?.message || error.message;
+      alert(`❌ API Test Error: ${errorMessage}`);
     }
   };
 
