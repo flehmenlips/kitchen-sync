@@ -27,7 +27,7 @@ const multer = require('multer');
 const createProductionSafeAsset = async (assetData: any) => {
   // Only use fields that exist in production database
   const productionSafeData = {
-    id: assetData.id || undefined, // Let database generate if not provided
+    id: assetData.id || `asset-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, // Generate UUID-like ID
     restaurantId: assetData.restaurantId,
     assetType: assetData.assetType,
     fileName: assetData.fileName,
@@ -48,22 +48,23 @@ const createProductionSafeAsset = async (assetData: any) => {
   // Use raw SQL to bypass Prisma schema validation
   const query = `
     INSERT INTO brand_assets (
-      restaurant_id, asset_type, file_name, file_url, 
+      id, restaurant_id, asset_type, file_name, file_url, 
       file_size, mime_type, dimensions, alt_text, is_primary,
       created_at, updated_at
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW()
+      $1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10, NOW(), NOW()
     ) RETURNING *
   `;
   
   const values = [
+    productionSafeData.id,
     productionSafeData.restaurantId,
     productionSafeData.assetType,
     productionSafeData.fileName,
     productionSafeData.fileUrl,
     productionSafeData.fileSize,
     productionSafeData.mimeType,
-    JSON.stringify(productionSafeData.dimensions),
+    productionSafeData.dimensions ? JSON.stringify(productionSafeData.dimensions) : null,
     productionSafeData.altText,
     productionSafeData.isPrimary
   ];
