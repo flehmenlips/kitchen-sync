@@ -490,6 +490,7 @@ export const trackAssetUsage = asyncHandler(async (req: Request, res: Response) 
 /**
  * Import ALL existing assets from Cloudinary for a restaurant (historical import)
  * This scans the entire Cloudinary account and imports assets not in database
+ * FIXED: Now properly filters out demo/sample assets
  */
 export const importAllCloudinaryAssets = async (req: Request, res: Response) => {
   try {
@@ -503,12 +504,12 @@ export const importAllCloudinaryAssets = async (req: Request, res: Response) => 
     // Get existing assets from database
     const existingAssets = await prisma.brandAsset.findMany({
       where: { restaurantId },
-      select: { id: true, fileName: true }
+      select: { id: true, fileName: true, cloudinaryPublicId: true }
     });
 
     const existingPublicIds = new Set(
       existingAssets
-        .map(asset => asset.fileName)
+        .map(asset => asset.cloudinaryPublicId)
         .filter(Boolean)
     );
 
@@ -562,26 +563,65 @@ export const importAllCloudinaryAssets = async (req: Request, res: Response) => 
 
     console.log(`📁 Total assets found in Cloudinary: ${allAssets.length}`);
 
-    // Filter out assets already in database and demo assets
-    const assetsToImport = allAssets.filter(
-      asset => !existingPublicIds.has(asset.public_id) && 
-                !asset.public_id.startsWith('demo_') &&
-                !asset.public_id.startsWith('restaurants/') // Exclude current restaurant-specific assets
-    );
+    // ENHANCED FILTERING: Filter out assets already in database and demo assets
+    const assetsToImport = allAssets.filter(asset => {
+      // Skip if already imported (check by public_id)
+      if (existingPublicIds.has(asset.public_id)) {
+        return false;
+      }
+      
+      // Skip Cloudinary sample/demo assets (ENHANCED FILTERING)
+      if (asset.public_id.startsWith('samples/') || 
+          asset.public_id.startsWith('demo_') ||
+          asset.public_id.startsWith('cld-sample') ||
+          asset.public_id === 'sample' ||
+          asset.public_id.includes('sample-') ||
+          asset.public_id.includes('cloudinary-') ||
+          asset.original_filename?.includes('sample') ||
+          asset.original_filename?.includes('demo')) {
+        console.log(`🚫 Skipping demo/sample asset: ${asset.public_id}`);
+        return false;
+      }
+      
+      // For Restaurant 2 (Coq au Vin), only import assets that are likely legitimate:
+      // - Assets in restaurant-specific folders
+      // - Assets in content-blocks, recipe-photos folders
+      // - Assets from known business partners (seabreeze_farm, neverstill)
+      if (restaurantId === 2) {
+        const isRestaurantSpecific = asset.public_id.startsWith('restaurants/2/');
+        const isContentBlock = asset.public_id.startsWith('content-blocks/');
+        const isRecipePhoto = asset.public_id.startsWith('recipe-photos/');
+        const isRestaurantSetting = asset.public_id.startsWith('restaurant-settings/');
+        const isMenuLogo = asset.public_id.startsWith('menu-logos/');
+        const isBusinessPartner = asset.public_id.startsWith('seabreeze_farm/') || 
+                                 asset.public_id.startsWith('neverstill/');
+        
+        const isLegitimate = isRestaurantSpecific || isContentBlock || isRecipePhoto || 
+                           isRestaurantSetting || isMenuLogo || isBusinessPartner;
+        
+        if (!isLegitimate) {
+          console.log(`🚫 Skipping non-restaurant asset: ${asset.public_id}`);
+          return false;
+        }
+      }
+      
+      console.log(`✅ Including asset: ${asset.public_id} (${asset.assetType})`);
+      return true;
+    });
 
     console.log(`📥 Importing ${assetsToImport.length} historical assets`);
 
     // Special case: No assets to import (everything already imported)
     if (assetsToImport.length === 0) {
-      console.log(`✅ All Cloudinary assets already imported! Database has ${existingAssets.length} assets.`);
+      console.log(`✅ All legitimate Cloudinary assets already imported! Database has ${existingAssets.length} assets.`);
       
       return res.json({
         success: true,
-        message: `🎉 Import check complete! All your Cloudinary assets (${allAssets.length} total) are already in your Asset Library.`,
+        message: `🎉 Import check complete! All your legitimate Cloudinary assets are already in your Asset Library.`,
         imported: 0,
         totalCloudinary: allAssets.length,
         totalDatabase: existingAssets.length,
-        skipped: 0,
+        skipped: allAssets.length - assetsToImport.length,
         alreadyImported: allAssets.filter(asset => existingPublicIds.has(asset.public_id)).length,
         categories: {
           recipes: 0,
@@ -600,13 +640,6 @@ export const importAllCloudinaryAssets = async (req: Request, res: Response) => 
       });
     }
 
-    // TEMPORARILY DISABLED - Enhanced folder management not available in production schema
-    // Get available folders for categorization
-    // const assetFolders = await prisma.assetFolder.findMany({
-    //   where: { restaurantId },
-    //   orderBy: { name: 'asc' }
-    // });
-
     // Create database entries for new assets
     const importedAssets = [];
     const importStats = {
@@ -618,8 +651,6 @@ export const importAllCloudinaryAssets = async (req: Request, res: Response) => 
 
     for (const asset of assetsToImport) {
       try {
-        // TEMPORARILY DISABLED - Smart categorization based on folders
-        // let folderId: string | null = null;
         let category = 'other';
 
         if (asset.public_id.includes('recipe') || asset.public_id.includes('food') || 
@@ -655,7 +686,8 @@ export const importAllCloudinaryAssets = async (req: Request, res: Response) => 
           assetType: asset.assetType.toUpperCase(),
           isPrimary: false,
           altText: null,
-          dimensions: null
+          dimensions: null,
+          cloudinaryPublicId: asset.public_id // Store the public ID for future reference
         });
 
         importedAssets.push(newAsset);
@@ -674,7 +706,7 @@ export const importAllCloudinaryAssets = async (req: Request, res: Response) => 
 
     res.json({
       success: true,
-      message: `🎉 Historical import complete! Successfully imported ${importedAssets.length} assets from your Cloudinary account`,
+      message: `🎉 Historical import complete! Successfully imported ${importedAssets.length} legitimate assets from your Cloudinary account`,
       imported: importedAssets.length,
       totalCloudinary: allAssets.length,
       totalDatabase: existingAssets.length + importedAssets.length,
@@ -689,7 +721,8 @@ export const importAllCloudinaryAssets = async (req: Request, res: Response) => 
         existingInDb: existingAssets.length,
         foundInCloudinary: allAssets.length,
         eligibleForImport: assetsToImport.length,
-        successfullyImported: importedAssets.length
+        successfullyImported: importedAssets.length,
+        demoAssetsSkipped: allAssets.length - assetsToImport.length - existingAssets.length
       }
     });
 
