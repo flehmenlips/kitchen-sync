@@ -614,6 +614,7 @@ export const updateFolder = asyncHandler(async (req: Request, res: Response) => 
 export const deleteFolder = asyncHandler(async (req: Request, res: Response) => {
   const restaurantId = parseInt(req.params.restaurantId);
   const { id } = req.params;
+  const { force = false, moveAssetsToParent = false } = req.query;
 
   try {
     // Verify ownership and check for assets/subfolders
@@ -628,6 +629,12 @@ export const deleteFolder = asyncHandler(async (req: Request, res: Response) => 
             assets: true,
             subFolders: true
           }
+        },
+        parentFolder: {
+          select: {
+            id: true,
+            name: true
+          }
         }
       }
     });
@@ -636,20 +643,62 @@ export const deleteFolder = asyncHandler(async (req: Request, res: Response) => 
       return res.status(404).json({ error: 'Folder not found or access denied' });
     }
 
+    // Handle folder with contents
     if (folder._count.assets > 0 || folder._count.subFolders > 0) {
-      return res.status(400).json({ 
-        error: 'Cannot delete folder that contains assets or subfolders. Move or delete contents first.' 
-      });
+      if (moveAssetsToParent === 'true') {
+        // Move assets to parent folder (or null for root)
+        if (folder._count.assets > 0) {
+          await prisma.brandAsset.updateMany({
+            where: { folderId: id },
+            data: { folderId: folder.parentFolderId }
+          });
+        }
+        
+        // Move subfolders to parent folder (or null for root)
+        if (folder._count.subFolders > 0) {
+          await prisma.assetFolder.updateMany({
+            where: { parentFolderId: id },
+            data: { parentFolderId: folder.parentFolderId }
+          });
+        }
+        
+        console.log(`[AssetController] Moved ${folder._count.assets} assets and ${folder._count.subFolders} subfolders to parent`);
+      } else if (force !== 'true') {
+        return res.status(400).json({ 
+          error: 'Cannot delete folder that contains assets or subfolders.',
+          details: {
+            assets: folder._count.assets,
+            subFolders: folder._count.subFolders,
+            parentFolder: folder.parentFolder?.name || 'Root',
+            suggestions: [
+              'Use ?moveAssetsToParent=true to move contents to parent folder',
+              'Use ?force=true to delete folder and all contents permanently'
+            ]
+          }
+        });
+      }
+      // If force=true, we'll delete the folder and cascade will handle the contents
     }
 
     await prisma.assetFolder.delete({
       where: { id: id }
     });
 
-    res.json({ message: 'Folder deleted successfully' });
+    const action = moveAssetsToParent === 'true' ? 'moved contents and deleted' : 
+                   force === 'true' ? 'force deleted' : 'deleted';
+    
+    res.json({ 
+      message: `Folder ${action} successfully`,
+      details: {
+        folderName: folder.name,
+        assetsAffected: folder._count.assets,
+        subfoldersAffected: folder._count.subFolders,
+        action
+      }
+    });
   } catch (error: any) {
     console.error('[AssetController] Delete folder error:', error);
-    res.status(501).json({ error: 'Folder management not available in production schema' });
+    res.status(500).json({ error: 'Failed to delete folder' });
   }
 });
 

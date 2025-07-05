@@ -185,8 +185,17 @@ export const assetApi = {
   },
 
   // Delete folder - FIXED: Use correct endpoint with restaurantId
-  async deleteFolder(restaurantId: number, folderId: string): Promise<void> {
-    await api.delete(`/assets/restaurants/${restaurantId}/folders/${folderId}`);
+  async deleteFolder(restaurantId: number, folderId: string, options?: {
+    force?: boolean;
+    moveAssetsToParent?: boolean;
+  }): Promise<{ message: string; details?: any }> {
+    const params = new URLSearchParams();
+    if (options?.force) params.append('force', 'true');
+    if (options?.moveAssetsToParent) params.append('moveAssetsToParent', 'true');
+    
+    const url = `/assets/restaurants/${restaurantId}/folders/${folderId}${params.toString() ? `?${params.toString()}` : ''}`;
+    const response = await api.delete(url);
+    return response.data;
   },
 
   // Get asset analytics

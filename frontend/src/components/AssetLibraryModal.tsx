@@ -97,6 +97,7 @@ interface AssetFolder {
     assets: number;
     subFolders: number;
   };
+  parentFolder?: AssetFolder; // Added for folder deletion options
 }
 
 interface AssetLibraryModalProps {
@@ -141,6 +142,7 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
   const [deleteFolderConfirmOpen, setDeleteFolderConfirmOpen] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<AssetFolder | null>(null);
   const [folderMenuAnchor, setFolderMenuAnchor] = useState<null | HTMLElement>(null);
+  const [folderDeleteOption, setFolderDeleteOption] = useState<'move' | 'force'>('move');
   const [newFolderData, setNewFolderData] = useState({
     name: '',
     description: '',
@@ -158,6 +160,10 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
   const [selectedAssetForMove, setSelectedAssetForMove] = useState<Asset | null>(null);
   const [targetFolderId, setTargetFolderId] = useState<string | null>(null);
   
+  // Drag and drop state
+  const [draggedAsset, setDraggedAsset] = useState<Asset | null>(null);
+  const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Predefined folder colors
@@ -554,7 +560,13 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
     try {
       setLoading(true);
       
-      await assetApi.deleteFolder(currentRestaurant.id, selectedFolder.id);
+      const options = folderDeleteOption === 'move' 
+        ? { moveAssetsToParent: true } 
+        : { force: true };
+      
+      const result = await assetApi.deleteFolder(currentRestaurant.id, selectedFolder.id, options);
+      
+      console.log('[AssetLibrary] Folder deletion result:', result);
       
       setDeleteFolderConfirmOpen(false);
       setSelectedFolder(null);
@@ -569,9 +581,15 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
       await fetchFolders();
       await fetchAssets();
       
+      // Show success message
+      setError(`✅ ${result.message}`);
+      
     } catch (error: any) {
       console.error('[AssetLibrary] Delete folder failed:', error);
-      setError(`Failed to delete folder: ${error.response?.data?.error || error.message}`);
+      const errorMsg = error.response?.data?.error || error.message;
+      const suggestions = error.response?.data?.details?.suggestions || [];
+      
+      setError(`Failed to delete folder: ${errorMsg}${suggestions.length > 0 ? '\n\nSuggestions:\n' + suggestions.join('\n') : ''}`);
     } finally {
       setLoading(false);
     }
@@ -640,6 +658,61 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
     }
   };
 
+  // Drag and Drop Functions
+  const handleAssetDragStart = (event: React.DragEvent, asset: Asset) => {
+    setDraggedAsset(asset);
+    event.dataTransfer.setData('text/plain', asset.id);
+    event.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleAssetDragEnd = () => {
+    setDraggedAsset(null);
+    setDragOverFolder(null);
+  };
+
+  const handleFolderDragOver = (event: React.DragEvent, folderId: string | null) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    setDragOverFolder(folderId);
+  };
+
+  const handleFolderDragLeave = () => {
+    setDragOverFolder(null);
+  };
+
+  const handleFolderDrop = async (event: React.DragEvent, folderId: string | null) => {
+    event.preventDefault();
+    setDragOverFolder(null);
+    
+    const assetId = event.dataTransfer.getData('text/plain');
+    const asset = assets.find(a => a.id === assetId);
+    
+    if (!asset || !currentRestaurant) return;
+    
+    // Don't move if dropping on the same folder
+    if (asset.folderId === folderId) return;
+    
+    try {
+      setLoading(true);
+      
+      await assetApi.updateAsset(currentRestaurant.id, asset.id, {
+        folderId: folderId || undefined
+      });
+      
+      console.log(`[AssetLibrary] Moved asset ${asset.fileName} to folder ${folderId || 'root'}`);
+      
+      // Refresh assets and folders to update counts
+      await fetchAssets();
+      await fetchFolders();
+      
+    } catch (error: any) {
+      console.error('[AssetLibrary] Move asset failed:', error);
+      setError(`Failed to move asset: ${error.response?.data?.error || error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Dialog
       open={open}
@@ -682,6 +755,12 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
             <ListItemButton
               selected={currentFolderId === null}
               onClick={() => navigateToFolder(null, 'All Assets')}
+              onDragOver={(e) => handleFolderDragOver(e, null)}
+              onDragLeave={handleFolderDragLeave}
+              onDrop={(e) => handleFolderDrop(e, null)}
+              sx={{
+                bgcolor: dragOverFolder === null ? 'action.hover' : 'transparent'
+              }}
             >
               <ListItemIcon>
                 <Home />
@@ -694,7 +773,13 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
                 key={folder.id}
                 selected={currentFolderId === folder.id}
                 onClick={() => navigateToFolder(folder.id, folder.name)}
-                sx={{ pl: folder.parentFolderId ? 4 : 2 }}
+                onDragOver={(e) => handleFolderDragOver(e, folder.id)}
+                onDragLeave={handleFolderDragLeave}
+                onDrop={(e) => handleFolderDrop(e, folder.id)}
+                sx={{ 
+                  pl: folder.parentFolderId ? 4 : 2,
+                  bgcolor: dragOverFolder === folder.id ? 'action.hover' : 'transparent'
+                }}
               >
                 <ListItemIcon>
                   <Folder sx={{ color: folder.colorHex }} />
@@ -801,9 +886,13 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
               {assets.map(asset => (
                 <Grid item xs={12} sm={6} md={4} lg={3} key={asset.id}>
                   <Card
+                    draggable
+                    onDragStart={(e) => handleAssetDragStart(e, asset)}
+                    onDragEnd={handleAssetDragEnd}
                     sx={{
                       cursor: 'pointer',
                       transition: 'transform 0.2s',
+                      opacity: draggedAsset?.id === asset.id ? 0.5 : 1,
                       '&:hover': { 
                         transform: 'scale(1.02)',
                         boxShadow: 3
@@ -1139,17 +1228,80 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
       </Dialog>
 
       {/* Delete Folder Confirmation Dialog */}
-      <Dialog open={deleteFolderConfirmOpen} onClose={() => setDeleteFolderConfirmOpen(false)}>
+      <Dialog open={deleteFolderConfirmOpen} onClose={() => setDeleteFolderConfirmOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Delete Folder</DialogTitle>
         <DialogContent>
-          <Typography>
-            Are you sure you want to delete folder "{selectedFolder?.name}"? This action cannot be undone.
-            All assets and sub-folders within this folder will also be deleted.
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            Are you sure you want to delete folder "{selectedFolder?.name}"?
+          </Typography>
+          
+          {selectedFolder && (selectedFolder._count?.assets > 0 || selectedFolder._count?.subFolders > 0) && (
+            <Box sx={{ mb: 2, p: 2, bgcolor: 'warning.lighter', borderRadius: 1 }}>
+              <Typography variant="body2" color="warning.main" sx={{ mb: 1 }}>
+                ⚠️ This folder contains:
+              </Typography>
+              <Typography variant="body2">
+                • {selectedFolder._count?.assets || 0} assets
+              </Typography>
+              <Typography variant="body2">
+                • {selectedFolder._count?.subFolders || 0} subfolders
+              </Typography>
+            </Box>
+          )}
+          
+          <FormControl component="fieldset" sx={{ mb: 2 }}>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              What should happen to the folder contents?
+            </Typography>
+            <Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <input
+                  type="radio"
+                  id="move-option"
+                  checked={folderDeleteOption === 'move'}
+                  onChange={() => setFolderDeleteOption('move')}
+                  style={{ marginRight: 8 }}
+                />
+                <label htmlFor="move-option">
+                  <Typography variant="body2">
+                    Move contents to parent folder ({selectedFolder?.parentFolder?.name || 'Root'})
+                  </Typography>
+                </label>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <input
+                  type="radio"
+                  id="force-option"
+                  checked={folderDeleteOption === 'force'}
+                  onChange={() => setFolderDeleteOption('force')}
+                  style={{ marginRight: 8 }}
+                />
+                <label htmlFor="force-option">
+                  <Typography variant="body2" color="error.main">
+                    Delete all contents permanently (cannot be undone)
+                  </Typography>
+                </label>
+              </Box>
+            </Box>
+          </FormControl>
+          
+          <Typography variant="caption" color="text.secondary">
+            {folderDeleteOption === 'move' 
+              ? 'Assets and subfolders will be moved to the parent folder before deletion.'
+              : 'All contents will be permanently deleted along with the folder.'
+            }
           </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteFolderConfirmOpen(false)}>Cancel</Button>
-          <Button onClick={handleDeleteFolder} variant="contained" color="error">Delete Folder</Button>
+          <Button 
+            onClick={handleDeleteFolder} 
+            variant="contained" 
+            color="error"
+            startIcon={folderDeleteOption === 'force' ? <Delete /> : <DriveFileMove />}
+          >
+            {folderDeleteOption === 'move' ? 'Move & Delete' : 'Force Delete'}
+          </Button>
         </DialogActions>
       </Dialog>
 
