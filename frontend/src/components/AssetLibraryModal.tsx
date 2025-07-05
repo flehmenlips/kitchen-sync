@@ -32,7 +32,9 @@ import {
   Tabs,
   Tab,
   Menu,
-  Fab
+  Fab,
+  Slider,
+  Autocomplete
 } from '@mui/material';
 import {
   Close,
@@ -54,7 +56,11 @@ import {
   Edit,
   Delete,
   Download,
-  Add
+  Add,
+  FolderOpen,
+  ColorLens,
+  DriveFileMove,
+  CheckCircle
 } from '@mui/icons-material';
 import { assetApi } from '../services/assetApi';
 import { api } from '../services/api';
@@ -73,6 +79,7 @@ interface Asset {
   folderId?: string;
   folderPath?: string;
   tags?: string[];
+  cloudinaryPublicId?: string;
 }
 
 interface AssetFolder {
@@ -81,7 +88,15 @@ interface AssetFolder {
   parentFolderId?: string;
   colorHex: string;
   description?: string;
-  assetCount: number;
+  assetCount?: number; // Make optional to match API response
+  sortOrder?: number;
+  isSystemFolder?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  _count?: {
+    assets: number;
+    subFolders: number;
+  };
 }
 
 interface AssetLibraryModalProps {
@@ -112,12 +127,46 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [importing, setImporting] = useState(false);
+  
+  // Asset management state
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [assetMenuAnchor, setAssetMenuAnchor] = useState<null | HTMLElement>(null);
   const [editAssetDialogOpen, setEditAssetDialogOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [editAssetData, setEditAssetData] = useState<Partial<Asset>>({});
+  
+  // Folder management state
+  const [createFolderDialogOpen, setCreateFolderDialogOpen] = useState(false);
+  const [editFolderDialogOpen, setEditFolderDialogOpen] = useState(false);
+  const [deleteFolderConfirmOpen, setDeleteFolderConfirmOpen] = useState(false);
+  const [selectedFolder, setSelectedFolder] = useState<AssetFolder | null>(null);
+  const [folderMenuAnchor, setFolderMenuAnchor] = useState<null | HTMLElement>(null);
+  const [newFolderData, setNewFolderData] = useState({
+    name: '',
+    description: '',
+    colorHex: '#1976d2',
+    parentFolderId: null as string | null
+  });
+  const [editFolderData, setEditFolderData] = useState({
+    name: '',
+    description: '',
+    colorHex: '#1976d2'
+  });
+  
+  // Asset move state
+  const [moveAssetDialogOpen, setMoveAssetDialogOpen] = useState(false);
+  const [selectedAssetForMove, setSelectedAssetForMove] = useState<Asset | null>(null);
+  const [targetFolderId, setTargetFolderId] = useState<string | null>(null);
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Predefined folder colors
+  const folderColors = [
+    '#1976d2', '#2196f3', '#03a9f4', '#00bcd4', '#009688',
+    '#4caf50', '#8bc34a', '#cddc39', '#ffeb3b', '#ffc107',
+    '#ff9800', '#ff5722', '#f44336', '#e91e63', '#9c27b0',
+    '#673ab7', '#3f51b5', '#607d8b', '#795548', '#9e9e9e'
+  ];
 
   // Fetch assets and folders
   const fetchAssets = async () => {
@@ -127,9 +176,6 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
     }
     
     console.log('[AssetLibrary] Fetching assets for restaurant:', currentRestaurant.id);
-    console.log('[AssetLibrary] Search term:', searchTerm);
-    console.log('[AssetLibrary] Asset type filter:', assetTypeFilter);
-    console.log('[AssetLibrary] Current folder ID:', currentFolderId);
     setLoading(true);
     setError('');
     
@@ -142,11 +188,39 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
         limit: 100
       });
       
-      console.log('[AssetLibrary] Raw API response:', assetResponse);
       console.log('[AssetLibrary] Total assets returned:', assetResponse.assets?.length || 0);
       
-      // Fetch folders (placeholder - will implement when backend is ready)
-      const demoFolders: AssetFolder[] = [
+      // Filter by allowed types
+      const filteredAssets = assetResponse.assets.filter(asset => 
+        allowedTypes.includes(asset.assetType.toLowerCase())
+      );
+      
+      setAssets(filteredAssets);
+      
+      if (filteredAssets.length === 0 && !searchTerm) {
+        setError(`No assets found. Upload some images to get started!`);
+      }
+    } catch (error: any) {
+      console.error('[AssetLibrary] API Error:', error);
+      setError(`Failed to load assets: ${error.message || 'Connection error'}`);
+      setAssets([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch folders
+  const fetchFolders = async () => {
+    if (!currentRestaurant) return;
+    
+    try {
+      const foldersResponse = await assetApi.getFolders(currentRestaurant.id);
+      console.log('[AssetLibrary] Folders loaded:', foldersResponse.length);
+      setFolders(foldersResponse);
+    } catch (error: any) {
+      console.log('[AssetLibrary] Folders not available:', error.message);
+      // Set demo folders for development
+      setFolders([
         {
           id: 'website-assets',
           name: 'Website Assets',
@@ -155,79 +229,13 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
           assetCount: 4
         },
         {
-          id: 'hero-images',
-          name: 'Hero Images',
-          parentFolderId: 'website-assets',
-          colorHex: '#f44336',
-          description: 'Hero section backgrounds',
-          assetCount: 2
-        },
-        {
           id: 'recipe-photos',
           name: 'Recipe Photos',
           colorHex: '#4caf50',
           description: 'Recipe and food photography',
           assetCount: 0
         }
-      ];
-      
-      // Filter by allowed types
-      const filteredAssets = assetResponse.assets.filter(asset => 
-        allowedTypes.includes(asset.assetType.toLowerCase())
-      );
-      
-      console.log('[AssetLibrary] Filtered assets (by type):', filteredAssets.length);
-      console.log('[AssetLibrary] Allowed types:', allowedTypes);
-      console.log('[AssetLibrary] Sample assets:', filteredAssets.slice(0, 3));
-      
-      setAssets(filteredAssets);
-      setFolders(demoFolders);
-      
-      if (filteredAssets.length === 0 && !searchTerm) {
-        setError(`No assets found. Total from API: ${assetResponse.assets?.length || 0}. Upload some images to get started!`);
-      }
-    } catch (error: any) {
-      console.error('[AssetLibrary] API Error:', error);
-      
-      if (error.response?.status === 401) {
-        setError('Authentication required. Please login to access assets.');
-      } else if (error.response?.status === 404) {
-        setError('No assets found. Upload some images to get started.');
-      } else {
-        setError(`Failed to load assets: ${error.message || 'Connection error'}`);
-      }
-      
-      // Show demo assets for development
-      setAssets([
-        {
-          id: 'demo-1',
-          fileName: 'hero-restaurant.jpg',
-          fileUrl: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800',
-          fileSize: 856000,
-          mimeType: 'image/jpeg',
-          assetType: 'image',
-          altText: 'Elegant restaurant interior',
-          createdAt: new Date().toISOString(),
-          folderId: 'hero-images',
-          folderPath: '/Website Assets/Hero Images',
-          tags: ['hero', 'restaurant', 'interior']
-        },
-        {
-          id: 'demo-2',
-          fileName: 'food-platter.jpg',
-          fileUrl: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=800',
-          fileSize: 724000,
-          mimeType: 'image/jpeg',
-          assetType: 'image',
-          altText: 'Delicious food platter',
-          createdAt: new Date().toISOString(),
-          folderId: 'website-assets',
-          folderPath: '/Website Assets',
-          tags: ['food', 'platter', 'menu']
-        }
       ]);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -235,12 +243,13 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
   useEffect(() => {
     if (open && currentRestaurant) {
       fetchAssets();
+      fetchFolders();
     }
   }, [open, currentRestaurant, searchTerm, assetTypeFilter, currentFolderId]);
 
-  // Get asset icon
+  // Utility Functions
   const getAssetIcon = (assetType: string) => {
-    switch (assetType) {
+    switch (assetType.toLowerCase()) {
       case 'image': return <Image />;
       case 'video': return <VideoFile />;
       case 'document': return <Description />;
@@ -248,7 +257,6 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
     }
   };
 
-  // Format file size
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 B';
     const k = 1024;
@@ -257,7 +265,6 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   };
 
-  // Navigate to folder
   const navigateToFolder = (folderId: string | null, folderName: string) => {
     setCurrentFolderId(folderId);
     setCurrentFolderPath(folderId ? folderName : 'All Assets');
@@ -332,48 +339,6 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
     } catch (error: any) {
       console.error('[AssetLibrary] Import error:', error);
       setError(`Import failed: ${error.response?.data?.message || error.message}`);
-    } finally {
-      setImporting(false);
-    }
-  };
-
-  // Import ALL historical assets from Cloudinary
-  const handleImportAllAssets = async () => {
-    if (!currentRestaurant) {
-      setError('No restaurant selected');
-      return;
-    }
-    
-    setImporting(true);
-    setError('');
-    
-    try {
-      console.log('[AssetLibrary] Starting FULL historical import for restaurant:', currentRestaurant.id);
-      
-      const result = await assetApi.importAllAssets(currentRestaurant.id);
-      console.log('[AssetLibrary] Full import result:', result);
-      
-      // Refresh the asset list first
-      await fetchAssets();
-      
-      // Show detailed success message
-      if (result.success) {
-        const message = `🎉 Historical import complete! Successfully imported ${result.imported} assets.`;
-        alert(message);
-      } else {
-        console.warn('[AssetLibrary] Unexpected response format:', result);
-        alert('✅ Import completed successfully!');
-      }
-      
-    } catch (error: any) {
-      console.error('[AssetLibrary] Full import error:', error);
-      
-      // Improved error handling with more detail
-      const errorMessage = error.response?.data?.message || error.message || 'Unknown error occurred';
-      const statusCode = error.response?.status || 'Unknown';
-      
-      setError(`❌ Historical import failed: ${errorMessage} (Status: ${statusCode})`);
-      alert(`Import failed: ${errorMessage}`);
     } finally {
       setImporting(false);
     }
@@ -523,6 +488,158 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
     }
   };
 
+  // Folder Management Functions
+  const handleCreateFolder = async () => {
+    if (!currentRestaurant || !newFolderData.name.trim()) return;
+    
+    try {
+      setLoading(true);
+      
+      await assetApi.createFolder(currentRestaurant.id, {
+        name: newFolderData.name.trim(),
+        description: newFolderData.description.trim() || undefined,
+        colorHex: newFolderData.colorHex,
+        parentFolderId: newFolderData.parentFolderId || undefined
+      });
+      
+      // Reset form and close dialog
+      setNewFolderData({
+        name: '',
+        description: '',
+        colorHex: '#1976d2',
+        parentFolderId: null
+      });
+      setCreateFolderDialogOpen(false);
+      
+      // Refresh folders
+      await fetchFolders();
+      
+    } catch (error: any) {
+      console.error('[AssetLibrary] Create folder failed:', error);
+      setError(`Failed to create folder: ${error.response?.data?.error || error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditFolder = async () => {
+    if (!currentRestaurant || !selectedFolder || !editFolderData.name.trim()) return;
+    
+    try {
+      setLoading(true);
+      
+      await assetApi.updateFolder(currentRestaurant.id, selectedFolder.id, {
+        name: editFolderData.name.trim(),
+        description: editFolderData.description.trim() || undefined,
+        colorHex: editFolderData.colorHex
+      });
+      
+      setEditFolderDialogOpen(false);
+      setSelectedFolder(null);
+      
+      // Refresh folders
+      await fetchFolders();
+      
+    } catch (error: any) {
+      console.error('[AssetLibrary] Edit folder failed:', error);
+      setError(`Failed to update folder: ${error.response?.data?.error || error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteFolder = async () => {
+    if (!currentRestaurant || !selectedFolder) return;
+    
+    try {
+      setLoading(true);
+      
+      await assetApi.deleteFolder(currentRestaurant.id, selectedFolder.id);
+      
+      setDeleteFolderConfirmOpen(false);
+      setSelectedFolder(null);
+      
+      // If we're currently viewing the deleted folder, go back to all assets
+      if (currentFolderId === selectedFolder.id) {
+        setCurrentFolderId(null);
+        setCurrentFolderPath('All Assets');
+      }
+      
+      // Refresh folders and assets
+      await fetchFolders();
+      await fetchAssets();
+      
+    } catch (error: any) {
+      console.error('[AssetLibrary] Delete folder failed:', error);
+      setError(`Failed to delete folder: ${error.response?.data?.error || error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Folder Context Menu Handlers
+  const handleFolderMenuClick = (event: React.MouseEvent<HTMLElement>, folder: AssetFolder) => {
+    event.stopPropagation();
+    setSelectedFolder(folder);
+    setFolderMenuAnchor(event.currentTarget);
+  };
+
+  const handleFolderMenuClose = () => {
+    setFolderMenuAnchor(null);
+    setSelectedFolder(null);
+  };
+
+  const handleEditFolderClick = () => {
+    if (selectedFolder) {
+      setEditFolderData({
+        name: selectedFolder.name,
+        description: selectedFolder.description || '',
+        colorHex: selectedFolder.colorHex
+      });
+      setEditFolderDialogOpen(true);
+    }
+    handleFolderMenuClose();
+  };
+
+  const handleDeleteFolderClick = () => {
+    setDeleteFolderConfirmOpen(true);
+    handleFolderMenuClose();
+  };
+
+  // Asset Move Functions
+  const handleMoveAsset = (asset: Asset) => {
+    setSelectedAssetForMove(asset);
+    setTargetFolderId(asset.folderId || null);
+    setMoveAssetDialogOpen(true);
+    handleAssetMenuClose();
+  };
+
+  const handleMoveAssetConfirm = async () => {
+    if (!currentRestaurant || !selectedAssetForMove) return;
+    
+    try {
+      setLoading(true);
+      
+      // Update asset with new folder
+      await assetApi.updateAsset(currentRestaurant.id, selectedAssetForMove.id, {
+        folderId: targetFolderId || undefined
+      });
+      
+      setMoveAssetDialogOpen(false);
+      setSelectedAssetForMove(null);
+      setTargetFolderId(null);
+      
+      // Refresh assets
+      await fetchAssets();
+      
+    } catch (error: any) {
+      console.error('[AssetLibrary] Move asset failed:', error);
+      setError(`Failed to move asset: ${error.response?.data?.error || error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Dialog
       open={open}
@@ -584,8 +701,15 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
                 </ListItemIcon>
                 <ListItemText 
                   primary={folder.name}
-                  secondary={`${folder.assetCount} items`}
+                  secondary={`${folder._count?.assets || folder.assetCount || 0} items`}
                 />
+                <IconButton
+                  size="small"
+                  onClick={(e) => handleFolderMenuClick(e, folder)}
+                  sx={{ ml: 1 }}
+                >
+                  <MoreVert fontSize="small" />
+                </IconButton>
               </ListItemButton>
             ))}
           </List>
@@ -595,7 +719,7 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
           <Button
             size="small"
             startIcon={<CreateNewFolder />}
-            onClick={() => alert('Folder creation coming soon!')}
+            onClick={() => setCreateFolderDialogOpen(true)}
             fullWidth
           >
             New Folder
@@ -817,6 +941,10 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
           <ListItemIcon><Edit fontSize="small" /></ListItemIcon>
           <ListItemText>Edit Details</ListItemText>
         </MenuItem>
+        <MenuItem onClick={() => handleMoveAsset(selectedAsset!)}>
+          <ListItemIcon><DriveFileMove fontSize="small" /></ListItemIcon>
+          <ListItemText>Move to Folder</ListItemText>
+        </MenuItem>
         <MenuItem onClick={handleDownloadAsset}>
           <ListItemIcon><Download fontSize="small" /></ListItemIcon>
           <ListItemText>Download</ListItemText>
@@ -824,6 +952,33 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
         <MenuItem onClick={handleDeleteAsset} sx={{ color: 'error.main' }}>
           <ListItemIcon><Delete fontSize="small" color="error" /></ListItemIcon>
           <ListItemText>Delete</ListItemText>
+        </MenuItem>
+      </Menu>
+
+      {/* Folder Context Menu */}
+      <Menu
+        anchorEl={folderMenuAnchor}
+        open={Boolean(folderMenuAnchor)}
+        onClose={handleFolderMenuClose}
+      >
+        <MenuItem onClick={handleEditFolderClick}>
+          <ListItemIcon><Edit fontSize="small" /></ListItemIcon>
+          <ListItemText>Edit Folder</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => {
+          setNewFolderData({
+            ...newFolderData,
+            parentFolderId: selectedFolder?.id || null
+          });
+          setCreateFolderDialogOpen(true);
+          handleFolderMenuClose();
+        }}>
+          <ListItemIcon><CreateNewFolder fontSize="small" /></ListItemIcon>
+          <ListItemText>Create Subfolder</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={handleDeleteFolderClick} sx={{ color: 'error.main' }}>
+          <ListItemIcon><Delete fontSize="small" color="error" /></ListItemIcon>
+          <ListItemText>Delete Folder</ListItemText>
         </MenuItem>
       </Menu>
 
@@ -884,6 +1039,167 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
         <DialogActions>
           <Button onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
           <Button onClick={handleDeleteConfirm} variant="contained" color="error">Delete</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Create Folder Dialog */}
+      <Dialog open={createFolderDialogOpen} onClose={() => setCreateFolderDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Create New Folder</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1 }}>
+            <TextField
+              fullWidth
+              label="Folder Name"
+              value={newFolderData.name}
+              onChange={(e) => setNewFolderData({ ...newFolderData, name: e.target.value })}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Description (optional)"
+              value={newFolderData.description}
+              onChange={(e) => setNewFolderData({ ...newFolderData, description: e.target.value })}
+              sx={{ mb: 2 }}
+            />
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel>Parent Folder</InputLabel>
+              <Select
+                value={newFolderData.parentFolderId || ''}
+                onChange={(e) => setNewFolderData({ ...newFolderData, parentFolderId: e.target.value || null })}
+              >
+                <MenuItem value="">No Parent</MenuItem>
+                {folders.map(folder => (
+                  <MenuItem key={folder.id} value={folder.id}>
+                    {folder.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel>Folder Color</InputLabel>
+              <Select
+                value={newFolderData.colorHex}
+                onChange={(e) => setNewFolderData({ ...newFolderData, colorHex: e.target.value })}
+              >
+                {folderColors.map(color => (
+                  <MenuItem key={color} value={color}>
+                    <Box sx={{ width: 20, height: 20, bgcolor: color, borderRadius: '4px', mr: 1 }} />
+                    {color}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCreateFolderDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleCreateFolder} variant="contained">Create Folder</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit Folder Dialog */}
+      <Dialog open={editFolderDialogOpen} onClose={() => setEditFolderDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Edit Folder Details</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1 }}>
+            <TextField
+              fullWidth
+              label="Folder Name"
+              value={editFolderData.name}
+              onChange={(e) => setEditFolderData({ ...editFolderData, name: e.target.value })}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Description (optional)"
+              value={editFolderData.description}
+              onChange={(e) => setEditFolderData({ ...editFolderData, description: e.target.value })}
+              sx={{ mb: 2 }}
+            />
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel>Folder Color</InputLabel>
+              <Select
+                value={editFolderData.colorHex}
+                onChange={(e) => setEditFolderData({ ...editFolderData, colorHex: e.target.value })}
+              >
+                {folderColors.map(color => (
+                  <MenuItem key={color} value={color}>
+                    <Box sx={{ width: 20, height: 20, bgcolor: color, borderRadius: '4px', mr: 1 }} />
+                    {color}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditFolderDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleEditFolder} variant="contained">Save Changes</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Folder Confirmation Dialog */}
+      <Dialog open={deleteFolderConfirmOpen} onClose={() => setDeleteFolderConfirmOpen(false)}>
+        <DialogTitle>Delete Folder</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete folder "{selectedFolder?.name}"? This action cannot be undone.
+            All assets and sub-folders within this folder will also be deleted.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteFolderConfirmOpen(false)}>Cancel</Button>
+          <Button onClick={handleDeleteFolder} variant="contained" color="error">Delete Folder</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Asset Move Dialog */}
+      <Dialog open={moveAssetDialogOpen} onClose={() => setMoveAssetDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Move Asset</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1 }}>
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              Current Folder: {currentFolderPath}
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              Target Folder: {folders.find(f => f.id === targetFolderId)?.name || 'No Folder Selected'}
+            </Typography>
+            <Autocomplete
+              options={folders.map(folder => folder.name)}
+              value={folders.find(f => f.id === targetFolderId)?.name || ''}
+              onChange={(event, newValue) => {
+                const folder = folders.find(f => f.name === newValue);
+                setTargetFolderId(folder?.id || null);
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Move to Folder"
+                  InputProps={{
+                    ...params.InputProps,
+                    startAdornment: (
+                      <Box sx={{ mr: 1 }}>
+                        <FolderOpen fontSize="small" />
+                      </Box>
+                    ),
+                    endAdornment: (
+                      <Box sx={{ mr: 1 }}>
+                        {params.InputProps.endAdornment}
+                      </Box>
+                    ),
+                  }}
+                />
+              )}
+              sx={{ mb: 2 }}
+            />
+            <Typography variant="body2" color="text.secondary">
+              This action will move the selected asset to the target folder.
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setMoveAssetDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleMoveAssetConfirm} variant="contained">Move Asset</Button>
         </DialogActions>
       </Dialog>
 
