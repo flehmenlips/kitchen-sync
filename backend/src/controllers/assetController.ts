@@ -37,11 +37,13 @@ const createProductionSafeAsset = async (assetData: any) => {
     dimensions: assetData.dimensions || null,
     altText: assetData.altText || null,
     isPrimary: assetData.isPrimary || false,
+    cloudinaryPublicId: assetData.cloudinaryPublicId || null, // Store Cloudinary public ID
   };
   
   console.log('🔧 Creating production-safe asset with RAW SQL:', {
     fileName: productionSafeData.fileName,
     assetType: productionSafeData.assetType,
+    cloudinaryPublicId: productionSafeData.cloudinaryPublicId,
     fieldsUsed: Object.keys(productionSafeData)
   });
   
@@ -50,9 +52,9 @@ const createProductionSafeAsset = async (assetData: any) => {
     INSERT INTO brand_assets (
       id, restaurant_id, asset_type, file_name, file_url, 
       file_size, mime_type, dimensions, alt_text, is_primary,
-      created_at, updated_at
+      cloudinary_public_id, created_at, updated_at
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10, NOW(), NOW()
+      $1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10, $11, NOW(), NOW()
     ) RETURNING *
   `;
   
@@ -66,7 +68,8 @@ const createProductionSafeAsset = async (assetData: any) => {
     productionSafeData.mimeType,
     productionSafeData.dimensions ? JSON.stringify(productionSafeData.dimensions) : null,
     productionSafeData.altText,
-    productionSafeData.isPrimary
+    productionSafeData.isPrimary,
+    productionSafeData.cloudinaryPublicId
   ];
   
   console.log('🔧 Executing raw SQL with values:', values);
@@ -161,6 +164,7 @@ export const getAssets = asyncHandler(async (req: Request, res: Response) => {
       mimeType: true,
       altText: true,
       isPrimary: true,
+      cloudinaryPublicId: true, // Include cloudinaryPublicId for delete operations
       createdAt: true,
       updatedAt: true
       // All enhanced fields (tags, description, folderId, etc.) disabled for production
@@ -351,7 +355,8 @@ export const uploadAsset = asyncHandler(async (req: Request, res: Response) => {
       mimeType: req.file.mimetype,
       altText: altText || req.file.originalname,
       isPrimary: false,
-      dimensions: null
+      dimensions: null,
+      cloudinaryPublicId: cloudinaryResult.publicId // Store the Cloudinary public ID
     });
 
     // Clean up temp file
@@ -381,11 +386,24 @@ export const uploadAsset = asyncHandler(async (req: Request, res: Response) => {
 
 // Update asset
 export const updateAsset = asyncHandler(async (req: Request, res: Response) => {
-  const { assetId } = req.params;
+  const restaurantId = parseInt(req.params.restaurantId);
+  const { id } = req.params;
   const { fileName, altText } = req.body;
 
+  // Verify the asset belongs to this restaurant
+  const existingAsset = await prisma.brandAsset.findFirst({
+    where: {
+      id: id,
+      restaurantId: restaurantId
+    }
+  });
+
+  if (!existingAsset) {
+    return res.status(404).json({ error: 'Asset not found or access denied' });
+  }
+
   const asset = await prisma.brandAsset.update({
-    where: { id: assetId },
+    where: { id: id },
     data: {
       ...(fileName && { fileName }),
       ...(altText !== undefined && { altText })
@@ -395,26 +413,43 @@ export const updateAsset = asyncHandler(async (req: Request, res: Response) => {
   res.json(asset);
 });
 
-// Delete asset
+// Delete asset with enhanced security and Cloudinary cleanup
 export const deleteAsset = asyncHandler(async (req: Request, res: Response) => {
-  const { assetId } = req.params;
+  const restaurantId = parseInt(req.params.restaurantId);
+  const { id } = req.params;
 
-  const asset = await prisma.brandAsset.findUnique({
-    where: { id: assetId }
+  // Get the asset with ownership validation
+  const asset = await prisma.brandAsset.findFirst({
+    where: {
+      id: id,
+      restaurantId: restaurantId // Ensure it belongs to this restaurant
+    }
   });
 
   if (!asset) {
-    return res.status(404).json({ error: 'Asset not found' });
+    return res.status(404).json({ error: 'Asset not found or access denied' });
   }
 
   try {
-    // For now, skip Cloudinary deletion since we need the public_id field
-    // TODO: Implement when schema is migrated
+    // Delete from Cloudinary if cloudinaryPublicId exists
+    if (asset.cloudinaryPublicId) {
+      try {
+        await deleteImage(asset.cloudinaryPublicId, restaurantId);
+        console.log(`🗑️ Deleted from Cloudinary: ${asset.cloudinaryPublicId}`);
+      } catch (cloudinaryError) {
+        console.warn('Warning: Could not delete from Cloudinary:', cloudinaryError);
+        // Continue with database deletion even if Cloudinary fails
+      }
+    } else {
+      console.log('⚠️ No cloudinaryPublicId found, skipping Cloudinary deletion');
+    }
     
     // Delete from database
     await prisma.brandAsset.delete({
-      where: { id: assetId }
+      where: { id: id }
     });
+
+    console.log(`✅ Deleted asset ${asset.fileName} for restaurant ${restaurantId}`);
 
     res.json({ message: 'Asset deleted successfully' });
   } catch (error) {
@@ -466,21 +501,156 @@ export const getAssetAnalytics = asyncHandler(async (req: Request, res: Response
   });
 });
 
-// Placeholder functions for folder management (will implement after schema migration)
+// Basic folder management for current schema
 export const getFolders = asyncHandler(async (req: Request, res: Response) => {
-  res.json([]); // Return empty array for now
+  const restaurantId = parseInt(req.params.restaurantId);
+
+  try {
+    // Check if AssetFolder table exists in production
+    const folders = await prisma.assetFolder.findMany({
+      where: { restaurantId },
+      orderBy: { sortOrder: 'asc' },
+      include: {
+        _count: {
+          select: {
+            assets: true,
+            subFolders: true
+          }
+        }
+      }
+    });
+
+    res.json(folders);
+  } catch (error: any) {
+    // If AssetFolder table doesn't exist in production, return empty array with a note
+    console.log('[AssetController] AssetFolder table not available in production schema');
+    res.json([]);
+  }
 });
 
 export const createFolder = asyncHandler(async (req: Request, res: Response) => {
-  res.status(501).json({ error: 'Folder management not yet implemented' });
+  const restaurantId = parseInt(req.params.restaurantId);
+  const { name, parentFolderId, colorHex = '#1976d2', description } = req.body;
+
+  if (!name) {
+    return res.status(400).json({ error: 'Folder name is required' });
+  }
+
+  try {
+    const folder = await prisma.assetFolder.create({
+      data: {
+        restaurantId,
+        name,
+        parentFolderId: parentFolderId || null,
+        colorHex,
+        description: description || null,
+        sortOrder: 0,
+        isSystemFolder: false
+      },
+      include: {
+        _count: {
+          select: {
+            assets: true,
+            subFolders: true
+          }
+        }
+      }
+    });
+
+    res.status(201).json(folder);
+  } catch (error: any) {
+    console.error('[AssetController] Create folder error:', error);
+    if (error.code === 'P2002') {
+      res.status(400).json({ error: 'A folder with this name already exists' });
+    } else {
+      res.status(501).json({ error: 'Folder management not available in production schema' });
+    }
+  }
 });
 
 export const updateFolder = asyncHandler(async (req: Request, res: Response) => {
-  res.status(501).json({ error: 'Folder management not yet implemented' });
+  const restaurantId = parseInt(req.params.restaurantId);
+  const { id } = req.params;
+  const { name, colorHex, description, sortOrder } = req.body;
+
+  try {
+    // Verify ownership
+    const existingFolder = await prisma.assetFolder.findFirst({
+      where: {
+        id: id,
+        restaurantId: restaurantId
+      }
+    });
+
+    if (!existingFolder) {
+      return res.status(404).json({ error: 'Folder not found or access denied' });
+    }
+
+    const folder = await prisma.assetFolder.update({
+      where: { id: id },
+      data: {
+        ...(name && { name }),
+        ...(colorHex && { colorHex }),
+        ...(description !== undefined && { description }),
+        ...(sortOrder !== undefined && { sortOrder })
+      },
+      include: {
+        _count: {
+          select: {
+            assets: true,
+            subFolders: true
+          }
+        }
+      }
+    });
+
+    res.json(folder);
+  } catch (error: any) {
+    console.error('[AssetController] Update folder error:', error);
+    res.status(501).json({ error: 'Folder management not available in production schema' });
+  }
 });
 
 export const deleteFolder = asyncHandler(async (req: Request, res: Response) => {
-  res.status(501).json({ error: 'Folder management not yet implemented' });
+  const restaurantId = parseInt(req.params.restaurantId);
+  const { id } = req.params;
+
+  try {
+    // Verify ownership and check for assets/subfolders
+    const folder = await prisma.assetFolder.findFirst({
+      where: {
+        id: id,
+        restaurantId: restaurantId
+      },
+      include: {
+        _count: {
+          select: {
+            assets: true,
+            subFolders: true
+          }
+        }
+      }
+    });
+
+    if (!folder) {
+      return res.status(404).json({ error: 'Folder not found or access denied' });
+    }
+
+    if (folder._count.assets > 0 || folder._count.subFolders > 0) {
+      return res.status(400).json({ 
+        error: 'Cannot delete folder that contains assets or subfolders. Move or delete contents first.' 
+      });
+    }
+
+    await prisma.assetFolder.delete({
+      where: { id: id }
+    });
+
+    res.json({ message: 'Folder deleted successfully' });
+  } catch (error: any) {
+    console.error('[AssetController] Delete folder error:', error);
+    res.status(501).json({ error: 'Folder management not available in production schema' });
+  }
 });
 
 export const trackAssetUsage = asyncHandler(async (req: Request, res: Response) => {

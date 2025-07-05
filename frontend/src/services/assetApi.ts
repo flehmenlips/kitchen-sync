@@ -130,30 +130,30 @@ export const assetApi = {
     return response.data;
   },
 
-  // Update asset metadata
-  async updateAsset(assetId: string, data: {
+  // Update asset metadata - FIXED: Use correct endpoint with restaurantId
+  async updateAsset(restaurantId: number, assetId: string, data: {
     fileName?: string;
     altText?: string;
     description?: string;
     tags?: string;
     folderId?: string;
   }): Promise<Asset> {
-    const response = await api.put(`/assets/assets/${assetId}`, data);
+    const response = await api.put(`/assets/restaurants/${restaurantId}/assets/${assetId}`, data);
     return response.data;
   },
 
-  // Delete asset
-  async deleteAsset(assetId: string): Promise<void> {
-    await api.delete(`/assets/assets/${assetId}`);
+  // Delete asset - FIXED: Use correct endpoint with restaurantId
+  async deleteAsset(restaurantId: number, assetId: string): Promise<void> {
+    await api.delete(`/assets/restaurants/${restaurantId}/assets/${assetId}`);
   },
 
-  // Track asset usage
-  async trackAssetUsage(assetId: string, usage: {
+  // Track asset usage - FIXED: Use correct endpoint with restaurantId
+  async trackAssetUsage(restaurantId: number, assetId: string, usage: {
     moduleName: string;
     referenceId: string;
     referenceType: string;
   }): Promise<void> {
-    await api.post(`/assets/assets/${assetId}/usage`, usage);
+    await api.post(`/assets/restaurants/${restaurantId}/assets/${assetId}/track-usage`, usage);
   },
 
   // Get asset folders
@@ -173,20 +173,20 @@ export const assetApi = {
     return response.data;
   },
 
-  // Update folder
-  async updateFolder(folderId: string, data: {
+  // Update folder - FIXED: Use correct endpoint with restaurantId
+  async updateFolder(restaurantId: number, folderId: string, data: {
     name?: string;
     colorHex?: string;
     description?: string;
     sortOrder?: number;
   }): Promise<AssetFolder> {
-    const response = await api.put(`/assets/folders/${folderId}`, data);
+    const response = await api.put(`/assets/restaurants/${restaurantId}/folders/${folderId}`, data);
     return response.data;
   },
 
-  // Delete folder
-  async deleteFolder(folderId: string): Promise<void> {
-    await api.delete(`/assets/folders/${folderId}`);
+  // Delete folder - FIXED: Use correct endpoint with restaurantId
+  async deleteFolder(restaurantId: number, folderId: string): Promise<void> {
+    await api.delete(`/assets/restaurants/${restaurantId}/folders/${folderId}`);
   },
 
   // Get asset analytics
@@ -195,22 +195,48 @@ export const assetApi = {
     return response.data;
   },
 
-  // Get asset by ID (for detailed view)
-  async getAsset(assetId: string): Promise<Asset> {
-    const response = await api.get(`/assets/assets/${assetId}`);
+  // Get asset by ID (for detailed view) - FIXED: Use correct endpoint with restaurantId
+  async getAsset(restaurantId: number, assetId: string): Promise<Asset> {
+    const response = await api.get(`/assets/restaurants/${restaurantId}/assets/${assetId}`);
     return response.data;
   },
 
-  // Bulk operations
-  async bulkDelete(assetIds: string[]): Promise<void> {
-    await api.post('/assets/bulk/delete', { assetIds });
+  // Bulk operations - FIXED: Use correct endpoints with restaurantId
+  async bulkDelete(restaurantId: number, assetIds: string[]): Promise<void> {
+    await api.post(`/assets/restaurants/${restaurantId}/bulk/delete`, { assetIds });
   },
 
-  async bulkMove(assetIds: string[], folderId: string): Promise<void> {
-    await api.post('/assets/bulk/move', { assetIds, folderId });
+  async bulkMove(restaurantId: number, assetIds: string[], folderId: string): Promise<void> {
+    await api.post(`/assets/restaurants/${restaurantId}/bulk/move`, { assetIds, folderId });
   },
 
-  async bulkTag(assetIds: string[], tags: string[]): Promise<void> {
-    await api.post('/assets/bulk/tag', { assetIds, tags });
+  async bulkTag(restaurantId: number, assetIds: string[], tags: string[]): Promise<void> {
+    await api.post(`/assets/restaurants/${restaurantId}/bulk/tag`, { assetIds, tags });
+  },
+
+  // Import assets from Cloudinary
+  async importAllAssets(restaurantId: number): Promise<{
+    success: boolean;
+    message: string;
+    imported: number;
+    totalCloudinary: number;
+    totalDatabase: number;
+    skipped: number;
+  }> {
+    const response = await api.post(`/assets/restaurants/${restaurantId}/import-all`);
+    return response.data;
+  },
+
+  // Test API connection
+  async testApi(restaurantId: number): Promise<{
+    success: boolean;
+    message: string;
+    restaurantId: number;
+    userId: number;
+    environment: string;
+    timestamp: string;
+  }> {
+    const response = await api.get(`/assets/restaurants/${restaurantId}/test`);
+    return response.data;
   }
 }; 

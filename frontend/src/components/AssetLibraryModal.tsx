@@ -350,19 +350,18 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
     try {
       console.log('[AssetLibrary] Starting FULL historical import for restaurant:', currentRestaurant.id);
       
-      const response = await api.post(`/assets/restaurants/${currentRestaurant.id}/import-all`);
-      console.log('[AssetLibrary] Full import result:', response.data);
+      const result = await assetApi.importAllAssets(currentRestaurant.id);
+      console.log('[AssetLibrary] Full import result:', result);
       
       // Refresh the asset list first
       await fetchAssets();
       
       // Show detailed success message
-      if (response.data.success) {
-        const message = `🎉 Historical import complete! Successfully imported ${response.data.imported} assets.`;
+      if (result.success) {
+        const message = `🎉 Historical import complete! Successfully imported ${result.imported} assets.`;
         alert(message);
       } else {
-        // Handle case where response isn't in expected format
-        console.warn('[AssetLibrary] Unexpected response format:', response.data);
+        console.warn('[AssetLibrary] Unexpected response format:', result);
         alert('✅ Import completed successfully!');
       }
       
@@ -411,11 +410,18 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
     
     try {
       setLoading(true);
-      // TODO: Implement asset update API call
-      // await assetApi.updateAsset(currentRestaurant.id, selectedAsset.id, editAssetData);
       
-      console.log('[AssetLibrary] Asset edit would save:', editAssetData);
-      alert('Asset edit functionality coming soon!');
+      // Prepare update data (only fields supported in production schema)
+      const updateData = {
+        fileName: editAssetData.fileName,
+        altText: editAssetData.altText,
+        // Note: description and tags are not supported in production schema yet
+      };
+      
+      // Update the asset
+      await assetApi.updateAsset(currentRestaurant.id, selectedAsset.id, updateData);
+      
+      console.log('[AssetLibrary] Asset updated successfully:', updateData);
       
       setEditAssetDialogOpen(false);
       await fetchAssets();
@@ -438,13 +444,14 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
     
     try {
       setLoading(true);
-      // TODO: Implement asset delete API call
-      // await assetApi.deleteAsset(currentRestaurant.id, selectedAsset.id);
       
-      console.log('[AssetLibrary] Asset delete would remove:', selectedAsset.id);
-      alert('Asset delete functionality coming soon!');
+      // Delete the asset
+      await assetApi.deleteAsset(currentRestaurant.id, selectedAsset.id);
+      
+      console.log('[AssetLibrary] Asset deleted successfully:', selectedAsset.id);
       
       setDeleteConfirmOpen(false);
+      setSelectedAsset(null);
       await fetchAssets();
     } catch (error) {
       console.error('[AssetLibrary] Delete failed:', error);
@@ -492,10 +499,9 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
         console.warn('[AssetLibrary] Customer auth detected in sessionStorage - this may interfere with admin API calls');
       }
       
-      const response = await api.get(`/assets/restaurants/${currentRestaurant.id}/test`);
-      console.log('[AssetLibrary] Test API response:', response.data);
+      const result = await assetApi.testApi(currentRestaurant.id);
+      console.log('[AssetLibrary] Test API response:', result);
       
-      const result = response.data;
       alert(`✅ API Test Success!\n\nRestaurant ID: ${result.restaurantId}\nUser ID: ${result.userId}\nEnvironment: ${result.environment}\nTimestamp: ${result.timestamp}`);
       
     } catch (error: any) {
