@@ -1,33 +1,52 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
 import {
   Box,
-  Button,
   Container,
   Typography,
-  Grid,
+  Button,
   Card,
   CardContent,
   CardMedia,
+  Grid,
   Paper,
+  TextField,
+  Chip,
+  Avatar,
   List,
   ListItem,
   ListItemText,
-  TableContainer,
+  Divider,
+  IconButton,
+  Link as MuiLink,
   Table,
-  TableHead,
   TableBody,
   TableCell,
-  TableRow,
-  Divider,
-  TextField,
-  Avatar,
-  Rating,
-  ListItemIcon,
-  Chip
+  TableContainer,
+  TableHead,
+  TableRow
 } from '@mui/material';
+import {
+  PlayArrow,
+  Pause,
+  VolumeUp,
+  VolumeOff,
+  Fullscreen,
+  ChevronLeft,
+  ChevronRight,
+  Star,
+  StarBorder,
+  Close,
+  ArrowForward,
+  LocationOn,
+  Phone,
+  Email,
+  Schedule,
+  CheckCircle,
+  Instagram,
+  EventSeat
+} from '@mui/icons-material';
 import { ContentBlock, BLOCK_TYPES } from '../../services/contentBlockService';
-import { CheckCircle, EventSeat, LocationOn, Instagram, Star } from '@mui/icons-material';
 import { useParallax } from '../../hooks/useParallax';
 import { useVideoBackground } from '../../hooks/useVideoBackground';
 
@@ -633,7 +652,7 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
               )}
               {block.buttonText && block.buttonLink && (
                 <Button
-                  component={Link}
+                  component={RouterLink}
                   to={safeRender(block.buttonLink)}
                   variant="contained"
                   size="large"
@@ -948,7 +967,7 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
               )}
               {block.buttonText && block.buttonLink && (
                 <Button
-                  component={Link}
+                  component={RouterLink}
                   to={safeRender(block.buttonLink)}
                   variant={heroSettings.buttonVariant || "contained"}
                   size={heroSettings.buttonSize || "large"}
@@ -996,7 +1015,7 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
             <Box sx={{ textAlign: 'center' }}>
               {block.buttonText && block.buttonLink && (
                 <Button
-                  component={Link}
+                  component={RouterLink}
                   to={safeRender(block.buttonLink)}
                   variant="contained"
                   size="large"
@@ -1092,7 +1111,7 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
                 )}
                 {block.buttonText && block.buttonLink && (
                   <Button
-                    component={Link}
+                    component={RouterLink}
                     to={safeRender(block.buttonLink)}
                     variant="contained"
                     sx={{ mt: 2 }}
@@ -1201,9 +1220,9 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
                         <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Typography variant="body1" sx={{ fontWeight: 500 }}>📞</Typography>
                           <Typography variant="body1">
-                            <Link href={`tel:${contactData.phone}`} sx={{ textDecoration: 'none', color: 'inherit' }}>
+                            <MuiLink href={`tel:${contactData.phone}`} sx={{ textDecoration: 'none', color: 'inherit' }}>
                               {safeRender(contactData.phone)}
-                            </Link>
+                            </MuiLink>
                           </Typography>
                         </Box>
                       )}
@@ -1212,9 +1231,9 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
                         <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Typography variant="body1" sx={{ fontWeight: 500 }}>📧</Typography>
                           <Typography variant="body1">
-                            <Link href={`mailto:${contactData.email}`} sx={{ textDecoration: 'none', color: 'inherit' }}>
+                            <MuiLink href={`mailto:${contactData.email}`} sx={{ textDecoration: 'none', color: 'inherit' }}>
                               {safeRender(contactData.email)}
-                            </Link>
+                            </MuiLink>
                           </Typography>
                         </Box>
                       )}
@@ -1249,13 +1268,13 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
                             url && (
                               <Button
                                 key={platform}
-                                component={Link}
+                                component={MuiLink}
                                 href={url}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 variant="outlined"
                                 size="small"
-                                sx={{ textTransform: 'capitalize' }}
+                                sx={{ textTransform: 'capitalize', textDecoration: 'none' }}
                               >
                                 {platform}
                               </Button>
@@ -1268,8 +1287,8 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
                     {/* CTA Button */}
                     {block.buttonText && block.buttonLink && (
                       <Button
-                        component={Link}
-                        href={safeRender(block.buttonLink)}
+                        component={RouterLink}
+                        to={safeRender(block.buttonLink)}
                         variant="contained"
                         sx={{ 
                           mt: 3,
