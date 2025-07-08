@@ -14,8 +14,15 @@ import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { asyncHandler } from '../utils/asyncHandler';
 import { uploadImage, deleteImage, listRestaurantAssets, validateAssetOwnership } from '../services/cloudinaryService';
+import { uploadToLocal, deleteFromLocal, listLocalAssets } from '../services/localStorageService';
 
 const prisma = new PrismaClient();
+
+// Storage mode configuration
+const STORAGE_MODE = process.env.ASSET_STORAGE_MODE || 'cloudinary';
+const USE_LOCAL_STORAGE = STORAGE_MODE === 'local' || process.env.NODE_ENV === 'development';
+
+console.log(`🔧 Asset storage mode: ${USE_LOCAL_STORAGE ? 'LOCAL' : 'CLOUDINARY'}`);
 
 // Use require for multer to avoid TypeScript issues temporarily
 const multer = require('multer');
@@ -297,11 +304,18 @@ export const uploadAsset = asyncHandler(async (req: Request, res: Response) => {
     
     fs.writeFileSync(tempPath, req.file.buffer);
 
-    // Upload to Cloudinary with restaurant-specific folder
-    if (!tempPath) {
-      throw new Error('Temp file path is null');
+    // Upload to storage (Cloudinary or Local based on configuration)
+    let uploadResult;
+    
+    if (USE_LOCAL_STORAGE) {
+      console.log('[AssetController] Using LOCAL storage mode');
+      uploadResult = await uploadToLocal(req.file, `restaurants/${restaurantId}/assets`);
+      console.log('[AssetController] Local upload result:', uploadResult);
+    } else {
+      console.log('[AssetController] Using CLOUDINARY storage mode');
+      uploadResult = await uploadImage(tempPath, `restaurants/${restaurantId}/assets`);
+      console.log('[AssetController] Cloudinary upload result:', uploadResult);
     }
-    const cloudinaryResult = await uploadImage(tempPath, `restaurants/${restaurantId}/assets`);
 
     // Get folder path if folderId provided and validate it exists
     let folderPath = null;
@@ -350,13 +364,13 @@ export const uploadAsset = asyncHandler(async (req: Request, res: Response) => {
       restaurantId,
       assetType,
       fileName: req.file.originalname,
-      fileUrl: cloudinaryResult.url,
-      fileSize: req.file.size,
+      fileUrl: uploadResult.url,
+      fileSize: uploadResult.bytes || req.file.size,
       mimeType: req.file.mimetype,
       altText: altText || req.file.originalname,
       isPrimary: false,
       dimensions: null,
-      cloudinaryPublicId: cloudinaryResult.publicId // Store the Cloudinary public ID
+      cloudinaryPublicId: uploadResult.publicId // Store the public ID (for both Cloudinary and local)
     });
 
     // Clean up temp file
