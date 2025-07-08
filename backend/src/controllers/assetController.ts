@@ -313,6 +313,9 @@ export const uploadAsset = asyncHandler(async (req: Request, res: Response) => {
       console.log('[AssetController] Local upload result:', uploadResult);
     } else {
       console.log('[AssetController] Using CLOUDINARY storage mode');
+      if (!tempPath) {
+        throw new Error('Temp file path is required for Cloudinary upload');
+      }
       uploadResult = await uploadImage(tempPath, `restaurants/${restaurantId}/assets`);
       console.log('[AssetController] Cloudinary upload result:', uploadResult);
     }
@@ -365,7 +368,7 @@ export const uploadAsset = asyncHandler(async (req: Request, res: Response) => {
       assetType,
       fileName: req.file.originalname,
       fileUrl: uploadResult.url,
-      fileSize: uploadResult.bytes || req.file.size,
+      fileSize: ('bytes' in uploadResult ? uploadResult.bytes : req.file.size) || req.file.size,
       mimeType: req.file.mimetype,
       altText: altText || req.file.originalname,
       isPrimary: false,
