@@ -350,6 +350,37 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
     }
   };
 
+  // Import ALL historical assets from Cloudinary
+  const handleImportAllAssets = async () => {
+    if (!currentRestaurant) {
+      setError('No restaurant selected');
+      return;
+    }
+    
+    setImporting(true);
+    setError('');
+    
+    try {
+      console.log('[AssetLibrary] Starting ALL asset import for restaurant:', currentRestaurant.id);
+      
+      const response = await assetApi.importAllAssets(currentRestaurant.id);
+      console.log('[AssetLibrary] Import ALL result:', response);
+      
+      // Show success message
+      setError(`✅ Successfully imported ${response.imported} assets from Cloudinary! (${response.skipped} skipped, ${response.totalDatabase} total in database)`);
+      
+      // Refresh the asset list
+      await fetchAssets();
+      await fetchFolders();
+      
+    } catch (error: any) {
+      console.error('[AssetLibrary] Import ALL error:', error);
+      setError(`Import failed: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setImporting(false);
+    }
+  };
+
   // Asset Context Menu Handlers
   const handleAssetMenuClick = (event: React.MouseEvent<HTMLElement>, asset: Asset) => {
     event.stopPropagation();
@@ -1235,7 +1266,7 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
             Are you sure you want to delete folder "{selectedFolder?.name}"?
           </Typography>
           
-          {selectedFolder && (selectedFolder._count?.assets > 0 || selectedFolder._count?.subFolders > 0) && (
+          {selectedFolder && (selectedFolder._count?.assets || 0) > 0 || (selectedFolder._count?.subFolders || 0) > 0 && (
             <Box sx={{ mb: 2, p: 2, bgcolor: 'warning.lighter', borderRadius: 1 }}>
               <Typography variant="body2" color="warning.main" sx={{ mb: 1 }}>
                 ⚠️ This folder contains:
