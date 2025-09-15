@@ -42,7 +42,7 @@
     "node": ">=20.0.0 <24.0.0"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.40.1",
+    "@anthropic-ai/sdk": "^0.62.0",
     "@prisma/client": "^6.7.0",
     "@sendgrid/mail": "^8.1.5",
     "@types/bcrypt": "^5.0.2",
