@@ -654,7 +654,6 @@ const ContentBlocksPage: React.FC = () => {
         <Typography variant="body1" color="text.secondary" sx={{ ml: 15, fontSize: '1rem' }}>
           Manage pages and their content blocks for your customer-facing website
         </Typography>
-        </Box>
 
         {/* Main Content Container */}
         <Paper sx={{ 
