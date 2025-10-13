@@ -125,33 +125,91 @@ const SortableBlockCard: React.FC<{ block: ContentBlock; onEdit: () => void; onD
   };
 
   return (
-    <Card ref={setNodeRef} style={style} sx={{ mb: 2, opacity: block.isActive ? 1 : 0.6 }}>
+    <Card 
+      ref={setNodeRef} 
+      style={style} 
+      sx={{ 
+        mb: 2, 
+        opacity: block.isActive ? 1 : 0.6,
+        background: 'rgba(255,255,255,0.7)',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(255,255,255,0.3)',
+        borderRadius: '16px',
+        overflow: 'hidden',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+        transition: 'all 0.3s ease',
+        '&:hover': {
+          transform: 'translateY(-4px)',
+          boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
+          background: 'rgba(255,255,255,0.8)'
+        }
+      }}
+    >
       <CardContent>
         <Box display="flex" alignItems="flex-start">
-          <IconButton {...attributes} {...listeners} sx={{ cursor: 'grab', mr: 1 }}>
-            <DragIcon />
+          <IconButton 
+            {...attributes} 
+            {...listeners} 
+            sx={{ 
+              cursor: 'grab', 
+              mr: 1,
+              background: 'rgba(59, 130, 246, 0.1)',
+              borderRadius: '8px',
+              '&:hover': {
+                background: 'rgba(59, 130, 246, 0.2)'
+              }
+            }}
+          >
+            <DragIcon sx={{ color: '#3b82f6' }} />
           </IconButton>
           
           <Box flexGrow={1}>
-            <Box display="flex" alignItems="center" mb={1}>
+            <Box display="flex" alignItems="center" mb={2}>
               <Chip 
                 label={BLOCK_TYPE_LABELS[block.blockType as keyof typeof BLOCK_TYPE_LABELS] || block.blockType} 
                 size="small" 
-                color="primary" 
-                sx={{ mr: 1 }}
+                sx={{ 
+                  mr: 1,
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                  color: 'white',
+                  fontWeight: 600
+                }}
               />
               <Chip 
                 label={block.page?.name || `Page ${block.pageId}`} 
                 size="small" 
                 variant="outlined"
-                sx={{ mr: 1 }}
+                sx={{ 
+                  mr: 1,
+                  border: '1px solid rgba(59, 130, 246, 0.3)',
+                  color: '#3b82f6',
+                  background: 'rgba(59, 130, 246, 0.05)'
+                }}
               />
               {!block.isActive && (
-                <Chip label="Inactive" size="small" color="warning" />
+                <Chip 
+                  label="Inactive" 
+                  size="small" 
+                  sx={{
+                    background: 'rgba(245, 158, 11, 0.1)',
+                    color: '#f59e0b',
+                    border: '1px solid rgba(245, 158, 11, 0.3)'
+                  }}
+                />
               )}
             </Box>
             
-            <Typography variant="h6" gutterBottom>
+            <Typography 
+              variant="h6" 
+              gutterBottom
+              sx={{
+                background: 'linear-gradient(135deg, #1e40af 0%, #8b5cf6 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                fontWeight: 700
+              }}
+            >
               {block.title || 'Untitled Block'}
             </Typography>
             
@@ -449,26 +507,99 @@ const ContentBlocksPage: React.FC = () => {
 
   if (loading) {
     return (
-      <Container maxWidth="lg">
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-          <CircularProgress />
-        </Box>
-      </Container>
+      <Box sx={{
+        background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+        minHeight: '100vh',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center'
+      }}>
+        <Paper sx={{
+          background: 'rgba(255,255,255,0.7)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255,255,255,0.3)',
+          borderRadius: '20px',
+          p: 4,
+          textAlign: 'center',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+        }}>
+          <CircularProgress sx={{ color: '#3b82f6' }} />
+          <Typography variant="h6" color="text.secondary" sx={{ mt: 2 }}>
+            Loading content blocks...
+          </Typography>
+        </Paper>
+      </Box>
     );
   }
 
   return (
-    <Container maxWidth="lg">
-      <Box mb={4}>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          <Typography variant="h4">Content & Page Management</Typography>
-          <Box display="flex" gap={1} alignItems="center">
+    <Box sx={{
+      background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+      minHeight: '100vh',
+      py: 4
+    }}>
+      <Container maxWidth="lg">
+        {/* Hero Header */}
+        <Box sx={{ mb: 4 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '64px',
+              height: '64px',
+              background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+              borderRadius: '20px',
+              boxShadow: '0 8px 24px rgba(59, 130, 246, 0.3)',
+              mr: 3
+            }}>
+              <SettingsIcon sx={{ fontSize: 32, color: 'white' }} />
+            </Box>
+            <Box>
+              <Typography 
+                variant="h4" 
+                component="h1"
+                fontWeight="800"
+                sx={{
+                  background: 'linear-gradient(135deg, #1e40af 0%, #8b5cf6 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  mb: 0.5
+                }}
+              >
+                Content & Page Management
+              </Typography>
+              <Typography variant="body1" color="text.secondary" sx={{ fontSize: '1.1rem' }}>
+                Manage your website content blocks and pages
+              </Typography>
+            </Box>
+          </Box>
+          
+          {/* Action Buttons */}
+          <Box display="flex" gap={2} flexDirection={{ xs: 'column', sm: 'row' }} sx={{ ml: 15 }}>
             <Button
               startIcon={<PreviewIcon />}
               href={buildRestaurantUrl(currentRestaurant?.slug || 'restaurant')}
               target="_blank"
               variant="outlined"
-              size="small"
+              sx={{
+                border: '2px solid rgba(59, 130, 246, 0.3)',
+                borderRadius: '16px',
+                px: 4,
+                py: 1.5,
+                fontSize: '1rem',
+                fontWeight: 600,
+                color: '#3b82f6',
+                background: 'rgba(255,255,255,0.7)',
+                backdropFilter: 'blur(20px)',
+                '&:hover': {
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  border: '2px solid rgba(59, 130, 246, 0.5)',
+                  transform: 'translateY(-2px)'
+                },
+                transition: 'all 0.3s ease'
+              }}
             >
               Preview Site
             </Button>
@@ -476,7 +607,23 @@ const ContentBlocksPage: React.FC = () => {
               variant="outlined"
               startIcon={<PagesIcon />}
               onClick={openCreatePageDialog}
-              size="small"
+              sx={{
+                border: '2px solid rgba(139, 92, 246, 0.3)',
+                borderRadius: '16px',
+                px: 4,
+                py: 1.5,
+                fontSize: '1rem',
+                fontWeight: 600,
+                color: '#8b5cf6',
+                background: 'rgba(255,255,255,0.7)',
+                backdropFilter: 'blur(20px)',
+                '&:hover': {
+                  background: 'rgba(139, 92, 246, 0.1)',
+                  border: '2px solid rgba(139, 92, 246, 0.5)',
+                  transform: 'translateY(-2px)'
+                },
+                transition: 'all 0.3s ease'
+              }}
             >
               Add Page
             </Button>
@@ -484,19 +631,73 @@ const ContentBlocksPage: React.FC = () => {
               variant="contained"
               startIcon={<AddIcon />}
               onClick={openCreateDialog}
-              size="small"
+              sx={{
+                background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                borderRadius: '16px',
+                px: 4,
+                py: 1.5,
+                fontSize: '1rem',
+                fontWeight: 600,
+                boxShadow: '0 8px 32px rgba(59, 130, 246, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
+                  boxShadow: '0 12px 40px rgba(59, 130, 246, 0.4)',
+                  transform: 'translateY(-2px)'
+                },
+                transition: 'all 0.3s ease'
+              }}
             >
               Add Block
             </Button>
           </Box>
         </Box>
-        <Typography variant="body1" color="text.secondary">
+        <Typography variant="body1" color="text.secondary" sx={{ ml: 15, fontSize: '1rem' }}>
           Manage pages and their content blocks for your customer-facing website
         </Typography>
-      </Box>
+        </Box>
 
-      <Paper sx={{ mb: 3 }}>
-        <Tabs value={selectedPageId} onChange={(e, v) => setSelectedPageId(v)}>
+        {/* Main Content Container */}
+        <Paper sx={{ 
+          background: 'rgba(255,255,255,0.7)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255,255,255,0.3)',
+          borderRadius: '24px',
+          overflow: 'hidden',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+          mb: 3
+        }}>
+          <Box sx={{ 
+            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%)',
+            borderBottom: '1px solid rgba(59, 130, 246, 0.1)'
+          }}>
+            <Tabs 
+              value={selectedPageId} 
+              onChange={(e, v) => setSelectedPageId(v)}
+              variant="scrollable"
+              scrollButtons="auto"
+              sx={{
+                '& .MuiTab-root': {
+                  fontWeight: 600,
+                  fontSize: '1rem',
+                  textTransform: 'none',
+                  borderRadius: '12px 12px 0 0',
+                  mx: 0.5,
+                  minHeight: 56,
+                  '&.Mui-selected': {
+                    background: 'rgba(255,255,255,0.8)',
+                    color: '#1e40af'
+                  },
+                  '&:hover': {
+                    background: 'rgba(255,255,255,0.5)'
+                  }
+                },
+                '& .MuiTabs-indicator': {
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                  height: '3px',
+                  borderRadius: '2px'
+                }
+              }}
+            >
           <Tab label="All Pages" value="all" />
           {pages.map(page => (
             <Tab 
@@ -759,7 +960,8 @@ const ContentBlocksPage: React.FC = () => {
         page={editingPage}
         onSave={handlePageSave}
       />
-    </Container>
+      </Container>
+    </Box>
   );
 };
 
