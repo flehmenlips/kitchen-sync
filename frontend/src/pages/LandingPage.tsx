@@ -10,9 +10,6 @@ import {
   CardContent,
   AppBar,
   Toolbar,
-  useTheme,
-  useMediaQuery,
-  IconButton,
   List,
   ListItem,
   ListItemIcon,
@@ -27,19 +24,14 @@ import {
   DashboardCustomize,
   CheckCircle,
   TrendingUp,
-  Speed,
-  Group,
   ArrowForward,
   Star,
-  AttachMoney,
 } from '@mui/icons-material';
 import { PLAN_DETAILS } from '../services/billingService';
 import { useAuth } from '../context/AuthContext'; // Adjust path as needed
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { user } = useAuth();
 
   const features = [
@@ -104,23 +96,106 @@ const LandingPage: React.FC = () => {
   const plans = planOrder.map((key) => PLAN_DETAILS[key]);
 
   return (
-    <Box sx={{ flexGrow: 1 }}>
+    <Box sx={{ 
+      flexGrow: 1,
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 25%, #8b5cf6 75%, #a855f7 100%)',
+      position: 'relative',
+      overflow: 'hidden'
+    }}>
+      {/* Animated background elements */}
+      <Box sx={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: `
+          radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+          radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+          radial-gradient(circle at 40% 40%, rgba(120, 119, 198, 0.2) 0%, transparent 50%)
+        `,
+        animation: 'float 20s ease-in-out infinite'
+      }} />
+
       {/* Navigation */}
-      <AppBar position="fixed" color="transparent" elevation={0} sx={{ backdropFilter: 'blur(20px)', backgroundColor: 'rgba(255,255,255,0.9)' }}>
+      <AppBar 
+        position="fixed" 
+        color="transparent" 
+        elevation={0} 
+        sx={{ 
+          backdropFilter: 'blur(20px)', 
+          backgroundColor: 'rgba(255,255,255,0.1)',
+          borderBottom: '1px solid rgba(255,255,255,0.1)'
+        }}
+      >
         <Toolbar>
-          <Typography variant="h5" sx={{ flexGrow: 1, fontWeight: 'bold', color: 'primary.main' }}>
+          <Typography 
+            variant="h5" 
+            sx={{ 
+              flexGrow: 1, 
+              fontWeight: 800,
+              background: 'linear-gradient(135deg, #ffffff 0%, #e0e7ff 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text'
+            }}
+          >
             KitchenSync
           </Typography>
           {user ? (
-            <Button color="primary" onClick={() => navigate('/dashboard')} sx={{ mr: 2 }}>
+            <Button 
+              onClick={() => navigate('/dashboard')} 
+              sx={{ 
+                mr: 2,
+                color: 'white',
+                border: '1px solid rgba(255,255,255,0.3)',
+                borderRadius: '12px',
+                px: 3,
+                py: 1,
+                '&:hover': {
+                  backgroundColor: 'rgba(255,255,255,0.1)',
+                  border: '1px solid rgba(255,255,255,0.5)'
+                }
+              }}
+            >
               Dashboard
             </Button>
           ) : (
             <>
-              <Button color="primary" onClick={() => navigate('/login')} sx={{ mr: 2 }}>
+              <Button 
+                onClick={() => navigate('/login')} 
+                sx={{ 
+                  mr: 2,
+                  color: 'white',
+                  border: '1px solid rgba(255,255,255,0.3)',
+                  borderRadius: '12px',
+                  px: 3,
+                  py: 1,
+                  '&:hover': {
+                    backgroundColor: 'rgba(255,255,255,0.1)',
+                    border: '1px solid rgba(255,255,255,0.5)'
+                  }
+                }}
+              >
                 Sign In
               </Button>
-              <Button variant="contained" color="primary" onClick={() => navigate('/register')}>
+              <Button 
+                onClick={() => navigate('/register')}
+                sx={{
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                  borderRadius: '12px',
+                  px: 4,
+                  py: 1,
+                  boxShadow: '0 8px 32px rgba(59, 130, 246, 0.3)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
+                    boxShadow: '0 12px 40px rgba(59, 130, 246, 0.4)',
+                    transform: 'translateY(-2px)'
+                  },
+                  transition: 'all 0.3s ease'
+                }}
+              >
                 Start Free Trial
               </Button>
             </>
@@ -134,28 +209,100 @@ const LandingPage: React.FC = () => {
           minHeight: '100vh',
           display: 'flex',
           alignItems: 'center',
-          background: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)',
           color: 'white',
           pt: 8,
+          position: 'relative',
+          zIndex: 1
         }}
       >
         <Container maxWidth="lg">
-          <Grid container spacing={4} alignItems="center">
+          <Grid container spacing={6} alignItems="center">
             <Grid item xs={12} md={6}>
-              <Typography variant="h2" component="h1" gutterBottom fontWeight="bold">
+              {/* Floating stats cards */}
+              <Box sx={{ mb: 4, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <Paper sx={{
+                  background: 'rgba(255,255,255,0.1)',
+                  backdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  borderRadius: '16px',
+                  px: 3,
+                  py: 2,
+                  minWidth: '120px'
+                }}>
+                  <Typography variant="h4" fontWeight="bold" color="white">
+                    10K+
+                  </Typography>
+                  <Typography variant="body2" color="rgba(255,255,255,0.8)">
+                    Restaurants
+                  </Typography>
+                </Paper>
+                <Paper sx={{
+                  background: 'rgba(255,255,255,0.1)',
+                  backdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  borderRadius: '16px',
+                  px: 3,
+                  py: 2,
+                  minWidth: '120px'
+                }}>
+                  <Typography variant="h4" fontWeight="bold" color="white">
+                    99.9%
+                  </Typography>
+                  <Typography variant="body2" color="rgba(255,255,255,0.8)">
+                    Uptime
+                  </Typography>
+                </Paper>
+              </Box>
+
+              <Typography 
+                variant="h2" 
+                component="h1" 
+                gutterBottom 
+                fontWeight="800"
+                sx={{
+                  background: 'linear-gradient(135deg, #ffffff 0%, #e0e7ff 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  fontSize: { xs: '2.5rem', md: '3.5rem' },
+                  lineHeight: 1.2
+                }}
+              >
                 All-in-One Restaurant Management Platform
               </Typography>
-              <Typography variant="h5" paragraph sx={{ mb: 4, opacity: 0.9 }}>
+              <Typography 
+                variant="h5" 
+                paragraph 
+                sx={{ 
+                  mb: 4, 
+                  opacity: 0.9,
+                  fontSize: { xs: '1.1rem', md: '1.3rem' },
+                  lineHeight: 1.6
+                }}
+              >
                 From recipes to reservations, manage every aspect of your restaurant with one powerful system.
               </Typography>
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', mb: 3 }}>
                 <Button
-                  variant="contained"
                   size="large"
-                  color="secondary"
                   endIcon={<ArrowForward />}
                   onClick={() => navigate('/register')}
-                  sx={{ px: 4, py: 1.5 }}
+                  sx={{ 
+                    background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                    color: '#1e40af',
+                    borderRadius: '16px',
+                    px: 5,
+                    py: 2,
+                    fontSize: '1.1rem',
+                    fontWeight: 600,
+                    boxShadow: '0 12px 40px rgba(0,0,0,0.2)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 16px 48px rgba(0,0,0,0.3)'
+                    },
+                    transition: 'all 0.3s ease'
+                  }}
                 >
                   Start 14-Day Free Trial
                 </Button>
@@ -165,59 +312,201 @@ const LandingPage: React.FC = () => {
                   onClick={() => window.open('https://www.youtube.com/watch?v=dQw4w9WgXcQ', '_blank')}
                   sx={{ 
                     color: 'white', 
-                    borderColor: 'white',
+                    borderColor: 'rgba(255,255,255,0.4)',
+                    borderRadius: '16px',
                     px: 4,
-                    py: 1.5,
+                    py: 2,
+                    fontSize: '1.1rem',
+                    fontWeight: 600,
+                    backdropFilter: 'blur(20px)',
+                    backgroundColor: 'rgba(255,255,255,0.1)',
                     '&:hover': {
-                      borderColor: 'white',
-                      backgroundColor: 'rgba(255,255,255,0.1)',
-                    }
+                      borderColor: 'rgba(255,255,255,0.6)',
+                      backgroundColor: 'rgba(255,255,255,0.2)',
+                      transform: 'translateY(-2px)'
+                    },
+                    transition: 'all 0.3s ease'
                   }}
                 >
                   Watch Demo
                 </Button>
               </Box>
-              <Typography variant="body2" sx={{ mt: 2, opacity: 0.8 }}>
+              <Typography variant="body2" sx={{ opacity: 0.8, fontSize: '0.95rem' }}>
                 No credit card required • Setup in minutes • Cancel anytime
               </Typography>
+            </Grid>
+            
+            {/* Hero Visual */}
+            <Grid item xs={12} md={6}>
+              <Box sx={{
+                position: 'relative',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center'
+              }}>
+                {/* Glass-morphism dashboard preview */}
+                <Paper sx={{
+                  background: 'rgba(255,255,255,0.1)',
+                  backdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  borderRadius: '24px',
+                  p: 4,
+                  width: '100%',
+                  maxWidth: '500px',
+                  boxShadow: '0 25px 50px rgba(0,0,0,0.2)'
+                }}>
+                  <Typography variant="h6" color="white" fontWeight="600" gutterBottom>
+                    KitchenSync Dashboard
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+                    <Paper sx={{
+                      background: 'rgba(255,255,255,0.2)',
+                      borderRadius: '12px',
+                      p: 2,
+                      flex: 1,
+                      textAlign: 'center'
+                    }}>
+                      <Typography variant="h4" color="white" fontWeight="bold">127</Typography>
+                      <Typography variant="body2" color="rgba(255,255,255,0.8)">Orders</Typography>
+                    </Paper>
+                    <Paper sx={{
+                      background: 'rgba(255,255,255,0.2)',
+                      borderRadius: '12px',
+                      p: 2,
+                      flex: 1,
+                      textAlign: 'center'
+                    }}>
+                      <Typography variant="h4" color="white" fontWeight="bold">$2.4K</Typography>
+                      <Typography variant="body2" color="rgba(255,255,255,0.8)">Revenue</Typography>
+                    </Paper>
+                  </Box>
+                  <Box sx={{
+                    background: 'rgba(255,255,255,0.1)',
+                    borderRadius: '12px',
+                    p: 2,
+                    height: '120px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <Typography variant="body2" color="rgba(255,255,255,0.7)">
+                      Real-time restaurant management
+                    </Typography>
+                  </Box>
+                </Paper>
+              </Box>
             </Grid>
           </Grid>
         </Container>
       </Box>
 
       {/* Features Section */}
-      <Box sx={{ py: 10, backgroundColor: 'background.default' }}>
+      <Box sx={{ 
+        py: 12, 
+        background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+        position: 'relative'
+      }}>
         <Container maxWidth="lg">
-          <Typography variant="h3" align="center" gutterBottom fontWeight="bold">
-            Everything You Need to Run Your Restaurant
-          </Typography>
-          <Typography variant="h6" align="center" paragraph sx={{ mb: 6, color: 'text.secondary' }}>
-            Five powerful modules working together seamlessly
-          </Typography>
+          <Box sx={{ textAlign: 'center', mb: 8 }}>
+            <Typography 
+              variant="h3" 
+              gutterBottom 
+              fontWeight="800"
+              sx={{
+                background: 'linear-gradient(135deg, #1e40af 0%, #8b5cf6 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                fontSize: { xs: '2rem', md: '3rem' }
+              }}
+            >
+              Everything You Need to Run Your Restaurant
+            </Typography>
+            <Typography 
+              variant="h6" 
+              paragraph 
+              sx={{ 
+                mb: 6, 
+                color: 'text.secondary',
+                fontSize: { xs: '1.1rem', md: '1.3rem' },
+                maxWidth: '600px',
+                mx: 'auto'
+              }}
+            >
+              Five powerful modules working together seamlessly
+            </Typography>
+          </Box>
           <Grid container spacing={4}>
             {features.map((feature, index) => (
               <Grid item xs={12} sm={6} md={4} key={index}>
                 <Card 
                   sx={{ 
-                    height: '100%', 
-                    transition: 'transform 0.2s',
+                    height: '100%',
+                    background: 'rgba(255,255,255,0.7)',
+                    backdropFilter: 'blur(20px)',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    borderRadius: '20px',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+                    transition: 'all 0.3s ease',
                     '&:hover': {
                       transform: 'translateY(-8px)',
+                      boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+                      background: 'rgba(255,255,255,0.8)'
                     }
                   }}
-                  elevation={2}
+                  elevation={0}
                 >
                   <CardContent sx={{ textAlign: 'center', p: 4 }}>
-                    <Box sx={{ color: 'primary.main', mb: 2 }}>
-                      {feature.icon}
+                    <Box sx={{ 
+                      mb: 3,
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      width: '80px',
+                      height: '80px',
+                      mx: 'auto',
+                      background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                      borderRadius: '20px',
+                      boxShadow: '0 8px 24px rgba(59, 130, 246, 0.3)'
+                    }}>
+                      <Box sx={{ color: 'white', fontSize: '32px' }}>
+                        {feature.icon}
+                      </Box>
                     </Box>
-                    <Typography variant="h5" gutterBottom fontWeight="bold">
+                    <Typography 
+                      variant="h5" 
+                      gutterBottom 
+                      fontWeight="700"
+                      sx={{
+                        background: 'linear-gradient(135deg, #1e40af 0%, #8b5cf6 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text'
+                      }}
+                    >
                       {feature.title}
                     </Typography>
-                    <Typography variant="subtitle2" color="primary" gutterBottom>
+                    <Typography 
+                      variant="subtitle2" 
+                      gutterBottom 
+                      sx={{
+                        color: '#6b7280',
+                        fontWeight: 600,
+                        fontSize: '0.9rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}
+                    >
                       {feature.subtitle}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography 
+                      variant="body2" 
+                      sx={{
+                        color: '#64748b',
+                        lineHeight: 1.6,
+                        fontSize: '0.95rem'
+                      }}
+                    >
                       {feature.description}
                     </Typography>
                   </CardContent>
@@ -311,7 +600,7 @@ const LandingPage: React.FC = () => {
             Start with a 14-day free trial. No credit card required.
           </Typography>
           <Grid container spacing={4} justifyContent="center">
-            {plans.map((plan, idx) => (
+            {plans.map((plan) => (
               <Grid item xs={12} sm={6} md={3} key={plan.plan}>
                 <Card sx={{ textAlign: 'center', position: 'relative', border: plan.plan === 'PROFESSIONAL' ? '2px solid' : undefined, borderColor: plan.plan === 'PROFESSIONAL' ? 'primary.main' : undefined }}>
                   {plan.plan === 'PROFESSIONAL' && (
