@@ -21,7 +21,6 @@ import {
   MenuItem,
   Alert,
   CircularProgress,
-  Fab,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -34,7 +33,6 @@ import {
   PhotoLibrary,
   Upload,
   Search,
-  FilterList,
   MoreVert,
   Delete,
   Edit,
@@ -46,8 +44,6 @@ import {
   Image,
   VideoFile,
   Description,
-  Add,
-  DriveFileMove,
   Home
 } from '@mui/icons-material';
 import { useRestaurant } from '../context/RestaurantContext';
@@ -375,33 +371,103 @@ export const AssetLibraryPage: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="xl" sx={{ py: 3 }}>
-      {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Box>
-          <Typography variant="h4" component="h1" gutterBottom>
-            Asset Library
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Manage your images, videos, and documents
-          </Typography>
-        </Box>
-        
-        <Box display="flex" gap={2}>
-          <Button
-            variant="outlined"
-            startIcon={importing ? <CircularProgress size={16} /> : <CloudDownload />}
-            onClick={handleImportAll}
-            disabled={importing}
-          >
-            {importing ? 'Importing...' : 'Import from Cloudinary'}
-          </Button>
+    <Box sx={{
+      background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+      minHeight: '100vh',
+      py: 4
+    }}>
+      <Container maxWidth="xl">
+        {/* Hero Header */}
+        <Box sx={{ mb: 4 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '64px',
+              height: '64px',
+              background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+              borderRadius: '20px',
+              boxShadow: '0 8px 24px rgba(59, 130, 246, 0.3)',
+              mr: 3
+            }}>
+              <PhotoLibrary sx={{ fontSize: 32, color: 'white' }} />
+            </Box>
+            <Box>
+              <Typography 
+                variant="h4" 
+                component="h1"
+                fontWeight="800"
+                sx={{
+                  background: 'linear-gradient(135deg, #1e40af 0%, #8b5cf6 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  mb: 0.5
+                }}
+              >
+                Asset Library
+              </Typography>
+              <Typography variant="body1" color="text.secondary" sx={{ fontSize: '1.1rem' }}>
+                Manage your images, videos, and documents
+              </Typography>
+            </Box>
+          </Box>
           
-          <Button variant="contained" startIcon={<Upload />}>
-            Upload Assets
-          </Button>
+          {/* Action Buttons */}
+          <Box display="flex" gap={2} flexDirection={{ xs: 'column', sm: 'row' }} sx={{ ml: 15 }}>
+            <Button
+              variant="outlined"
+              startIcon={importing ? <CircularProgress size={16} /> : <CloudDownload />}
+              onClick={handleImportAll}
+              disabled={importing}
+              sx={{
+                border: '2px solid rgba(59, 130, 246, 0.3)',
+                borderRadius: '16px',
+                px: 4,
+                py: 1.5,
+                fontSize: '1rem',
+                fontWeight: 600,
+                color: '#3b82f6',
+                background: 'rgba(255,255,255,0.7)',
+                backdropFilter: 'blur(20px)',
+                '&:hover': {
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  border: '2px solid rgba(59, 130, 246, 0.5)',
+                  transform: 'translateY(-2px)'
+                },
+                transition: 'all 0.3s ease'
+              }}
+            >
+              {importing ? 'Importing...' : 'Import from Cloudinary'}
+            </Button>
+            
+            <Button 
+              variant="contained" 
+              startIcon={<Upload />}
+              sx={{
+                background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                borderRadius: '16px',
+                px: 4,
+                py: 1.5,
+                fontSize: '1rem',
+                fontWeight: 600,
+                boxShadow: '0 8px 32px rgba(59, 130, 246, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
+                  boxShadow: '0 12px 40px rgba(59, 130, 246, 0.4)',
+                  transform: 'translateY(-2px)'
+                },
+                transition: 'all 0.3s ease'
+              }}
+            >
+              Upload Assets
+            </Button>
+          </Box>
         </Box>
-      </Box>
+        <Typography variant="body1" color="text.secondary" sx={{ ml: 15, fontSize: '1rem', mb: 3 }}>
+          Organize and manage all your digital assets in one place
+        </Typography>
 
       {/* Error Alert */}
       {error && (
@@ -413,11 +479,41 @@ export const AssetLibraryPage: React.FC = () => {
       <Grid container spacing={3}>
         {/* Sidebar - Folders */}
         <Grid item xs={12} md={3}>
-          <Paper sx={{ p: 2 }}>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-              <Typography variant="h6">Folders</Typography>
-              <IconButton size="small" onClick={() => setCreateFolderDialogOpen(true)}>
-                <CreateNewFolder />
+          <Paper sx={{ 
+            p: 3,
+            background: 'rgba(255,255,255,0.7)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255,255,255,0.3)',
+            borderRadius: '20px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+          }}>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+              <Typography 
+                variant="h6" 
+                fontWeight="700"
+                sx={{
+                  background: 'linear-gradient(135deg, #1e40af 0%, #8b5cf6 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text'
+                }}
+              >
+                Folders
+              </Typography>
+              <IconButton 
+                size="small" 
+                onClick={() => setCreateFolderDialogOpen(true)}
+                sx={{
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  borderRadius: '8px',
+                  '&:hover': {
+                    background: 'rgba(59, 130, 246, 0.2)',
+                    transform: 'scale(1.05)'
+                  },
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <CreateNewFolder sx={{ color: '#3b82f6' }} />
               </IconButton>
             </Box>
 
@@ -460,25 +556,67 @@ export const AssetLibraryPage: React.FC = () => {
         {/* Main Content */}
         <Grid item xs={12} md={9}>
           {/* Breadcrumb and Search */}
-          <Box display="flex" gap={2} mb={3} alignItems="center">
-            <Typography variant="h6" sx={{ flexGrow: 1 }}>
-              {currentFolderPath}
-            </Typography>
-            
-            <TextField
-              placeholder="Search assets..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              InputProps={{
-                startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} />
-              }}
-              sx={{ width: 300 }}
-            />
+          <Paper sx={{
+            p: 3,
+            mb: 3,
+            background: 'rgba(255,255,255,0.7)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255,255,255,0.3)',
+            borderRadius: '20px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+          }}>
+            <Box display="flex" gap={2} alignItems="center">
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  flexGrow: 1,
+                  fontWeight: 700,
+                  background: 'linear-gradient(135deg, #1e40af 0%, #8b5cf6 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text'
+                }}
+              >
+                {currentFolderPath}
+              </Typography>
+              
+              <TextField
+                placeholder="Search assets..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                InputProps={{
+                  startAdornment: <Search sx={{ mr: 1, color: '#3b82f6' }} />
+                }}
+                sx={{ 
+                  width: 300,
+                  '& .MuiOutlinedInput-root': {
+                    background: 'rgba(255,255,255,0.8)',
+                    backdropFilter: 'blur(10px)',
+                    borderRadius: '12px',
+                    '&:hover': {
+                      background: 'rgba(255,255,255,0.9)'
+                    }
+                  }
+                }}
+              />
 
-            <IconButton onClick={() => { fetchAssets(); fetchFolders(); }} title="Refresh">
-              <Refresh />
-            </IconButton>
-          </Box>
+              <IconButton 
+                onClick={() => { fetchAssets(); fetchFolders(); }} 
+                title="Refresh"
+                sx={{
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  borderRadius: '8px',
+                  '&:hover': {
+                    background: 'rgba(59, 130, 246, 0.2)',
+                    transform: 'scale(1.05)'
+                  },
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <Refresh sx={{ color: '#3b82f6' }} />
+              </IconButton>
+            </Box>
+          </Paper>
 
           {/* Asset Grid */}
           {loading ? (
@@ -725,6 +863,7 @@ export const AssetLibraryPage: React.FC = () => {
           <Button onClick={handleDeleteAsset} variant="contained" color="error">Delete Asset</Button>
         </DialogActions>
       </Dialog>
-    </Container>
+      </Container>
+    </Box>
   );
 }; 
