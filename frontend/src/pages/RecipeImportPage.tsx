@@ -791,7 +791,7 @@ const RecipeImportPage: React.FC = () => {
         }
     };
 
-    const handleDeleteIngredient = () => {
+    const handleDeleteIngredient = (ingredientToDelete: ParsedRecipe['ingredients'][0]) => {
         if (parsedRecipe && editingIngredient !== null) {
             const updatedIngredients = parsedRecipe.ingredients.filter((_, index) => 
                 index !== editingIngredient.index
