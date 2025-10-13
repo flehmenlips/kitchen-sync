@@ -29,7 +29,7 @@ export function getSubdomain(): string | null {
     const subdomain = parts[0];
     
     // Exclude main app subdomains
-    if (subdomain === 'app' || subdomain === 'www' || subdomain === 'admin' || subdomain === 'platform-admin') {
+    if (subdomain === 'app' || subdomain === 'www' || subdomain === 'admin' || subdomain === 'platform-admin' || subdomain.startsWith('kitchen-sync-app')) {
       console.log('[Subdomain Detection] Main app subdomain, treating as main domain');
       return null;
     }
