@@ -54,7 +54,10 @@ const allowedOrigins = [
 const isValidSubdomain = (origin: string): boolean => {
     // Pattern to match any subdomain of kitchensync.restaurant
     const subdomainPattern = /^https:\/\/([a-z0-9-]+\.)?kitchensync\.restaurant$/;
-    return subdomainPattern.test(origin);
+    // Pattern to match Render preview URLs (kitchen-sync-app-pr-*.onrender.com)
+    const renderPreviewPattern = /^https:\/\/kitchen-sync-app-pr-[\d]+\.onrender\.com$/;
+    
+    return subdomainPattern.test(origin) || renderPreviewPattern.test(origin);
 };
 
 app.use(cors({ 
