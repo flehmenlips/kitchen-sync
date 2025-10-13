@@ -77,8 +77,9 @@ import MenusPage from './pages/MenusPage';
 import MenuFormPage from './pages/MenuFormPage';
 import MenuDetailPage from './pages/MenuDetailPage';
 
-// TableFarm Component
+// TableFarm Components
 import { TableFarmPage } from './pages/TableFarmPage';
+import TablesPage from './pages/TablesPage';
 
 // Website & Marketing Module
 import WebsiteBuilderPage from './pages/WebsiteBuilderPage';
@@ -216,6 +217,7 @@ const App: React.FC = () => {
 
                             {/* TableFarm Module Routes */}
                             <Route path="tablefarm" element={<TableFarmPage />} />
+                            <Route path="tables" element={<TablesPage />} />
                             <Route path="reservations" element={<ReservationManagementPage />} />
 
                             {/* Website & Marketing Module Routes */}
