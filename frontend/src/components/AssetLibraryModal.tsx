@@ -817,7 +817,7 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
                 </ListItemIcon>
                 <ListItemText 
                   primary={folder.name}
-                  secondary={`${folder._count?.assets || folder.assetCount || 0} items`}
+                  secondary={`${(folder._count && folder._count.assets) || folder.assetCount || 0} items`}
                 />
                 <IconButton
                   size="small"
@@ -1266,16 +1266,16 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
             Are you sure you want to delete folder "{selectedFolder?.name}"?
           </Typography>
           
-          {selectedFolder && (selectedFolder._count?.assets || 0) > 0 || (selectedFolder._count?.subFolders || 0) > 0 && (
+          {selectedFolder && (((selectedFolder._count && selectedFolder._count.assets) || 0) > 0 || ((selectedFolder._count && selectedFolder._count.subFolders) || 0) > 0) && (
             <Box sx={{ mb: 2, p: 2, bgcolor: 'warning.lighter', borderRadius: 1 }}>
               <Typography variant="body2" color="warning.main" sx={{ mb: 1 }}>
                 ⚠️ This folder contains:
               </Typography>
               <Typography variant="body2">
-                • {selectedFolder._count?.assets || 0} assets
+                • {(selectedFolder._count && selectedFolder._count.assets) || 0} assets
               </Typography>
               <Typography variant="body2">
-                • {selectedFolder._count?.subFolders || 0} subfolders
+                • {(selectedFolder._count && selectedFolder._count.subFolders) || 0} subfolders
               </Typography>
             </Box>
           )}
