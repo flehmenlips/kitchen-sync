@@ -555,9 +555,12 @@ const RecipeImportPage: React.FC = () => {
                     try {
                         unitId = await findOrCreateUnit(ing.unit || 'whole');
                         // Add to successful logs only if we actually created a new unit and haven't already logged it
-                        if (ing.unit && !units.some(u => u.name.toLowerCase() === ing.unit!.toLowerCase()) && !createdUnits.has(ing.unit.toLowerCase())) {
-                            successfulIngredients.push(`Created unit: ${ing.unit}`);
-                            createdUnits.add(ing.unit.toLowerCase());
+                        if (ing.unit) {
+                            const unitName = ing.unit;
+                            if (!units.some(u => u.name.toLowerCase() === unitName.toLowerCase()) && !createdUnits.has(unitName.toLowerCase())) {
+                                successfulIngredients.push(`Created unit: ${unitName}`);
+                                createdUnits.add(unitName.toLowerCase());
+                            }
                         }
                     } catch (unitError) {
                         console.error(`Error processing unit "${ing.unit}":`, unitError);
@@ -594,8 +597,11 @@ const RecipeImportPage: React.FC = () => {
                             const ingredientId = await findOrCreateIngredient(ing.name);
                             
                             // Add to successful logs if we created a new ingredient
-                            if (!ingredients.some(i => i.name.toLowerCase() === ing.name!.toLowerCase())) {
-                                successfulIngredients.push(`Created ingredient: ${ing.name}`);
+                            if (ing.name) {
+                                const ingredientName = ing.name;
+                                if (!ingredients.some(i => i.name.toLowerCase() === ingredientName.toLowerCase())) {
+                                    successfulIngredients.push(`Created ingredient: ${ingredientName}`);
+                                }
                             }
                             
                             processedIngredients.push({
@@ -674,18 +680,49 @@ const RecipeImportPage: React.FC = () => {
             }
 
             // Find or create yield unit
-            let yieldUnitId = 1; // Default to "serving"
+            let yieldUnitId: number;
             if (parsedRecipe.yieldUnit) {
                 try {
                     yieldUnitId = await findOrCreateUnit(parsedRecipe.yieldUnit);
                     // Add to successful logs only if we actually created a new unit and haven't already logged it
-                    if (!units.some(u => u.name.toLowerCase() === parsedRecipe.yieldUnit!.toLowerCase()) && !createdUnits.has(parsedRecipe.yieldUnit.toLowerCase())) {
-                        successfulIngredients.push(`Created unit: ${parsedRecipe.yieldUnit}`);
-                        createdUnits.add(parsedRecipe.yieldUnit.toLowerCase());
+                    if (parsedRecipe.yieldUnit) {
+                        const yieldUnitName = parsedRecipe.yieldUnit;
+                        if (!units.some(u => u.name.toLowerCase() === yieldUnitName.toLowerCase()) && !createdUnits.has(yieldUnitName.toLowerCase())) {
+                            successfulIngredients.push(`Created unit: ${yieldUnitName}`);
+                            createdUnits.add(yieldUnitName.toLowerCase());
+                        }
                     }
                 } catch (unitError) {
                     console.warn(`Could not create yield unit "${parsedRecipe.yieldUnit}", using default`);
-                    yieldUnitId = 1; // Default to "serving"
+                    // Find a default "serving" unit or create one
+                    const servingUnit = units.find(u => u.name.toLowerCase() === 'serving' || u.name.toLowerCase() === 'portion');
+                    if (servingUnit) {
+                        yieldUnitId = servingUnit.id;
+                    } else {
+                        // Create a default serving unit
+                        const defaultServingUnit = await createUnit({
+                            name: 'serving',
+                            abbreviation: 'serving',
+                            type: 'COUNT'
+                        });
+                        setUnits(prev => [...prev, defaultServingUnit]);
+                        yieldUnitId = defaultServingUnit.id;
+                    }
+                }
+            } else {
+                // Find a default "serving" unit or create one
+                const servingUnit = units.find(u => u.name.toLowerCase() === 'serving' || u.name.toLowerCase() === 'portion');
+                if (servingUnit) {
+                    yieldUnitId = servingUnit.id;
+                } else {
+                    // Create a default serving unit
+                    const defaultServingUnit = await createUnit({
+                        name: 'serving',
+                        abbreviation: 'serving',
+                        type: 'COUNT'
+                    });
+                    setUnits(prev => [...prev, defaultServingUnit]);
+                    yieldUnitId = defaultServingUnit.id;
                 }
             }
 
@@ -791,7 +828,7 @@ const RecipeImportPage: React.FC = () => {
         }
     };
 
-    const handleDeleteIngredient = (ingredientToDelete: ParsedRecipe['ingredients'][0]) => {
+    const handleDeleteIngredient = (_ingredientToDelete: ParsedRecipe['ingredients'][0]) => {
         if (parsedRecipe && editingIngredient !== null) {
             const updatedIngredients = parsedRecipe.ingredients.filter((_, index) => 
                 index !== editingIngredient.index
