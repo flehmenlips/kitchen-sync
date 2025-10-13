@@ -139,17 +139,35 @@ const PrepColumn: React.FC<PrepColumnProps> = ({
 
     return (
         <Paper
+            elevation={0}
             sx={{
-                width: 300,
+                width: 320,
                 minHeight: '100%',
                 display: 'flex',
                 flexDirection: 'column',
-                p: 2,
-                transition: 'background-color 0.2s ease, transform 0.1s ease',
+                p: 3,
+                background: 'rgba(255, 255, 255, 0.7)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                borderRadius: '16px',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+                transition: 'all 0.3s ease',
+                position: 'relative',
+                overflow: 'hidden',
                 '&:hover': {
-                    backgroundColor: '#f9f9f9',
+                    transform: 'translateY(-4px)',
+                    boxShadow: '0 12px 40px rgba(0, 0, 0, 0.15)',
                 },
-                borderTop: `4px solid ${column.color || '#1976d2'}`,
+                '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: '4px',
+                    background: `linear-gradient(90deg, ${column.color || '#3b82f6'}, ${column.color ? `${column.color}80` : '#8b5cf6'})`,
+                    borderRadius: '16px 16px 0 0'
+                }
             }}
         >
             <Box 
@@ -157,12 +175,22 @@ const PrepColumn: React.FC<PrepColumnProps> = ({
                     display: 'flex', 
                     justifyContent: 'space-between', 
                     alignItems: 'center', 
-                    mb: 2,
-                    borderBottom: '1px solid #eee',
-                    pb: 1,
+                    mb: 3,
+                    pb: 2,
                     cursor: 'grab',
+                    position: 'relative',
+                    zIndex: 1,
                     '&:active': {
                         cursor: 'grabbing',
+                    },
+                    '&::after': {
+                        content: '""',
+                        position: 'absolute',
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        height: '1px',
+                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)'
                     }
                 }}
             >
@@ -172,27 +200,49 @@ const PrepColumn: React.FC<PrepColumnProps> = ({
                         variant="h6" 
                         component="div"
                         sx={{ 
-                            color: column.color || '#1976d2',
-                            fontWeight: 'bold'
+                            color: column.color || '#3b82f6',
+                            fontWeight: 700,
+                            fontSize: '1.1rem',
+                            textShadow: '0 1px 2px rgba(0,0,0,0.1)'
                         }}
                     >
                         {column.name}
                     </Typography>
                 </Box>
-                <Box>
+                <Box sx={{ display: 'flex', gap: 0.5 }}>
                     <IconButton
                         size="small"
                         onClick={() => setIsAddingTask(true)}
-                        sx={{ '&:hover': { color: column.color || 'primary.main' } }}
+                        sx={{ 
+                            background: 'rgba(255, 255, 255, 0.5)',
+                            backdropFilter: 'blur(10px)',
+                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            borderRadius: '8px',
+                            '&:hover': { 
+                                background: 'rgba(255, 255, 255, 0.8)',
+                                transform: 'scale(1.1)',
+                                color: column.color || '#3b82f6'
+                            } 
+                        }}
                     >
-                        <AddIcon />
+                        <AddIcon fontSize="small" />
                     </IconButton>
                     <IconButton
                         size="small"
                         onClick={handleMenuOpen}
-                        sx={{ '&:hover': { color: column.color || 'primary.main' } }}
+                        sx={{ 
+                            background: 'rgba(255, 255, 255, 0.5)',
+                            backdropFilter: 'blur(10px)',
+                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            borderRadius: '8px',
+                            '&:hover': { 
+                                background: 'rgba(255, 255, 255, 0.8)',
+                                transform: 'scale(1.1)',
+                                color: column.color || '#3b82f6'
+                            } 
+                        }}
                     >
-                        <MoreVertIcon />
+                        <MoreVertIcon fontSize="small" />
                     </IconButton>
                     <Menu
                         anchorEl={menuAnchorEl}

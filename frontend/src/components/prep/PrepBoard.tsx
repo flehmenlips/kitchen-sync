@@ -210,30 +210,78 @@ export const PrepBoard: React.FC = () => {
                             display: 'flex',
                             overflowX: 'auto',
                             minHeight: 'calc(100vh - 64px)', // Adjust based on your app's header height
-                            p: 2,
-                            gap: 2,
-                            position: 'relative'
+                            p: 3,
+                            gap: 3,
+                            position: 'relative',
+                            background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)', // Subtle Remise-inspired gradient
+                            '&::-webkit-scrollbar': {
+                                height: '8px',
+                            },
+                            '&::-webkit-scrollbar-track': {
+                                background: 'rgba(255,255,255,0.1)',
+                                borderRadius: '4px',
+                            },
+                            '&::-webkit-scrollbar-thumb': {
+                                background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                                borderRadius: '4px',
+                            },
+                            '&::-webkit-scrollbar-thumb:hover': {
+                                background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
+                            }
                         }}
                     >
                         {columns.length === 0 && (
-                            <Paper elevation={3} sx={{ 
-                                p: 3, 
+                            <Paper elevation={0} sx={{ 
+                                p: 4, 
                                 maxWidth: 600, 
                                 mx: 'auto', 
                                 my: 4, 
                                 textAlign: 'center',
-                                background: 'rgba(255, 255, 255, 0.9)'
+                                background: 'rgba(255, 255, 255, 0.7)',
+                                backdropFilter: 'blur(10px)',
+                                border: '1px solid rgba(255, 255, 255, 0.2)',
+                                borderRadius: '20px',
+                                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+                                position: 'relative',
+                                overflow: 'hidden',
+                                '&::before': {
+                                    content: '""',
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%)',
+                                    borderRadius: '20px'
+                                }
                             }}>
-                                <Typography variant="h5" gutterBottom>
-                                    Welcome to the Prep Board!
-                                </Typography>
-                                <Alert severity="info" sx={{ mb: 2 }}>
-                                    No columns found. Click the <strong>plus button</strong> in the lower right corner to add a new column or recipe to your prep board.
-                                </Alert>
-                                <Typography variant="body1">
-                                    The prep board helps you organize your kitchen tasks and recipes into customizable columns. 
-                                    Start by creating a column such as "To Prep," "In Progress," or "Completed."
-                                </Typography>
+                                <Box sx={{ position: 'relative', zIndex: 1 }}>
+                                    <Typography variant="h4" gutterBottom sx={{ 
+                                        fontWeight: 700,
+                                        background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                                        WebkitBackgroundClip: 'text',
+                                        WebkitTextFillColor: 'transparent',
+                                        backgroundClip: 'text',
+                                        mb: 2
+                                    }}>
+                                        🍳 Welcome to AgileChef!
+                                    </Typography>
+                                    <Alert severity="info" sx={{ 
+                                        mb: 3,
+                                        background: 'rgba(59, 130, 246, 0.1)',
+                                        border: '1px solid rgba(59, 130, 246, 0.2)',
+                                        borderRadius: '12px',
+                                        '& .MuiAlert-icon': {
+                                            color: '#3b82f6'
+                                        }
+                                    }}>
+                                        No columns found. Click the <strong>plus button</strong> in the lower right corner to add a new column or recipe to your prep board.
+                                    </Alert>
+                                    <Typography variant="body1" sx={{ color: '#6b7280', lineHeight: 1.6 }}>
+                                        The prep board helps you organize your kitchen tasks and recipes into customizable columns. 
+                                        Start by creating a column such as "To Prep," "In Progress," or "Completed."
+                                    </Typography>
+                                </Box>
                             </Paper>
                         )}
                         
@@ -274,7 +322,29 @@ export const PrepBoard: React.FC = () => {
                         {/* Add floating action buttons */}
                         <SpeedDial
                             ariaLabel="Prep board speed dial"
-                            sx={{ position: 'fixed', bottom: 24, right: 24 }}
+                            sx={{ 
+                                position: 'fixed', 
+                                bottom: 32, 
+                                right: 32,
+                                '& .MuiFab-primary': {
+                                    background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                                    boxShadow: '0 8px 32px rgba(59, 130, 246, 0.3)',
+                                    '&:hover': {
+                                        background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
+                                        boxShadow: '0 12px 40px rgba(59, 130, 246, 0.4)',
+                                    }
+                                },
+                                '& .MuiFab-root': {
+                                    background: 'rgba(255, 255, 255, 0.9)',
+                                    backdropFilter: 'blur(10px)',
+                                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
+                                    '&:hover': {
+                                        background: 'rgba(255, 255, 255, 1)',
+                                        transform: 'scale(1.05)',
+                                    }
+                                }
+                            }}
                             icon={<SpeedDialIcon />}
                             onClose={() => setSpeedDialOpen(false)}
                             onOpen={() => setSpeedDialOpen(true)}
@@ -284,11 +354,27 @@ export const PrepBoard: React.FC = () => {
                                 icon={<ViewColumnIcon />}
                                 tooltipTitle="Add Column"
                                 onClick={openAddColumnDialog}
+                                sx={{
+                                    '& .MuiFab-root': {
+                                        background: 'linear-gradient(135deg, #10b981, #059669)',
+                                        '&:hover': {
+                                            background: 'linear-gradient(135deg, #059669, #047857)',
+                                        }
+                                    }
+                                }}
                             />
                             <SpeedDialAction
                                 icon={<RestaurantIcon />}
                                 tooltipTitle="Add Recipe"
                                 onClick={openAddRecipeDialog}
+                                sx={{
+                                    '& .MuiFab-root': {
+                                        background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                                        '&:hover': {
+                                            background: 'linear-gradient(135deg, #d97706, #b45309)',
+                                        }
+                                    }
+                                }}
                             />
                         </SpeedDial>
                         

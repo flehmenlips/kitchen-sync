@@ -1044,7 +1044,6 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ onSubmit, initialData, isSubmit
                 <Controller
                     name="instructions"
                     control={control}
-                    rules={{ required: "Instructions are required" }}
                     render={({ field }) => (
                         <Box sx={{ mb: 4 }}>
                             <Box sx={{ '.ql-container': { minHeight: '200px' } }}>

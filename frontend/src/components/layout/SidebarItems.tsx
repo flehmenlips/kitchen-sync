@@ -7,6 +7,7 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import Divider from '@mui/material/Divider';
 import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
 import Collapse from '@mui/material/Collapse';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
@@ -14,39 +15,6 @@ import LockIcon from '@mui/icons-material/Lock';
 import { useSubscription } from '../../context/SubscriptionContext';
 import { getAccessibleModules, Module, SubModule } from '../../types/modules';
 import Tooltip from '@mui/material/Tooltip';
-
-// Import Icons
-import DashboardIcon from '@mui/icons-material/Dashboard';
-import MenuBookIcon from '@mui/icons-material/MenuBook'; // For Recipes
-import ScaleIcon from '@mui/icons-material/Scale'; // For Units
-import BlenderIcon from '@mui/icons-material/Blender'; // For Ingredients
-import CategoryIcon from '@mui/icons-material/Category'; // Import Category icon
-import ClassIcon from '@mui/icons-material/Class'; // Icon for Ingredient Categories
-import RestaurantMenuIcon from '@mui/icons-material/RestaurantMenu'; // For Menu Builder
-import BugReportIcon from '@mui/icons-material/BugReport'; // For Issues
-import AssignmentIcon from '@mui/icons-material/Assignment'; // For Prep Board
-
-interface NavItem {
-  text: string;
-  icon: React.ReactElement;
-  path: string;
-}
-
-const mainNavItems: NavItem[] = [
-  { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-  { text: 'Recipes', icon: <MenuBookIcon />, path: '/recipes' },
-  { text: 'Categories', icon: <CategoryIcon />, path: '/categories' }, // Recipe Categories
-  { text: 'Ingredients', icon: <BlenderIcon />, path: '/ingredients' },
-  { text: 'Ingr Categories', icon: <ClassIcon />, path: '/ingredient-categories' }, // Ingredient Categories
-  { text: 'Units', icon: <ScaleIcon />, path: '/units' },
-];
-
-// Tools and modules section
-const toolsNavItems: NavItem[] = [
-  { text: 'Menu Builder', icon: <RestaurantMenuIcon />, path: '/menus' },
-  { text: 'Prep Board', icon: <AssignmentIcon />, path: '/prep' },
-  { text: 'Issue Tracker', icon: <BugReportIcon />, path: '/issues' },
-];
 
 export const SidebarItems: React.FC = () => {
   const location = useLocation();
@@ -101,16 +69,59 @@ export const SidebarItems: React.FC = () => {
         selected={isAccessible && isActive}
         disabled={!isAccessible}
         onClick={hasSubModules ? () => handleModuleClick(module.id) : undefined}
+        className={isAccessible ? 'transition-all duration-300 hover:-translate-x-1' : ''}
+        sx={{
+          borderRadius: 2,
+          mx: 0.5,
+          mb: 0.5,
+          minHeight: 44,
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          '&:hover': isAccessible ? {
+            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%)',
+            transform: 'translateX(4px)',
+            boxShadow: '0 4px 12px rgba(59, 130, 246, 0.12)',
+          } : {},
+          '&.Mui-selected': {
+            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(139, 92, 246, 0.12) 100%)',
+            borderLeft: '3px solid',
+            borderColor: '#8b5cf6',
+            fontWeight: 600,
+            '&:hover': {
+              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%)',
+            }
+          }
+        }}
       >
-        <ListItemIcon>
-          {isAccessible ? <module.icon /> : <LockIcon color="disabled" />}
+        <ListItemIcon sx={{ minWidth: 44 }}>
+          {isAccessible ? (
+            <Box className="bg-gradient-to-br from-blue-500 to-purple-600 p-1.5 rounded-lg shadow-sm transition-transform duration-300 hover:scale-110">
+              <Box component={module.icon} sx={{ fontSize: 18, color: 'white' }} />
+            </Box>
+          ) : (
+            <Box className="bg-gray-200 p-1.5 rounded-lg">
+              <LockIcon sx={{ fontSize: 18, color: '#9ca3af' }} />
+            </Box>
+          )}
         </ListItemIcon>
         <ListItemText 
           primary={module.name}
           secondary={!isAccessible && module.requiredTier[0] ? `Requires ${module.requiredTier[0]}` : undefined}
-          sx={{ opacity: isAccessible ? 1 : 0.5 }}
+          primaryTypographyProps={{
+            sx: { 
+              fontWeight: isActive ? 600 : 500,
+              fontSize: '0.9rem'
+            }
+          }}
+          secondaryTypographyProps={{
+            sx: { fontSize: '0.75rem' }
+          }}
+          sx={{ opacity: isAccessible ? 1 : 0.6 }}
         />
-        {hasSubModules && (isOpen ? <ExpandLess /> : <ExpandMore />)}
+        {hasSubModules && (
+          isOpen ? 
+            <ExpandLess sx={{ color: '#8b5cf6' }} /> : 
+            <ExpandMore sx={{ color: '#3b82f6' }} />
+        )}
       </ListItemButton>
     );
 
@@ -143,15 +154,27 @@ export const SidebarItems: React.FC = () => {
   const optionalModules = accessibleModules.filter(m => m.type === 'optional');
   
   return (
-    <Box>
-      <List>
+    <Box sx={{ px: 1 }}>
+      {/* Core Modules Section */}
+      <Box className="px-2 py-2 mb-1">
+        <Typography variant="caption" className="text-gray-500 font-semibold uppercase tracking-wider" sx={{ fontSize: '0.7rem' }}>
+          Core Modules
+        </Typography>
+      </Box>
+      <List sx={{ py: 0 }}>
         {coreModules.map(module => renderModule(module))}
       </List>
       
+      {/* Optional Modules Section */}
       {optionalModules.length > 0 && (
         <>
-          <Divider />
-          <List>
+          <Divider sx={{ my: 2, borderColor: 'rgba(59, 130, 246, 0.1)' }} />
+          <Box className="px-2 py-2 mb-1">
+            <Typography variant="caption" className="text-gray-500 font-semibold uppercase tracking-wider" sx={{ fontSize: '0.7rem' }}>
+              Premium Modules
+            </Typography>
+          </Box>
+          <List sx={{ py: 0 }}>
             {optionalModules.map(module => renderModule(module))}
           </List>
         </>

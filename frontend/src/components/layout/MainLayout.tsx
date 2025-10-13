@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useLocation, Link as RouterLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { UserProfile } from '../../types/user';
 import RestaurantSelector from '../common/RestaurantSelector';
 import { SidebarItems } from './SidebarItems';
 import { modules } from '../../types/modules';
+import { KitchenSyncLogo } from '../common/KitchenSyncLogo';
 
 // MUI Components
 import {
@@ -26,9 +26,7 @@ import {
     Divider,
     Tooltip,
     Avatar,
-    Badge,
     useMediaQuery,
-    Collapse,
 } from '@mui/material';
 
 // MUI Icons
@@ -82,52 +80,89 @@ const MainLayout: React.FC = () => {
     };
 
     const drawer = (
-        <Box>
-            {/* Mobile-optimized header */}
+        <Box className="h-full bg-gradient-to-b from-white to-gray-50">
+            {/* Remise-inspired header with gradient */}
             <Toolbar sx={{ 
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'flex-start',
                 px: 2,
-                background: theme.palette.primary.main,
+                background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
                 color: 'white',
-                minHeight: isMobile ? `${MOBILE_APPBAR_HEIGHT}px !important` : '64px !important'
+                minHeight: isMobile ? `${MOBILE_APPBAR_HEIGHT}px !important` : '100px !important',
+                boxShadow: '0 4px 20px rgba(59, 130, 246, 0.3)',
+                position: 'relative',
+                '&::after': {
+                    content: '""',
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: '1px',
+                    background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)'
+                }
             }}>
-                {/* KitchenSync Logo - Responsive sizing */}
-                <Box sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    flexGrow: 1,
-                    gap: 1
-                }}>
-                    <img 
-                        src="/logo-white.svg" 
-                        alt="KitchenSync Logo" 
-                        style={{ 
-                            height: isMobile ? '28px' : '32px',
-                            width: 'auto'
-                        }}
-                    />
-                    <Typography 
-                        variant={isMobile ? "subtitle1" : "h6"}
-                        noWrap 
-                        component="div" 
-                        sx={{ 
-                            fontWeight: 600,
-                            letterSpacing: '0.5px'
-                        }}
-                    >
-                        KitchenSync
-                    </Typography>
-                </Box>
+                       {/* KitchenSync Sidebar Logo - EXACT login page elements, scaled for sidebar */}
+                       <Box sx={{ 
+                           display: 'flex', 
+                           alignItems: 'center', 
+                           flexGrow: 1,
+                           flexDirection: 'column',
+                           gap: '8px'
+                       }}>
+                           {/* Top Logo - Scaled down version of login page */}
+                           <div style={{
+                               width: '36px',
+                               height: '36px',
+                               background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                               borderRadius: '8px',
+                               display: 'flex',
+                               alignItems: 'center',
+                               justifyContent: 'center',
+                               boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                               position: 'relative',
+                               overflow: 'hidden'
+                           }}>
+                               {/* Inner glow effect */}
+                               <div style={{
+                                   position: 'absolute',
+                                   inset: '1px',
+                                   background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 100%)',
+                                   borderRadius: '7px',
+                                   pointerEvents: 'none'
+                               }}></div>
+                               <img 
+                                   src="/k-table-logo.svg" 
+                                   alt="KitchenSync Logo" 
+                                   style={{ 
+                                       width: '22px', 
+                                       height: '22px',
+                                       filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.2))',
+                                       position: 'relative',
+                                       zIndex: 1
+                                   }}
+                               />
+                           </div>
+                           
+                           {/* Bottom Text - Scaled down KitchenSyncLogo component */}
+                           <div style={{ 
+                               display: 'flex',
+                               justifyContent: 'center',
+                               alignItems: 'center'
+                           }}>
+                               <KitchenSyncLogo size="sidebar" variant="light" showIcon />
+                           </div>
+                       </Box>
                 {isMobile && (
                     <IconButton 
                         onClick={handleDrawerToggle} 
+                        className="hover:bg-white/20 transition-all duration-300"
                         sx={{ 
                             color: 'white',
                             minWidth: MOBILE_TOUCH_TARGET,
                             minHeight: MOBILE_TOUCH_TARGET,
-                            p: 1.5
+                            p: 1.5,
+                            borderRadius: 2
                         }}
                         size="large"
                     >
@@ -135,7 +170,7 @@ const MainLayout: React.FC = () => {
                     </IconButton>
                 )}
             </Toolbar>
-            <Divider />
+            <Divider sx={{ borderColor: 'rgba(59, 130, 246, 0.1)' }} />
             
             {/* Module-based navigation - Mobile optimized */}
             <Box sx={{ 
@@ -160,37 +195,74 @@ const MainLayout: React.FC = () => {
                 <SidebarItems />
             </Box>
             
-            <Divider sx={{ my: 1 }} />
+            <Divider sx={{ my: 2, borderColor: 'rgba(59, 130, 246, 0.1)' }} />
             
-            {/* Admin sections - Mobile optimized */}
+            {/* Admin sections - Remise-inspired premium styling */}
             <List sx={{ 
-                px: isMobile ? 1 : 0,
+                px: isMobile ? 1.5 : 1,
+                pb: 2,
                 '& .MuiListItemButton-root': {
-                    minHeight: isMobile ? MOBILE_TOUCH_TARGET : 'auto',
-                    borderRadius: isMobile ? 2 : 0,
-                    mx: isMobile ? 1 : 0,
-                    mb: isMobile ? 0.5 : 0,
+                    minHeight: isMobile ? MOBILE_TOUCH_TARGET : 48,
+                    borderRadius: 2,
+                    mx: isMobile ? 0.5 : 0.5,
+                    mb: 0.75,
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&:hover': {
+                        background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%)',
+                        transform: 'translateX(4px)',
+                        boxShadow: '0 4px 12px rgba(59, 130, 246, 0.15)',
+                    },
+                    '&.Mui-selected': {
+                        background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(139, 92, 246, 0.12) 100%)',
+                        borderLeft: '3px solid',
+                        borderColor: '#8b5cf6',
+                        fontWeight: 600,
+                        '&:hover': {
+                            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%)',
+                        }
+                    }
                 },
                 '& .MuiListItemIcon-root': {
-                    minWidth: isMobile ? 44 : 56,
+                    minWidth: isMobile ? 44 : 48,
+                    color: '#6366f1'
+                },
+                '& .MuiListItemText-primary': {
+                    fontWeight: 500,
+                    fontSize: '0.9rem'
                 }
             }}>
                 {/* Admin Dashboard - Only visible to admin/owner */}
                 {(user?.role === 'ADMIN' || user?.role === 'SUPERADMIN') && (
                     <>
-                        <Divider sx={{ my: 1 }} />
+                        <Box className="px-2 py-1 mb-2">
+                            <Typography variant="caption" className="text-gray-500 font-semibold uppercase tracking-wider" sx={{ fontSize: '0.7rem' }}>
+                                Administration
+                            </Typography>
+                        </Box>
                         <ListItem disablePadding>
-                            <ListItemButton component={RouterLink} to="/admin-dashboard">
+                            <ListItemButton 
+                                component={RouterLink} 
+                                to="/admin-dashboard"
+                                selected={location.pathname === '/admin-dashboard'}
+                            >
                                 <ListItemIcon>
-                                    <AdminPanelSettingsIcon />
+                                    <Box className="bg-gradient-to-br from-blue-500 to-purple-600 p-1.5 rounded-lg shadow-sm">
+                                        <AdminPanelSettingsIcon sx={{ fontSize: 18, color: 'white' }} />
+                                    </Box>
                                 </ListItemIcon>
                                 <ListItemText primary="Admin Dashboard" />
                             </ListItemButton>
                         </ListItem>
                         <ListItem disablePadding>
-                            <ListItemButton component={RouterLink} to="/settings/billing">
+                            <ListItemButton 
+                                component={RouterLink} 
+                                to="/settings/billing"
+                                selected={location.pathname === '/settings/billing'}
+                            >
                                 <ListItemIcon>
-                                    <PaymentIcon />
+                                    <Box className="bg-gradient-to-br from-emerald-500 to-teal-600 p-1.5 rounded-lg shadow-sm">
+                                        <PaymentIcon sx={{ fontSize: 18, color: 'white' }} />
+                                    </Box>
                                 </ListItemIcon>
                                 <ListItemText primary="Billing & Subscription" />
                             </ListItemButton>
@@ -205,13 +277,19 @@ const MainLayout: React.FC = () => {
         <Box sx={{ display: 'flex', minHeight: '100vh' }}>
             <CssBaseline />
             
-            {/* Top App Bar - Mobile optimized */}
+            {/* Top App Bar - Remise-inspired modern styling */}
             <AppBar
                 position="fixed"
+                className="backdrop-blur-md"
                 sx={{
                     width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
                     ml: { md: `${DRAWER_WIDTH}px` },
                     height: isMobile ? MOBILE_APPBAR_HEIGHT : 64,
+                    background: 'rgba(255, 255, 255, 0.95)',
+                    backdropFilter: 'blur(20px)',
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05), 0 4px 12px rgba(59, 130, 246, 0.08)',
+                    borderBottom: '1px solid rgba(59, 130, 246, 0.1)',
+                    color: theme.palette.text.primary,
                 }}
             >
                 <Toolbar sx={{
@@ -260,12 +338,13 @@ const MainLayout: React.FC = () => {
                         <RestaurantSelector />
                     </Box>
 
-                    {/* User Menu - Mobile optimized */}
+                    {/* User Menu - Remise-inspired premium styling */}
                     {user && (
                         <>
                             <Tooltip title="Account settings">
                                 <IconButton 
                                     onClick={handleProfileClick} 
+                                    className="hover:scale-110 transition-transform duration-300"
                                     sx={{ 
                                         ml: isMobile ? 0.5 : 2,
                                         minWidth: MOBILE_TOUCH_TARGET,
@@ -274,12 +353,16 @@ const MainLayout: React.FC = () => {
                                     }}
                                     size={isMobile ? "large" : "small"}
                                 >
-                                    <Avatar sx={{ 
-                                        width: isMobile ? 36 : 32, 
-                                        height: isMobile ? 36 : 32, 
-                                        bgcolor: 'secondary.main',
-                                        fontSize: isMobile ? '1.1rem' : '1rem'
-                                    }}>
+                                    <Avatar 
+                                        className="shadow-lg ring-2 ring-white"
+                                        sx={{ 
+                                            width: isMobile ? 40 : 36, 
+                                            height: isMobile ? 40 : 36, 
+                                            background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                                            fontSize: isMobile ? '1.1rem' : '1rem',
+                                            fontWeight: 600
+                                        }}
+                                    >
                                         {user.name?.[0]?.toUpperCase() || user.email[0]?.toUpperCase()}
                                     </Avatar>
                                 </IconButton>

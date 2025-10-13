@@ -15,7 +15,6 @@ import {
     Step,
     StepLabel,
     Card,
-    CardContent,
     List,
     ListItem,
     ListItemText,
@@ -67,6 +66,10 @@ interface ParsedRecipe {
         parenthetical?: string; // Text in parentheses (e.g., "(~3 cups)")
         skipDatabase?: boolean; // Flag to skip adding to database for complex ingredients
     }[];
+    yieldQuantity?: number;
+    yieldUnit?: string;
+    prepTimeMinutes?: number;
+    cookTimeMinutes?: number;
 }
 
 // Add CSS for ReactQuill
@@ -256,7 +259,6 @@ const RecipeImportPage: React.FC = () => {
     } | null>(null);
     const [units, setUnits] = useState<UnitOfMeasure[]>([]);
     const [ingredients, setIngredients] = useState<Ingredient[]>([]);
-    const [isLoadingData, setIsLoadingData] = useState(false);
     const [useAI, setUseAI] = useState(true);
 
     const steps = ['Paste Recipe', 'Review & Edit', 'Import'];
@@ -264,7 +266,6 @@ const RecipeImportPage: React.FC = () => {
     // Fetch units and ingredients when component mounts
     useEffect(() => {
         const loadData = async () => {
-            setIsLoadingData(true);
             try {
                 const [fetchedUnits, fetchedIngredients] = await Promise.all([
                     getUnits(),
@@ -275,54 +276,11 @@ const RecipeImportPage: React.FC = () => {
             } catch (err) {
                 console.error('Error loading data:', err);
                 setError('Failed to load units and ingredients');
-            } finally {
-                setIsLoadingData(false);
             }
         };
         loadData();
     }, []);
 
-    // Helper function to normalize unit names
-    const normalizeUnit = (unit: string): string => {
-        const unitMap: { [key: string]: string } = {
-            'tbsp': 'tablespoon',
-            'tbs': 'tablespoon',
-            'tablespoons': 'tablespoon',
-            'tablespoon': 'tablespoon',
-            'tsp': 'teaspoon',
-            'teaspoons': 'teaspoon',
-            'teaspoon': 'teaspoon',
-            'oz': 'ounce',
-            'ounces': 'ounce',
-            'ounce': 'ounce',
-            'lb': 'pound',
-            'lbs': 'pound',
-            'pounds': 'pound',
-            'pound': 'pound',
-            'cup': 'cup',
-            'cups': 'cup',
-            'g': 'gram',
-            'grams': 'gram',
-            'gram': 'gram',
-            'kg': 'kilogram',
-            'kilograms': 'kilogram',
-            'kilogram': 'kilogram',
-            'ml': 'milliliter',
-            'milliliters': 'milliliter',
-            'milliliter': 'milliliter',
-            'l': 'liter',
-            'liters': 'liter',
-            'liter': 'liter',
-            'whole': 'piece',
-            'wholes': 'piece',
-            'piece': 'piece',
-            'pieces': 'piece',
-            'count': 'piece',
-            'counts': 'piece',
-            '#': 'pound'
-        };
-        return unitMap[unit.toLowerCase()] || unit.toLowerCase();
-    };
 
     // Helper function to find or create a unit
     const findOrCreateUnit = async (unitName: string): Promise<number> => {
@@ -578,6 +536,7 @@ const RecipeImportPage: React.FC = () => {
             const processedIngredients = [];
             const failedIngredients = [];
             const successfulIngredients = []; // Track successful ingredients for reporting
+            const createdUnits = new Set<string>(); // Track units created during this import session
             
             // Set up a progress message for status updates
             const setProgressError = (message: string) => {
@@ -595,9 +554,10 @@ const RecipeImportPage: React.FC = () => {
                     let unitId: number;
                     try {
                         unitId = await findOrCreateUnit(ing.unit || 'whole');
-                        // Add to successful logs
-                        if (ing.unit && !units.some(u => u.name === ing.unit)) {
+                        // Add to successful logs only if we actually created a new unit and haven't already logged it
+                        if (ing.unit && !units.some(u => u.name.toLowerCase() === ing.unit!.toLowerCase()) && !createdUnits.has(ing.unit.toLowerCase())) {
                             successfulIngredients.push(`Created unit: ${ing.unit}`);
+                            createdUnits.add(ing.unit.toLowerCase());
                         }
                     } catch (unitError) {
                         console.error(`Error processing unit "${ing.unit}":`, unitError);
@@ -634,7 +594,7 @@ const RecipeImportPage: React.FC = () => {
                             const ingredientId = await findOrCreateIngredient(ing.name);
                             
                             // Add to successful logs if we created a new ingredient
-                            if (!ingredients.some(i => i.name.toLowerCase() === ing.name.toLowerCase())) {
+                            if (!ingredients.some(i => i.name.toLowerCase() === ing.name!.toLowerCase())) {
                                 successfulIngredients.push(`Created ingredient: ${ing.name}`);
                             }
                             
@@ -713,16 +673,32 @@ const RecipeImportPage: React.FC = () => {
                 }
             }
 
+            // Find or create yield unit
+            let yieldUnitId = 1; // Default to "serving"
+            if (parsedRecipe.yieldUnit) {
+                try {
+                    yieldUnitId = await findOrCreateUnit(parsedRecipe.yieldUnit);
+                    // Add to successful logs only if we actually created a new unit and haven't already logged it
+                    if (!units.some(u => u.name.toLowerCase() === parsedRecipe.yieldUnit!.toLowerCase()) && !createdUnits.has(parsedRecipe.yieldUnit.toLowerCase())) {
+                        successfulIngredients.push(`Created unit: ${parsedRecipe.yieldUnit}`);
+                        createdUnits.add(parsedRecipe.yieldUnit.toLowerCase());
+                    }
+                } catch (unitError) {
+                    console.warn(`Could not create yield unit "${parsedRecipe.yieldUnit}", using default`);
+                    yieldUnitId = 1; // Default to "serving"
+                }
+            }
+
             // Create the recipe with processed ingredients
             const recipe = await createRecipe({
                 name: parsedRecipe.name,
                 description: parsedRecipe.description || '',
                 instructions: parsedRecipe.instructions || '',
                 ingredients: processedIngredients,
-                yieldQuantity: 1,
-                yieldUnitId: 1, // Default to "serving"
-                prepTimeMinutes: 0,
-                cookTimeMinutes: 0,
+                yieldQuantity: parsedRecipe.yieldQuantity || 1,
+                yieldUnitId: yieldUnitId,
+                prepTimeMinutes: parsedRecipe.prepTimeMinutes || 0,
+                cookTimeMinutes: parsedRecipe.cookTimeMinutes || 0,
                 tags: [],
                 categoryId: 1 // Default to "Uncategorized"
             });
@@ -815,7 +791,7 @@ const RecipeImportPage: React.FC = () => {
         }
     };
 
-    const handleDeleteIngredient = (ingredientToDelete: ParsedRecipe['ingredients'][0]) => {
+    const handleDeleteIngredient = () => {
         if (parsedRecipe && editingIngredient !== null) {
             const updatedIngredients = parsedRecipe.ingredients.filter((_, index) => 
                 index !== editingIngredient.index

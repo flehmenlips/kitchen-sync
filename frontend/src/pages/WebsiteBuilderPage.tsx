@@ -73,7 +73,8 @@ import {
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
   DragHandle as DragHandleIcon,
-  Sync as SyncIcon
+  Sync as SyncIcon,
+  PhotoLibrary as PhotoLibraryIcon
 } from '@mui/icons-material';
 import {
   DragDropContext,
@@ -103,7 +104,7 @@ import AdvancedColorPalette from '../components/AdvancedColorPalette';
 import AdvancedTypographySelector from '../components/AdvancedTypographySelector';
 import { themingService, ColorPalette, TypographyConfig } from '../services/themingService';
 import TemplateSelector from '../components/TemplateSelector';
-import AssetPicker from '../components/AssetPicker';
+import AssetLibraryModal from '../components/AssetLibraryModal';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -1326,6 +1327,30 @@ const WebsiteBuilderPage: React.FC = () => {
     setEditingBlockId(block.id);
   };
 
+  // Asset Library Integration Handlers
+  const handleAssetSelect = async (asset: any) => {
+    try {
+      // Update the appropriate field based on assetPickerField
+      if (assetPickerField === 'logo') {
+        await handleSettingsChange('logoUrl', asset.fileUrl);
+        showSnackbar('Logo updated from Asset Library', 'success');
+      } else if (assetPickerField === 'cover') {
+        await handleSettingsChange('coverImageUrl', asset.fileUrl);
+        showSnackbar('Cover image updated from Asset Library', 'success');
+      }
+      
+      setAssetPickerOpen(false);
+    } catch (error) {
+      console.error('Error selecting asset:', error);
+      showSnackbar('Failed to select asset', 'error');
+    }
+  };
+
+  const openAssetLibrary = (field: 'cover' | 'logo' | 'hero' | 'about') => {
+    setAssetPickerField(field);
+    setAssetPickerOpen(true);
+  };
+
   if (loading) {
     return (
       <Container maxWidth="lg">
@@ -1888,7 +1913,7 @@ const WebsiteBuilderPage: React.FC = () => {
             <Grid item xs={12}>
               <Box>
                 <Typography variant="body2" gutterBottom>Logo</Typography>
-                <Box display="flex" alignItems="center" gap={2}>
+                <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
                   <Button
                     variant="outlined"
                     component="label"
@@ -1905,6 +1930,14 @@ const WebsiteBuilderPage: React.FC = () => {
                       }}
                     />
                   </Button>
+                  <Button
+                    variant="contained"
+                    onClick={() => openAssetLibrary('logo')}
+                    startIcon={<PhotoLibraryIcon />}
+                    sx={{ bgcolor: 'secondary.main', '&:hover': { bgcolor: 'secondary.dark' } }}
+                  >
+                    Asset Library
+                  </Button>
                   {websiteData.settings.logoUrl && (
                     <Box
                       component="img"
@@ -1914,6 +1947,9 @@ const WebsiteBuilderPage: React.FC = () => {
                     />
                   )}
                 </Box>
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                  Upload a new image or select from your Asset Library
+                </Typography>
               </Box>
             </Grid>
 
@@ -2878,6 +2914,13 @@ const WebsiteBuilderPage: React.FC = () => {
           fetchWebsiteData();
           setTemplateSelectorOpen(false);
         }}
+      />
+
+      {/* Asset Library Modal */}
+      <AssetLibraryModal
+        open={assetPickerOpen}
+        onClose={() => setAssetPickerOpen(false)}
+        onAssetSelect={handleAssetSelect}
       />
     </Box>
   );

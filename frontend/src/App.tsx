@@ -36,6 +36,7 @@ import VerifyEmailPage from './pages/VerifyEmailPage';
 import DashboardPage from './pages/DashboardPage';
 import ProfilePage from './pages/ProfilePage';
 import { AssetLibraryPage } from './pages/AssetLibraryPage';
+import LogoTestPage from './pages/LogoTestPage';
 
 // Recipe Components
 import RecipeList from './components/RecipeList';
@@ -149,6 +150,9 @@ const App: React.FC = () => {
                         <Route path="/welcome" element={<RestaurantWelcomePage />} />
                         <Route path="/verify-email-sent" element={<VerifyEmailSentPage />} />
                         <Route path="/verify-email" element={<VerifyEmailPage />} />
+                        
+                        {/* Logo Test Page */}
+                        <Route path="/logo-test" element={<LogoTestPage />} />
 
                         {/* Platform Admin Routes - Separate from main app */}
                         <Route path="/platform-admin/login" element={<PlatformLogin />} />
