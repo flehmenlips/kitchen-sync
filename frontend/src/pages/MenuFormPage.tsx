@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Box, Container, Typography, Paper, TextField, Button, CircularProgress,
-  Divider, Grid, IconButton, Tabs, Tab, Alert, FormControlLabel, Switch,
+  Divider, Grid, IconButton, Tabs, Tab, FormControlLabel, Switch,
   Select, MenuItem as MuiMenuItem, InputLabel, FormControl, SelectChangeEvent
 } from '@mui/material';
 import { 
@@ -10,7 +10,7 @@ import {
   CloudUpload as CloudUploadIcon,
   Delete as DeleteIcon
 } from '@mui/icons-material';
-import { createMenu, getMenuById, updateMenu, uploadMenuLogo, MenuFormData, Menu } from '../services/apiService';
+import { createMenu, getMenuById, updateMenu, uploadMenuLogo, MenuFormData } from '../services/apiService';
 import MenuSectionsEditor from '../components/menu/MenuSectionsEditor';
 import { menuFonts } from '../theme';
 
@@ -119,7 +119,7 @@ const MenuFormPage: React.FC = () => {
     }
   }, [id, isEditing]);
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
@@ -231,42 +231,137 @@ const MenuFormPage: React.FC = () => {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
-        <CircularProgress />
+      <Box sx={{
+        background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+        minHeight: '100vh',
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center'
+      }}>
+        <Paper sx={{
+          background: 'rgba(255,255,255,0.7)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255,255,255,0.3)',
+          borderRadius: '20px',
+          p: 4,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+        }}>
+          <CircularProgress size={24} />
+          <Typography variant="body1" color="text.secondary" fontWeight="500">
+            Loading menu...
+          </Typography>
+        </Paper>
       </Box>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 6 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
-        <IconButton 
-          edge="start" 
-          sx={{ mr: 2 }} 
-          onClick={() => navigate('/menus')}
-          aria-label="back to menus"
-        >
-          <ArrowBackIcon />
-        </IconButton>
-        <Typography variant="h4" component="h1">
-          {isEditing ? 'Edit Menu' : 'Create New Menu'}
-        </Typography>
-      </Box>
+    <Box sx={{
+      background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+      minHeight: '100vh',
+      py: 4
+    }}>
+      <Container maxWidth="lg">
+        {/* Hero Header Section */}
+        <Paper sx={{
+          background: 'rgba(255,255,255,0.7)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255,255,255,0.3)',
+          borderRadius: '24px',
+          p: 4,
+          mb: 4,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <IconButton 
+              onClick={() => navigate('/menus')}
+              sx={{
+                background: 'rgba(59, 130, 246, 0.1)',
+                color: '#3b82f6',
+                borderRadius: '12px',
+                '&:hover': {
+                  background: 'rgba(59, 130, 246, 0.2)',
+                  transform: 'scale(1.05)'
+                },
+                transition: 'all 0.2s ease'
+              }}
+              aria-label="back to menus"
+            >
+              <ArrowBackIcon />
+            </IconButton>
+            <Box>
+              <Typography 
+                variant="h4" 
+                component="h1"
+                fontWeight="800"
+                sx={{
+                  background: 'linear-gradient(135deg, #1e40af 0%, #8b5cf6 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  mb: 0.5
+                }}
+              >
+                {isEditing ? 'Edit Menu' : 'Create New Menu'}
+              </Typography>
+              <Typography variant="body1" color="text.secondary">
+                {isEditing ? 'Update your menu settings and content' : 'Design and customize your restaurant menu'}
+              </Typography>
+            </Box>
+          </Box>
+        </Paper>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
-        </Alert>
-      )}
+        {error && (
+          <Paper sx={{
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.2)',
+            borderRadius: '16px',
+            p: 3,
+            mb: 3,
+            backdropFilter: 'blur(20px)'
+          }}>
+            <Typography color="error" fontWeight="600">{error}</Typography>
+          </Paper>
+        )}
 
-      <Paper sx={{ p: 2, mb: 4 }}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={tabValue} onChange={handleTabChange} aria-label="menu form tabs">
-            <Tab label="Basic Information" />
-            <Tab label="Layout & Style" />
-            <Tab label="Content" />
-          </Tabs>
-        </Box>
+        <Paper sx={{ 
+          background: 'rgba(255,255,255,0.7)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255,255,255,0.3)',
+          borderRadius: '24px',
+          overflow: 'hidden',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+        }}>
+          <Box sx={{ 
+            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%)',
+            borderBottom: '1px solid rgba(59, 130, 246, 0.1)'
+          }}>
+            <Tabs 
+              value={tabValue} 
+              onChange={handleTabChange} 
+              aria-label="menu form tabs"
+              sx={{
+                '& .MuiTab-root': {
+                  fontWeight: 600,
+                  fontSize: '1rem',
+                  textTransform: 'none',
+                  borderRadius: '12px 12px 0 0',
+                  mx: 0.5,
+                  '&.Mui-selected': {
+                    background: 'rgba(255,255,255,0.8)',
+                    color: '#1e40af'
+                  }
+                }
+              }}
+            >
+              <Tab label="Basic Information" />
+              <Tab label="Layout & Style" />
+              <Tab label="Content" />
+            </Tabs>
+          </Box>
 
         <form onSubmit={handleSubmit}>
           <TabPanel value={tabValue} index={0}>
@@ -651,29 +746,60 @@ const MenuFormPage: React.FC = () => {
 
           <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
             <Button 
-              variant="outlined" 
-              sx={{ mr: 2 }}
               onClick={() => navigate('/menus')}
+              sx={{ 
+                mr: 2,
+                color: '#6b7280',
+                border: '1px solid rgba(107, 114, 128, 0.3)',
+                borderRadius: '12px',
+                px: 3,
+                py: 1,
+                fontWeight: 600,
+                '&:hover': {
+                  backgroundColor: 'rgba(107, 114, 128, 0.1)',
+                  border: '1px solid rgba(107, 114, 128, 0.5)'
+                },
+                transition: 'all 0.2s ease'
+              }}
             >
               Cancel
             </Button>
             <Button 
               type="submit" 
-              variant="contained" 
-              color="primary"
               disabled={saving}
+              sx={{
+                background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                borderRadius: '12px',
+                px: 4,
+                py: 1,
+                fontSize: '1rem',
+                fontWeight: 600,
+                boxShadow: '0 8px 32px rgba(59, 130, 246, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
+                  boxShadow: '0 12px 40px rgba(59, 130, 246, 0.4)',
+                  transform: 'translateY(-2px)'
+                },
+                '&:disabled': {
+                  background: 'rgba(107, 114, 128, 0.3)',
+                  boxShadow: 'none',
+                  transform: 'none'
+                },
+                transition: 'all 0.3s ease'
+              }}
             >
               {saving ? (
                 <>
-                  <CircularProgress size={24} sx={{ mr: 1 }} />
+                  <CircularProgress size={20} sx={{ mr: 1, color: 'white' }} />
                   Saving...
                 </>
               ) : isEditing ? 'Update Menu' : 'Create Menu'}
             </Button>
           </Box>
         </form>
-      </Paper>
-    </Container>
+        </Paper>
+      </Container>
+    </Box>
   );
 };
 
