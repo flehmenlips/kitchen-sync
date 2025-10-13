@@ -40,7 +40,7 @@ export async function parseRecipeWithAI(recipeText: string): Promise<ParsedRecip
 - Ingredients (with quantity, unit, and ingredient name separated)
 - Instructions (as numbered steps)
 - Notes (if any)
-- Yield information (how many servings)
+- Yield information (how many servings, portions, or pieces)
 - Prep time in minutes (if specified)
 - Cook time in minutes (if specified)
 
@@ -51,7 +51,12 @@ For ingredients, be attentive to the various formats:
 - When you see "25g peppercorns", parse quantity=25, unit="g", name="peppercorns"
 - For numeric quantities without explicit units, use "piece" as the unit
 - For ingredients without specified quantities, set quantity to 1 and unit to "piece".
-- For ingredient measurements that use mixed numbers (like 1 1/2), convert to decimal (1.5).`;
+- For ingredient measurements that use mixed numbers (like 1 1/2), convert to decimal (1.5).
+
+For yield information, be very careful to extract:
+- Look for phrases like "serves 4", "makes 6 portions", "yields 8 pieces", "feeds 2 people"
+- Extract both the quantity (number) and the unit (servings, portions, pieces, etc.)
+- If no yield information is found, leave yieldQuantity and yieldUnit as null/undefined`;
 
     const userPrompt = `Parse this recipe into a structured JSON format:
 
@@ -71,8 +76,8 @@ Return ONLY the following JSON format with no other text or explanation:
   ],
   "instructions": ["Step 1 instruction", "Step 2 instruction"],
   "notes": "Any additional notes about the recipe (optional)",
-  "yieldQuantity": number of servings (optional),
-  "yieldUnit": "servings" (usually, optional),
+  "yieldQuantity": number of servings/portions/pieces (optional, null if not found),
+  "yieldUnit": "servings" or "portions" or "pieces" etc. (optional, null if not found),
   "prepTimeMinutes": prep time in minutes (optional),
   "cookTimeMinutes": cook time in minutes (optional)
 }`;

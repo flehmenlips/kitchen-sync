@@ -89,7 +89,7 @@ model Recipe {
   id                Int            @id @default(autoincrement())
   name              String         @db.VarChar(255)
   description       String?
-  instructions      String
+  instructions      String?
   yieldQuantity     Decimal?       @map("yield_quantity") @db.Decimal(10, 2)
   yieldUnitId       Int?           @map("yield_unit_id")
   prepTimeMinutes   Int?           @map("prep_time_minutes")

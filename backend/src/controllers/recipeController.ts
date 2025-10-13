@@ -203,7 +203,7 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
             ingredients
         } = req.body;
 
-        if (!name) {
+        if (!name || name.trim() === '') {
             res.status(400).json({ message: 'Missing required field: name' });
             return;
         }
