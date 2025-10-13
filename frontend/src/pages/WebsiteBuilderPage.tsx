@@ -1372,29 +1372,76 @@ const WebsiteBuilderPage: React.FC = () => {
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
   return (
-    <Box sx={{ width: '100%', px: { xs: 2, sm: 3, md: 4 } }}>
+    <Box sx={{ 
+      background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+      minHeight: '100vh',
+      width: '100%'
+    }}>
       {/* Show subdomain info in development */}
       {process.env.NODE_ENV === 'development' && <SubdomainInfo />}
       
-      <Box sx={{ mb: 4 }}>
-        <Box display="flex" justifyContent="space-between" alignItems="center">
-          <Box>
-            <Typography variant="h4" gutterBottom>
-              Website Builder
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Manage all customer-facing content and settings for your website
-            </Typography>
+      <Box sx={{ px: { xs: 2, sm: 3, md: 4 }, py: 4 }}>
+        {/* Hero Header */}
+        <Box sx={{ mb: 4 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '64px',
+              height: '64px',
+              background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+              borderRadius: '20px',
+              boxShadow: '0 8px 24px rgba(59, 130, 246, 0.3)',
+              mr: 3
+            }}>
+              <PublicIcon sx={{ fontSize: 32, color: 'white' }} />
+            </Box>
+            <Box>
+              <Typography 
+                variant="h4" 
+                component="h1"
+                fontWeight="800"
+                sx={{
+                  background: 'linear-gradient(135deg, #1e40af 0%, #8b5cf6 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  mb: 0.5
+                }}
+              >
+                Website Builder
+              </Typography>
+              <Typography variant="body1" color="text.secondary" sx={{ fontSize: '1.1rem' }}>
+                Manage all customer-facing content and settings for your website
+              </Typography>
+            </Box>
           </Box>
-          <Box display="flex" gap={2} flexDirection={{ xs: 'column', sm: 'row' }}>
+          
+          {/* Action Buttons */}
+          <Box display="flex" gap={2} flexDirection={{ xs: 'column', sm: 'row' }} sx={{ ml: 15 }}>
             <Button
               variant="contained"
               component="a"
               href={buildRestaurantUrl(currentRestaurant?.slug || 'restaurant')}
               target="_blank"
               startIcon={<PublicIcon />}
-              color="primary"
               size="large"
+              sx={{
+                background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                borderRadius: '16px',
+                px: 4,
+                py: 1.5,
+                fontSize: '1rem',
+                fontWeight: 600,
+                boxShadow: '0 8px 32px rgba(59, 130, 246, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
+                  boxShadow: '0 12px 40px rgba(59, 130, 246, 0.4)',
+                  transform: 'translateY(-2px)'
+                },
+                transition: 'all 0.3s ease'
+              }}
             >
               🌐 Preview Live Website
             </Button>
@@ -1403,6 +1450,23 @@ const WebsiteBuilderPage: React.FC = () => {
               component={Link}
               to="/website/content"
               startIcon={<EditIcon />}
+              sx={{
+                border: '2px solid rgba(59, 130, 246, 0.3)',
+                borderRadius: '16px',
+                px: 4,
+                py: 1.5,
+                fontSize: '1rem',
+                fontWeight: 600,
+                color: '#3b82f6',
+                background: 'rgba(255,255,255,0.7)',
+                backdropFilter: 'blur(20px)',
+                '&:hover': {
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  border: '2px solid rgba(59, 130, 246, 0.5)',
+                  transform: 'translateY(-2px)'
+                },
+                transition: 'all 0.3s ease'
+              }}
             >
               Manage Content Blocks
             </Button>
@@ -1410,45 +1474,134 @@ const WebsiteBuilderPage: React.FC = () => {
               variant="outlined"
               onClick={() => setTemplateSelectorOpen(true)}
               startIcon={<ColorLensIcon />}
+              sx={{
+                border: '2px solid rgba(139, 92, 246, 0.3)',
+                borderRadius: '16px',
+                px: 4,
+                py: 1.5,
+                fontSize: '1rem',
+                fontWeight: 600,
+                color: '#8b5cf6',
+                background: 'rgba(255,255,255,0.7)',
+                backdropFilter: 'blur(20px)',
+                '&:hover': {
+                  background: 'rgba(139, 92, 246, 0.1)',
+                  border: '2px solid rgba(139, 92, 246, 0.5)',
+                  transform: 'translateY(-2px)'
+                },
+                transition: 'all 0.3s ease'
+              }}
             >
               Choose Template
             </Button>
           </Box>
         </Box>
-      </Box>
 
-      {/* Website Deployment Info */}
-      <Paper sx={{ p: 2, mb: 3, bgcolor: 'primary.lighter', border: '1px solid', borderColor: 'primary.light' }}>
-        <Box display="flex" alignItems="center" gap={2}>
-          <PublicIcon color="primary" />
-          <Box>
-            <Typography variant="subtitle1" color="primary.main" fontWeight="bold">
-              Your Website is Live! 🎉
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Your restaurant website is automatically deployed at:{' '}
-              <strong>{buildRestaurantUrl(currentRestaurant?.slug || 'restaurant')}</strong>
-              <br />
-              Changes you make here are instantly reflected on your live website. No manual deployment needed!
-            </Typography>
+        {/* Website Deployment Info */}
+        <Paper sx={{ 
+          p: 3, 
+          mb: 4, 
+          background: 'rgba(255,255,255,0.7)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(59, 130, 246, 0.2)',
+          borderRadius: '20px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+        }}>
+          <Box display="flex" alignItems="center" gap={3}>
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '48px',
+              height: '48px',
+              background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+              borderRadius: '12px',
+              boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+            }}>
+              <PublicIcon sx={{ fontSize: 24, color: 'white' }} />
+            </Box>
+            <Box>
+              <Typography variant="h6" fontWeight="700" sx={{ mb: 0.5 }}>
+                Your Website is Live! 🎉
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '1rem' }}>
+                Your restaurant website is automatically deployed at:{' '}
+                <Typography 
+                  component="span" 
+                  sx={{ 
+                    background: 'linear-gradient(135deg, #1e40af 0%, #8b5cf6 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                    fontWeight: 700
+                  }}
+                >
+                  {buildRestaurantUrl(currentRestaurant?.slug || 'restaurant')}
+                </Typography>
+                <br />
+                Changes you make here are instantly reflected on your live website. No manual deployment needed!
+              </Typography>
+            </Box>
           </Box>
-        </Box>
-      </Paper>
+        </Paper>
 
-      <Paper sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Tabs value={tabValue} onChange={handleTabChange}>
-          <Tab icon={<SettingsIcon />} label="Settings" />
-          <Tab icon={<PagesIcon />} label="Pages" />
-          <Tab icon={<DragHandleIcon />} label="Visual Editor" />
-          <Tab icon={<PaletteIcon />} label="Branding" />
-          <Tab icon={<SeoIcon />} label="SEO" />
-          <Tab icon={<MenuIcon />} label="Navigation" />
-        </Tabs>
-      </Paper>
+        {/* Main Content Container */}
+        <Paper sx={{ 
+          background: 'rgba(255,255,255,0.7)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255,255,255,0.3)',
+          borderRadius: '24px',
+          overflow: 'hidden',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+        }}>
+          <Box sx={{ 
+            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%)',
+            borderBottom: '1px solid rgba(59, 130, 246, 0.1)'
+          }}>
+            <Tabs 
+              value={tabValue} 
+              onChange={handleTabChange}
+              variant="scrollable"
+              scrollButtons="auto"
+              sx={{
+                '& .MuiTab-root': {
+                  fontWeight: 600,
+                  fontSize: '1rem',
+                  textTransform: 'none',
+                  borderRadius: '12px 12px 0 0',
+                  mx: 0.5,
+                  minHeight: 56,
+                  '&.Mui-selected': {
+                    background: 'rgba(255,255,255,0.8)',
+                    color: '#1e40af'
+                  },
+                  '&:hover': {
+                    background: 'rgba(255,255,255,0.5)'
+                  }
+                },
+                '& .MuiTabs-indicator': {
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                  height: '3px',
+                  borderRadius: '2px'
+                }
+              }}
+            >
+              <Tab icon={<SettingsIcon />} label="Settings" />
+              <Tab icon={<PagesIcon />} label="Pages" />
+              <Tab icon={<DragHandleIcon />} label="Visual Editor" />
+              <Tab icon={<PaletteIcon />} label="Branding" />
+              <Tab icon={<SeoIcon />} label="SEO" />
+              <Tab icon={<MenuIcon />} label="Navigation" />
+            </Tabs>
+          </Box>
 
-      <Paper>
-        {/* Settings Tab - Site Configuration Only */}
-        <TabPanel value={tabValue} index={0}>
+          {/* Tab Content */}
+          <Box sx={{ 
+            background: 'rgba(255,255,255,0.3)',
+            minHeight: '400px'
+          }}>
+            {/* Settings Tab - Site Configuration Only */}
+            <TabPanel value={tabValue} index={0}>
           <Grid container spacing={3}>
             {/* Content Editing Guide */}
             <Grid item xs={12}>
@@ -2553,21 +2706,57 @@ const WebsiteBuilderPage: React.FC = () => {
               </Typography>
             </Grid>
           </Grid>
-        </TabPanel>
-      </Paper>
+            </TabPanel>
+          </Box>
+        </Paper>
 
-      {/* Save Button */}
-      <Box sx={{ mt: 3, textAlign: 'center' }}>
-        <Button
-          variant="contained"
-          color="primary"
-          size="large"
-          onClick={handleSaveSettings}
-          disabled={saving || !hasChanges}
-          startIcon={<Save />}
-        >
-          {saving ? 'Saving...' : hasChanges ? 'Save Changes' : 'No Changes'}
-        </Button>
+        {/* Save Button */}
+        <Box sx={{ 
+          mt: 4, 
+          textAlign: 'center',
+          p: 3,
+          background: 'rgba(255,255,255,0.7)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255,255,255,0.3)',
+          borderRadius: '20px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+        }}>
+          <Button
+            variant="contained"
+            size="large"
+            onClick={handleSaveSettings}
+            disabled={saving || !hasChanges}
+            startIcon={<Save />}
+            sx={{ 
+              minWidth: 200,
+              background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+              borderRadius: '16px',
+              px: 4,
+              py: 1.5,
+              fontSize: '1rem',
+              fontWeight: 600,
+              boxShadow: '0 8px 32px rgba(59, 130, 246, 0.3)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
+                boxShadow: '0 12px 40px rgba(59, 130, 246, 0.4)',
+                transform: 'translateY(-2px)'
+              },
+              '&:disabled': {
+                background: 'rgba(107, 114, 128, 0.3)',
+                boxShadow: 'none',
+                transform: 'none'
+              },
+              transition: 'all 0.3s ease'
+            }}
+          >
+            {saving ? 'Saving...' : hasChanges ? 'Save Changes' : 'No Changes'}
+          </Button>
+          {hasChanges && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+              You have unsaved changes
+            </Typography>
+          )}
+        </Box>
       </Box>
 
       {/* Page Creation Dialog */}
