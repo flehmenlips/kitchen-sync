@@ -733,7 +733,8 @@ const ContentBlocksPage: React.FC = () => {
             />
           ))}
         </Tabs>
-      </Paper>
+          </Box>
+        </Paper>
 
       {/* Page Management Section */}
       {selectedPageId !== 'all' && (
