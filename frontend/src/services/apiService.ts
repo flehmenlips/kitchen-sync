@@ -4,11 +4,28 @@ import { UserProfile, UserCredentials, AuthResponse } from '../types/user';
 import { Recipe as RecipeType, RecipeApiData } from '../types/recipe';
 import { API_URL } from '../config';
 
-// In production, use the production backend URL
-// In development, use the environment variable or localhost
-const API_BASE_URL = import.meta.env.PROD 
-  ? 'https://api.kitchensync.restaurant/api'
-  : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api');
+// Determine API URL based on environment
+const getApiUrl = () => {
+  // If VITE_API_BASE_URL is explicitly set, use it
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
+  
+  // If running on Render preview (kitchen-sync-app-pr-*.onrender.com), use Render API
+  if (window.location.hostname.includes('kitchen-sync-app-pr-') && window.location.hostname.includes('onrender.com')) {
+    return 'https://kitchen-sync-api.onrender.com/api';
+  }
+  
+  // If running in production (kitchensync.restaurant), use production API
+  if (window.location.hostname === 'kitchensync.restaurant' || window.location.hostname === 'www.kitchensync.restaurant') {
+    return 'https://api.kitchensync.restaurant/api';
+  }
+  
+  // Default to localhost for development
+  return 'http://localhost:3001/api';
+};
+
+const API_BASE_URL = getApiUrl();
 
 // Create an axios instance with auth interceptor
 const apiService = axios.create({
