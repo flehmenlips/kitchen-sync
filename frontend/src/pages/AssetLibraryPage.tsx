@@ -442,7 +442,7 @@ export const AssetLibraryPage: React.FC = () => {
                   </ListItemIcon>
                   <ListItemText 
                     primary={folder.name} 
-                    secondary={`${folder._count?.assets || folder.assetCount || 0} items`} 
+                    secondary={`${(folder._count && folder._count.assets) || folder.assetCount || 0} items`} 
                   />
                   <IconButton
                     size="small"
