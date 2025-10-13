@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { getMenus, Menu, deleteMenu, archiveMenu, duplicateMenu } from '../services/apiService';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { 
   Box, Typography, Button, Card, CardContent, CardActions, 
   Grid, IconButton, Dialog, DialogActions, DialogContent, 
-  DialogContentText, DialogTitle, Chip, CircularProgress, CardMedia,
-  Paper, CardHeader, Tooltip, Divider, Avatar
+  DialogContentText, DialogTitle, Chip, CircularProgress,
+  Paper, CardHeader, Tooltip
 } from '@mui/material';
 import { 
   Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, 
@@ -191,45 +191,129 @@ const MenusPage: React.FC = () => {
   };
 
   return (
-    <Box sx={{ width: '100%', px: { xs: 2, sm: 3, md: 4 }, mt: 4, mb: 6 }}>
-      <Box 
-        sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          mb: 4,
-          pb: 2,
-          borderBottom: '1px solid #eaeaea'
-        }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <MenuBookIcon sx={{ fontSize: 32, mr: 2, color: 'primary.main' }} />
-          <Typography variant="h4" component="h1">
-            Menu Builder
-          </Typography>
-        </Box>
-        <Button 
-          variant="contained" 
-          color="primary" 
-          startIcon={<AddIcon />}
-          onClick={handleCreateMenu}
-          sx={{ borderRadius: 2 }}
+    <Box sx={{ 
+      width: '100%', 
+      px: { xs: 2, sm: 3, md: 4 }, 
+      mt: 4, 
+      mb: 6,
+      background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+      minHeight: '100vh'
+    }}>
+      {/* Hero Header Section */}
+      <Paper sx={{
+        background: 'rgba(255,255,255,0.7)',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(255,255,255,0.3)',
+        borderRadius: '24px',
+        p: 4,
+        mb: 4,
+        boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+      }}>
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            flexWrap: 'wrap',
+            gap: 2
+          }}
         >
-          Create New Menu
-        </Button>
-      </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '64px',
+              height: '64px',
+              background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+              borderRadius: '20px',
+              boxShadow: '0 8px 24px rgba(59, 130, 246, 0.3)',
+              mr: 3
+            }}>
+              <MenuBookIcon sx={{ fontSize: 32, color: 'white' }} />
+            </Box>
+            <Box>
+              <Typography 
+                variant="h4" 
+                component="h1"
+                fontWeight="800"
+                sx={{
+                  background: 'linear-gradient(135deg, #1e40af 0%, #8b5cf6 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  mb: 0.5
+                }}
+              >
+                Menu Builder
+              </Typography>
+              <Typography variant="body1" color="text.secondary">
+                Create and manage your restaurant menus
+              </Typography>
+            </Box>
+          </Box>
+          <Button 
+            startIcon={<AddIcon />}
+            onClick={handleCreateMenu}
+            sx={{
+              background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+              borderRadius: '16px',
+              px: 4,
+              py: 1.5,
+              fontSize: '1rem',
+              fontWeight: 600,
+              boxShadow: '0 8px 32px rgba(59, 130, 246, 0.3)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
+                boxShadow: '0 12px 40px rgba(59, 130, 246, 0.4)',
+                transform: 'translateY(-2px)'
+              },
+              transition: 'all 0.3s ease'
+            }}
+          >
+            Create New Menu
+          </Button>
+        </Box>
+      </Paper>
 
       {/* Error message */}
       {error && (
-        <Box sx={{ mt: 2, mb: 2 }}>
-          <Typography color="error">{error}</Typography>
-        </Box>
+        <Paper sx={{
+          background: 'rgba(239, 68, 68, 0.1)',
+          border: '1px solid rgba(239, 68, 68, 0.2)',
+          borderRadius: '16px',
+          p: 3,
+          mb: 3,
+          backdropFilter: 'blur(20px)'
+        }}>
+          <Typography color="error" fontWeight="600">{error}</Typography>
+        </Paper>
       )}
 
       {/* Loading indicator */}
       {loading && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-          <CircularProgress />
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center',
+          mt: 8,
+          mb: 8
+        }}>
+          <Paper sx={{
+            background: 'rgba(255,255,255,0.7)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255,255,255,0.3)',
+            borderRadius: '20px',
+            p: 4,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2
+          }}>
+            <CircularProgress size={24} />
+            <Typography variant="body1" color="text.secondary" fontWeight="500">
+              Loading menus...
+            </Typography>
+          </Paper>
         </Box>
       )}
 
@@ -237,22 +321,63 @@ const MenusPage: React.FC = () => {
       {!loading && menus.length === 0 ? (
         <Paper 
           sx={{ 
-            mt: 4, 
-            p: 6, 
+            background: 'rgba(255,255,255,0.7)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255,255,255,0.3)',
+            borderRadius: '24px',
+            p: 8, 
             textAlign: 'center',
-            bgcolor: 'rgba(0,0,0,0.02)',
-            borderRadius: 2
+            boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
           }}
         >
-          <RestaurantIcon sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
-          <Typography variant="h5" sx={{ mb: 2 }}>No menus found</Typography>
-          <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary' }}>
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '120px',
+            height: '120px',
+            background: 'linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%)',
+            borderRadius: '30px',
+            mx: 'auto',
+            mb: 4,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.1)'
+          }}>
+            <RestaurantIcon sx={{ fontSize: 60, color: '#64748b' }} />
+          </Box>
+          <Typography 
+            variant="h5" 
+            sx={{ 
+              mb: 2,
+              fontWeight: 700,
+              background: 'linear-gradient(135deg, #1e40af 0%, #8b5cf6 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text'
+            }}
+          >
+            No menus found
+          </Typography>
+          <Typography variant="body1" sx={{ mb: 4, color: 'text.secondary', fontSize: '1.1rem' }}>
             Create your first menu to get started with Menu Builder
           </Typography>
           <Button 
-            variant="contained" 
             startIcon={<AddIcon />}
             onClick={handleCreateMenu}
+            sx={{
+              background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+              borderRadius: '16px',
+              px: 4,
+              py: 1.5,
+              fontSize: '1rem',
+              fontWeight: 600,
+              boxShadow: '0 8px 32px rgba(59, 130, 246, 0.3)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
+                boxShadow: '0 12px 40px rgba(59, 130, 246, 0.4)',
+                transform: 'translateY(-2px)'
+              },
+              transition: 'all 0.3s ease'
+            }}
           >
             Create New Menu
           </Button>
@@ -277,58 +402,113 @@ const MenusPage: React.FC = () => {
                     height: '100%', 
                     display: 'flex', 
                     flexDirection: 'column',
-                    transition: 'transform 0.2s, box-shadow 0.2s',
-                    borderRadius: 2,
+                    background: 'rgba(255,255,255,0.7)',
+                    backdropFilter: 'blur(20px)',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    borderRadius: '20px',
                     overflow: 'hidden',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+                    transition: 'all 0.3s ease',
                     '&:hover': {
-                      transform: 'translateY(-4px)',
-                      boxShadow: 6
+                      transform: 'translateY(-8px)',
+                      boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+                      background: 'rgba(255,255,255,0.8)'
                     }
                   }}
                 >
                   <CardHeader
                     title={
-                      <Typography variant="h6" component="h2" sx={{ fontWeight: 'bold' }}>
+                      <Typography 
+                        variant="h6" 
+                        component="h2" 
+                        sx={{ 
+                          fontWeight: 700,
+                          background: 'linear-gradient(135deg, #1e40af 0%, #8b5cf6 100%)',
+                          WebkitBackgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent',
+                          backgroundClip: 'text'
+                        }}
+                      >
                         {menu.name}
                       </Typography>
                     }
-                    subheader={menu.title}
+                    subheader={
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                        {menu.title}
+                      </Typography>
+                    }
                     action={
                       <IconButton 
                         onClick={() => handleViewMenu(menu.id)} 
-                        color="primary"
+                        sx={{
+                          background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                          color: 'white',
+                          borderRadius: '12px',
+                          width: '40px',
+                          height: '40px',
+                          boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+                          '&:hover': {
+                            background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
+                            transform: 'scale(1.05)'
+                          },
+                          transition: 'all 0.2s ease'
+                        }}
                         aria-label="view menu"
                       >
-                        <PrintIcon />
+                        <PrintIcon fontSize="small" />
                       </IconButton>
                     }
                     sx={{ 
-                      pb: 0,
+                      pb: 1,
+                      pt: 2,
+                      px: 3,
                       '& .MuiCardHeader-action': {
                         margin: 0
                       }
                     }}
                   />
-                  <Divider sx={{ mx: 2, my: 1 }} />
-                  <CardContent sx={{ pt: 1, pb: 1, flexGrow: 1 }}>
-                    <Box sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap' }}>
+                  <Box sx={{ 
+                    height: '1px', 
+                    background: 'linear-gradient(90deg, transparent 0%, rgba(59, 130, 246, 0.3) 50%, transparent 100%)',
+                    mx: 3,
+                    my: 1
+                  }} />
+                  <CardContent sx={{ pt: 1, pb: 1, flexGrow: 1, px: 3 }}>
+                    <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
                       <Chip 
                         size="small" 
                         label={`${sectionCount} ${sectionCount === 1 ? 'Section' : 'Sections'}`} 
-                        color="primary"
-                        variant="outlined"
+                        sx={{
+                          background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                          color: 'white',
+                          fontWeight: 600,
+                          borderRadius: '8px'
+                        }}
                       />
                       <Chip 
                         size="small" 
                         label={`${activeItemCount} ${activeItemCount === 1 ? 'Item' : 'Items'}`}
-                        variant="outlined"
+                        sx={{
+                          background: 'rgba(59, 130, 246, 0.1)',
+                          color: '#3b82f6',
+                          border: '1px solid rgba(59, 130, 246, 0.2)',
+                          fontWeight: 600,
+                          borderRadius: '8px'
+                        }}
                       />
                       {menu.font && (
                         <Chip 
                           size="small" 
                           label={menu.font}
-                          variant="outlined"
-                          sx={{ maxWidth: '100%', overflow: 'hidden' }}
+                          sx={{ 
+                            background: 'rgba(139, 92, 246, 0.1)',
+                            color: '#8b5cf6',
+                            border: '1px solid rgba(139, 92, 246, 0.2)',
+                            fontWeight: 600,
+                            borderRadius: '8px',
+                            maxWidth: '100%', 
+                            overflow: 'hidden' 
+                          }}
                         />
                       )}
                     </Box>
@@ -336,13 +516,15 @@ const MenusPage: React.FC = () => {
                     {/* Preview of menu content */}
                     <Box 
                       sx={{ 
-                        p: 1.5, 
-                        borderRadius: 1,
+                        p: 2, 
+                        borderRadius: '12px',
                         backgroundColor: menu.backgroundColor || '#ffffff',
                         color: menu.textColor || '#000000',
-                        border: '1px solid #eaeaea',
-                        minHeight: 100,
-                        position: 'relative'
+                        border: '1px solid rgba(59, 130, 246, 0.2)',
+                        minHeight: 120,
+                        position: 'relative',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                        backdropFilter: 'blur(10px)'
                       }}
                     >
                       {/* Logo preview if present */}
@@ -388,50 +570,93 @@ const MenusPage: React.FC = () => {
                   </CardContent>
                   <CardActions 
                     sx={{ 
-                      justifyContent: 'center', 
-                      p: 1.5,
-                      backgroundColor: 'rgba(0,0,0,0.02)',
-                      gap: 0.5
+                      justifyContent: 'space-between', 
+                      p: 2,
+                      pt: 1,
+                      background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%)',
+                      gap: 1
                     }}
                   >
                     <Tooltip title="Edit">
                       <Button
                         size="small"
-                        variant="outlined"
                         startIcon={<EditIcon />}
                         onClick={() => handleEditMenu(menu.id)}
-                        sx={{ borderRadius: 2 }}
+                        sx={{ 
+                          background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                          color: 'white',
+                          borderRadius: '12px',
+                          px: 2,
+                          py: 0.5,
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                          boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+                          '&:hover': {
+                            background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
+                            transform: 'translateY(-1px)'
+                          },
+                          transition: 'all 0.2s ease'
+                        }}
                       >
                         Edit
                       </Button>
                     </Tooltip>
-                    <Tooltip title="Duplicate">
-                      <IconButton 
-                        size="small" 
-                        onClick={() => handleDuplicateMenu(menu)}
-                        color="default"
-                      >
-                        <CopyIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Archive">
-                      <IconButton 
-                        size="small" 
-                        onClick={() => handleArchiveMenu(menu)}
-                        color="default"
-                      >
-                        <ArchiveIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Delete">
-                      <IconButton 
-                        size="small" 
-                        onClick={() => handleDeleteClick(menu)}
-                        color="error"
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                      <Tooltip title="Duplicate">
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleDuplicateMenu(menu)}
+                          sx={{
+                            background: 'rgba(59, 130, 246, 0.1)',
+                            color: '#3b82f6',
+                            borderRadius: '8px',
+                            '&:hover': {
+                              background: 'rgba(59, 130, 246, 0.2)',
+                              transform: 'scale(1.05)'
+                            },
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          <CopyIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Archive">
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleArchiveMenu(menu)}
+                          sx={{
+                            background: 'rgba(139, 92, 246, 0.1)',
+                            color: '#8b5cf6',
+                            borderRadius: '8px',
+                            '&:hover': {
+                              background: 'rgba(139, 92, 246, 0.2)',
+                              transform: 'scale(1.05)'
+                            },
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          <ArchiveIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Delete">
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleDeleteClick(menu)}
+                          sx={{
+                            background: 'rgba(239, 68, 68, 0.1)',
+                            color: '#ef4444',
+                            borderRadius: '8px',
+                            '&:hover': {
+                              background: 'rgba(239, 68, 68, 0.2)',
+                              transform: 'scale(1.05)'
+                            },
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
                   </CardActions>
                 </Card>
               </Grid>
