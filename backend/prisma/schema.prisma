@@ -472,6 +472,73 @@ model GuestReservation {
   @@map("guest_reservations")
 }
 
+// Restaurant reservation settings and configuration
+model ReservationSettings {
+  id                      Int        @id @default(autoincrement())
+  restaurantId            Int        @unique @map("restaurant_id")
+  
+  // Operating Hours (JSON format: { "monday": { "open": "17:00", "close": "22:00", "closed": false }, ... })
+  operatingHours          Json       @default("{}") @map("operating_hours") @db.Json
+  
+  // Reservation Rules
+  minPartySize            Int        @default(1) @map("min_party_size")
+  maxPartySize            Int        @default(20) @map("max_party_size")
+  defaultDuration         Int        @default(90) @map("default_duration") // minutes
+  advanceBookingDays      Int        @default(60) @map("advance_booking_days")
+  minAdvanceHours         Int        @default(2) @map("min_advance_hours")
+  
+  // Time Slot Configuration
+  timeSlotInterval        Int        @default(15) @map("time_slot_interval") // minutes (15, 30, 60)
+  seatingIntervals        Json?      @map("seating_intervals") @db.Json // ["17:00", "17:30", "18:00", ...]
+  
+  // Capacity Management
+  maxCoversPerSlot        Int?       @map("max_covers_per_slot") // Optional overall capacity limit
+  allowOverbooking        Boolean    @default(false) @map("allow_overbooking")
+  overbookingPercentage   Int        @default(10) @map("overbooking_percentage")
+  
+  // Policies
+  cancellationPolicy      String?    @map("cancellation_policy") @db.Text
+  cancellationHours       Int        @default(24) @map("cancellation_hours") // Hours before reservation
+  requireCreditCard       Boolean    @default(false) @map("require_credit_card")
+  requireDeposit          Boolean    @default(false) @map("require_deposit")
+  depositAmount           Decimal?   @map("deposit_amount") @db.Decimal(10, 2)
+  autoConfirm             Boolean    @default(true) @map("auto_confirm")
+  
+  // Communication
+  sendConfirmation        Boolean    @default(true) @map("send_confirmation")
+  sendReminder            Boolean    @default(true) @map("send_reminder")
+  reminderHours           Int        @default(24) @map("reminder_hours") // Hours before reservation
+  
+  // Metadata
+  createdAt               DateTime   @default(now()) @map("created_at")
+  updatedAt               DateTime   @updatedAt @map("updated_at")
+  
+  restaurant              Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  
+  @@index([restaurantId])
+  @@map("reservation_settings")
+}
+
+// Time slot capacity configuration for specific days/times
+model TimeSlotCapacity {
+  id                Int        @id @default(autoincrement())
+  restaurantId      Int        @map("restaurant_id")
+  dayOfWeek         Int        // 0-6 (Sunday-Saturday)
+  timeSlot          String     @db.VarChar(10) // "18:00"
+  maxCovers         Int        @map("max_covers") // Maximum guests for this slot
+  isActive          Boolean    @default(true) @map("is_active")
+  
+  createdAt         DateTime   @default(now()) @map("created_at")
+  updatedAt         DateTime   @updatedAt @map("updated_at")
+  
+  restaurant        Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  
+  @@unique([restaurantId, dayOfWeek, timeSlot])
+  @@index([restaurantId])
+  @@index([dayOfWeek])
+  @@map("time_slot_capacity")
+}
+
 model Order {
   id            Int          @id @default(autoincrement())
   orderNumber   String       @unique @map("order_number") @db.VarChar(50)
@@ -596,9 +663,11 @@ model Restaurant {
   prepTasks               PrepTask[]
   recipes                 Recipe[]
   reservations            Reservation[]
+  reservationSettings     ReservationSettings?
   restaurantNotes         RestaurantNote[]
   restaurant_settings     RestaurantSettings?
   staff                   RestaurantStaff[]
+  timeSlotCapacities      TimeSlotCapacity[]
   restaurants             Restaurant?           @relation("restaurantsTorestaurants", fields: [parent_restaurant_id], references: [id])
   other_restaurants       Restaurant[]          @relation("restaurantsTorestaurants")
   subscription            Subscription?
