@@ -1,6 +1,12 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { customerAuthController } from '../controllers/customerAuthController';
 import { authenticateCustomer, CustomerAuthRequest } from '../middleware/authenticateCustomer';
+import { 
+  registrationLimiter, 
+  loginLimiter, 
+  passwordResetLimiter, 
+  emailVerificationLimiter 
+} from '../middleware/rateLimiter';
 
 const router = Router();
 
@@ -41,12 +47,12 @@ const updateProfile = async (req: Request, res: Response): Promise<void> => {
   await customerAuthController.updateProfile(req as CustomerAuthRequest, res);
 };
 
-// Public routes - no authentication required
-router.post('/register', register);
-router.post('/login', login);
-router.post('/verify-email', verifyEmail);
-router.post('/request-password-reset', requestPasswordReset);
-router.post('/reset-password', resetPassword);
+// Public routes - with rate limiting for security
+router.post('/register', registrationLimiter, register);
+router.post('/login', loginLimiter, login);
+router.post('/verify-email', emailVerificationLimiter, verifyEmail);
+router.post('/request-password-reset', passwordResetLimiter, requestPasswordReset);
+router.post('/reset-password', passwordResetLimiter, resetPassword);
 router.post('/refresh-token', refreshToken);
 router.post('/logout', logout);
 
