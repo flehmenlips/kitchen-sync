@@ -9,11 +9,16 @@ import {
 } from '../controllers/userController';
 import { protect } from '../middleware/authMiddleware'; // Import protect middleware (to be created)
 import { registrationLimiter, loginLimiter } from '../middleware/rateLimiter';
+import { validateRegistration } from '../middleware/emailValidator';
 
 const router = express.Router();
 
-// Apply rate limiting to prevent bot attacks
-router.post('/register', registrationLimiter, registerUser);
+// Apply full security stack to prevent bot attacks
+router.post('/register', 
+  registrationLimiter,      // Rate limiting
+  ...validateRegistration,  // Email + name validation
+  registerUser
+);
 router.post('/login', loginLimiter, loginUser);
 router.post('/logout', logoutUser);
 

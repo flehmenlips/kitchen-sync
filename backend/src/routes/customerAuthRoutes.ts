@@ -7,6 +7,7 @@ import {
   passwordResetLimiter, 
   emailVerificationLimiter 
 } from '../middleware/rateLimiter';
+import { validateRegistration } from '../middleware/emailValidator';
 
 const router = Router();
 
@@ -47,8 +48,12 @@ const updateProfile = async (req: Request, res: Response): Promise<void> => {
   await customerAuthController.updateProfile(req as CustomerAuthRequest, res);
 };
 
-// Public routes - with rate limiting for security
-router.post('/register', registrationLimiter, register);
+// Public routes - with full security stack
+router.post('/register', 
+  registrationLimiter,      // Rate limiting (3 per 15 min)
+  ...validateRegistration,  // Email + name validation
+  register
+);
 router.post('/login', loginLimiter, login);
 router.post('/verify-email', emailVerificationLimiter, verifyEmail);
 router.post('/request-password-reset', passwordResetLimiter, requestPasswordReset);
