@@ -318,7 +318,7 @@ export const uploadAsset = asyncHandler(async (req: Request, res: Response) => {
       }
       // Use standardized folder structure: restaurants/{id}/assets/{subfolder}
       const targetSubfolder = folderId ? 'organized' : 'general';
-      uploadResult = await uploadImage(tempPath, `restaurants/${restaurantId}/assets/${targetSubfolder}`, restaurantId);
+      uploadResult = await uploadImage(tempPath, `restaurants/${restaurantId}/assets/${targetSubfolder}`);
       console.log('[AssetController] Cloudinary upload result:', uploadResult);
     }
 

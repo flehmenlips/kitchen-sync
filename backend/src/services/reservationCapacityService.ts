@@ -189,7 +189,7 @@ export async function getTimeSlotAvailabilities(
 
     return {
       timeSlot,
-      available: capacity === null || remaining > 0,
+      available: capacity === null || (remaining !== null && remaining > 0),
       currentBookings,
       capacity,
       remaining

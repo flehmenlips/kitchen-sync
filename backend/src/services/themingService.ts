@@ -627,8 +627,62 @@ export const themingService = {
       warnings,
       suggestions
     };
+  },
+
+  // Predefined Color Schemes
+  async getPredefinedColorSchemes() {
+    return PREDEFINED_COLOR_SCHEMES;
+  },
+
+  // Color extraction
+  async extractColorsFromImage(imageUrl: string) {
+    return await extractColorsFromImage(imageUrl);
   }
 };
+
+// Predefined color schemes for restaurants
+const PREDEFINED_COLOR_SCHEMES = [
+  {
+    name: 'Classic Fine Dining',
+    primaryColor: '#8B4513',
+    secondaryColor: '#D2691E',
+    accentColor: '#2F1B14',
+    backgroundColor: '#FFFEF7',
+    textColor: '#2F1B14'
+  },
+  {
+    name: 'Modern Bistro',
+    primaryColor: '#1a1a1a',
+    secondaryColor: '#d4af37',
+    accentColor: '#8b4513',
+    backgroundColor: '#ffffff',
+    textColor: '#333333'
+  },
+  {
+    name: 'Cozy Café',
+    primaryColor: '#6B4423',
+    secondaryColor: '#D4A574',
+    accentColor: '#8B4513',
+    backgroundColor: '#F5F5DC',
+    textColor: '#3E2723'
+  },
+  {
+    name: 'Seaside Restaurant',
+    primaryColor: '#1E3A5F',
+    secondaryColor: '#4A90A4',
+    accentColor: '#2C5F7C',
+    backgroundColor: '#F0F8FF',
+    textColor: '#1E3A5F'
+  },
+  {
+    name: 'Rustic Farmhouse',
+    primaryColor: '#5D4037',
+    secondaryColor: '#8D6E63',
+    accentColor: '#3E2723',
+    backgroundColor: '#FFF8E1',
+    textColor: '#3E2723'
+  }
+];
 
 // Calculate contrast ratio for accessibility validation
 export function calculateContrastRatio(color1: string, color2: string): number {

@@ -3,9 +3,7 @@ import {
   themingService, 
   ColorPaletteData, 
   TypographyConfigData, 
-  BrandAssetData,
-  getPredefinedColorSchemes,
-  extractColorsFromImage as extractColors
+  BrandAssetData
 } from '../services/themingService';
 
 export const themingController = {
