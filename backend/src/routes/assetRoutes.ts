@@ -12,7 +12,11 @@ import {
   getAssetAnalytics,
   upload,
   importAllCloudinaryAssets,
-  testAssetApi
+  testAssetApi,
+  bulkDelete,
+  bulkMove,
+  bulkTag,
+  migrateAssetsToStandardStructure
 } from '../controllers/assetController';
 import { protect } from '../middleware/authMiddleware';
 
@@ -45,5 +49,13 @@ router.post('/restaurants/:restaurantId/assets/:id/track-usage', trackAssetUsage
 
 // Analytics routes
 router.get('/restaurants/:restaurantId/assets/analytics', getAssetAnalytics);
+
+// Bulk operations routes
+router.post('/restaurants/:restaurantId/bulk/delete', bulkDelete);
+router.post('/restaurants/:restaurantId/bulk/move', bulkMove);
+router.post('/restaurants/:restaurantId/bulk/tag', bulkTag);
+
+// Migration route
+router.post('/restaurants/:restaurantId/migrate-folder-structure', migrateAssetsToStandardStructure);
 
 export default router; 

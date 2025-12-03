@@ -114,6 +114,7 @@ export interface BrandAsset {
     height: number;
   };
   altText?: string;
+  description?: string;
   isPrimary: boolean;
   createdAt: string;
   updatedAt: string;
@@ -130,6 +131,7 @@ export interface BrandAssetData {
     height: number;
   };
   altText?: string;
+  description?: string;
   isPrimary?: boolean;
 }
 

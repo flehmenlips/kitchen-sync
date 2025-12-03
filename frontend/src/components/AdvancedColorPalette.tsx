@@ -74,6 +74,8 @@ const AdvancedColorPalette: React.FC<AdvancedColorPaletteProps> = ({
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [selectedPalette, setSelectedPalette] = useState<ColorPalette | null>(null);
   const [showPredefined, setShowPredefined] = useState(true);
+  const [extractingColors, setExtractingColors] = useState(false);
+  const [colorExtractionDialogOpen, setColorExtractionDialogOpen] = useState(false);
 
   // Form state for creating/editing palettes
   const [formData, setFormData] = useState<ColorPaletteData>({
@@ -246,11 +248,121 @@ const AdvancedColorPalette: React.FC<AdvancedColorPaletteProps> = ({
       accentColor: scheme.accentColor,
       backgroundColor: scheme.backgroundColor,
       textColor: scheme.textColor,
-      successColor: '#4caf50',
-      warningColor: '#ff9800',
-      errorColor: '#f44336'
+      successColor: scheme.successColor || '#4caf50',
+      warningColor: scheme.warningColor || '#ff9800',
+      errorColor: scheme.errorColor || '#f44336'
     });
     setCreateDialogOpen(true);
+  };
+
+  // Client-side color extraction using Canvas API
+  const extractColorsFromImageClient = (imageUrl: string): Promise<string[]> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            reject(new Error('Could not get canvas context'));
+            return;
+          }
+          
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0);
+          
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const pixels = imageData.data;
+          
+          // Simple color extraction: get dominant colors
+          const colorMap = new Map<string, number>();
+          
+          // Sample pixels (every 10th pixel for performance)
+          for (let i = 0; i < pixels.length; i += 40) {
+            const r = pixels[i];
+            const g = pixels[i + 1];
+            const b = pixels[i + 2];
+            const a = pixels[i + 3];
+            
+            // Skip transparent pixels
+            if (a < 128) continue;
+            
+            // Quantize colors to reduce noise
+            const quantizedR = Math.round(r / 32) * 32;
+            const quantizedG = Math.round(g / 32) * 32;
+            const quantizedB = Math.round(b / 32) * 32;
+            
+            const color = `#${quantizedR.toString(16).padStart(2, '0')}${quantizedG.toString(16).padStart(2, '0')}${quantizedB.toString(16).padStart(2, '0')}`;
+            colorMap.set(color, (colorMap.get(color) || 0) + 1);
+          }
+          
+          // Sort by frequency and get top colors
+          const sortedColors = Array.from(colorMap.entries())
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10)
+            .map(([color]) => color);
+          
+          // Filter out very light/white and very dark/black colors for better palette
+          const filteredColors = sortedColors.filter(color => {
+            const rgb = parseInt(color.slice(1), 16);
+            const r = (rgb >> 16) & 0xff;
+            const g = (rgb >> 8) & 0xff;
+            const b = rgb & 0xff;
+            const brightness = (r + g + b) / 3;
+            return brightness > 30 && brightness < 225; // Exclude very dark and very light
+          });
+          
+          resolve(filteredColors.length >= 3 ? filteredColors : sortedColors);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      
+      img.onerror = () => {
+        reject(new Error('Failed to load image'));
+      };
+      
+      img.src = imageUrl;
+    });
+  };
+
+  const handleExtractColorsFromImage = async (imageUrl: string) => {
+    try {
+      setExtractingColors(true);
+      
+      // Try client-side extraction first (more accurate)
+      let colors: string[];
+      try {
+        colors = await extractColorsFromImageClient(imageUrl);
+      } catch (clientError) {
+        // Fallback to server-side extraction
+        console.log('Client-side extraction failed, using server-side:', clientError);
+        colors = await themingService.extractColorsFromImage(imageUrl);
+      }
+      
+      if (colors && colors.length >= 3) {
+        // Use extracted colors to populate form
+        setFormData({
+          ...formData,
+          primaryColor: colors[0] || formData.primaryColor,
+          secondaryColor: colors[1] || formData.secondaryColor,
+          accentColor: colors[2] || formData.accentColor,
+          backgroundColor: colors[3] || formData.backgroundColor || '#ffffff',
+          textColor: colors[4] || formData.textColor || '#000000'
+        });
+        setColorExtractionDialogOpen(false);
+        if (!createDialogOpen) {
+          setCreateDialogOpen(true);
+        }
+      }
+    } catch (error) {
+      console.error('Error extracting colors:', error);
+    } finally {
+      setExtractingColors(false);
+    }
   };
 
   const resetForm = () => {
@@ -353,13 +465,22 @@ const AdvancedColorPalette: React.FC<AdvancedColorPaletteProps> = ({
       {/* Header */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h6">Advanced Color Palettes</Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setCreateDialogOpen(true)}
-        >
-          Create Palette
-        </Button>
+        <Box display="flex" gap={1}>
+          <Button
+            variant="outlined"
+            startIcon={<UploadIcon />}
+            onClick={() => setColorExtractionDialogOpen(true)}
+          >
+            Extract from Logo
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setCreateDialogOpen(true)}
+          >
+            Create Palette
+          </Button>
+        </Box>
       </Box>
 
       {/* Toggle for Predefined Schemes */}
@@ -564,6 +685,65 @@ const AdvancedColorPalette: React.FC<AdvancedColorPaletteProps> = ({
           >
             {editingPalette ? 'Update' : 'Create'}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Color Extraction Dialog */}
+      <Dialog 
+        open={colorExtractionDialogOpen} 
+        onClose={() => setColorExtractionDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Extract Colors from Logo</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Upload your logo image to automatically extract a color palette that matches your brand.
+            </Alert>
+            <TextField
+              fullWidth
+              label="Image URL"
+              placeholder="https://example.com/logo.png"
+              helperText="Enter the URL of your logo image"
+              sx={{ mb: 2 }}
+              onChange={(e) => {
+                const url = e.target.value;
+                if (url && url.startsWith('http')) {
+                  handleExtractColorsFromImage(url);
+                }
+              }}
+            />
+            <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 2 }}>
+              OR
+            </Typography>
+            <Button
+              fullWidth
+              variant="outlined"
+              component="label"
+              startIcon={extractingColors ? <CircularProgress size={16} /> : <UploadIcon />}
+              disabled={extractingColors}
+            >
+              {extractingColors ? 'Extracting Colors...' : 'Upload Logo Image'}
+              <input
+                type="file"
+                hidden
+                accept="image/*"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    // Create a temporary URL for the file
+                    const tempUrl = URL.createObjectURL(file);
+                    await handleExtractColorsFromImage(tempUrl);
+                    URL.revokeObjectURL(tempUrl);
+                  }
+                }}
+              />
+            </Button>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setColorExtractionDialogOpen(false)}>Cancel</Button>
         </DialogActions>
       </Dialog>
     </Box>

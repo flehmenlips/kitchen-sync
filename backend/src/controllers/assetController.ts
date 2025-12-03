@@ -13,7 +13,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { asyncHandler } from '../utils/asyncHandler';
-import { uploadImage, deleteImage, listRestaurantAssets, validateAssetOwnership } from '../services/cloudinaryService';
+import { uploadImage, deleteImage, listRestaurantAssets, validateAssetOwnership, migrateRestaurantAssets } from '../services/cloudinaryService';
 import { uploadToLocal, deleteFromLocal, listLocalAssets } from '../services/localStorageService';
 
 const prisma = new PrismaClient();
@@ -316,7 +316,9 @@ export const uploadAsset = asyncHandler(async (req: Request, res: Response) => {
       if (!tempPath) {
         throw new Error('Temp file path is required for Cloudinary upload');
       }
-      uploadResult = await uploadImage(tempPath, `restaurants/${restaurantId}/assets`);
+      // Use standardized folder structure: restaurants/{id}/assets/{subfolder}
+      const targetSubfolder = folderId ? 'organized' : 'general';
+      uploadResult = await uploadImage(tempPath, `restaurants/${restaurantId}/assets/${targetSubfolder}`, restaurantId);
       console.log('[AssetController] Cloudinary upload result:', uploadResult);
     }
 
@@ -723,6 +725,171 @@ export const trackAssetUsage = asyncHandler(async (req: Request, res: Response) 
   res.status(501).json({ error: 'Asset usage tracking not yet implemented' });
 });
 
+// Bulk operations
+export const bulkDelete = asyncHandler(async (req: Request, res: Response) => {
+  const restaurantId = parseInt(req.params.restaurantId);
+  const { assetIds } = req.body;
+
+  if (!Array.isArray(assetIds) || assetIds.length === 0) {
+    return res.status(400).json({ error: 'assetIds array is required' });
+  }
+
+  try {
+    // Verify all assets belong to this restaurant
+    const assets = await prisma.brandAsset.findMany({
+      where: {
+        id: { in: assetIds },
+        restaurantId: restaurantId
+      },
+      select: {
+        id: true,
+        cloudinaryPublicId: true,
+        fileName: true
+      }
+    });
+
+    if (assets.length !== assetIds.length) {
+      return res.status(403).json({ error: 'Some assets do not belong to this restaurant' });
+    }
+
+    // Delete from Cloudinary and database
+    const deletePromises = assets.map(async (asset) => {
+      if (asset.cloudinaryPublicId) {
+        try {
+          await deleteImage(asset.cloudinaryPublicId, restaurantId);
+        } catch (error) {
+          console.warn(`Warning: Could not delete ${asset.cloudinaryPublicId} from Cloudinary:`, error);
+        }
+      }
+      return prisma.brandAsset.delete({ where: { id: asset.id } });
+    });
+
+    await Promise.all(deletePromises);
+
+    res.json({
+      message: `Successfully deleted ${assets.length} asset(s)`,
+      deleted: assets.length
+    });
+  } catch (error: any) {
+    console.error('Bulk delete error:', error);
+    res.status(500).json({ error: 'Failed to delete assets' });
+  }
+});
+
+export const bulkMove = asyncHandler(async (req: Request, res: Response) => {
+  const restaurantId = parseInt(req.params.restaurantId);
+  const { assetIds, folderId } = req.body;
+
+  if (!Array.isArray(assetIds) || assetIds.length === 0) {
+    return res.status(400).json({ error: 'assetIds array is required' });
+  }
+
+  // Validate folderId if provided
+  if (folderId) {
+    const folder = await prisma.assetFolder.findFirst({
+      where: {
+        id: folderId,
+        restaurantId: restaurantId
+      }
+    });
+
+    if (!folder) {
+      return res.status(404).json({ error: 'Folder not found or access denied' });
+    }
+  }
+
+  try {
+    // Verify all assets belong to this restaurant
+    const assets = await prisma.brandAsset.findMany({
+      where: {
+        id: { in: assetIds },
+        restaurantId: restaurantId
+      }
+    });
+
+    if (assets.length !== assetIds.length) {
+      return res.status(403).json({ error: 'Some assets do not belong to this restaurant' });
+    }
+
+    // Update folderId for all assets
+    await prisma.brandAsset.updateMany({
+      where: {
+        id: { in: assetIds },
+        restaurantId: restaurantId
+      },
+      data: {
+        folderId: folderId || null
+      }
+    });
+
+    res.json({
+      message: `Successfully moved ${assets.length} asset(s)`,
+      moved: assets.length,
+      folderId: folderId || null
+    });
+  } catch (error: any) {
+    console.error('Bulk move error:', error);
+    res.status(500).json({ error: 'Failed to move assets' });
+  }
+});
+
+export const bulkTag = asyncHandler(async (req: Request, res: Response) => {
+  const restaurantId = parseInt(req.params.restaurantId);
+  const { assetIds, tags } = req.body;
+
+  if (!Array.isArray(assetIds) || assetIds.length === 0) {
+    return res.status(400).json({ error: 'assetIds array is required' });
+  }
+
+  if (!Array.isArray(tags)) {
+    return res.status(400).json({ error: 'tags array is required' });
+  }
+
+  try {
+    // Note: Tags field may not exist in production schema
+    // This will fail gracefully if the field doesn't exist
+    const assets = await prisma.brandAsset.findMany({
+      where: {
+        id: { in: assetIds },
+        restaurantId: restaurantId
+      }
+    });
+
+    if (assets.length !== assetIds.length) {
+      return res.status(403).json({ error: 'Some assets do not belong to this restaurant' });
+    }
+
+    // Try to update tags (will fail if field doesn't exist in production)
+    try {
+      await prisma.brandAsset.updateMany({
+        where: {
+          id: { in: assetIds },
+          restaurantId: restaurantId
+        },
+        data: {
+          tags: tags
+        }
+      });
+
+      res.json({
+        message: `Successfully tagged ${assets.length} asset(s)`,
+        tagged: assets.length,
+        tags: tags
+      });
+    } catch (tagError: any) {
+      // If tags field doesn't exist, return a message but don't fail
+      console.log('Tags field not available in production schema');
+      res.status(501).json({
+        error: 'Tagging not available in current schema',
+        message: 'Tags field is not available in the production database schema'
+      });
+    }
+  } catch (error: any) {
+    console.error('Bulk tag error:', error);
+    res.status(500).json({ error: 'Failed to tag assets' });
+  }
+});
+
 /**
  * Import ALL existing assets from Cloudinary for a restaurant (historical import)
  * This scans the entire Cloudinary account and imports assets not in database
@@ -1057,6 +1224,58 @@ export const testAssetApi = async (req: Request, res: Response) => {
     });
   }
 };
+
+/**
+ * Migrate restaurant assets to standardized folder structure
+ */
+export const migrateAssetsToStandardStructure = asyncHandler(async (req: Request, res: Response) => {
+  const restaurantId = parseInt(req.params.restaurantId);
+  const { folderMapping } = req.body; // Optional custom folder mapping
+
+  if (!restaurantId) {
+    return res.status(400).json({ error: 'Restaurant ID required' });
+  }
+
+  try {
+    console.log(`🔄 Starting folder structure migration for restaurant ${restaurantId}`);
+    
+    const results = await migrateRestaurantAssets(restaurantId, folderMapping || {});
+    
+    // Update database records with new public IDs
+    let updatedCount = 0;
+    for (const detail of results.details) {
+      if (detail.status === 'success' && detail.newPublicId) {
+        try {
+          await prisma.brandAsset.updateMany({
+            where: {
+              restaurantId: restaurantId,
+              cloudinaryPublicId: detail.oldPublicId
+            },
+            data: {
+              cloudinaryPublicId: detail.newPublicId
+            }
+          });
+          updatedCount++;
+        } catch (error) {
+          console.warn(`Failed to update database for ${detail.oldPublicId}:`, error);
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Migration complete: ${results.migrated} assets migrated, ${results.failed} failed`,
+      migration: results,
+      databaseUpdates: updatedCount
+    });
+  } catch (error: any) {
+    console.error('Migration error:', error);
+    res.status(500).json({
+      error: 'Migration failed',
+      message: error.message || 'Unknown error'
+    });
+  }
+});
 
 /**
  * Deployment verification endpoint - FORCE CACHE INVALIDATION
