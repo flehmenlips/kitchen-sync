@@ -562,13 +562,18 @@ export const websiteBuilderService = {
               
               // If reservations are enabled but item doesn't exist, add it
               if (reservationsEnabled && !hasReservationsItem) {
+                // Calculate display order based on maximum existing display order
+                const maxDisplayOrder = parsedItems.length > 0
+                  ? Math.max(...parsedItems.map(item => item.displayOrder || 0))
+                  : 0;
+                
                 updatedItems.push({
                   id: 'reservations',
                   label: 'Make Reservation',
                   path: '/reservations/new',
                   icon: 'event_seat',
                   isActive: true,
-                  displayOrder: 3,
+                  displayOrder: maxDisplayOrder + 1,
                   isSystem: true
                 });
               }
