@@ -433,8 +433,10 @@ export const websiteBuilderService = {
           
           // Use reservation operating hours if available (more accurate for reservations)
           // Check that operatingHours is not just an empty object (default schema value)
+          // Also exclude arrays since parseOpeningHours returns null for arrays
           if (reservationSettings?.operatingHours && 
               typeof reservationSettings.operatingHours === 'object' &&
+              !Array.isArray(reservationSettings.operatingHours) &&
               Object.keys(reservationSettings.operatingHours).length > 0) {
             operatingHours = this.parseOpeningHours(reservationSettings.operatingHours);
           }
