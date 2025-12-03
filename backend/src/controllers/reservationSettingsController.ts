@@ -196,8 +196,8 @@ export const upsertReservationSettings = async (req: Request, res: Response): Pr
     const updateData: any = {};
     
     if (operatingHours !== undefined) updateData.operatingHours = operatingHours;
-    if (minPartySize !== undefined) updateData.minPartySize = minPartySize;
-    if (maxPartySize !== undefined) updateData.maxPartySize = maxPartySize;
+    if (parsedMinPartySize !== undefined) updateData.minPartySize = parsedMinPartySize;
+    if (parsedMaxPartySize !== undefined) updateData.maxPartySize = parsedMaxPartySize;
     if (defaultDuration !== undefined) updateData.defaultDuration = defaultDuration;
     if (advanceBookingDays !== undefined) updateData.advanceBookingDays = advanceBookingDays;
     if (minAdvanceHours !== undefined) updateData.minAdvanceHours = minAdvanceHours;
