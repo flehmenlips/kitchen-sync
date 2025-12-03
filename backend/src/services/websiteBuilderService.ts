@@ -502,7 +502,7 @@ export const websiteBuilderService = {
             maxPartySize: reservationSettings.maxPartySize,
             advanceBookingDays: reservationSettings.advanceBookingDays,
             minAdvanceHours: reservationSettings.minAdvanceHours,
-            cancellationPolicy: reservationSettings.cancellationPolicy,
+            cancellationPolicy: reservationSettings.cancellationPolicy || undefined,
             requireCreditCard: reservationSettings.requireCreditCard,
             requireDeposit: reservationSettings.requireDeposit,
             depositAmount: reservationSettings.depositAmount ? Number(reservationSettings.depositAmount) : undefined
@@ -563,66 +563,6 @@ export const websiteBuilderService = {
               path: '/reservations/new',
               icon: 'event_seat',
               isActive: reservationSettings ? true : false, // Only show if reservations are configured
-              displayOrder: 3,
-              isSystem: true
-            }
-          ],
-          
-          // Menu Display
-          menuDisplayMode: settings.menuDisplayMode || undefined,
-          activeMenuIds: settings.activeMenuIds || undefined,
-          
-          // Social & Footer (keep - site-wide configuration)
-          facebookUrl: settings.facebookUrl || undefined,
-          instagramUrl: settings.instagramUrl || undefined,
-          twitterUrl: settings.twitterUrl || undefined,
-          footerText: settings.footerText || undefined,
-          
-          // SEO (keep - site-wide defaults)
-          metaTitle: settings.metaTitle || undefined,
-          metaDescription: settings.metaDescription || undefined,
-          metaKeywords: settings.metaKeywords || undefined,
-          
-          // Info Panes Customization (keep - UI configuration)
-          infoPanesEnabled: (settings as any).infoPanesEnabled ?? true,
-          hoursCardTitle: (settings as any).hoursCardTitle || 'Opening Hours',
-          locationCardTitle: (settings as any).locationCardTitle || 'Our Location', 
-          contactCardTitle: (settings as any).contactCardTitle || 'Contact Us',
-          hoursCardShowDetails: (settings as any).hoursCardShowDetails ?? true,
-          locationCardShowDirections: (settings as any).locationCardShowDirections ?? true,
-          
-          // Navigation Customization (keep - UI configuration)
-          navigationEnabled: (settings as any).navigationEnabled ?? true,
-          navigationLayout: (settings as any).navigationLayout || 'topbar',
-          navigationAlignment: (settings as any).navigationAlignment || 'left',
-          navigationStyle: (settings as any).navigationStyle || 'modern',
-          showMobileMenu: (settings as any).showMobileMenu ?? true,
-          mobileMenuStyle: (settings as any).mobileMenuStyle || 'hamburger',
-          navigationItems: this.parseNavigationItems((settings as any).navigationItems) || [
-            {
-              id: 'home',
-              label: 'Home',
-              path: '/',
-              icon: 'home',
-              isActive: true,
-              displayOrder: 1,
-              isSystem: true
-            },
-            {
-              id: 'menu',
-              label: 'Menu',
-              path: '/menu',
-              icon: 'menu_book',
-              isActive: true,
-              displayOrder: 2,
-              isSystem: true
-            },
-            {
-              id: 'reservations',
-              label: 'Make Reservation',
-              path: '/reservations/new',
-              icon: 'event_seat',
-              isActive: true,
               displayOrder: 3,
               isSystem: true
             }
