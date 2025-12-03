@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   Tabs,
@@ -42,10 +43,32 @@ function TabPanel(props: TabPanelProps) {
 }
 
 export const TableFarmPage: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [tabValue, setTabValue] = useState(0);
+
+  // Sync tab with URL
+  useEffect(() => {
+    const path = location.pathname;
+    if (path.includes('/tablefarm/settings')) {
+      setTabValue(3);
+    } else if (path.includes('/tablefarm/reservations')) {
+      setTabValue(1);
+    } else if (path.includes('/tablefarm/orders')) {
+      setTabValue(2);
+    } else if (path.includes('/tablefarm/analytics')) {
+      setTabValue(4);
+    } else {
+      setTabValue(0);
+    }
+  }, [location.pathname]);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
+    // Update URL based on tab
+    const tabPaths = ['', '/reservations', '/orders', '/settings', '/analytics'];
+    const path = `/tablefarm${tabPaths[newValue]}`;
+    navigate(path, { replace: true });
   };
 
   return (

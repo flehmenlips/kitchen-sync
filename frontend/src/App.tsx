@@ -216,7 +216,7 @@ const App: React.FC = () => {
                             <Route path="menus/:id/edit" element={<MenuFormPage />} />
 
                             {/* TableFarm Module Routes */}
-                            <Route path="tablefarm" element={<TableFarmPage />} />
+                            <Route path="tablefarm/*" element={<TableFarmPage />} />
                             <Route path="tables" element={<TablesPage />} />
                             <Route path="reservations" element={<ReservationManagementPage />} />
 
