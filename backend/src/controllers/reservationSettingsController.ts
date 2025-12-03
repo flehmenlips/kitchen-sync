@@ -95,9 +95,18 @@ export const getReservationSettings = async (req: Request, res: Response): Promi
     }
 
     res.status(200).json(settings);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching reservation settings:', error);
-    res.status(500).json({ message: 'Error fetching reservation settings' });
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      meta: error.meta,
+      stack: error.stack
+    });
+    res.status(500).json({ 
+      message: 'Error fetching reservation settings',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
