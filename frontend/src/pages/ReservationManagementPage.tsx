@@ -42,9 +42,11 @@ import {
   CalendarToday as CalendarIcon,
   Refresh as RefreshIcon
 } from '@mui/icons-material';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, differenceInHours, differenceInDays, startOfDay } from 'date-fns';
 import { reservationService, Reservation, ReservationStatus } from '../services/reservationService';
+import { reservationSettingsService } from '../services/reservationSettingsService';
 import { useSnackbar } from '../context/SnackbarContext';
+import { useRestaurant } from '../context/RestaurantContext';
 import { useMobileResponsive, mobileResponsiveStyles } from '../utils/mobileUtils';
 
 // Reservation form dialog
@@ -62,6 +64,7 @@ const ReservationFormDialog: React.FC<ReservationFormDialogProps> = ({
   onSave 
 }) => {
   const { showSnackbar } = useSnackbar();
+  const { currentRestaurant } = useRestaurant();
   const [formData, setFormData] = useState({
     customerName: '',
     customerEmail: '',
@@ -70,9 +73,30 @@ const ReservationFormDialog: React.FC<ReservationFormDialogProps> = ({
     reservationDate: format(new Date(), 'yyyy-MM-dd'),
     reservationTime: '18:00',
     status: ReservationStatus.CONFIRMED,
-    notes: ''
+    notes: '',
+    specialRequests: ''
   });
   const [loading, setLoading] = useState(false);
+  const [reservationSettings, setReservationSettings] = useState<any>(null);
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
+  const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
+
+  // Fetch reservation settings
+  useEffect(() => {
+    if (open && currentRestaurant?.id) {
+      reservationSettingsService.getReservationSettings(currentRestaurant.id)
+        .then(settings => {
+          setReservationSettings(settings);
+          // Set default party size from settings
+          if (!reservation && settings?.minPartySize) {
+            setFormData(prev => ({ ...prev, partySize: settings.minPartySize }));
+          }
+        })
+        .catch(() => {
+          // Settings not found or error - continue without them
+        });
+    }
+  }, [open, currentRestaurant?.id, reservation]);
 
   useEffect(() => {
     if (reservation) {
@@ -84,23 +108,134 @@ const ReservationFormDialog: React.FC<ReservationFormDialogProps> = ({
         reservationDate: format(parseISO(reservation.reservationDate), 'yyyy-MM-dd'),
         reservationTime: reservation.reservationTime,
         status: reservation.status,
-        notes: reservation.notes || ''
+        notes: reservation.notes || '',
+        specialRequests: reservation.specialRequests || ''
       });
     } else {
       setFormData({
         customerName: '',
         customerEmail: '',
         customerPhone: '',
-        partySize: 2,
+        partySize: reservationSettings?.minPartySize || 2,
         reservationDate: format(new Date(), 'yyyy-MM-dd'),
         reservationTime: '18:00',
         status: ReservationStatus.CONFIRMED,
-        notes: ''
+        notes: '',
+        specialRequests: ''
       });
     }
-  }, [reservation]);
+    setFormErrors({});
+  }, [reservation, reservationSettings]);
+
+  // Generate time slots based on selected date
+  useEffect(() => {
+    if (open && formData.reservationDate && reservationSettings) {
+      const selectedDate = new Date(formData.reservationDate);
+      const dayOfWeek = selectedDate.getDay();
+      const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][dayOfWeek];
+      const dayHours = reservationSettings.operatingHours?.[dayName];
+      
+      if (dayHours && !dayHours.closed) {
+        const slots: string[] = [];
+        const interval = reservationSettings.timeSlotInterval || 30;
+        const [openHour, openMin] = dayHours.open.split(':').map(Number);
+        const [closeHour, closeMin] = dayHours.close.split(':').map(Number);
+        const openMinutes = openHour * 60 + openMin;
+        let closeMinutes = closeHour * 60 + closeMin;
+        
+        // Handle midnight crossing
+        if (closeMinutes <= openMinutes) {
+          closeMinutes += 1440;
+        }
+        
+        let currentMinutes = openMinutes;
+        while (currentMinutes <= closeMinutes) {
+          const hour = Math.floor(currentMinutes / 60) % 24;
+          const minute = currentMinutes % 60;
+          slots.push(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
+          currentMinutes += interval;
+        }
+        
+        setAvailableTimeSlots(slots);
+      } else {
+        setAvailableTimeSlots([]);
+      }
+    }
+  }, [open, formData.reservationDate, reservationSettings]);
+
+  // Validate form
+  const validateForm = (): boolean => {
+    const errors: { [key: string]: string } = {};
+    
+    if (!formData.customerName.trim()) {
+      errors.customerName = 'Customer name is required';
+    }
+    
+    if (reservationSettings) {
+      // Validate advance booking days
+      const today = startOfDay(new Date());
+      const selected = startOfDay(new Date(formData.reservationDate));
+      const daysInAdvance = differenceInDays(selected, today);
+      
+      if (daysInAdvance < 0) {
+        errors.reservationDate = 'Cannot book in the past';
+      } else if (daysInAdvance > reservationSettings.advanceBookingDays) {
+        errors.reservationDate = `Reservations can only be made up to ${reservationSettings.advanceBookingDays} days in advance`;
+      }
+      
+      // Validate minimum advance hours
+      if (daysInAdvance === 0) {
+        const selectedDateTime = new Date(formData.reservationDate);
+        const [hours, minutes] = formData.reservationTime.split(':').map(Number);
+        selectedDateTime.setHours(hours, minutes, 0, 0);
+        
+        const hoursInAdvance = differenceInHours(selectedDateTime, new Date());
+        if (hoursInAdvance < reservationSettings.minAdvanceHours) {
+          errors.reservationTime = `Reservations must be made at least ${reservationSettings.minAdvanceHours} hours in advance`;
+        }
+      }
+      
+      // Validate party size
+      if (formData.partySize < reservationSettings.minPartySize) {
+        errors.partySize = `Minimum party size is ${reservationSettings.minPartySize}`;
+      } else if (formData.partySize > reservationSettings.maxPartySize) {
+        errors.partySize = `Maximum party size is ${reservationSettings.maxPartySize}`;
+      }
+      
+      // Validate date is not closed
+      const selectedDate = new Date(formData.reservationDate);
+      const dayOfWeek = selectedDate.getDay();
+      const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][dayOfWeek];
+      const dayHours = reservationSettings.operatingHours?.[dayName];
+      if (dayHours?.closed) {
+        errors.reservationDate = 'Restaurant is closed on this day';
+      }
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const getPartySizeOptions = (): number[] => {
+    if (!reservationSettings) {
+      return Array.from({ length: 20 }, (_, i) => i + 1);
+    }
+    const min = reservationSettings.minPartySize || 1;
+    const max = reservationSettings.maxPartySize || 20;
+    const options: number[] = [];
+    for (let i = min; i <= max; i++) {
+      options.push(i);
+    }
+    return options;
+  };
 
   const handleSubmit = async () => {
+    // Validate form
+    if (!reservation && !validateForm()) {
+      showSnackbar('Please fix the errors in the form', 'error');
+      return;
+    }
+    
     setLoading(true);
     try {
       if (reservation) {
@@ -109,109 +244,236 @@ const ReservationFormDialog: React.FC<ReservationFormDialogProps> = ({
       } else {
         await reservationService.createReservation({
           ...formData,
-          restaurantId: 1 // Single restaurant MVP
+          restaurantId: currentRestaurant?.id || 0
         });
         showSnackbar('Reservation created successfully', 'success');
       }
       onSave();
       onClose();
-    } catch (error) {
-      showSnackbar('Failed to save reservation', 'error');
+      setFormErrors({});
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Failed to save reservation';
+      showSnackbar(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
         {reservation ? 'Edit Reservation' : 'New Reservation'}
       </DialogTitle>
       <DialogContent>
-        <Grid container spacing={2} sx={{ mt: 1 }}>
-          <Grid item xs={12}>
-            <TextField
-              fullWidth
-              label="Customer Name"
-              value={formData.customerName}
-              onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
-              required
-            />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Email"
-              type="email"
-              value={formData.customerEmail}
-              onChange={(e) => setFormData({ ...formData, customerEmail: e.target.value })}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Phone"
-              value={formData.customerPhone}
-              onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
-            />
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <TextField
-              fullWidth
-              label="Party Size"
-              type="number"
-              value={formData.partySize}
-              onChange={(e) => setFormData({ ...formData, partySize: parseInt(e.target.value) || 1 })}
-              inputProps={{ min: 1, max: 20 }}
-            />
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <TextField
-              fullWidth
-              label="Date"
-              type="date"
-              value={formData.reservationDate}
-              onChange={(e) => setFormData({ ...formData, reservationDate: e.target.value })}
-              InputLabelProps={{ shrink: true }}
-            />
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <TextField
-              fullWidth
-              label="Time"
-              type="time"
-              value={formData.reservationTime}
-              onChange={(e) => setFormData({ ...formData, reservationTime: e.target.value })}
-              InputLabelProps={{ shrink: true }}
-            />
-          </Grid>
-          {reservation && (
+        <Box sx={{ pt: 2 }}>
+          {/* Validation Errors */}
+          {Object.keys(formErrors).length > 0 && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              <Typography variant="subtitle2" gutterBottom>Please fix the following errors:</Typography>
+              <ul style={{ margin: 0, paddingLeft: 20 }}>
+                {Object.values(formErrors).map((error, idx) => (
+                  <li key={idx}>{error}</li>
+                ))}
+              </ul>
+            </Alert>
+          )}
+
+          {/* Date Selection Info */}
+          {formData.reservationDate && reservationSettings && (
+            <Alert 
+              severity="info" 
+              sx={{ mb: 2 }}
+              icon={<CalendarIcon />}
+            >
+              <Typography variant="body2">
+                <strong>Selected Date:</strong> {format(new Date(formData.reservationDate), 'EEEE, MMMM d, yyyy')}
+                {(() => {
+                  const selectedDate = new Date(formData.reservationDate);
+                  const dayOfWeek = selectedDate.getDay();
+                  const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][dayOfWeek];
+                  const dayHours = reservationSettings.operatingHours?.[dayName];
+                  if (dayHours && !dayHours.closed) {
+                    return ` • Open: ${dayHours.open} - ${dayHours.close}`;
+                  }
+                  return null;
+                })()}
+              </Typography>
+            </Alert>
+          )}
+
+          <Grid container spacing={2}>
             <Grid item xs={12}>
-              <FormControl fullWidth>
-                <InputLabel>Status</InputLabel>
+              <TextField
+                fullWidth
+                label="Customer Name"
+                value={formData.customerName}
+                onChange={(e) => {
+                  setFormData({ ...formData, customerName: e.target.value });
+                  if (formErrors.customerName) {
+                    setFormErrors({ ...formErrors, customerName: '' });
+                  }
+                }}
+                required
+                error={!!formErrors.customerName}
+                helperText={formErrors.customerName}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Email"
+                type="email"
+                value={formData.customerEmail}
+                onChange={(e) => setFormData({ ...formData, customerEmail: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Phone"
+                value={formData.customerPhone}
+                onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth error={!!formErrors.partySize}>
+                <InputLabel>Party Size</InputLabel>
                 <Select
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value as ReservationStatus })}
-                  label="Status"
+                  value={formData.partySize.toString()}
+                  onChange={(e) => {
+                    setFormData({ ...formData, partySize: parseInt(e.target.value) });
+                    if (formErrors.partySize) {
+                      setFormErrors({ ...formErrors, partySize: '' });
+                    }
+                  }}
+                  label="Party Size"
                 >
-                  {Object.values(ReservationStatus).map(status => (
-                    <MenuItem key={status} value={status}>{status}</MenuItem>
+                  {getPartySizeOptions().map((size) => (
+                    <MenuItem key={size} value={size.toString()}>
+                      {size} {size === 1 ? 'Guest' : 'Guests'}
+                    </MenuItem>
                   ))}
                 </Select>
+                {formErrors.partySize && (
+                  <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
+                    {formErrors.partySize}
+                  </Typography>
+                )}
+                {reservationSettings && (
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 1.75 }}>
+                    Party size: {reservationSettings.minPartySize} - {reservationSettings.maxPartySize} guests
+                  </Typography>
+                )}
               </FormControl>
             </Grid>
-          )}
-          <Grid item xs={12}>
-            <TextField
-              fullWidth
-              label="Special Requests / Notes"
-              multiline
-              rows={3}
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-            />
+            <Grid item xs={12} sm={4}>
+              <TextField
+                fullWidth
+                label="Date"
+                type="date"
+                value={formData.reservationDate}
+                onChange={(e) => {
+                  setFormData({ ...formData, reservationDate: e.target.value });
+                  if (formErrors.reservationDate) {
+                    setFormErrors({ ...formErrors, reservationDate: '' });
+                  }
+                }}
+                InputLabelProps={{ shrink: true }}
+                error={!!formErrors.reservationDate}
+                helperText={formErrors.reservationDate}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth error={!!formErrors.reservationTime}>
+                <InputLabel>Time</InputLabel>
+                <Select
+                  value={formData.reservationTime}
+                  onChange={(e) => {
+                    setFormData({ ...formData, reservationTime: e.target.value });
+                    if (formErrors.reservationTime) {
+                      setFormErrors({ ...formErrors, reservationTime: '' });
+                    }
+                  }}
+                  label="Time"
+                  disabled={availableTimeSlots.length === 0}
+                >
+                  {availableTimeSlots.length === 0 ? (
+                    <MenuItem disabled>Restaurant closed on this day</MenuItem>
+                  ) : (
+                    availableTimeSlots.map((time) => (
+                      <MenuItem key={time} value={time}>
+                        {time}
+                      </MenuItem>
+                    ))
+                  )}
+                </Select>
+                {formErrors.reservationTime && (
+                  <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
+                    {formErrors.reservationTime}
+                  </Typography>
+                )}
+              </FormControl>
+            </Grid>
+            {reservation && (
+              <Grid item xs={12}>
+                <FormControl fullWidth>
+                  <InputLabel>Status</InputLabel>
+                  <Select
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value as ReservationStatus })}
+                    label="Status"
+                  >
+                    {Object.values(ReservationStatus).map(status => (
+                      <MenuItem key={status} value={status}>{status}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            )}
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Special Requests"
+                multiline
+                rows={2}
+                value={formData.specialRequests}
+                onChange={(e) => setFormData({ ...formData, specialRequests: e.target.value })}
+                helperText="Any special requests or dietary restrictions"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Internal Notes"
+                multiline
+                rows={2}
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                helperText="For staff use only - not visible to customer"
+              />
+            </Grid>
           </Grid>
-        </Grid>
+
+          {/* Cancellation Policy */}
+          {!reservation && reservationSettings?.cancellationPolicy && (
+            <>
+              <Divider sx={{ my: 2 }} />
+              <Alert severity="info" icon={<CalendarIcon />}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Cancellation Policy
+                </Typography>
+                <Typography variant="body2">
+                  {reservationSettings.cancellationPolicy}
+                </Typography>
+                {reservationSettings.cancellationHours > 0 && (
+                  <Typography variant="caption" sx={{ mt: 1, display: 'block' }}>
+                    Cancellations must be made at least {reservationSettings.cancellationHours} hours in advance.
+                  </Typography>
+                )}
+              </Alert>
+            </>
+          )}
+        </Box>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
@@ -220,7 +482,7 @@ const ReservationFormDialog: React.FC<ReservationFormDialogProps> = ({
           variant="contained" 
           disabled={loading || !formData.customerName}
         >
-          {reservation ? 'Update' : 'Create'}
+          {loading ? 'Saving...' : (reservation ? 'Update' : 'Create')}
         </Button>
       </DialogActions>
     </Dialog>
