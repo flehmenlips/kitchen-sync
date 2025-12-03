@@ -57,7 +57,6 @@ const ReservationSettingsPage: React.FC = () => {
   const [tabValue, setTabValue] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [settings, setSettings] = useState<ReservationSettings | null>(null);
   const [formData, setFormData] = useState<Partial<ReservationSettings>>({});
 
   const restaurantId = currentRestaurant?.id || null;
@@ -76,7 +75,6 @@ const ReservationSettingsPage: React.FC = () => {
     setLoading(true);
     try {
       const data = await reservationSettingsService.getReservationSettings(restaurantId);
-      setSettings(data);
       setFormData(data);
     } catch (error) {
       console.error('Error fetching reservation settings:', error);
@@ -98,7 +96,6 @@ const ReservationSettingsPage: React.FC = () => {
         restaurantId,
         formData
       );
-      setSettings(updated);
       setFormData(updated);
       showSnackbar('Reservation settings saved successfully', 'success');
     } catch (error: any) {
