@@ -458,7 +458,6 @@ export const ReservationCalendar: React.FC = () => {
                         // FIXED: Check if availability exists and is explicitly false
                         // If availability is undefined, assume available (backend hasn't filtered it out)
                         // Only disable if availability exists and available is explicitly false
-                        const isAvailable = availability === undefined || availability.available !== false;
                         const remaining = availability?.remaining;
                         const capacity = availability?.capacity;
                         
