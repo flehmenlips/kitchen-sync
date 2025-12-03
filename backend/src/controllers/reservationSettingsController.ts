@@ -162,21 +162,29 @@ export const upsertReservationSettings = async (req: Request, res: Response): Pr
       where: { restaurantId: parseInt(restaurantId) }
     });
 
-    const finalMinPartySize = minPartySize !== undefined ? parseInt(minPartySize) : existingSettings?.minPartySize;
-    const finalMaxPartySize = maxPartySize !== undefined ? parseInt(maxPartySize) : existingSettings?.maxPartySize;
+    // Parse provided values and validate they are numbers
+    const parsedMinPartySize = minPartySize !== undefined ? parseInt(minPartySize) : undefined;
+    const parsedMaxPartySize = maxPartySize !== undefined ? parseInt(maxPartySize) : undefined;
 
-    // Validate that parsed values are valid numbers
-    if (minPartySize !== undefined && (isNaN(parseInt(minPartySize)) || parseInt(minPartySize) < 1)) {
-      res.status(400).json({ message: 'Minimum party size must be a valid number greater than 0' });
-      return;
+    // Validate that parsed values are valid numbers (not NaN and > 0)
+    if (minPartySize !== undefined) {
+      if (isNaN(parsedMinPartySize!) || parsedMinPartySize! < 1) {
+        res.status(400).json({ message: 'Minimum party size must be a valid number greater than 0' });
+        return;
+      }
     }
 
-    if (maxPartySize !== undefined && (isNaN(parseInt(maxPartySize)) || parseInt(maxPartySize) < 1)) {
-      res.status(400).json({ message: 'Maximum party size must be a valid number greater than 0' });
-      return;
+    if (maxPartySize !== undefined) {
+      if (isNaN(parsedMaxPartySize!) || parsedMaxPartySize! < 1) {
+        res.status(400).json({ message: 'Maximum party size must be a valid number greater than 0' });
+        return;
+      }
     }
 
-    // Validate party size constraints (check against final values, not just provided values)
+    // Validate party size constraints (check against final values: provided or existing)
+    const finalMinPartySize = parsedMinPartySize !== undefined ? parsedMinPartySize : existingSettings?.minPartySize;
+    const finalMaxPartySize = parsedMaxPartySize !== undefined ? parsedMaxPartySize : existingSettings?.maxPartySize;
+
     if (finalMinPartySize !== undefined && finalMaxPartySize !== undefined && finalMinPartySize > finalMaxPartySize) {
       res.status(400).json({ 
         message: `Minimum party size (${finalMinPartySize}) cannot be greater than maximum party size (${finalMaxPartySize})` 
