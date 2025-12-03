@@ -19,6 +19,7 @@ export interface CustomerAuthRequest extends Request {
     lastName: string | null;
     phone: string | null;
     restaurantId: number | null;
+    emailVerified: boolean | null;
   };
 }
 
@@ -48,11 +49,32 @@ export const authenticateCustomer = async (
       
       // Fetch customer from database
       const customer = await prisma.customer.findUnique({
-        where: { id: payload.userId }
+        where: { id: payload.userId },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          restaurantId: true,
+          emailVerified: true
+        }
       });
 
       if (!customer) {
         res.status(401).json({ error: 'Customer not found' });
+        return;
+      }
+      
+      // Check if email is verified (for reservation endpoints)
+      // Allow unverified customers for profile/account endpoints
+      const requiresVerification = req.path.includes('/reservations') && req.method === 'POST';
+      if (requiresVerification && !customer.emailVerified) {
+        res.status(403).json({ 
+          error: 'Email verification required',
+          message: 'Please verify your email address before making a reservation. Check your inbox for the verification email.',
+          requiresVerification: true
+        });
         return;
       }
       

@@ -1,16 +1,17 @@
 import { Router, Request, Response } from 'express';
 import { customerReservationController } from '../controllers/customerReservationController';
 import { authenticateCustomer } from '../middleware/authenticateCustomer';
+import { reservationLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 
-// Create a new reservation (public - doesn't require authentication)
-router.post('/', async (req: Request, res: Response) => {
+// All routes require customer authentication
+router.use(authenticateCustomer);
+
+// Create a new reservation (requires authentication + email verification + rate limiting)
+router.post('/', reservationLimiter, async (req: Request, res: Response) => {
   await customerReservationController.createReservation(req as any, res);
 });
-
-// All other routes require customer authentication
-router.use(authenticateCustomer);
 
 // Get customer's reservations
 router.get('/', async (req: Request, res: Response) => {

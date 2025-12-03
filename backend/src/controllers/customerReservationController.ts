@@ -305,10 +305,18 @@ export const customerReservationController = {
   // Create a new reservation
   async createReservation(req: CustomerAuthRequest, res: Response) {
     try {
+      // REQUIRE AUTHENTICATION - No more public reservations
+      if (!req.customer?.id && !req.customerUser?.userId) {
+        return res.status(401).json({
+          error: 'Authentication required',
+          message: 'Please sign in or create an account to make a reservation'
+        });
+      }
+
       // Get restaurant from slug or ID
       let restaurantId: number | undefined;
       
-      // First try to get restaurant from slug (for public reservations)
+      // First try to get restaurant from slug
       const restaurantSlug = req.body.restaurantSlug || req.query.slug || req.params.slug;
       if (restaurantSlug) {
         const restaurant = await prisma.restaurant.findUnique({
@@ -332,53 +340,61 @@ export const customerReservationController = {
         });
       }
 
-      // Handle authenticated vs unauthenticated reservations
-      let customerId: number | undefined;
-      let customerName: string;
-      let customerEmail: string;
-      let customerPhone: string | undefined;
-
-      if (req.customer?.id || req.customerUser?.userId) {
-        // Authenticated customer
-        const customerIdFromAuth = req.customer?.id || req.customerUser!.userId;
-        const customer = req.customer || (await prisma.customer.findUnique({
-          where: { id: customerIdFromAuth },
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-            phone: true,
-            restaurantId: true
-          }
-        }));
-
-        if (!customer) {
-          return res.status(404).json({ error: 'Customer not found' });
+      // Get authenticated customer
+      const customerIdFromAuth = req.customer?.id || req.customerUser!.userId;
+      
+      // Fetch customer with email verification status
+      const customer = await prisma.customer.findUnique({
+        where: { id: customerIdFromAuth },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          restaurantId: true,
+          emailVerified: true
         }
+      });
 
-        customerId = customer.id;
-        customerName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.email;
-        customerEmail = customer.email;
-        customerPhone = customer.phone || undefined;
-      } else {
-        // Unauthenticated (public) reservation - use data from request body
-        const {
-          customerName: reqCustomerName,
-          customerEmail: reqCustomerEmail,
-          customerPhone: reqCustomerPhone
-        } = req.body;
-
-        if (!reqCustomerName || !reqCustomerEmail) {
-          return res.status(400).json({
-            error: 'Customer name and email are required for public reservations'
-          });
-        }
-
-        customerName = reqCustomerName;
-        customerEmail = reqCustomerEmail;
-        customerPhone = reqCustomerPhone || undefined;
+      if (!customer) {
+        return res.status(404).json({ error: 'Customer not found' });
       }
+
+      // REQUIRE EMAIL VERIFICATION
+      if (!customer.emailVerified) {
+        return res.status(403).json({
+          error: 'Email verification required',
+          message: 'Please verify your email address before making a reservation. Check your inbox for the verification email.',
+          requiresVerification: true
+        });
+      }
+
+      // Ensure customer-restaurant link exists (create if needed)
+      const existingLink = await prisma.customerRestaurant.findUnique({
+        where: {
+          customerId_restaurantId: {
+            customerId: customer.id,
+            restaurantId: restaurantId
+          }
+        }
+      });
+
+      if (!existingLink) {
+        // Create restaurant-specific customer profile link
+        await prisma.customerRestaurant.create({
+          data: {
+            customerId: customer.id,
+            restaurantId: restaurantId,
+            firstVisit: new Date()
+          }
+        });
+      }
+
+      const customerId = customer.id;
+      const customerName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.email;
+      const customerEmail = customer.email;
+      const customerPhone = customer.phone || undefined;
 
       const {
         reservationDate,
@@ -425,7 +441,7 @@ export const customerReservationController = {
           notes,
           specialRequests,
           // userId is now nullable, so we don't need to provide it for customer reservations
-          source: customerId ? 'customer_portal' : 'public_website'
+          source: 'customer_portal'
         },
         include: {
           restaurant: true

@@ -60,6 +60,31 @@ export const apiLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Rate limit for reservation creation
+// 5 reservations per hour per customer (prevents spam/abuse)
+export const reservationLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // Max 5 reservations per hour
+  message: {
+    error: 'Too many reservations. Please limit to 5 reservations per hour.',
+    retryAfter: '1 hour'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Use customer ID if available, otherwise fall back to IP
+  keyGenerator: (req: any) => {
+    if (req.customer?.id) {
+      return `reservation:customer:${req.customer.id}`;
+    }
+    if (req.customerUser?.userId) {
+      return `reservation:customer:${req.customerUser.userId}`;
+    }
+    return `reservation:ip:${req.ip}`;
+  },
+  skipSuccessfulRequests: false, // Count successful reservations
+  skipFailedRequests: true, // Don't count failed attempts
+});
+
 // Very strict rate limit for email verification
 // 5 attempts per hour (prevents email bombing)
 export const emailVerificationLimiter = rateLimit({
