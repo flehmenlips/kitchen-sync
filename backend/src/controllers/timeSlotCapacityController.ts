@@ -117,12 +117,18 @@ export const getAvailability = async (req: Request, res: Response): Promise<void
     });
 
     // Get all confirmed reservations for this date/time slot
+    // FIXED: Use lte (less than or equal) to match reservationCapacityService behavior
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+    
     const reservations = await prisma.reservation.findMany({
       where: {
         restaurantId,
         reservationDate: {
-          gte: new Date(targetDate.setHours(0, 0, 0, 0)),
-          lt: new Date(targetDate.setHours(23, 59, 59, 999))
+          gte: startOfDay,
+          lte: endOfDay
         },
         reservationTime: timeSlot as string,
         status: 'CONFIRMED'
