@@ -217,19 +217,19 @@ export const upsertTimeSlotCapacity = async (req: Request, res: Response): Promi
       where: {
         restaurantId_dayOfWeek_timeSlot: {
           restaurantId: parseInt(restaurantId),
-          dayOfWeek: parseInt(dayOfWeek),
+          dayOfWeek: dayOfWeekNum,
           timeSlot: timeSlot
         }
       },
       update: {
-        maxCovers: parseInt(maxCovers),
+        maxCovers: maxCoversNum,
         isActive: isActive !== undefined ? isActive : true
       },
       create: {
         restaurantId: parseInt(restaurantId),
-        dayOfWeek: parseInt(dayOfWeek),
+        dayOfWeek: dayOfWeekNum,
         timeSlot: timeSlot,
-        maxCovers: parseInt(maxCovers),
+        maxCovers: maxCoversNum,
         isActive: isActive !== undefined ? isActive : true
       }
     });
