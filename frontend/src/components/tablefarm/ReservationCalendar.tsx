@@ -21,7 +21,8 @@ import {
   InputLabel,
   Skeleton,
   Alert,
-  useTheme
+  useTheme,
+  Divider
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -36,7 +37,7 @@ import {
   ViewWeek as ViewWeekIcon,
   CalendarMonth as CalendarMonthIcon
 } from '@mui/icons-material';
-import { format, startOfWeek, endOfWeek, addDays, isSameDay, isToday, startOfMonth, eachDayOfInterval, getDaysInMonth, getDay } from 'date-fns';
+import { format, startOfWeek, endOfWeek, addDays, isSameDay, isToday, startOfMonth, eachDayOfInterval, getDaysInMonth, getDay, differenceInHours, differenceInDays, startOfDay } from 'date-fns';
 import { ToggleButton, ToggleButtonGroup } from '@mui/material';
 import { reservationService, Reservation, ReservationStatus, CreateReservationInput } from '../../services/reservationService';
 import { reservationSettingsService } from '../../services/reservationSettingsService';
@@ -79,6 +80,8 @@ export const ReservationCalendar: React.FC = () => {
     notes: '',
     specialRequests: ''
   });
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
+  const [validatingAvailability, setValidatingAvailability] = useState(false);
 
   // Generate default time slots (fallback)
   const generateDefaultTimeSlots = (): string[] => {
@@ -371,8 +374,75 @@ export const ReservationCalendar: React.FC = () => {
     setViewReservation(reservation);
   };
 
+  // Validate form against reservation settings
+  const validateForm = (): boolean => {
+    const errors: { [key: string]: string } = {};
+    
+    if (!formData.customerName.trim()) {
+      errors.customerName = 'Customer name is required';
+    }
+    
+    if (!selectedDate) {
+      errors.date = 'Please select a date';
+    } else if (reservationSettings) {
+      // Validate advance booking days
+      const today = startOfDay(new Date());
+      const selected = startOfDay(selectedDate);
+      const daysInAdvance = differenceInDays(selected, today);
+      
+      if (daysInAdvance < 0) {
+        errors.date = 'Cannot book in the past';
+      } else if (daysInAdvance > reservationSettings.advanceBookingDays) {
+        errors.date = `Reservations can only be made up to ${reservationSettings.advanceBookingDays} days in advance`;
+      }
+      
+      // Validate minimum advance hours
+      if (daysInAdvance === 0) {
+        const selectedDateTime = new Date(selectedDate);
+        const [hours, minutes] = formData.reservationTime.split(':').map(Number);
+        selectedDateTime.setHours(hours, minutes, 0, 0);
+        
+        const hoursInAdvance = differenceInHours(selectedDateTime, new Date());
+        if (hoursInAdvance < reservationSettings.minAdvanceHours) {
+          errors.time = `Reservations must be made at least ${reservationSettings.minAdvanceHours} hours in advance`;
+        }
+      }
+      
+      // Validate party size
+      const partySize = parseInt(formData.partySize);
+      if (partySize < reservationSettings.minPartySize) {
+        errors.partySize = `Minimum party size is ${reservationSettings.minPartySize}`;
+      } else if (partySize > reservationSettings.maxPartySize) {
+        errors.partySize = `Maximum party size is ${reservationSettings.maxPartySize}`;
+      }
+      
+      // Validate date is not closed
+      if (selectedDate) {
+        const dayOfWeek = selectedDate.getDay();
+        const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][dayOfWeek];
+        const dayHours = reservationSettings.operatingHours?.[dayName];
+        if (dayHours?.closed) {
+          errors.date = 'Restaurant is closed on this day';
+        }
+      }
+    }
+    
+    if (!formData.reservationTime) {
+      errors.time = 'Please select a time';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleFormSubmit = async () => {
     if (!selectedDate) return;
+    
+    // Validate form
+    if (!validateForm()) {
+      enqueueSnackbar('Please fix the errors in the form', { variant: 'error' });
+      return;
+    }
     
     try {
       const data: CreateReservationInput = {
@@ -391,12 +461,29 @@ export const ReservationCalendar: React.FC = () => {
       enqueueSnackbar('Reservation created successfully!', { variant: 'success' });
       setFormOpen(false);
       resetForm();
+      setFormErrors({});
       fetchReservations();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating reservation:', error);
-      enqueueSnackbar('Failed to create reservation', { variant: 'error' });
+      const errorMessage = error.response?.data?.message || 'Failed to create reservation';
+      enqueueSnackbar(errorMessage, { variant: 'error' });
     }
   };
+
+  // Update availability when party size or time changes
+  useEffect(() => {
+    if (formOpen && selectedDate && reservationSettings && currentRestaurant?.id) {
+      const slots = generateTimeSlots(selectedDate);
+      setAvailableTimeSlots(slots);
+      
+      if (slots.length > 0) {
+        setValidatingAvailability(true);
+        fetchAvailabilityForDate(selectedDate, slots).finally(() => {
+          setValidatingAvailability(false);
+        });
+      }
+    }
+  }, [formData.partySize, selectedDate, formOpen]);
 
   const handleCancelReservation = async (id: number) => {
     try {
@@ -415,11 +502,32 @@ export const ReservationCalendar: React.FC = () => {
       customerName: '',
       customerPhone: '',
       customerEmail: '',
-      partySize: '2',
+      partySize: reservationSettings?.minPartySize?.toString() || '2',
       reservationTime: '18:00',
       notes: '',
       specialRequests: ''
     });
+    setFormErrors({});
+  };
+
+  // Get party size options based on settings
+  const getPartySizeOptions = (): number[] => {
+    if (!reservationSettings) {
+      return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    }
+    const min = reservationSettings.minPartySize || 1;
+    const max = reservationSettings.maxPartySize || 20;
+    const options: number[] = [];
+    for (let i = min; i <= max; i++) {
+      options.push(i);
+    }
+    return options;
+  };
+
+  // Get selected time slot availability info
+  const getSelectedTimeSlotAvailability = () => {
+    if (!formData.reservationTime) return null;
+    return timeSlotAvailabilities.get(formData.reservationTime);
   };
 
   const getStatusColor = (status: ReservationStatus) => {
@@ -745,18 +853,18 @@ export const ReservationCalendar: React.FC = () => {
             </ToggleButtonGroup>
             <Box display="flex" alignItems="center" ml={2}>
               <IconButton onClick={handlePreviousPeriod}>
-                <ArrowBackIcon />
-              </IconButton>
-              <Button
-                startIcon={<TodayIcon />}
-                onClick={handleToday}
-                sx={{ mx: 1 }}
-              >
-                Today
-              </Button>
+              <ArrowBackIcon />
+            </IconButton>
+            <Button
+              startIcon={<TodayIcon />}
+              onClick={handleToday}
+              sx={{ mx: 1 }}
+            >
+              Today
+            </Button>
               <IconButton onClick={handleNextPeriod}>
-                <ArrowForwardIcon />
-              </IconButton>
+              <ArrowForwardIcon />
+            </IconButton>
             </Box>
           </Box>
         </Box>
@@ -774,7 +882,7 @@ export const ReservationCalendar: React.FC = () => {
 
         {/* Week View */}
         {view === 'week' && (
-          <Grid container spacing={1} sx={{ mt: 2 }}>
+        <Grid container spacing={1} sx={{ mt: 2 }}>
             {viewDates.map((day, index) => {
             const dayReservations = getReservationsForDay(day);
             const isCurrentDay = isToday(day);
@@ -892,8 +1000,8 @@ export const ReservationCalendar: React.FC = () => {
                 </Card>
               </Grid>
             );
-            })}
-          </Grid>
+          })}
+        </Grid>
         )}
 
         {/* Month View */}
@@ -905,23 +1013,74 @@ export const ReservationCalendar: React.FC = () => {
       </Paper>
 
       {/* Create Reservation Dialog */}
-      <Dialog open={formOpen} onClose={() => setFormOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog open={formOpen} onClose={() => setFormOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>
-          Create Reservation - {selectedDate && format(selectedDate, 'EEEE, MMMM d, yyyy')}
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Typography variant="h6">
+              Create Reservation
+            </Typography>
+            {selectedDate && (
+              <Chip 
+                label={format(selectedDate, 'EEEE, MMMM d, yyyy')} 
+                color="primary" 
+                variant="outlined"
+              />
+            )}
+          </Box>
         </DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
-            {availableTimeSlots.length === 0 && selectedDate && (
-              <Alert severity="warning" sx={{ mb: 2 }}>
-                Restaurant is closed on {format(selectedDate, 'EEEE, MMMM d')}. Please select a different date.
+            {/* Validation Errors */}
+            {Object.keys(formErrors).length > 0 && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                <Typography variant="subtitle2" gutterBottom>Please fix the following errors:</Typography>
+                <ul style={{ margin: 0, paddingLeft: 20 }}>
+                  {Object.values(formErrors).map((error, idx) => (
+                    <li key={idx}>{error}</li>
+                  ))}
+                </ul>
               </Alert>
             )}
+
+            {/* Date Selection Info */}
+            {selectedDate && reservationSettings && (
+              <Alert 
+                severity="info" 
+                sx={{ mb: 2 }}
+                icon={<EventIcon />}
+              >
+                <Typography variant="body2">
+                  <strong>Selected Date:</strong> {format(selectedDate, 'EEEE, MMMM d, yyyy')}
+                  {(() => {
+                    const dayOfWeek = selectedDate.getDay();
+                    const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][dayOfWeek];
+                    const dayHours = reservationSettings.operatingHours?.[dayName];
+                    if (dayHours && !dayHours.closed) {
+                      return ` • Open: ${dayHours.open} - ${dayHours.close}`;
+                    }
+                    return null;
+                  })()}
+                </Typography>
+              </Alert>
+            )}
+
+            {/* Customer Information */}
+            <Typography variant="subtitle1" fontWeight="bold" gutterBottom sx={{ mt: 2 }}>
+              Customer Information
+            </Typography>
             <TextField
               fullWidth
               label="Customer Name"
               value={formData.customerName}
-              onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, customerName: e.target.value });
+                if (formErrors.customerName) {
+                  setFormErrors({ ...formErrors, customerName: '' });
+                }
+              }}
               required
+              error={!!formErrors.customerName}
+              helperText={formErrors.customerName}
               sx={{ mb: 2 }}
             />
             <Grid container spacing={2}>
@@ -943,43 +1102,66 @@ export const ReservationCalendar: React.FC = () => {
                 />
               </Grid>
             </Grid>
+            <Divider sx={{ my: 2 }} />
+
+            {/* Reservation Details */}
+            <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+              Reservation Details
+            </Typography>
             <Grid container spacing={2} sx={{ mt: 1 }}>
               <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
+                <FormControl fullWidth error={!!formErrors.partySize}>
                   <InputLabel>Party Size</InputLabel>
                   <Select
                     value={formData.partySize}
-                    onChange={(e) => setFormData({ ...formData, partySize: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, partySize: e.target.value });
+                      if (formErrors.partySize) {
+                        setFormErrors({ ...formErrors, partySize: '' });
+                      }
+                    }}
                   >
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((size) => (
-                      <MenuItem key={size} value={size}>
+                    {getPartySizeOptions().map((size) => (
+                      <MenuItem key={size} value={size.toString()}>
                         {size} {size === 1 ? 'Guest' : 'Guests'}
                       </MenuItem>
                     ))}
                   </Select>
+                  {formErrors.partySize && (
+                    <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
+                      {formErrors.partySize}
+                    </Typography>
+                  )}
+                  {reservationSettings && (
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 1.75 }}>
+                      Party size: {reservationSettings.minPartySize} - {reservationSettings.maxPartySize} guests
+                    </Typography>
+                  )}
                 </FormControl>
               </Grid>
               <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
+                <FormControl fullWidth error={!!formErrors.time}>
                   <InputLabel>Time</InputLabel>
                   <Select
                     value={formData.reservationTime}
-                    onChange={(e) => setFormData({ ...formData, reservationTime: e.target.value })}
-                    disabled={availableTimeSlots.length === 0}
+                    onChange={(e) => {
+                      setFormData({ ...formData, reservationTime: e.target.value });
+                      if (formErrors.time) {
+                        setFormErrors({ ...formErrors, time: '' });
+                      }
+                    }}
+                    disabled={availableTimeSlots.length === 0 || validatingAvailability}
                   >
                     {availableTimeSlots.length === 0 ? (
                       <MenuItem disabled>Restaurant closed on this day</MenuItem>
                     ) : (
                       availableTimeSlots.map((time) => {
                         const availability = timeSlotAvailabilities.get(time);
-                        // FIXED: Check if availability exists and is explicitly false
-                        // If availability is undefined, assume available (backend hasn't filtered it out)
-                        // Only disable if availability exists and available is explicitly false
                         const remaining = availability?.remaining;
                         const capacity = availability?.capacity;
+                        const isAvailable = availability === undefined || availability.available !== false;
                         
                         let label = time;
-                        // FIXED: Use != null to check for both null and undefined
                         if (capacity != null && remaining != null) {
                           label = `${time} (${remaining}/${capacity} available)`;
                         } else if (capacity != null) {
@@ -992,15 +1174,49 @@ export const ReservationCalendar: React.FC = () => {
                             value={time}
                             disabled={availability !== undefined && availability.available === false}
                           >
-                            {label}
+                            <Box display="flex" alignItems="center" justifyContent="space-between" width="100%">
+                              <span>{label}</span>
+                              {!isAvailable && (
+                                <Chip label="Full" size="small" color="error" sx={{ ml: 1 }} />
+                              )}
+                            </Box>
                           </MenuItem>
                         );
                       })
                     )}
                   </Select>
+                  {formErrors.time && (
+                    <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
+                      {formErrors.time}
+                    </Typography>
+                  )}
+                  {validatingAvailability && (
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 1.75 }}>
+                      Checking availability...
+                    </Typography>
+                  )}
+                  {(() => {
+                    const availability = getSelectedTimeSlotAvailability();
+                    if (availability && availability.capacity != null && availability.remaining != null) {
+                      return (
+                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 1.75 }}>
+                          {availability.remaining > 0 
+                            ? `${availability.remaining} spots remaining` 
+                            : 'Fully booked'}
+                        </Typography>
+                      );
+                    }
+                    return null;
+                  })()}
                 </FormControl>
               </Grid>
             </Grid>
+            <Divider sx={{ my: 2 }} />
+
+            {/* Additional Information */}
+            <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+              Additional Information
+            </Typography>
             <TextField
               fullWidth
               label="Special Requests"
@@ -1008,7 +1224,8 @@ export const ReservationCalendar: React.FC = () => {
               rows={2}
               value={formData.specialRequests}
               onChange={(e) => setFormData({ ...formData, specialRequests: e.target.value })}
-              sx={{ mt: 2 }}
+              sx={{ mt: 1 }}
+              helperText="Any special requests or dietary restrictions"
             />
             <TextField
               fullWidth
@@ -1018,8 +1235,28 @@ export const ReservationCalendar: React.FC = () => {
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               sx={{ mt: 2 }}
-              helperText="For staff use only"
+              helperText="For staff use only - not visible to customer"
             />
+
+            {/* Cancellation Policy */}
+            {reservationSettings?.cancellationPolicy && (
+              <>
+                <Divider sx={{ my: 2 }} />
+                <Alert severity="info" icon={<EventIcon />}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Cancellation Policy
+                  </Typography>
+                  <Typography variant="body2">
+                    {reservationSettings.cancellationPolicy}
+                  </Typography>
+                  {reservationSettings.cancellationHours > 0 && (
+                    <Typography variant="caption" sx={{ mt: 1, display: 'block' }}>
+                      Cancellations must be made at least {reservationSettings.cancellationHours} hours in advance.
+                    </Typography>
+                  )}
+                </Alert>
+              </>
+            )}
           </Box>
         </DialogContent>
         <DialogActions>
