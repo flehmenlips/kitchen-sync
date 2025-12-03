@@ -171,10 +171,13 @@ export const migrateRestaurantAssets = async (
       if (publicId.includes('restaurant-settings') || publicId.includes('menu-logos')) return 'branding';
       if (publicId.includes('restaurants/')) {
         // Extract subfolder from existing structure
+        // Format: restaurants/{id}/{subfolder}/{filename} or restaurants/{id}/{filename}
         const parts = publicId.split('/');
-        if (parts.length > 2) {
+        // Check if there's an actual subfolder (parts.length > 3 means: restaurants, id, subfolder, filename)
+        if (parts.length > 3) {
           return parts[parts.length - 2] || 'general';
         }
+        // If directly in restaurant folder (restaurants/{id}/{filename}), use 'general'
       }
       
       return 'general';

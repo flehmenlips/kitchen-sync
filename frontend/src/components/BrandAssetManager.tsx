@@ -45,6 +45,7 @@ import {
 import { themingService, BrandAsset, BrandAssetData } from '../services/themingService';
 import { useSnackbar } from '../context/SnackbarContext';
 import AssetLibraryModal from './AssetLibraryModal';
+import { assetApi } from '../services/assetApi';
 
 interface BrandAssetManagerProps {
   restaurantId: number;
@@ -228,17 +229,26 @@ const BrandAssetManager: React.FC<BrandAssetManagerProps> = ({
 
     try {
       setUploading(true);
-      // TODO: Upload to Cloudinary and get URL
-      // For now, create a placeholder
-      const fileUrl = URL.createObjectURL(file);
+      
+      // Create FormData for upload
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', file);
+      uploadFormData.append('folder', 'branding'); // Upload brand assets to branding folder
+      
+      // Upload to Cloudinary via asset API
+      const uploadedAsset = await assetApi.uploadAsset(restaurantId, uploadFormData);
+      
+      // Update form with uploaded asset details
       setFormData({
         ...formData,
-        fileName: file.name,
-        fileUrl,
-        mimeType: file.type,
-        fileSize: file.size
+        fileName: uploadedAsset.fileName,
+        fileUrl: uploadedAsset.fileUrl,
+        mimeType: uploadedAsset.mimeType,
+        fileSize: uploadedAsset.fileSize,
+        cloudinaryPublicId: uploadedAsset.cloudinaryPublicId
       });
-      showSnackbar('File selected. Please save to upload.', 'info');
+      
+      showSnackbar('File uploaded successfully. Click Save to add as brand asset.', 'success');
     } catch (error) {
       console.error('Error uploading file:', error);
       showSnackbar('Failed to upload file', 'error');

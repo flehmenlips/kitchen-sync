@@ -581,27 +581,38 @@ export const themingService = {
       if (specifiedFont) {
         // If it's a serif font, suggest sans-serif pairings
         if (specifiedFont.category === 'serif') {
-          return FONT_PAIRINGS.filter(pairing => {
+          const complementaryPairings = FONT_PAIRINGS.filter(pairing => {
             const bodyFont = RESTAURANT_GOOGLE_FONTS.find(f => f.family === pairing.body);
             return bodyFont && bodyFont.category === 'sans-serif';
-          }).concat(
-            // Also include pairings where this font is used
-            FONT_PAIRINGS.filter(pairing => 
-              pairing.heading === fontFamily || pairing.body === fontFamily
-            )
+          });
+          const directPairings = FONT_PAIRINGS.filter(pairing => 
+            pairing.heading === fontFamily || pairing.body === fontFamily
           );
+          
+          // Deduplicate by combining and filtering unique pairings
+          const allPairings = [...complementaryPairings, ...directPairings];
+          const uniquePairings = allPairings.filter((pairing, index, self) =>
+            index === self.findIndex(p => p.heading === pairing.heading && p.body === pairing.body)
+          );
+          return uniquePairings;
         }
         
         // If it's a sans-serif font, suggest serif pairings
         if (specifiedFont.category === 'sans-serif') {
-          return FONT_PAIRINGS.filter(pairing => {
+          const complementaryPairings = FONT_PAIRINGS.filter(pairing => {
             const headingFont = RESTAURANT_GOOGLE_FONTS.find(f => f.family === pairing.heading);
             return headingFont && headingFont.category === 'serif';
-          }).concat(
-            FONT_PAIRINGS.filter(pairing => 
-              pairing.heading === fontFamily || pairing.body === fontFamily
-            )
+          });
+          const directPairings = FONT_PAIRINGS.filter(pairing => 
+            pairing.heading === fontFamily || pairing.body === fontFamily
           );
+          
+          // Deduplicate by combining and filtering unique pairings
+          const allPairings = [...complementaryPairings, ...directPairings];
+          const uniquePairings = allPairings.filter((pairing, index, self) =>
+            index === self.findIndex(p => p.heading === pairing.heading && p.body === pairing.body)
+          );
+          return uniquePairings;
         }
       }
       
