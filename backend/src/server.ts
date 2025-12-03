@@ -14,6 +14,8 @@ import prepTaskRoutes from './routes/prepTaskRoutes';
 import prepColumnRoutes from './routes/prepColumnRoutes';
 import menuRoutes from './routes/menuRoutes'; // Import menu routes
 import reservationRoutes from './routes/reservationRoutes'; // Import reservation routes
+import reservationSettingsRoutes from './routes/reservationSettingsRoutes'; // Import reservation settings routes
+import timeSlotCapacityRoutes from './routes/timeSlotCapacityRoutes'; // Import time slot capacity routes
 import orderRoutes from './routes/orderRoutes'; // Import order routes
 import restaurantSettingsRoutes from './routes/restaurantSettingsRoutes';
 import contentBlockRoutes from './routes/contentBlockRoutes';
@@ -145,6 +147,8 @@ app.use('/api/prep-tasks', prepTaskRoutes);
 app.use('/api/prep-columns', prepColumnRoutes);
 app.use('/api/menus', menuRoutes); // Mount menu routes
 app.use('/api/reservations', reservationRoutes); // Mount reservation routes
+app.use('/api/reservation-settings', reservationSettingsRoutes); // Mount reservation settings routes
+app.use('/api/time-slot-capacity', timeSlotCapacityRoutes); // Mount time slot capacity routes
 app.use('/api/orders', orderRoutes); // Mount order routes
 app.use('/api/restaurant', restaurantSettingsRoutes); // Mount restaurant settings routes
 app.use('/api/content-blocks', contentBlockRoutes); // Mount content block routes
