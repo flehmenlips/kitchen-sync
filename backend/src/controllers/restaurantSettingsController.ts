@@ -368,7 +368,10 @@ export const getPublicRestaurantSettings = async (req: Request, res: Response): 
       });
       
       // Use reservation operating hours if available (they're more accurate)
-      if (reservationSettings?.operatingHours) {
+      // Check that operatingHours is not just an empty object (default schema value)
+      if (reservationSettings?.operatingHours && 
+          typeof reservationSettings.operatingHours === 'object' &&
+          Object.keys(reservationSettings.operatingHours).length > 0) {
         operatingHours = parseOpeningHours(reservationSettings.operatingHours);
       }
     } catch (error) {

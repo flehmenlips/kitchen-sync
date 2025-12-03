@@ -432,7 +432,10 @@ export const websiteBuilderService = {
           });
           
           // Use reservation operating hours if available (more accurate for reservations)
-          if (reservationSettings?.operatingHours) {
+          // Check that operatingHours is not just an empty object (default schema value)
+          if (reservationSettings?.operatingHours && 
+              typeof reservationSettings.operatingHours === 'object' &&
+              Object.keys(reservationSettings.operatingHours).length > 0) {
             operatingHours = this.parseOpeningHours(reservationSettings.operatingHours);
           }
         } catch (error) {
