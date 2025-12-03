@@ -455,7 +455,10 @@ export const ReservationCalendar: React.FC = () => {
                     ) : (
                       availableTimeSlots.map((time) => {
                         const availability = timeSlotAvailabilities.get(time);
-                        const isAvailable = availability?.available !== false;
+                        // FIXED: Check if availability exists and is explicitly false
+                        // If availability is undefined, assume available (backend hasn't filtered it out)
+                        // Only disable if availability exists and available is explicitly false
+                        const isAvailable = availability === undefined || availability.available !== false;
                         const remaining = availability?.remaining;
                         const capacity = availability?.capacity;
                         
@@ -470,7 +473,7 @@ export const ReservationCalendar: React.FC = () => {
                           <MenuItem 
                             key={time} 
                             value={time}
-                            disabled={!isAvailable}
+                            disabled={availability !== undefined && availability.available === false}
                           >
                             {label}
                           </MenuItem>

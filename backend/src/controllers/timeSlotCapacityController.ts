@@ -337,8 +337,20 @@ export const bulkUpsertTimeSlotCapacities = async (req: Request, res: Response):
       message: `Successfully updated ${results.length} time slot capacities`,
       capacities: results
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error bulk updating time slot capacities:', error);
+    
+    // FIXED: Return 400 for validation errors with descriptive messages
+    if (error.message && (
+      error.message.includes('Missing required fields') ||
+      error.message.includes('Invalid dayOfWeek') ||
+      error.message.includes('Invalid timeSlot') ||
+      error.message.includes('Invalid maxCovers')
+    )) {
+      res.status(400).json({ message: error.message });
+      return;
+    }
+    
     res.status(500).json({ message: 'Error bulk updating time slot capacities' });
   }
 };

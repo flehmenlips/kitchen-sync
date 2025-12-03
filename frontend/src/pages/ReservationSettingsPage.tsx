@@ -462,7 +462,7 @@ const ReservationSettingsPage: React.FC = () => {
               <FormControlLabel
                 control={
                   <Switch
-                    checked={formData.autoConfirm || true}
+                    checked={formData.autoConfirm !== undefined ? formData.autoConfirm : true}
                     onChange={(e) =>
                       setFormData({ ...formData, autoConfirm: e.target.checked })
                     }
@@ -476,7 +476,7 @@ const ReservationSettingsPage: React.FC = () => {
               <FormControlLabel
                 control={
                   <Switch
-                    checked={formData.sendConfirmation || true}
+                    checked={formData.sendConfirmation !== undefined ? formData.sendConfirmation : true}
                     onChange={(e) =>
                       setFormData({ ...formData, sendConfirmation: e.target.checked })
                     }
@@ -490,7 +490,7 @@ const ReservationSettingsPage: React.FC = () => {
               <FormControlLabel
                 control={
                   <Switch
-                    checked={formData.sendReminder || true}
+                    checked={formData.sendReminder !== undefined ? formData.sendReminder : true}
                     onChange={(e) =>
                       setFormData({ ...formData, sendReminder: e.target.checked })
                     }
