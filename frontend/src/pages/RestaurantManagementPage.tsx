@@ -13,6 +13,8 @@ import {
   Divider,
   Chip,
   Link as MuiLink,
+  Switch,
+  FormControlLabel,
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -103,6 +105,30 @@ const RestaurantManagementPage: React.FC = () => {
       console.error('Failed to update restaurant info:', err);
       setError(err.response?.data?.error || 'Failed to update restaurant information');
       showSnackbar('Failed to update restaurant information', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleWebsiteBuilderToggle = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    try {
+      setSaving(true);
+      setError(null);
+      const updated = await restaurantInfoService.updateRestaurantInfo({
+        website_builder_enabled: enabled
+      });
+      setRestaurantInfo(updated);
+      showSnackbar(
+        enabled 
+          ? 'Website Builder enabled successfully' 
+          : 'Website Builder disabled successfully',
+        'success'
+      );
+    } catch (err: any) {
+      console.error('Failed to toggle website builder:', err);
+      setError(err.response?.data?.error || 'Failed to update website builder status');
+      showSnackbar('Failed to update website builder status', 'error');
     } finally {
       setSaving(false);
     }
@@ -199,17 +225,38 @@ const RestaurantManagementPage: React.FC = () => {
                       />
                     )}
                   </Box>
+                  <Box sx={{ ml: 4, mb: 1 }}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={restaurantInfo?.modules?.websiteBuilder?.enabled || false}
+                          onChange={handleWebsiteBuilderToggle}
+                          disabled={saving}
+                          color="primary"
+                        />
+                      }
+                      label={
+                        <Typography variant="body2">
+                          {restaurantInfo?.modules?.websiteBuilder?.enabled 
+                            ? 'Website Builder is enabled' 
+                            : 'Enable Website Builder'}
+                        </Typography>
+                      }
+                    />
+                  </Box>
                   <Typography variant="body2" color="text.secondary" sx={{ ml: 4 }}>
                     Restaurant: {restaurantInfo?.name || 'N/A'}
                   </Typography>
-                  <MuiLink
-                    component="button"
-                    variant="body2"
-                    onClick={() => navigate('/website')}
-                    sx={{ ml: 4, mt: 0.5 }}
-                  >
-                    Open Website Builder →
-                  </MuiLink>
+                  {restaurantInfo?.modules?.websiteBuilder?.enabled && (
+                    <MuiLink
+                      component="button"
+                      variant="body2"
+                      onClick={() => navigate('/website')}
+                      sx={{ ml: 4, mt: 0.5 }}
+                    >
+                      Open Website Builder →
+                    </MuiLink>
+                  )}
                 </Grid>
               </Grid>
             </CardContent>
