@@ -107,16 +107,41 @@ export const ReservationCalendar: React.FC = () => {
     const [openHour, openMin] = open.split(':').map(Number);
     const [closeHour, closeMin] = close.split(':').map(Number);
     const startMinutes = openHour * 60 + openMin;
-    const endMinutes = closeHour * 60 + closeMin;
+    let endMinutes = closeHour * 60 + closeMin;
 
     const slots: string[] = [];
     let currentMinutes = startMinutes;
 
-    while (currentMinutes <= endMinutes) {
-      const hour = Math.floor(currentMinutes / 60);
-      const minute = currentMinutes % 60;
-      slots.push(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
-      currentMinutes += interval;
+    // FIXED: Handle midnight crossing - if end time is earlier than start time,
+    // it means the end time is the next day (e.g., 20:00 to 02:00)
+    const crossesMidnight = endMinutes <= startMinutes;
+    
+    if (crossesMidnight) {
+      // Generate slots from start time to end of day (23:59)
+      const endOfDay = 24 * 60; // 1440 minutes
+      while (currentMinutes < endOfDay) {
+        const hour = Math.floor(currentMinutes / 60);
+        const minute = currentMinutes % 60;
+        slots.push(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
+        currentMinutes += interval;
+      }
+      
+      // Generate slots from start of next day (00:00) to end time
+      currentMinutes = 0;
+      while (currentMinutes <= endMinutes) {
+        const hour = Math.floor(currentMinutes / 60);
+        const minute = currentMinutes % 60;
+        slots.push(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
+        currentMinutes += interval;
+      }
+    } else {
+      // Normal case: end time is after start time on the same day
+      while (currentMinutes <= endMinutes) {
+        const hour = Math.floor(currentMinutes / 60);
+        const minute = currentMinutes % 60;
+        slots.push(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
+        currentMinutes += interval;
+      }
     }
 
     return slots;

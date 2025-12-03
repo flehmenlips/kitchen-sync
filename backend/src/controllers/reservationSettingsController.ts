@@ -16,13 +16,23 @@ const validateOperatingHours = (hours: any): boolean => {
       if (!dayHours.open || !dayHours.close) return false;
       if (!timeRegex.test(dayHours.open) || !timeRegex.test(dayHours.close)) return false;
       
-      // Validate that close time is after open time
+      // Validate that close time is after open time (handles midnight crossing)
       const [openHour, openMin] = dayHours.open.split(':').map(Number);
       const [closeHour, closeMin] = dayHours.close.split(':').map(Number);
       const openMinutes = openHour * 60 + openMin;
-      const closeMinutes = closeHour * 60 + closeMin;
+      let closeMinutes = closeHour * 60 + closeMin;
       
-      if (closeMinutes <= openMinutes) return false;
+      // FIXED: Handle midnight crossing - if close time is earlier than open time,
+      // it means the close time is the next day (e.g., 20:00 to 02:00)
+      // Add 24 hours (1440 minutes) to close time for comparison
+      if (closeMinutes <= openMinutes) {
+        closeMinutes += 1440; // Add 24 hours for midnight crossing
+      }
+      
+      // Validate that the duration is reasonable (not more than 24 hours)
+      if (closeMinutes - openMinutes > 1440) {
+        return false; // More than 24 hours is invalid
+      }
     }
   }
   
