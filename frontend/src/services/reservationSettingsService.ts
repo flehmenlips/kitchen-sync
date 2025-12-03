@@ -58,7 +58,7 @@ export interface ReservationSettingsData {
   reminderHours?: number;
 }
 
-const BASE_URL = '/api/reservation-settings';
+const BASE_URL = '/reservation-settings';
 
 export const reservationSettingsService = {
   // Get reservation settings for a restaurant

@@ -70,24 +70,39 @@ const ReservationSettingsPage: React.FC = () => {
   }, [restaurantId]);
 
   const fetchSettings = async () => {
-    if (!restaurantId) return;
+    if (!restaurantId) {
+      console.warn('ReservationSettingsPage: No restaurantId available');
+      setLoading(false);
+      return;
+    }
     
+    console.log('ReservationSettingsPage: Fetching settings for restaurantId:', restaurantId);
     setLoading(true);
     try {
       const data = await reservationSettingsService.getReservationSettings(restaurantId);
+      console.log('ReservationSettingsPage: Settings loaded:', data);
       setFormData(data);
     } catch (error: any) {
-      console.error('Error fetching reservation settings:', error);
+      console.error('ReservationSettingsPage: Error fetching reservation settings:', error);
+      console.error('ReservationSettingsPage: Error details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        url: error.config?.url,
+        baseURL: error.config?.baseURL
+      });
+      
       // If settings don't exist yet (404), initialize with empty formData
       // The backend will create default settings on first save
       if (error.response?.status === 404) {
-        console.log('No reservation settings found - will create on first save');
+        console.log('ReservationSettingsPage: No reservation settings found - will create on first save');
         setFormData({});
       } else {
-        showSnackbar(
-          error.response?.data?.message || 'Failed to load reservation settings',
-          'error'
-        );
+        const errorMessage = error.response?.data?.message || error.message || 'Failed to load reservation settings';
+        console.error('ReservationSettingsPage: Error message:', errorMessage);
+        showSnackbar(errorMessage, 'error');
+        // Still show the form even if loading fails, so user can create settings
+        setFormData({});
       }
     } finally {
       setLoading(false);
