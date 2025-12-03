@@ -371,25 +371,23 @@ export const customerReservationController = {
       }
 
       // Ensure customer-restaurant link exists (create if needed)
-      const existingLink = await prisma.customerRestaurant.findUnique({
+      // Use upsert to prevent race condition from concurrent requests
+      await prisma.customerRestaurant.upsert({
         where: {
           customerId_restaurantId: {
             customerId: customer.id,
             restaurantId: restaurantId
           }
+        },
+        create: {
+          customerId: customer.id,
+          restaurantId: restaurantId,
+          firstVisit: new Date()
+        },
+        update: {
+          // No-op: don't update existing records, just ensure they exist
         }
       });
-
-      if (!existingLink) {
-        // Create restaurant-specific customer profile link
-        await prisma.customerRestaurant.create({
-          data: {
-            customerId: customer.id,
-            restaurantId: restaurantId,
-            firstVisit: new Date()
-          }
-        });
-      }
 
       const customerId = customer.id;
       const customerName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.email;
