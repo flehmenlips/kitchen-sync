@@ -379,17 +379,22 @@ export const getPublicRestaurantSettings = async (req: Request, res: Response): 
     }
 
     // Get restaurant basic info to sync contact information
-    const restaurantInfo = await prisma.restaurant.findUnique({
-      where: { id: restaurant.id },
-      select: {
-        phone: true,
-        email: true,
-        address: true,
-        city: true,
-        state: true,
-        zipCode: true
-      }
-    });
+    let restaurantInfo = null;
+    try {
+      restaurantInfo = await prisma.restaurant.findUnique({
+        where: { id: restaurant.id },
+        select: {
+          phone: true,
+          email: true,
+          address: true,
+          city: true,
+          state: true,
+          zipCode: true
+        }
+      });
+    } catch (error) {
+      console.warn('Could not fetch restaurant info for public endpoint:', error);
+    }
 
     // Add restaurant info and parse opening hours
     const result = {
