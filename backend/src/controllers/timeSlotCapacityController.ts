@@ -176,9 +176,13 @@ export const upsertTimeSlotCapacity = async (req: Request, res: Response): Promi
       return;
     }
 
-    // Validate dayOfWeek (0-6)
-    if (dayOfWeek < 0 || dayOfWeek > 6) {
-      res.status(400).json({ message: 'dayOfWeek must be between 0 (Sunday) and 6 (Saturday)' });
+    // FIXED: Parse and validate numeric inputs to catch NaN values
+    const dayOfWeekNum = parseInt(dayOfWeek);
+    const maxCoversNum = parseInt(maxCovers);
+
+    // Validate dayOfWeek (0-6) and check for NaN
+    if (isNaN(dayOfWeekNum) || dayOfWeekNum < 0 || dayOfWeekNum > 6) {
+      res.status(400).json({ message: 'dayOfWeek must be a valid number between 0 (Sunday) and 6 (Saturday)' });
       return;
     }
 
@@ -189,9 +193,9 @@ export const upsertTimeSlotCapacity = async (req: Request, res: Response): Promi
       return;
     }
 
-    // Validate maxCovers
-    if (maxCovers < 1) {
-      res.status(400).json({ message: 'maxCovers must be at least 1' });
+    // Validate maxCovers and check for NaN
+    if (isNaN(maxCoversNum) || maxCoversNum < 1) {
+      res.status(400).json({ message: 'maxCovers must be a valid number greater than 0' });
       return;
     }
 

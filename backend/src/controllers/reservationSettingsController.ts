@@ -151,14 +151,36 @@ export const upsertReservationSettings = async (req: Request, res: Response): Pr
     }
 
     // Validate time slot interval
-    if (timeSlotInterval && ![15, 30, 60].includes(timeSlotInterval)) {
+    if (timeSlotInterval !== undefined && ![15, 30, 60].includes(timeSlotInterval)) {
       res.status(400).json({ message: 'Time slot interval must be 15, 30, or 60 minutes' });
       return;
     }
 
-    // Validate party size limits
-    if (minPartySize && maxPartySize && minPartySize > maxPartySize) {
-      res.status(400).json({ message: 'Minimum party size cannot be greater than maximum party size' });
+    // FIXED: Validate party size limits against existing settings for partial updates
+    // Get existing settings to validate against current values
+    const existingSettings = await prisma.reservationSettings.findUnique({
+      where: { restaurantId: parseInt(restaurantId) }
+    });
+
+    const finalMinPartySize = minPartySize !== undefined ? parseInt(minPartySize) : existingSettings?.minPartySize;
+    const finalMaxPartySize = maxPartySize !== undefined ? parseInt(maxPartySize) : existingSettings?.maxPartySize;
+
+    // Validate that parsed values are valid numbers
+    if (minPartySize !== undefined && (isNaN(parseInt(minPartySize)) || parseInt(minPartySize) < 1)) {
+      res.status(400).json({ message: 'Minimum party size must be a valid number greater than 0' });
+      return;
+    }
+
+    if (maxPartySize !== undefined && (isNaN(parseInt(maxPartySize)) || parseInt(maxPartySize) < 1)) {
+      res.status(400).json({ message: 'Maximum party size must be a valid number greater than 0' });
+      return;
+    }
+
+    // Validate party size constraints (check against final values, not just provided values)
+    if (finalMinPartySize !== undefined && finalMaxPartySize !== undefined && finalMinPartySize > finalMaxPartySize) {
+      res.status(400).json({ 
+        message: `Minimum party size (${finalMinPartySize}) cannot be greater than maximum party size (${finalMaxPartySize})` 
+      });
       return;
     }
 
