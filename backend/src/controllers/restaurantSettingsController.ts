@@ -369,13 +369,24 @@ export const getPublicRestaurantSettings = async (req: Request, res: Response): 
       
       // Use reservation operating hours if available (they're more accurate)
       // Check that operatingHours is not just an empty object (default schema value)
+      // Also exclude arrays since parseOpeningHours returns null for arrays
       if (reservationSettings?.operatingHours && 
           typeof reservationSettings.operatingHours === 'object' &&
+          !Array.isArray(reservationSettings.operatingHours) &&
           Object.keys(reservationSettings.operatingHours).length > 0) {
-        operatingHours = parseOpeningHours(reservationSettings.operatingHours);
+        const parsedReservationHours = parseOpeningHours(reservationSettings.operatingHours);
+        // Only use reservation hours if parsing succeeded (not null)
+        if (parsedReservationHours) {
+          operatingHours = parsedReservationHours;
+        }
       }
     } catch (error) {
       console.warn('Could not fetch reservation settings for public endpoint:', error);
+    }
+    
+    // Fall back to RestaurantSettings opening hours if reservation settings don't have valid hours
+    if (!operatingHours && settings?.openingHours) {
+      operatingHours = parseOpeningHours(settings.openingHours);
     }
 
     // Get restaurant basic info to sync contact information
