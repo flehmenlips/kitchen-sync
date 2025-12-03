@@ -88,5 +88,37 @@ export const reservationService = {
   // Cancel reservation (convenience method)
   async cancelReservation(id: number): Promise<Reservation> {
     return this.updateReservation(id, { status: ReservationStatus.CANCELLED });
+  },
+
+  // Get availability for a date with time slots
+  async getAvailability(
+    restaurantId: number,
+    date: string,
+    partySize?: number
+  ): Promise<{
+    date: string;
+    partySize: number;
+    timeSlots: Array<{
+      timeSlot: string;
+      available: boolean;
+      currentBookings: number;
+      capacity: number | null;
+      remaining: number | null;
+      canAccommodate: boolean;
+    }>;
+    allSlots: Array<{
+      timeSlot: string;
+      available: boolean;
+      currentBookings: number;
+      capacity: number | null;
+      remaining: number | null;
+    }>;
+  }> {
+    const params: any = { date };
+    if (partySize) {
+      params.partySize = partySize;
+    }
+    const response = await api.get(`/reservations/availability/${restaurantId}`, { params });
+    return response.data;
   }
 }; 
