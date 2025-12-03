@@ -76,9 +76,19 @@ const ReservationSettingsPage: React.FC = () => {
     try {
       const data = await reservationSettingsService.getReservationSettings(restaurantId);
       setFormData(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching reservation settings:', error);
-      showSnackbar('Failed to load reservation settings', 'error');
+      // If settings don't exist yet (404), initialize with empty formData
+      // The backend will create default settings on first save
+      if (error.response?.status === 404) {
+        console.log('No reservation settings found - will create on first save');
+        setFormData({});
+      } else {
+        showSnackbar(
+          error.response?.data?.message || 'Failed to load reservation settings',
+          'error'
+        );
+      }
     } finally {
       setLoading(false);
     }
