@@ -265,7 +265,8 @@ function generateSlotsBetweenTimes(
   const slots: string[] = [];
   let currentMinutes = startMinutes;
 
-  while (currentMinutes < endMinutes) {
+  // FIXED: Use <= to include closing time, matching generateDefaultTimeSlots behavior
+  while (currentMinutes <= endMinutes) {
     const hour = Math.floor(currentMinutes / 60);
     const minute = currentMinutes % 60;
     slots.push(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);

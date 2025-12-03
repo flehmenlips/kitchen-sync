@@ -270,6 +270,25 @@ export const bulkUpsertTimeSlotCapacities = async (req: Request, res: Response):
           throw new Error('Missing required fields in capacity item');
         }
 
+        // FIXED: Add validation checks to match upsertTimeSlotCapacity
+        // Validate dayOfWeek (0-6)
+        const dayOfWeekNum = parseInt(dayOfWeek);
+        if (isNaN(dayOfWeekNum) || dayOfWeekNum < 0 || dayOfWeekNum > 6) {
+          throw new Error(`Invalid dayOfWeek: ${dayOfWeek}. Must be between 0 (Sunday) and 6 (Saturday)`);
+        }
+
+        // Validate timeSlot format (HH:MM)
+        const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+        if (!timeRegex.test(timeSlot)) {
+          throw new Error(`Invalid timeSlot format: ${timeSlot}. Must be in HH:MM format (e.g., "18:00")`);
+        }
+
+        // Validate maxCovers
+        const maxCoversNum = parseInt(maxCovers);
+        if (isNaN(maxCoversNum) || maxCoversNum < 1) {
+          throw new Error(`Invalid maxCovers: ${maxCovers}. Must be at least 1`);
+        }
+
         return prisma.timeSlotCapacity.upsert({
           where: {
             restaurantId_dayOfWeek_timeSlot: {
@@ -279,14 +298,14 @@ export const bulkUpsertTimeSlotCapacities = async (req: Request, res: Response):
             }
           },
           update: {
-            maxCovers: parseInt(maxCovers),
+            maxCovers: maxCoversNum,
             isActive: isActive !== undefined ? isActive : true
           },
           create: {
             restaurantId: parseInt(restaurantId),
-            dayOfWeek: parseInt(dayOfWeek),
+            dayOfWeek: dayOfWeekNum,
             timeSlot: timeSlot,
-            maxCovers: parseInt(maxCovers),
+            maxCovers: maxCoversNum,
             isActive: isActive !== undefined ? isActive : true
           }
         });
