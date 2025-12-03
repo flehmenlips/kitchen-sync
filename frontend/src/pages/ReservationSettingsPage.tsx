@@ -166,6 +166,7 @@ const ReservationSettingsPage: React.FC = () => {
     );
   }
 
+  // Ensure operatingHours always has a structure, even if empty
   const operatingHours = (formData.operatingHours || {}) as OperatingHours;
 
   return (
@@ -182,7 +183,7 @@ const ReservationSettingsPage: React.FC = () => {
           color="primary"
           startIcon={<SaveIcon />}
           onClick={handleSave}
-          disabled={saving}
+          disabled={saving || !restaurantId}
           sx={{ ml: 2 }}
         >
           {saving ? 'Saving...' : 'Save Settings'}
@@ -192,6 +193,12 @@ const ReservationSettingsPage: React.FC = () => {
       {Object.keys(formData).length === 0 && !loading && (
         <Alert severity="info" sx={{ mb: 3 }}>
           No reservation settings found. Configure your settings below and click "Save Settings" to create them.
+        </Alert>
+      )}
+      
+      {!restaurantId && (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          Unable to determine restaurant. Please ensure you are associated with a restaurant.
         </Alert>
       )}
 
