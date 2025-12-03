@@ -487,9 +487,10 @@ export const ReservationCalendar: React.FC = () => {
                         const capacity = availability?.capacity;
                         
                         let label = time;
-                        if (capacity !== null && remaining !== null) {
+                        // FIXED: Use != null to check for both null and undefined
+                        if (capacity != null && remaining != null) {
                           label = `${time} (${remaining}/${capacity} available)`;
-                        } else if (capacity !== null) {
+                        } else if (capacity != null) {
                           label = `${time} (${capacity} capacity)`;
                         }
                         
