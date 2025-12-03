@@ -25,6 +25,7 @@ import {
 import { reservationSettingsService, ReservationSettings, OperatingHours } from '../services/reservationSettingsService';
 import { useSnackbar } from '../context/SnackbarContext';
 import { useRestaurant } from '../context/RestaurantContext';
+import TimeSlotCapacityPage from './TimeSlotCapacityPage';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -207,6 +208,7 @@ const ReservationSettingsPage: React.FC = () => {
           <Tab icon={<ScheduleIcon />} label="Operating Hours" />
           <Tab icon={<PeopleIcon />} label="Capacity & Rules" />
           <Tab icon={<InfoIcon />} label="Policies" />
+          <Tab icon={<SettingsIcon />} label="Time Slot Capacity" />
         </Tabs>
 
         {/* Operating Hours Tab */}
@@ -561,6 +563,11 @@ const ReservationSettingsPage: React.FC = () => {
               )}
             </Grid>
           </Grid>
+        </TabPanel>
+
+        {/* Time Slot Capacity Tab */}
+        <TabPanel value={tabValue} index={3}>
+          <TimeSlotCapacityPage />
         </TabPanel>
 
         <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end' }}>
