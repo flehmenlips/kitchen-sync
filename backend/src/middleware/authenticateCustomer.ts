@@ -68,7 +68,9 @@ export const authenticateCustomer = async (
       
       // Check if email is verified (for reservation endpoints)
       // Allow unverified customers for profile/account endpoints
-      const requiresVerification = req.path.includes('/reservations') && req.method === 'POST';
+      // Use req.originalUrl instead of req.path because when middleware is applied via router.use(),
+      // req.path is relative to the router (e.g., '/'), not the full path
+      const requiresVerification = req.originalUrl.includes('/reservations') && req.method === 'POST';
       if (requiresVerification && !customer.emailVerified) {
         res.status(403).json({ 
           error: 'Email verification required',

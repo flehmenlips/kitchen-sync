@@ -235,8 +235,8 @@ const CustomerReservationPage: React.FC = () => {
       return;
     }
 
-    // Check email verification
-    if (user.emailVerified === false) {
+    // Check email verification (handles false, undefined, and null)
+    if (user.emailVerified !== true) {
       enqueueSnackbar('Please verify your email address before making a reservation', { variant: 'warning' });
       navigate(buildCustomerUrl('verify-email'), {
         state: { from: '/reservations/new', message: 'Email verification required' }
@@ -272,8 +272,8 @@ const CustomerReservationPage: React.FC = () => {
       return;
     }
 
-    // Double-check email verification
-    if (user.emailVerified === false) {
+    // Double-check email verification (handles false, undefined, and null)
+    if (user.emailVerified !== true) {
       enqueueSnackbar('Please verify your email address before making a reservation', { variant: 'error' });
       navigate(buildCustomerUrl('verify-email'), {
         state: { from: '/reservations/new', message: 'Email verification required' }
@@ -449,7 +449,7 @@ const CustomerReservationPage: React.FC = () => {
             )}
 
             {/* Email verification prompt */}
-            {user && user.emailVerified === false && (
+            {user && user.emailVerified !== true && (
               <Grid item xs={12}>
                 <Alert 
                   severity="warning" 
@@ -600,7 +600,7 @@ const CustomerReservationPage: React.FC = () => {
             <Button
               variant="contained"
               onClick={handleNext}
-              disabled={loading || !user || user.emailVerified === false}
+              disabled={loading || !user || user.emailVerified !== true}
             >
               {loading ? 'Processing...' : 'Confirm Reservation'}
             </Button>
