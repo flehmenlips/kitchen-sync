@@ -62,6 +62,7 @@ export const ReservationCalendar: React.FC = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [viewReservation, setViewReservation] = useState<Reservation | null>(null);
   const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
+  const [timeSlotAvailabilities, setTimeSlotAvailabilities] = useState<Map<string, { available: boolean; remaining: number | null; capacity: number | null }>>(new Map());
   const [formData, setFormData] = useState<ReservationFormData>({
     customerName: '',
     customerPhone: '',
@@ -145,14 +146,45 @@ export const ReservationCalendar: React.FC = () => {
   }, [currentRestaurant?.id]);
 
   useEffect(() => {
-    if (selectedDate && reservationSettings) {
+    if (selectedDate && reservationSettings && currentRestaurant?.id) {
       const slots = generateTimeSlots(selectedDate);
       setAvailableTimeSlots(slots);
       if (slots.length > 0 && !slots.includes(formData.reservationTime)) {
         setFormData(prev => ({ ...prev, reservationTime: slots[0] }));
       }
+      
+      // Fetch availability for all time slots
+      if (slots.length > 0) {
+        fetchAvailabilityForDate(selectedDate, slots);
+      }
     }
-  }, [selectedDate, reservationSettings]);
+  }, [selectedDate, reservationSettings, currentRestaurant?.id]);
+
+  const fetchAvailabilityForDate = async (date: Date, slots: string[]) => {
+    if (!currentRestaurant?.id) return;
+    
+    try {
+      const dateStr = format(date, 'yyyy-MM-dd');
+      const availability = await reservationService.getAvailability(
+        currentRestaurant.id,
+        dateStr,
+        parseInt(formData.partySize) || 1
+      );
+      
+      // Create a map of time slot -> availability
+      const availabilityMap = new Map();
+      availability.timeSlots.forEach((slot: any) => {
+        availabilityMap.set(slot.timeSlot, {
+          available: slot.available,
+          remaining: slot.remaining,
+          capacity: slot.capacity
+        });
+      });
+      setTimeSlotAvailabilities(availabilityMap);
+    } catch (error) {
+      console.error('Error fetching availability:', error);
+    }
+  };
 
   const fetchReservationSettings = async () => {
     if (!currentRestaurant?.id) return;
@@ -421,11 +453,29 @@ export const ReservationCalendar: React.FC = () => {
                     {availableTimeSlots.length === 0 ? (
                       <MenuItem disabled>Restaurant closed on this day</MenuItem>
                     ) : (
-                      availableTimeSlots.map((time) => (
-                        <MenuItem key={time} value={time}>
-                          {time}
-                        </MenuItem>
-                      ))
+                      availableTimeSlots.map((time) => {
+                        const availability = timeSlotAvailabilities.get(time);
+                        const isAvailable = availability?.available !== false;
+                        const remaining = availability?.remaining;
+                        const capacity = availability?.capacity;
+                        
+                        let label = time;
+                        if (capacity !== null && remaining !== null) {
+                          label = `${time} (${remaining}/${capacity} available)`;
+                        } else if (capacity !== null) {
+                          label = `${time} (${capacity} capacity)`;
+                        }
+                        
+                        return (
+                          <MenuItem 
+                            key={time} 
+                            value={time}
+                            disabled={!isAvailable}
+                          >
+                            {label}
+                          </MenuItem>
+                        );
+                      })
                     )}
                   </Select>
                 </FormControl>
