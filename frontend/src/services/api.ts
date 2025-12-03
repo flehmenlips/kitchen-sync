@@ -4,24 +4,35 @@ import axios from 'axios';
 const getApiUrl = () => {
   // If VITE_API_URL is explicitly set, use it
   if (import.meta.env.VITE_API_URL) {
+    console.log('[API Config] Using VITE_API_URL from environment:', import.meta.env.VITE_API_URL);
     return import.meta.env.VITE_API_URL;
   }
   
+  const hostname = window.location.hostname;
+  console.log('[API Config] Detected hostname:', hostname);
+  
   // If running on Render preview (kitchen-sync-app-pr-*.onrender.com), use Render API
-  if (window.location.hostname.includes('kitchen-sync-app-pr-') && window.location.hostname.includes('onrender.com')) {
-    return 'https://kitchen-sync-api.onrender.com/api';
+  if (hostname.includes('kitchen-sync-app-pr-') && hostname.includes('onrender.com')) {
+    const apiUrl = 'https://kitchen-sync-api.onrender.com/api';
+    console.log('[API Config] Render preview detected, using:', apiUrl);
+    return apiUrl;
   }
   
   // If running in production (kitchensync.restaurant), use production API
-  if (window.location.hostname === 'kitchensync.restaurant' || window.location.hostname === 'www.kitchensync.restaurant') {
-    return 'https://api.kitchensync.restaurant/api';
+  if (hostname === 'kitchensync.restaurant' || hostname === 'www.kitchensync.restaurant') {
+    const apiUrl = 'https://api.kitchensync.restaurant/api';
+    console.log('[API Config] Production detected, using:', apiUrl);
+    return apiUrl;
   }
   
   // Default to localhost for development
-  return 'http://localhost:3001/api';
+  const apiUrl = 'http://localhost:3001/api';
+  console.log('[API Config] Development mode, using:', apiUrl);
+  return apiUrl;
 };
 
 const API_URL = getApiUrl();
+console.log('[API Config] Final API URL:', API_URL);
 
 const api = axios.create({
   baseURL: API_URL,
