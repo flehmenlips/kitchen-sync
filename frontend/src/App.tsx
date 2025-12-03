@@ -37,6 +37,7 @@ import DashboardPage from './pages/DashboardPage';
 import ProfilePage from './pages/ProfilePage';
 import { AssetLibraryPage } from './pages/AssetLibraryPage';
 import LogoTestPage from './pages/LogoTestPage';
+import RestaurantManagementPage from './pages/RestaurantManagementPage';
 
 // Recipe Components
 import RecipeList from './components/RecipeList';
@@ -224,7 +225,8 @@ const App: React.FC = () => {
                             <Route path="website" element={<WebsiteBuilderPage />} />
                             <Route path="website/content" element={<ContentBlocksPage />} />
                             
-                            {/* Billing Settings */}
+                            {/* Settings Routes */}
+                            <Route path="settings/restaurant" element={<RestaurantManagementPage />} />
                             <Route path="settings/billing" element={<BillingPage />} />
 
                             {/* AgileChef Module Routes */}

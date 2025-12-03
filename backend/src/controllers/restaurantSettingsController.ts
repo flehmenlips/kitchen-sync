@@ -491,4 +491,188 @@ export const getUnifiedRestaurantContent = async (req: Request, res: Response): 
     console.error('Error fetching unified restaurant content:', error);
     res.status(500).json({ error: 'Failed to fetch restaurant content' });
   }
+};
+
+// Get restaurant basic information (from Restaurant model)
+export const getRestaurantInfo = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const restaurantId = req.restaurantId;
+    
+    if (!restaurantId) {
+      res.status(400).json({ error: 'Restaurant context required' });
+      return;
+    }
+    
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { id: restaurantId },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        address: true,
+        city: true,
+        state: true,
+        zipCode: true,
+        country: true,
+        phone: true,
+        email: true,
+        website: true,
+        description: true,
+        cuisine: true,
+        logoUrl: true,
+        coverImageUrl: true,
+        openingHours: true,
+        ownerName: true,
+        ownerEmail: true,
+        businessPhone: true,
+        businessAddress: true,
+        website_builder_enabled: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+    
+    if (!restaurant) {
+      res.status(404).json({ error: 'Restaurant not found' });
+      return;
+    }
+    
+    // Get related module status
+    const reservationSettings = await prisma.reservationSettings.findUnique({
+      where: { restaurantId },
+      select: { id: true }
+    });
+    
+    const websiteSettings = await prisma.restaurantSettings.findUnique({
+      where: { restaurantId },
+      select: { id: true }
+    });
+    
+    res.json({
+      ...restaurant,
+      openingHours: parseOpeningHours(restaurant.openingHours),
+      modules: {
+        reservations: {
+          enabled: !!reservationSettings,
+          restaurantId: restaurantId
+        },
+        websiteBuilder: {
+          enabled: restaurant.website_builder_enabled,
+          restaurantId: restaurantId
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching restaurant info:', error);
+    res.status(500).json({ error: 'Failed to fetch restaurant information' });
+  }
+};
+
+// Update restaurant basic information (from Restaurant model)
+export const updateRestaurantInfo = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const restaurantId = req.restaurantId;
+    
+    if (!restaurantId) {
+      res.status(400).json({ error: 'Restaurant context required' });
+      return;
+    }
+    
+    const updateData = req.body;
+    
+    // Only allow updating specific fields from Restaurant model
+    const allowedFields = [
+      'name',
+      'address',
+      'city',
+      'state',
+      'zipCode',
+      'country',
+      'phone',
+      'email',
+      'website',
+      'description',
+      'cuisine',
+      'ownerName',
+      'ownerEmail',
+      'businessPhone',
+      'businessAddress',
+      'openingHours',
+      'website_builder_enabled'
+    ];
+    
+    // Filter update data to only include allowed fields
+    const filteredData: any = {};
+    for (const field of allowedFields) {
+      if (updateData[field] !== undefined) {
+        filteredData[field] = updateData[field];
+      }
+    }
+    
+    // Don't allow updating slug, id, or other protected fields
+    delete filteredData.slug;
+    delete filteredData.id;
+    delete filteredData.restaurantId;
+    delete filteredData.createdAt;
+    delete filteredData.updatedAt;
+    
+    const restaurant = await prisma.restaurant.update({
+      where: { id: restaurantId },
+      data: filteredData,
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        address: true,
+        city: true,
+        state: true,
+        zipCode: true,
+        country: true,
+        phone: true,
+        email: true,
+        website: true,
+        description: true,
+        cuisine: true,
+        logoUrl: true,
+        coverImageUrl: true,
+        openingHours: true,
+        ownerName: true,
+        ownerEmail: true,
+        businessPhone: true,
+        businessAddress: true,
+        website_builder_enabled: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+    
+    // Get related module status
+    const reservationSettings = await prisma.reservationSettings.findUnique({
+      where: { restaurantId },
+      select: { id: true }
+    });
+    
+    const websiteSettings = await prisma.restaurantSettings.findUnique({
+      where: { restaurantId },
+      select: { id: true }
+    });
+    
+    res.json({
+      ...restaurant,
+      openingHours: parseOpeningHours(restaurant.openingHours),
+      modules: {
+        reservations: {
+          enabled: !!reservationSettings,
+          restaurantId: restaurantId
+        },
+        websiteBuilder: {
+          enabled: restaurant.website_builder_enabled,
+          restaurantId: restaurantId
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error updating restaurant info:', error);
+    res.status(500).json({ error: 'Failed to update restaurant information' });
+  }
 }; 

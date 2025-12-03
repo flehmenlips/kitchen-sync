@@ -36,6 +36,7 @@ import Logout from '@mui/icons-material/Logout';
 import PersonIcon from '@mui/icons-material/Person';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import PaymentIcon from '@mui/icons-material/Payment';
+import RestaurantIcon from '@mui/icons-material/Restaurant';
 
 // Constants - Mobile-optimized sizing
 const DRAWER_WIDTH = 280;
@@ -231,10 +232,35 @@ const MainLayout: React.FC = () => {
                     fontSize: '0.9rem'
                 }
             }}>
+                {/* Restaurant Settings - Available to all restaurant staff */}
+                {user && (
+                    <>
+                        <Box className="px-2 py-1 mb-2">
+                            <Typography variant="caption" className="text-gray-500 font-semibold uppercase tracking-wider" sx={{ fontSize: '0.7rem' }}>
+                                Settings
+                            </Typography>
+                        </Box>
+                        <ListItem disablePadding>
+                            <ListItemButton 
+                                component={RouterLink} 
+                                to="/settings/restaurant"
+                                selected={location.pathname === '/settings/restaurant'}
+                            >
+                                <ListItemIcon>
+                                    <Box className="bg-gradient-to-br from-orange-500 to-red-600 p-1.5 rounded-lg shadow-sm">
+                                        <RestaurantIcon sx={{ fontSize: 18, color: 'white' }} />
+                                    </Box>
+                                </ListItemIcon>
+                                <ListItemText primary="Restaurant Management" />
+                            </ListItemButton>
+                        </ListItem>
+                    </>
+                )}
+                
                 {/* Admin Dashboard - Only visible to admin/owner */}
                 {(user?.role === 'ADMIN' || user?.role === 'SUPERADMIN') && (
                     <>
-                        <Box className="px-2 py-1 mb-2">
+                        <Box className="px-2 py-1 mb-2 mt-2">
                             <Typography variant="caption" className="text-gray-500 font-semibold uppercase tracking-wider" sx={{ fontSize: '0.7rem' }}>
                                 Administration
                             </Typography>

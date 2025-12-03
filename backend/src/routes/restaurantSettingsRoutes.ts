@@ -4,7 +4,9 @@ import {
   updateRestaurantSettings,
   uploadRestaurantImage,
   getPublicRestaurantSettings,
-  getUnifiedRestaurantContent
+  getUnifiedRestaurantContent,
+  getRestaurantInfo,
+  updateRestaurantInfo
 } from '../controllers/restaurantSettingsController';
 import { getPublicMenusBySlug } from '../controllers/menuController';
 import { protect } from '../middleware/authMiddleware';
@@ -31,6 +33,11 @@ const upload = multer({
 });
 
 // Admin routes (protected) - require restaurant context
+// Restaurant basic info (from Restaurant model)
+router.get('/info', protect, setRestaurantContext, requireRestaurantContext, getRestaurantInfo);
+router.put('/info', protect, setRestaurantContext, requireRestaurantContext, updateRestaurantInfo);
+
+// Restaurant settings (from RestaurantSettings model - website builder settings)
 router.get('/settings', protect, setRestaurantContext, requireRestaurantContext, getRestaurantSettings);
 router.put('/settings', protect, setRestaurantContext, requireRestaurantContext, updateRestaurantSettings);
 router.post('/settings/image/:field', protect, setRestaurantContext, requireRestaurantContext, upload.single('image'), uploadRestaurantImage);
