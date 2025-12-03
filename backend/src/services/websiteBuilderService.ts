@@ -538,35 +538,72 @@ export const websiteBuilderService = {
           navigationStyle: (settings as any).navigationStyle || 'modern',
           showMobileMenu: (settings as any).showMobileMenu ?? true,
           mobileMenuStyle: (settings as any).mobileMenuStyle || 'hamburger',
-          navigationItems: this.parseNavigationItems((settings as any).navigationItems) || [
-            {
-              id: 'home',
-              label: 'Home',
-              path: '/',
-              icon: 'home',
-              isActive: true,
-              displayOrder: 1,
-              isSystem: true
-            },
-            {
-              id: 'menu',
-              label: 'Menu',
-              path: '/menu',
-              icon: 'menu_book',
-              isActive: true,
-              displayOrder: 2,
-              isSystem: true
-            },
-            {
-              id: 'reservations',
-              label: 'Make Reservation',
-              path: '/reservations/new',
-              icon: 'event_seat',
-              isActive: reservationSettings ? true : false, // Only show if reservations are configured
-              displayOrder: 3,
-              isSystem: true
+          navigationItems: (() => {
+            const parsedItems = this.parseNavigationItems((settings as any).navigationItems);
+            const reservationsEnabled = reservationSettings ? true : false;
+            
+            if (parsedItems && parsedItems.length > 0) {
+              // Check if reservations item exists in parsed items
+              const hasReservationsItem = parsedItems.some(item => item.id === 'reservations');
+              
+              // Update or add reservations item based on reservationSettings
+              let updatedItems = parsedItems.map(item => {
+                if (item.id === 'reservations') {
+                  return {
+                    ...item,
+                    isActive: reservationsEnabled // Only show if reservations are configured
+                  };
+                }
+                return item;
+              });
+              
+              // If reservations are enabled but item doesn't exist, add it
+              if (reservationsEnabled && !hasReservationsItem) {
+                updatedItems.push({
+                  id: 'reservations',
+                  label: 'Make Reservation',
+                  path: '/reservations/new',
+                  icon: 'event_seat',
+                  isActive: true,
+                  displayOrder: 3,
+                  isSystem: true
+                });
+              }
+              
+              return updatedItems;
             }
-          ]
+            
+            // Default navigation items if none exist in settings
+            return [
+              {
+                id: 'home',
+                label: 'Home',
+                path: '/',
+                icon: 'home',
+                isActive: true,
+                displayOrder: 1,
+                isSystem: true
+              },
+              {
+                id: 'menu',
+                label: 'Menu',
+                path: '/menu',
+                icon: 'menu_book',
+                isActive: true,
+                displayOrder: 2,
+                isSystem: true
+              },
+              {
+                id: 'reservations',
+                label: 'Make Reservation',
+                path: '/reservations/new',
+                icon: 'event_seat',
+                isActive: reservationsEnabled, // Only show if reservations are configured
+                displayOrder: 3,
+                isSystem: true
+              }
+            ];
+          })()
         } : {},
         pages
       };
