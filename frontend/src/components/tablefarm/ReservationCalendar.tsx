@@ -405,7 +405,11 @@ export const ReservationCalendar: React.FC = () => {
                     backgroundColor: isCurrentDay 
                       ? theme.palette.action.hover 
                       : cardBgColor || undefined,
-                    border: isCurrentDay ? `2px solid ${theme.palette.primary.main}` : borderColor ? `1px solid ${theme.palette[borderColor]}` : undefined,
+                    border: isCurrentDay 
+                      ? `2px solid ${theme.palette.primary.main}` 
+                      : borderColor 
+                        ? `1px solid ${borderColor === 'error.main' ? theme.palette.error.main : borderColor === 'warning.main' ? theme.palette.warning.main : 'transparent'}` 
+                        : undefined,
                     cursor: 'pointer',
                     '&:hover': {
                       backgroundColor: theme.palette.action.hover,
