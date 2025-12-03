@@ -400,12 +400,12 @@ export const getPublicRestaurantSettings = async (req: Request, res: Response): 
     const result = {
       ...settings,
       // Sync contact info from Restaurant model if not in RestaurantSettings
-      contactPhone: settings.contactPhone || restaurantInfo?.phone || undefined,
-      contactEmail: settings.contactEmail || restaurantInfo?.email || undefined,
-      contactAddress: settings.contactAddress || restaurantInfo?.address || undefined,
-      contactCity: settings.contactCity || restaurantInfo?.city || undefined,
-      contactState: settings.contactState || restaurantInfo?.state || undefined,
-      contactZip: settings.contactZip || restaurantInfo?.zipCode || undefined,
+      contactPhone: restaurantInfo?.phone || settings.contactPhone || undefined,
+      contactEmail: restaurantInfo?.email || settings.contactEmail || undefined,
+      contactAddress: restaurantInfo?.address || settings.contactAddress || undefined,
+      contactCity: restaurantInfo?.city || settings.contactCity || undefined,
+      contactState: restaurantInfo?.state || settings.contactState || undefined,
+      contactZip: restaurantInfo?.zipCode || settings.contactZip || undefined,
       openingHours: operatingHours,
       restaurant: {
         id: restaurant.id,
