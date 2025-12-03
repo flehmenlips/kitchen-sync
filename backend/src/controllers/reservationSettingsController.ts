@@ -235,28 +235,46 @@ export const upsertReservationSettings = async (req: Request, res: Response): Pr
     if (sendReminder !== undefined) updateData.sendReminder = sendReminder;
     if (reminderHours !== undefined) updateData.reminderHours = reminderHours;
 
-    const settings = await prisma.reservationSettings.upsert({
-      where: { restaurantId: parseInt(restaurantId) },
-      update: updateData,
-      create: {
-        restaurantId: parseInt(restaurantId),
-        operatingHours: operatingHours || {
-          sunday: { closed: true },
-          monday: { open: '17:00', close: '22:00', closed: false },
-          tuesday: { open: '17:00', close: '22:00', closed: false },
-          wednesday: { open: '17:00', close: '22:00', closed: false },
-          thursday: { open: '17:00', close: '22:00', closed: false },
-          friday: { open: '17:00', close: '22:00', closed: false },
-          saturday: { open: '17:00', close: '22:00', closed: false }
-        },
-        ...updateData
+    // Filter out undefined values from updateData for create operation
+    const createData: any = {
+      restaurantId: parseInt(restaurantId),
+      operatingHours: operatingHours || {
+        sunday: { closed: true },
+        monday: { open: '17:00', close: '22:00', closed: false },
+        tuesday: { open: '17:00', close: '22:00', closed: false },
+        wednesday: { open: '17:00', close: '22:00', closed: false },
+        thursday: { open: '17:00', close: '22:00', closed: false },
+        friday: { open: '17:00', close: '22:00', closed: false },
+        saturday: { open: '17:00', close: '22:00', closed: false }
+      }
+    };
+    
+    // Only include defined values in createData
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] !== undefined) {
+        createData[key] = updateData[key];
       }
     });
 
+    const settings = await prisma.reservationSettings.upsert({
+      where: { restaurantId: parseInt(restaurantId) },
+      update: updateData,
+      create: createData
+    });
+
     res.status(200).json(settings);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error saving reservation settings:', error);
-    res.status(500).json({ message: 'Error saving reservation settings' });
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      meta: error.meta,
+      stack: error.stack
+    });
+    res.status(500).json({ 
+      message: 'Error saving reservation settings',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
