@@ -272,54 +272,65 @@ export const bulkUpsertTimeSlotCapacities = async (req: Request, res: Response):
       return;
     }
 
+    // FIXED: Validate all items first before any database writes to prevent partial updates
+    // This ensures atomicity - either all items are valid and saved, or none are saved
+    const validatedCapacities = capacities.map((cap: any, index: number) => {
+      const { dayOfWeek, timeSlot, maxCovers, isActive } = cap;
+
+      if (dayOfWeek === undefined || !timeSlot || maxCovers === undefined) {
+        throw new Error(`Item ${index + 1}: Missing required fields (dayOfWeek, timeSlot, maxCovers)`);
+      }
+
+      // Validate dayOfWeek (0-6)
+      const dayOfWeekNum = parseInt(dayOfWeek);
+      if (isNaN(dayOfWeekNum) || dayOfWeekNum < 0 || dayOfWeekNum > 6) {
+        throw new Error(`Item ${index + 1}: Invalid dayOfWeek: ${dayOfWeek}. Must be between 0 (Sunday) and 6 (Saturday)`);
+      }
+
+      // Validate timeSlot format (HH:MM)
+      const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+      if (!timeRegex.test(timeSlot)) {
+        throw new Error(`Item ${index + 1}: Invalid timeSlot format: ${timeSlot}. Must be in HH:MM format (e.g., "18:00")`);
+      }
+
+      // Validate maxCovers
+      const maxCoversNum = parseInt(maxCovers);
+      if (isNaN(maxCoversNum) || maxCoversNum < 1) {
+        throw new Error(`Item ${index + 1}: Invalid maxCovers: ${maxCovers}. Must be at least 1`);
+      }
+
+      return {
+        dayOfWeekNum,
+        timeSlot,
+        maxCoversNum,
+        isActive: isActive !== undefined ? isActive : true
+      };
+    });
+
+    // Only proceed with database writes if all validations pass
     const results = await Promise.all(
-      capacities.map(async (cap: any) => {
-        const { dayOfWeek, timeSlot, maxCovers, isActive } = cap;
-
-        if (dayOfWeek === undefined || !timeSlot || maxCovers === undefined) {
-          throw new Error('Missing required fields in capacity item');
-        }
-
-        // FIXED: Add validation checks to match upsertTimeSlotCapacity
-        // Validate dayOfWeek (0-6)
-        const dayOfWeekNum = parseInt(dayOfWeek);
-        if (isNaN(dayOfWeekNum) || dayOfWeekNum < 0 || dayOfWeekNum > 6) {
-          throw new Error(`Invalid dayOfWeek: ${dayOfWeek}. Must be between 0 (Sunday) and 6 (Saturday)`);
-        }
-
-        // Validate timeSlot format (HH:MM)
-        const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-        if (!timeRegex.test(timeSlot)) {
-          throw new Error(`Invalid timeSlot format: ${timeSlot}. Must be in HH:MM format (e.g., "18:00")`);
-        }
-
-        // Validate maxCovers
-        const maxCoversNum = parseInt(maxCovers);
-        if (isNaN(maxCoversNum) || maxCoversNum < 1) {
-          throw new Error(`Invalid maxCovers: ${maxCovers}. Must be at least 1`);
-        }
-
-        return prisma.timeSlotCapacity.upsert({
+      validatedCapacities.map((cap) =>
+        prisma.timeSlotCapacity.upsert({
           where: {
             restaurantId_dayOfWeek_timeSlot: {
               restaurantId: parseInt(restaurantId),
-              dayOfWeek: parseInt(dayOfWeek),
-              timeSlot: timeSlot
+              dayOfWeek: cap.dayOfWeekNum,
+              timeSlot: cap.timeSlot
             }
           },
           update: {
-            maxCovers: maxCoversNum,
-            isActive: isActive !== undefined ? isActive : true
+            maxCovers: cap.maxCoversNum,
+            isActive: cap.isActive
           },
           create: {
             restaurantId: parseInt(restaurantId),
-            dayOfWeek: dayOfWeekNum,
-            timeSlot: timeSlot,
-            maxCovers: maxCoversNum,
-            isActive: isActive !== undefined ? isActive : true
+            dayOfWeek: cap.dayOfWeekNum,
+            timeSlot: cap.timeSlot,
+            maxCovers: cap.maxCoversNum,
+            isActive: cap.isActive
           }
-        });
-      })
+        })
+      )
     );
 
     res.status(200).json({ 
