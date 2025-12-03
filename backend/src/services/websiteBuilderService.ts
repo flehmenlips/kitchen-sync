@@ -566,7 +566,7 @@ export const websiteBuilderService = {
               displayOrder: 3,
               isSystem: true
             }
-          ]
+          ],
           
           // Menu Display
           menuDisplayMode: settings.menuDisplayMode || undefined,
