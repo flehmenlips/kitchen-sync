@@ -434,8 +434,18 @@ export const getAvailability = async (req: Request, res: Response): Promise<void
             return;
         }
 
+        // Validate date format
         const targetDate = new Date(date as string);
+        if (isNaN(targetDate.getTime())) {
+            res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD format.' });
+            return;
+        }
+
         const requestedPartySize = partySize ? parseInt(partySize as string) : 1;
+        if (isNaN(requestedPartySize) || requestedPartySize < 1) {
+            res.status(400).json({ message: 'Invalid party size. Must be a positive number.' });
+            return;
+        }
 
         // Generate time slots based on reservation settings
         const timeSlots = await generateTimeSlots(restaurantId, targetDate);
@@ -443,7 +453,9 @@ export const getAvailability = async (req: Request, res: Response): Promise<void
         if (timeSlots.length === 0) {
             res.status(200).json({
                 date: date,
+                partySize: requestedPartySize,
                 timeSlots: [],
+                allSlots: [],
                 message: 'Restaurant is closed on this date'
             });
             return;
@@ -481,8 +493,18 @@ export const getAvailability = async (req: Request, res: Response): Promise<void
             timeSlots: availableSlots,
             allSlots: availabilities
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error fetching availability:', error);
-        res.status(500).json({ message: 'Error fetching availability' });
+        console.error('Error details:', {
+            message: error.message,
+            stack: error.stack,
+            restaurantId: req.params.restaurantId,
+            date: req.query.date,
+            partySize: req.query.partySize
+        });
+        res.status(500).json({ 
+            message: 'Error fetching availability',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 }; 

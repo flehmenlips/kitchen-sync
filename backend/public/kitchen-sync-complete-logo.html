@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KitchenSync Complete Logo</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #1f2937 0%, #1e40af 50%, #7c3aed 100%);
+            font-family: Inter, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .logo-container {
+            width: 400px;
+            height: 300px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+            box-sizing: border-box;
+        }
+        
+        /* EXACT Login Page Top Logo */
+        .top-logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .top-logo::after {
+            content: '';
+            position: absolute;
+            inset: 2px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 100%);
+            border-radius: 18px;
+            pointer-events: none;
+        }
+        
+        .top-logo img {
+            width: 48px;
+            height: 48px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* EXACT KitchenSyncLogo Component */
+        .wordmark {
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: 1.6px;
+            color: white;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #e2e8f0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            gap: 0;
+        }
+        
+        .wordmark .k-icon {
+            width: 42px;
+            height: 42px;
+            margin-right: -18px;
+            position: relative;
+            top: -11px;
+            vertical-align: middle;
+            display: inline-block;
+            transform: rotate(-90deg);
+            z-index: 1;
+        }
+        
+        .wordmark .text {
+            position: relative;
+            z-index: 2;
+        }
+    </style>
+</head>
+<body>
+    <div class="logo-container">
+        <!-- EXACT Login Page Top Logo -->
+        <div class="top-logo">
+            <img src="/k-table-logo.svg" alt="KitchenSync Logo">
+        </div>
+        
+        <!-- EXACT KitchenSyncLogo Component -->
+        <div class="wordmark">
+            <img src="/k-table-logo.svg" alt="K" class="k-icon">
+            <span class="text">itchenSync</span>
+        </div>
+    </div>
+</body>
+</html>
