@@ -155,12 +155,30 @@ const ReservationSettingsPage: React.FC = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-        <SettingsIcon sx={{ fontSize: 32, mr: 2, color: 'primary.main' }} />
-        <Typography variant="h4" component="h1">
-          Reservation Settings
-        </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <SettingsIcon sx={{ fontSize: 32, mr: 2, color: 'primary.main' }} />
+          <Typography variant="h4" component="h1">
+            Reservation Settings
+          </Typography>
+        </Box>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<SaveIcon />}
+          onClick={handleSave}
+          disabled={saving}
+          sx={{ ml: 2 }}
+        >
+          {saving ? 'Saving...' : 'Save Settings'}
+        </Button>
       </Box>
+      
+      {Object.keys(formData).length === 0 && !loading && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          No reservation settings found. Configure your settings below and click "Save Settings" to create them.
+        </Alert>
+      )}
 
       <Paper sx={{ p: 3 }}>
         <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)}>
