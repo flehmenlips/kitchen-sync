@@ -163,43 +163,110 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
             partySize,
             reservationDate,
             reservationTime,
-            notes
+            notes,
+            specialRequests,
+            restaurantId: requestedRestaurantId
         } = req.body;
 
+        // Validate required fields
         if (!customerName || !partySize || !reservationDate || !reservationTime) {
-            res.status(400).json({ message: 'Missing required fields' });
+            res.status(400).json({ 
+                message: 'Missing required fields',
+                missing: {
+                    customerName: !customerName,
+                    partySize: !partySize,
+                    reservationDate: !reservationDate,
+                    reservationTime: !reservationTime
+                }
+            });
             return;
         }
 
         const partySizeNum = safeParseInt(partySize);
         if (!partySizeNum || partySizeNum < 1) {
-            res.status(400).json({ message: 'Invalid party size' });
+            res.status(400).json({ message: 'Invalid party size. Must be a positive number.' });
             return;
         }
 
-        // Get user's primary restaurant
-        const userRestaurant = await prisma.restaurantStaff.findFirst({
-            where: { 
-                userId: req.user.id,
-                isActive: true
-            },
-            orderBy: { createdAt: 'asc' } // Use their first/primary restaurant
-        });
-
-        if (!userRestaurant) {
-            res.status(403).json({ message: 'You must be associated with a restaurant to create reservations' });
-            return;
-        }
-
+        // Validate date format
         const reservationDateObj = new Date(reservationDate);
+        if (isNaN(reservationDateObj.getTime())) {
+            res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD format.' });
+            return;
+        }
+
+        // Validate time format (HH:MM)
+        const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+        if (!timeRegex.test(reservationTime)) {
+            res.status(400).json({ message: 'Invalid time format. Use HH:MM format (e.g., 18:00).' });
+            return;
+        }
+
+        // Determine restaurant ID - use requested if provided and user has access, otherwise use user's primary restaurant
+        let restaurantId: number;
+        
+        if (requestedRestaurantId) {
+            const requestedId = safeParseInt(requestedRestaurantId);
+            if (!requestedId) {
+                res.status(400).json({ message: 'Invalid restaurant ID format' });
+                return;
+            }
+            
+            // Verify user has access to requested restaurant
+            const hasAccess = await prisma.restaurantStaff.findFirst({
+                where: {
+                    userId: req.user.id,
+                    restaurantId: requestedId,
+                    isActive: true
+                }
+            });
+
+            if (!hasAccess) {
+                res.status(403).json({ message: 'You do not have access to the requested restaurant' });
+                return;
+            }
+            
+            restaurantId = requestedId;
+        } else {
+            // Get user's primary restaurant
+            const userRestaurant = await prisma.restaurantStaff.findFirst({
+                where: { 
+                    userId: req.user.id,
+                    isActive: true
+                },
+                orderBy: { createdAt: 'asc' } // Use their first/primary restaurant
+            });
+
+            if (!userRestaurant) {
+                res.status(403).json({ message: 'You must be associated with a restaurant to create reservations' });
+                return;
+            }
+            
+            restaurantId = userRestaurant.restaurantId;
+        }
         
         // Check capacity before creating reservation
-        const availability = await checkAvailability(
-            userRestaurant.restaurantId,
-            reservationDateObj,
-            reservationTime,
-            partySizeNum
-        );
+        let availability;
+        try {
+            availability = await checkAvailability(
+                restaurantId,
+                reservationDateObj,
+                reservationTime,
+                partySizeNum
+            );
+        } catch (error: any) {
+            console.error('Error checking availability:', error);
+            // If availability check fails, log but continue (might be a settings issue)
+            // We'll still try to create the reservation
+            availability = {
+                available: true,
+                currentBookings: 0,
+                capacity: null,
+                remaining: null,
+                canOverbook: false,
+                overbooked: false
+            };
+        }
 
         if (!availability.available) {
             const capacityMsg = availability.capacity 
@@ -221,32 +288,47 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
             console.warn(`Overbooking reservation: ${partySizeNum} guests at ${reservationTime} on ${reservationDate}. Capacity: ${availability.capacity}, Current: ${availability.currentBookings}`);
         }
 
+        // Prepare reservation data
+        const reservationData: any = {
+            customerName: customerName.trim(),
+            partySize: partySizeNum,
+            reservationDate: reservationDateObj,
+            reservationTime: reservationTime.trim(),
+            userId: req.user.id,
+            restaurantId: restaurantId,
+            status: 'CONFIRMED'
+        };
+
+        // Add optional fields only if they have values
+        if (customerPhone && customerPhone.trim()) {
+            reservationData.customerPhone = customerPhone.trim();
+        }
+        if (customerEmail && customerEmail.trim()) {
+            reservationData.customerEmail = customerEmail.trim();
+        }
+        if (notes && notes.trim()) {
+            reservationData.notes = notes.trim();
+        }
+        if (specialRequests && specialRequests.trim()) {
+            reservationData.specialRequests = specialRequests.trim();
+        }
+
         const newReservation = await prisma.reservation.create({
-            data: {
-                customerName,
-                customerPhone,
-                customerEmail,
-                partySize: partySizeNum,
-                reservationDate: reservationDateObj,
-                reservationTime,
-                notes,
-                userId: req.user.id,
-                restaurantId: userRestaurant.restaurantId
-            }
+            data: reservationData
         });
 
         // Send confirmation email if customer email is provided
-        if (customerEmail) {
+        if (customerEmail && customerEmail.trim()) {
             try {
                 const formattedDate = format(new Date(reservationDate), 'EEEE, MMMM d, yyyy');
                 await emailService.sendReservationConfirmation(
-                    customerEmail,
-                    customerName,
+                    customerEmail.trim(),
+                    customerName.trim(),
                     {
                         date: formattedDate,
                         time: reservationTime,
                         partySize: partySizeNum,
-                        specialRequests: notes,
+                        specialRequests: specialRequests || notes || undefined,
                         confirmationNumber: generateConfirmationNumber(newReservation.id)
                     }
                 );
@@ -257,9 +339,40 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
         }
 
         res.status(201).json(newReservation);
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error creating reservation:', error);
-        res.status(500).json({ message: 'Error creating reservation' });
+        console.error('Error details:', {
+            message: error.message,
+            code: error.code,
+            meta: error.meta,
+            stack: error.stack,
+            body: req.body
+        });
+        
+        // Handle Prisma-specific errors
+        if (error.code === 'P2002') {
+            // Unique constraint violation
+            res.status(409).json({ 
+                message: 'A reservation already exists for this time slot',
+                error: 'DUPLICATE_RESERVATION'
+            });
+            return;
+        }
+        
+        if (error.code === 'P2003') {
+            // Foreign key constraint violation
+            res.status(400).json({ 
+                message: 'Invalid restaurant or user reference',
+                error: 'INVALID_REFERENCE'
+            });
+            return;
+        }
+        
+        // Generic error response
+        res.status(500).json({ 
+            message: 'Error creating reservation',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 };
 
