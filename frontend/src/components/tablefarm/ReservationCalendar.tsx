@@ -211,6 +211,31 @@ export const ReservationCalendar: React.FC = () => {
     }
   };
 
+  // Calculate day capacity summary for calendar display
+  const getDayCapacitySummary = (date: Date) => {
+    if (!reservationSettings) return null;
+    
+    const dayOfWeek = date.getDay();
+    const dayHours = reservationSettings.operatingHours?.[['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][dayOfWeek]];
+    
+    if (!dayHours || dayHours.closed) return null;
+    
+    // Get reservations for this day
+    const dayReservations = getReservationsForDay(date);
+    const totalBooked = dayReservations
+      .filter(r => r.status === ReservationStatus.CONFIRMED)
+      .reduce((sum, r) => sum + r.partySize, 0);
+    
+    // Estimate capacity (could be improved with actual time slot capacities)
+    const estimatedCapacity = reservationSettings.maxCoversPerSlot || 50;
+    
+    return {
+      totalBooked,
+      estimatedCapacity,
+      utilization: estimatedCapacity > 0 ? (totalBooked / estimatedCapacity) * 100 : 0
+    };
+  };
+
   const fetchReservationSettings = async () => {
     if (!currentRestaurant?.id) return;
     
@@ -350,6 +375,26 @@ export const ReservationCalendar: React.FC = () => {
           {weekDays.map((day, index) => {
             const dayReservations = getReservationsForDay(day);
             const isCurrentDay = isToday(day);
+            const capacitySummary = getDayCapacitySummary(day);
+            const dayOfWeek = day.getDay();
+            const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][dayOfWeek];
+            const dayHours = reservationSettings?.operatingHours?.[dayName];
+            const isClosed = dayHours?.closed || !dayHours;
+            
+            // Determine card color based on capacity/utilization
+            let cardBgColor = undefined;
+            let borderColor = undefined;
+            if (!isClosed && capacitySummary) {
+              if (capacitySummary.utilization >= 90) {
+                cardBgColor = 'rgba(244, 67, 54, 0.1)'; // Red tint for high utilization
+                borderColor = 'error.main';
+              } else if (capacitySummary.utilization >= 70) {
+                cardBgColor = 'rgba(255, 152, 0, 0.1)'; // Orange tint for medium-high utilization
+                borderColor = 'warning.main';
+              } else if (capacitySummary.utilization >= 50) {
+                cardBgColor = 'rgba(255, 235, 59, 0.1)'; // Yellow tint for medium utilization
+              }
+            }
             
             return (
               <Grid item xs={12} sm={6} md={12/7} key={index}>
@@ -357,10 +402,15 @@ export const ReservationCalendar: React.FC = () => {
                   sx={{
                     height: '100%',
                     minHeight: 200,
-                    backgroundColor: isCurrentDay ? theme.palette.action.hover : undefined,
+                    backgroundColor: isCurrentDay 
+                      ? theme.palette.action.hover 
+                      : cardBgColor || undefined,
+                    border: isCurrentDay ? `2px solid ${theme.palette.primary.main}` : borderColor ? `1px solid ${theme.palette[borderColor]}` : undefined,
                     cursor: 'pointer',
                     '&:hover': {
-                      backgroundColor: theme.palette.action.hover
+                      backgroundColor: theme.palette.action.hover,
+                      transform: 'translateY(-2px)',
+                      transition: 'all 0.2s ease-in-out'
                     }
                   }}
                   onClick={() => handleDateClick(day)}
@@ -376,6 +426,33 @@ export const ReservationCalendar: React.FC = () => {
                         </Typography>
                       </Badge>
                     </Box>
+                    
+                    {isClosed ? (
+                      <Chip 
+                        label="Closed" 
+                        size="small" 
+                        color="default" 
+                        sx={{ mb: 1 }}
+                      />
+                    ) : capacitySummary && (
+                      <Box sx={{ mb: 1 }}>
+                        <Typography variant="caption" color="text.secondary">
+                          Capacity: {capacitySummary.totalBooked}/{capacitySummary.estimatedCapacity}
+                        </Typography>
+                        <Box sx={{ mt: 0.5, width: '100%', height: 4, bgcolor: 'grey.200', borderRadius: 1, overflow: 'hidden' }}>
+                          <Box
+                            sx={{
+                              height: '100%',
+                              width: `${Math.min(capacitySummary.utilization, 100)}%`,
+                              bgcolor: capacitySummary.utilization >= 90 ? 'error.main' :
+                                       capacitySummary.utilization >= 70 ? 'warning.main' :
+                                       capacitySummary.utilization >= 50 ? 'info.main' : 'success.main',
+                              transition: 'width 0.3s ease'
+                            }}
+                          />
+                        </Box>
+                      </Box>
+                    )}
 
                     {loading ? (
                       <>
