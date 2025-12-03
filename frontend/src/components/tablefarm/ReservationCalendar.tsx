@@ -222,6 +222,8 @@ export const ReservationCalendar: React.FC = () => {
         fetchAvailabilityForDate(date, slots);
       }
     }
+    // Don't fetch availability for month view to avoid too many API calls
+    // Availability will be fetched when user clicks on a specific date
   }, [view, currentDate, reservationSettings, currentRestaurant?.id]);
 
   const fetchAvailabilityForDate = async (date: Date, _slots: string[]) => {
@@ -288,10 +290,19 @@ export const ReservationCalendar: React.FC = () => {
   };
 
   const getReservationsForDay = (date: Date) => {
-    return reservations.filter(res => 
-      isSameDay(new Date(res.reservationDate), date) &&
-      res.status !== ReservationStatus.CANCELLED
-    );
+    return reservations.filter(res => {
+      try {
+        const resDate = new Date(res.reservationDate);
+        if (isNaN(resDate.getTime())) {
+          console.warn('Invalid reservation date:', res.reservationDate, res.id);
+          return false;
+        }
+        return isSameDay(resDate, date) && res.status !== ReservationStatus.CANCELLED;
+      } catch (error) {
+        console.warn('Error parsing reservation date:', res.reservationDate, res.id, error);
+        return false;
+      }
+    });
   };
 
   const handlePreviousPeriod = () => {
@@ -658,26 +669,33 @@ export const ReservationCalendar: React.FC = () => {
 
                       {dayReservations.length > 0 && (
                         <Box sx={{ mt: 0.5 }}>
-                          {dayReservations.slice(0, 2).map(res => (
-                            <Chip
-                              key={res.id}
-                              label={`${format(new Date(res.reservationTime), 'HH:mm')} - ${res.partySize}`}
-                              size="small"
-                              color={getStatusColor(res.status) as any}
-                              sx={{ 
-                                fontSize: '0.6rem', 
-                                height: 16, 
-                                mb: 0.25,
-                                display: 'block',
-                                width: '100%',
-                                '& .MuiChip-label': { px: 0.5 }
-                              }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleReservationClick(res);
-                              }}
-                            />
-                          ))}
+                          {dayReservations.slice(0, 2).map(res => {
+                            // reservationTime is already in HH:mm format, just extract the time part
+                            const timeDisplay = res.reservationTime.includes('T') 
+                              ? format(new Date(res.reservationTime), 'HH:mm')
+                              : res.reservationTime.substring(0, 5); // Extract HH:mm from string
+                            
+                            return (
+                              <Chip
+                                key={res.id}
+                                label={`${timeDisplay} - ${res.partySize}`}
+                                size="small"
+                                color={getStatusColor(res.status) as any}
+                                sx={{ 
+                                  fontSize: '0.6rem', 
+                                  height: 16, 
+                                  mb: 0.25,
+                                  display: 'block',
+                                  width: '100%',
+                                  '& .MuiChip-label': { px: 0.5 }
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleReservationClick(res);
+                                }}
+                              />
+                            );
+                          })}
                           {dayReservations.length > 2 && (
                             <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6rem' }}>
                               +{dayReservations.length - 2} more
