@@ -238,7 +238,7 @@ const CustomerReservationPage: React.FC = () => {
     // Check email verification (handles false, undefined, and null)
     if (user.emailVerified !== true) {
       enqueueSnackbar('Please verify your email address before making a reservation', { variant: 'warning' });
-      navigate(buildCustomerUrl('verify-email'), {
+      navigate(buildCustomerUrl('verify-email-sent'), {
         state: { from: '/reservations/new', message: 'Email verification required' }
       });
       return;
@@ -275,7 +275,7 @@ const CustomerReservationPage: React.FC = () => {
     // Double-check email verification (handles false, undefined, and null)
     if (user.emailVerified !== true) {
       enqueueSnackbar('Please verify your email address before making a reservation', { variant: 'error' });
-      navigate(buildCustomerUrl('verify-email'), {
+      navigate(buildCustomerUrl('verify-email-sent'), {
         state: { from: '/reservations/new', message: 'Email verification required' }
       });
       return;
@@ -309,7 +309,7 @@ const CustomerReservationPage: React.FC = () => {
       // Handle specific error cases
       if (errorResponse?.requiresVerification) {
         enqueueSnackbar('Please verify your email address before making a reservation', { variant: 'error' });
-        navigate(buildCustomerUrl('verify-email'), {
+        navigate(buildCustomerUrl('verify-email-sent'), {
           state: { from: '/reservations/new', message: errorResponse.message }
         });
         return;
@@ -458,7 +458,7 @@ const CustomerReservationPage: React.FC = () => {
                     <Button 
                       size="small" 
                       variant="outlined"
-                      onClick={() => navigate(buildCustomerUrl('verify-email'), {
+                      onClick={() => navigate(buildCustomerUrl('verify-email-sent'), {
                         state: { from: '/reservations/new' }
                       })}
                     >
