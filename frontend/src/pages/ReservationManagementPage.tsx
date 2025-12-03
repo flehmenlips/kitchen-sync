@@ -167,8 +167,27 @@ const ReservationFormDialog: React.FC<ReservationFormDialogProps> = ({
   const validateForm = (): boolean => {
     const errors: { [key: string]: string } = {};
     
+    // Customer name validation
     if (!formData.customerName.trim()) {
       errors.customerName = 'Customer name is required';
+    } else if (formData.customerName.trim().length < 2) {
+      errors.customerName = 'Customer name must be at least 2 characters';
+    }
+    
+    // Email validation (if provided)
+    if (formData.customerEmail && formData.customerEmail.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.customerEmail.trim())) {
+        errors.customerEmail = 'Please enter a valid email address';
+      }
+    }
+    
+    // Phone validation (if provided)
+    if (formData.customerPhone && formData.customerPhone.trim()) {
+      const phoneRegex = /^[\d\s\-\+\(\)]+$/;
+      if (!phoneRegex.test(formData.customerPhone.trim()) || formData.customerPhone.trim().length < 10) {
+        errors.customerPhone = 'Please enter a valid phone number';
+      }
     }
     
     if (reservationSettings) {
@@ -196,10 +215,12 @@ const ReservationFormDialog: React.FC<ReservationFormDialogProps> = ({
       }
       
       // Validate party size
-      if (formData.partySize < reservationSettings.minPartySize) {
-        errors.partySize = `Minimum party size is ${reservationSettings.minPartySize}`;
+      if (formData.partySize < 1) {
+        errors.partySize = 'Party size must be at least 1';
+      } else if (formData.partySize < reservationSettings.minPartySize) {
+        errors.partySize = `Minimum party size is ${reservationSettings.minPartySize} guests`;
       } else if (formData.partySize > reservationSettings.maxPartySize) {
-        errors.partySize = `Maximum party size is ${reservationSettings.maxPartySize}`;
+        errors.partySize = `Maximum party size is ${reservationSettings.maxPartySize} guests`;
       }
       
       // Validate date is not closed
@@ -210,6 +231,12 @@ const ReservationFormDialog: React.FC<ReservationFormDialogProps> = ({
       if (dayHours?.closed) {
         errors.reservationDate = 'Restaurant is closed on this day';
       }
+    }
+    
+    if (!formData.reservationTime) {
+      errors.reservationTime = 'Please select a time';
+    } else if (availableTimeSlots.length > 0 && !availableTimeSlots.includes(formData.reservationTime)) {
+      errors.reservationTime = 'Selected time is not available for this date';
     }
     
     setFormErrors(errors);
@@ -232,27 +259,87 @@ const ReservationFormDialog: React.FC<ReservationFormDialogProps> = ({
   const handleSubmit = async () => {
     // Validate form
     if (!reservation && !validateForm()) {
-      showSnackbar('Please fix the errors in the form', 'error');
+      const errorCount = Object.keys(formErrors).length;
+      showSnackbar(
+        `Please fix ${errorCount} error${errorCount > 1 ? 's' : ''} in the form`,
+        'error'
+      );
+      return;
+    }
+    
+    // Additional pre-submission checks
+    const selectedDateTime = new Date(formData.reservationDate);
+    const [hours, minutes] = formData.reservationTime.split(':').map(Number);
+    selectedDateTime.setHours(hours, minutes, 0, 0);
+    
+    // Check if reservation time is in the past
+    if (selectedDateTime < new Date() && !reservation) {
+      setFormErrors({ reservationTime: 'Reservation time cannot be in the past' });
+      showSnackbar('Reservation time cannot be in the past', 'error');
       return;
     }
     
     setLoading(true);
     try {
+      const submitData = {
+        customerName: formData.customerName.trim(),
+        customerEmail: formData.customerEmail?.trim() || undefined,
+        customerPhone: formData.customerPhone?.trim() || undefined,
+        partySize: formData.partySize,
+        reservationDate: formData.reservationDate,
+        reservationTime: formData.reservationTime,
+        notes: formData.notes?.trim() || undefined,
+        specialRequests: formData.specialRequests?.trim() || undefined,
+        status: formData.status,
+        restaurantId: currentRestaurant?.id || 0
+      };
+      
       if (reservation) {
-        await reservationService.updateReservation(reservation.id, formData);
+        await reservationService.updateReservation(reservation.id, submitData);
         showSnackbar('Reservation updated successfully', 'success');
       } else {
-        await reservationService.createReservation({
-          ...formData,
-          restaurantId: currentRestaurant?.id || 0
-        });
+        await reservationService.createReservation(submitData);
         showSnackbar('Reservation created successfully', 'success');
       }
       onSave();
       onClose();
       setFormErrors({});
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Failed to save reservation';
+      console.error('Error saving reservation:', error);
+      
+      // Extract detailed error message
+      let errorMessage = 'Failed to save reservation';
+      let fieldErrors: { [key: string]: string } = {};
+      
+      if (error.response?.data) {
+        const errorData = error.response.data;
+        
+        if (errorData.message) {
+          errorMessage = errorData.message;
+        }
+        
+        if (errorData.errors) {
+          fieldErrors = errorData.errors;
+          setFormErrors(fieldErrors);
+        }
+        
+        if (error.response.status === 400) {
+          errorMessage = errorData.message || 'Invalid reservation data. Please check your inputs.';
+        } else if (error.response.status === 409) {
+          errorMessage = errorData.message || 'A reservation already exists for this time slot.';
+        } else if (error.response.status === 422) {
+          errorMessage = errorData.message || 'Reservation conflicts with existing booking or capacity limits.';
+        } else if (error.response.status === 500) {
+          errorMessage = 'Server error occurred. Please try again or contact support if the problem persists.';
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      if (Object.keys(fieldErrors).length > 0) {
+        setFormErrors(fieldErrors);
+      }
+      
       showSnackbar(errorMessage, 'error');
     } finally {
       setLoading(false);

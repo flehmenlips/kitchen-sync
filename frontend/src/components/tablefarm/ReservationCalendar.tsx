@@ -378,8 +378,27 @@ export const ReservationCalendar: React.FC = () => {
   const validateForm = (): boolean => {
     const errors: { [key: string]: string } = {};
     
+    // Customer name validation
     if (!formData.customerName.trim()) {
       errors.customerName = 'Customer name is required';
+    } else if (formData.customerName.trim().length < 2) {
+      errors.customerName = 'Customer name must be at least 2 characters';
+    }
+    
+    // Email validation (if provided)
+    if (formData.customerEmail && formData.customerEmail.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.customerEmail.trim())) {
+        errors.customerEmail = 'Please enter a valid email address';
+      }
+    }
+    
+    // Phone validation (if provided)
+    if (formData.customerPhone && formData.customerPhone.trim()) {
+      const phoneRegex = /^[\d\s\-\+\(\)]+$/;
+      if (!phoneRegex.test(formData.customerPhone.trim()) || formData.customerPhone.trim().length < 10) {
+        errors.customerPhone = 'Please enter a valid phone number';
+      }
     }
     
     if (!selectedDate) {
@@ -404,16 +423,18 @@ export const ReservationCalendar: React.FC = () => {
         
         const hoursInAdvance = differenceInHours(selectedDateTime, new Date());
         if (hoursInAdvance < reservationSettings.minAdvanceHours) {
-          errors.time = `Reservations must be made at least ${reservationSettings.minAdvanceHours} hours in advance`;
+          errors.reservationTime = `Reservations must be made at least ${reservationSettings.minAdvanceHours} hours in advance`;
         }
       }
       
       // Validate party size
       const partySize = parseInt(formData.partySize);
-      if (partySize < reservationSettings.minPartySize) {
-        errors.partySize = `Minimum party size is ${reservationSettings.minPartySize}`;
+      if (isNaN(partySize) || partySize < 1) {
+        errors.partySize = 'Party size must be at least 1';
+      } else if (partySize < reservationSettings.minPartySize) {
+        errors.partySize = `Minimum party size is ${reservationSettings.minPartySize} guests`;
       } else if (partySize > reservationSettings.maxPartySize) {
-        errors.partySize = `Maximum party size is ${reservationSettings.maxPartySize}`;
+        errors.partySize = `Maximum party size is ${reservationSettings.maxPartySize} guests`;
       }
       
       // Validate date is not closed
@@ -428,7 +449,9 @@ export const ReservationCalendar: React.FC = () => {
     }
     
     if (!formData.reservationTime) {
-      errors.time = 'Please select a time';
+      errors.reservationTime = 'Please select a time';
+    } else if (availableTimeSlots.length > 0 && !availableTimeSlots.includes(formData.reservationTime)) {
+      errors.reservationTime = 'Selected time is not available for this date';
     }
     
     setFormErrors(errors);
@@ -436,24 +459,79 @@ export const ReservationCalendar: React.FC = () => {
   };
 
   const handleFormSubmit = async () => {
-    if (!selectedDate) return;
+    if (!selectedDate) {
+      setFormErrors({ date: 'Please select a date' });
+      enqueueSnackbar('Please select a date for the reservation', { variant: 'error' });
+      return;
+    }
     
     // Validate form
     if (!validateForm()) {
-      enqueueSnackbar('Please fix the errors in the form', { variant: 'error' });
+      const errorCount = Object.keys(formErrors).length;
+      enqueueSnackbar(
+        `Please fix ${errorCount} error${errorCount > 1 ? 's' : ''} in the form`,
+        { variant: 'error', autoHideDuration: 4000 }
+      );
       return;
+    }
+    
+    // Additional pre-submission checks
+    const partySize = parseInt(formData.partySize);
+    const selectedDateTime = new Date(selectedDate);
+    const [hours, minutes] = formData.reservationTime.split(':').map(Number);
+    selectedDateTime.setHours(hours, minutes, 0, 0);
+    
+    // Check if reservation time is in the past
+    if (selectedDateTime < new Date()) {
+      setFormErrors({ time: 'Reservation time cannot be in the past' });
+      enqueueSnackbar('Reservation time cannot be in the past', { variant: 'error' });
+      return;
+    }
+    
+    // Check availability one more time before submitting
+    if (currentRestaurant?.id) {
+      try {
+        const dateStr = format(selectedDate, 'yyyy-MM-dd');
+        const availability = await reservationService.getAvailability(
+          currentRestaurant.id,
+          dateStr,
+          partySize
+        );
+        
+        const selectedSlot = availability.timeSlots.find(
+          (slot: any) => slot.timeSlot === formData.reservationTime
+        );
+        
+        if (selectedSlot && !selectedSlot.available) {
+          setFormErrors({ 
+            reservationTime: `This time slot is no longer available. ${selectedSlot.remaining != null ? `Only ${selectedSlot.remaining} spots remaining.` : 'Please select another time.'}` 
+          });
+          enqueueSnackbar('This time slot is no longer available. Please select another time.', { 
+            variant: 'error',
+            autoHideDuration: 5000
+          });
+          return;
+        }
+      } catch (error) {
+        // If availability check fails, warn but allow submission
+        console.warn('Could not verify availability before submission:', error);
+        enqueueSnackbar('Warning: Could not verify availability. Proceeding with reservation...', { 
+          variant: 'warning',
+          autoHideDuration: 3000
+        });
+      }
     }
     
     try {
       const data: CreateReservationInput = {
-        customerName: formData.customerName,
-        customerPhone: formData.customerPhone || undefined,
-        customerEmail: formData.customerEmail || undefined,
-        partySize: parseInt(formData.partySize),
+        customerName: formData.customerName.trim(),
+        customerPhone: formData.customerPhone?.trim() || undefined,
+        customerEmail: formData.customerEmail?.trim() || undefined,
+        partySize: partySize,
         reservationDate: format(selectedDate, 'yyyy-MM-dd'),
         reservationTime: formData.reservationTime,
-        notes: formData.notes || undefined,
-        specialRequests: formData.specialRequests || undefined,
+        notes: formData.notes?.trim() || undefined,
+        specialRequests: formData.specialRequests?.trim() || undefined,
         restaurantId: currentRestaurant?.id || 0
       };
       
@@ -465,8 +543,48 @@ export const ReservationCalendar: React.FC = () => {
       fetchReservations();
     } catch (error: any) {
       console.error('Error creating reservation:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to create reservation';
-      enqueueSnackbar(errorMessage, { variant: 'error' });
+      
+      // Extract detailed error message
+      let errorMessage = 'Failed to create reservation';
+      let fieldErrors: { [key: string]: string } = {};
+      
+      if (error.response?.data) {
+        const errorData = error.response.data;
+        
+        // Handle validation errors from backend
+        if (errorData.message) {
+          errorMessage = errorData.message;
+        }
+        
+        // Handle field-specific errors
+        if (errorData.errors) {
+          fieldErrors = errorData.errors;
+          setFormErrors(fieldErrors);
+        }
+        
+        // Handle specific error codes
+        if (error.response.status === 400) {
+          errorMessage = errorData.message || 'Invalid reservation data. Please check your inputs.';
+        } else if (error.response.status === 409) {
+          errorMessage = errorData.message || 'A reservation already exists for this time slot.';
+        } else if (error.response.status === 422) {
+          errorMessage = errorData.message || 'Reservation conflicts with existing booking or capacity limits.';
+        } else if (error.response.status === 500) {
+          errorMessage = 'Server error occurred. Please try again or contact support if the problem persists.';
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      // Update form errors if any field-specific errors
+      if (Object.keys(fieldErrors).length > 0) {
+        setFormErrors(fieldErrors);
+      }
+      
+      enqueueSnackbar(errorMessage, { 
+        variant: 'error',
+        autoHideDuration: 6000
+      });
     }
   };
 
@@ -1080,7 +1198,7 @@ export const ReservationCalendar: React.FC = () => {
               }}
               required
               error={!!formErrors.customerName}
-              helperText={formErrors.customerName}
+              helperText={formErrors.customerName || 'Required field'}
               sx={{ mb: 2 }}
             />
             <Grid container spacing={2}>
@@ -1089,7 +1207,15 @@ export const ReservationCalendar: React.FC = () => {
                   fullWidth
                   label="Phone Number"
                   value={formData.customerPhone}
-                  onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, customerPhone: e.target.value });
+                    if (formErrors.customerPhone) {
+                      setFormErrors({ ...formErrors, customerPhone: '' });
+                    }
+                  }}
+                  error={!!formErrors.customerPhone}
+                  helperText={formErrors.customerPhone || 'Optional'}
+                  placeholder="(555) 123-4567"
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -1098,7 +1224,15 @@ export const ReservationCalendar: React.FC = () => {
                   label="Email"
                   type="email"
                   value={formData.customerEmail}
-                  onChange={(e) => setFormData({ ...formData, customerEmail: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, customerEmail: e.target.value });
+                    if (formErrors.customerEmail) {
+                      setFormErrors({ ...formErrors, customerEmail: '' });
+                    }
+                  }}
+                  error={!!formErrors.customerEmail}
+                  helperText={formErrors.customerEmail || 'Optional'}
+                  placeholder="customer@example.com"
                 />
               </Grid>
             </Grid>
@@ -1259,12 +1393,18 @@ export const ReservationCalendar: React.FC = () => {
             )}
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setFormOpen(false)}>Cancel</Button>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => {
+            setFormOpen(false);
+            setFormErrors({});
+          }}>
+            Cancel
+          </Button>
           <Button
             onClick={handleFormSubmit}
             variant="contained"
-            disabled={!formData.customerName}
+            disabled={!formData.customerName.trim() || Object.keys(formErrors).length > 0}
+            sx={{ minWidth: 150 }}
           >
             Create Reservation
           </Button>
