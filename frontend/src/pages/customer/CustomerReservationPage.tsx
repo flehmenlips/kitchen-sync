@@ -79,6 +79,15 @@ const CustomerReservationPage: React.FC = () => {
       try {
         const settings = await restaurantSettingsService.getPublicSettings();
         setRestaurantSettings(settings);
+        
+        // Update party size if reservation settings have a minimum
+        if (settings.reservationSettings?.minPartySize) {
+          const minSize = settings.reservationSettings.minPartySize;
+          setFormData(prev => ({
+            ...prev,
+            partySize: Math.max(parseInt(prev.partySize) || minSize, minSize).toString()
+          }));
+        }
       } catch (error) {
         console.error('Error fetching restaurant settings:', error);
         // Continue with default time slots if fetch fails
@@ -169,6 +178,32 @@ const CustomerReservationPage: React.FC = () => {
   // Get time slots for the selected date
   const timeSlots = generateTimeSlots(formData.reservationDate);
 
+  // Check if a date should be disabled (restaurant is closed)
+  const shouldDisableDate = (date: Date): boolean => {
+    if (!restaurantSettings?.openingHours || typeof restaurantSettings.openingHours !== 'object') {
+      return false; // Don't disable if we don't have operating hours
+    }
+
+    const dayOfWeek = date.getDay();
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayName = dayNames[dayOfWeek];
+    const operatingHours = restaurantSettings.openingHours;
+    const dayHours = operatingHours[dayName];
+
+    // Disable if day is closed or no hours configured
+    return !dayHours || dayHours.closed || !dayHours.open || !dayHours.close;
+  };
+
+  // Get party size range from reservation settings
+  const minPartySize = restaurantSettings?.reservationSettings?.minPartySize || 1;
+  const maxPartySize = restaurantSettings?.reservationSettings?.maxPartySize || 10;
+  
+  // Generate party size options
+  const partySizeOptions = [];
+  for (let size = minPartySize; size <= maxPartySize; size++) {
+    partySizeOptions.push(size);
+  }
+
   const handleNext = () => {
     if (activeStep === 0 && (!formData.reservationDate || !formData.reservationTime)) {
       enqueueSnackbar('Please select both date and time', { variant: 'error' });
@@ -241,6 +276,7 @@ const CustomerReservationPage: React.FC = () => {
                   }}
                   minDate={new Date()}
                   maxDate={addDays(new Date(), 90)}
+                  shouldDisableDate={shouldDisableDate}
                   slotProps={{
                     textField: {
                       fullWidth: true,
@@ -259,8 +295,8 @@ const CustomerReservationPage: React.FC = () => {
                   onChange={(e) => setFormData({ ...formData, partySize: e.target.value })}
                   startAdornment={<PeopleIcon sx={{ mr: 1, color: 'action.active' }} />}
                 >
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((size) => (
-                    <MenuItem key={size} value={size}>
+                  {partySizeOptions.map((size) => (
+                    <MenuItem key={size} value={size.toString()}>
                       {size} {size === 1 ? 'Guest' : 'Guests'}
                     </MenuItem>
                   ))}

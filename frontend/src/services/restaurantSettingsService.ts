@@ -96,6 +96,12 @@ export interface RestaurantSettings {
   showMobileMenu?: boolean;
   mobileMenuStyle?: 'hamburger' | 'dots' | 'slide';
   
+  // Reservation settings (from ReservationSettings table)
+  reservationSettings?: {
+    minPartySize?: number;
+    maxPartySize?: number;
+  };
+  
   // Restaurant info (included in response)
   restaurant?: {
     id?: number;

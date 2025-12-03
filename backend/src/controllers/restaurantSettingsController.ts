@@ -359,12 +359,17 @@ export const getPublicRestaurantSettings = async (req: Request, res: Response): 
       return;
     }
 
-    // Get reservation settings for operating hours (more accurate for reservations)
+    // Get reservation settings for operating hours and party size restrictions
     let operatingHours = parseOpeningHours(settings.openingHours);
+    let reservationSettings = null;
     try {
-      const reservationSettings = await prisma.reservationSettings.findUnique({
+      reservationSettings = await prisma.reservationSettings.findUnique({
         where: { restaurantId: restaurant.id },
-        select: { operatingHours: true }
+        select: { 
+          operatingHours: true,
+          minPartySize: true,
+          maxPartySize: true
+        }
       });
       
       // Use reservation operating hours if available (they're more accurate)
@@ -418,6 +423,11 @@ export const getPublicRestaurantSettings = async (req: Request, res: Response): 
       contactState: restaurantInfo?.state || settings.contactState || undefined,
       contactZip: restaurantInfo?.zipCode || settings.contactZip || undefined,
       openingHours: operatingHours,
+      // Include reservation settings for party size restrictions
+      reservationSettings: reservationSettings ? {
+        minPartySize: reservationSettings.minPartySize,
+        maxPartySize: reservationSettings.maxPartySize
+      } : undefined,
       restaurant: {
         id: restaurant.id,
         name: settings.websiteName || restaurant.name || 'Restaurant',
