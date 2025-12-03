@@ -21,8 +21,10 @@ const getApiUrl = () => {
     return apiUrl;
   }
   
-  // If running in production (kitchensync.restaurant), use production API
-  if (hostname === 'kitchensync.restaurant' || hostname === 'www.kitchensync.restaurant') {
+  // If running in production (kitchensync.restaurant or any subdomain), use production API
+  if (hostname === 'kitchensync.restaurant' || 
+      hostname === 'www.kitchensync.restaurant' ||
+      hostname.endsWith('.kitchensync.restaurant')) {
     const apiUrl = 'https://api.kitchensync.restaurant/api';
     if (import.meta.env.DEV) {
       console.log('[API Config] Production detected, using:', apiUrl);

@@ -10,8 +10,11 @@ const getApiUrl = () => {
     return 'https://kitchen-sync-api.onrender.com';
   }
   
-  // If running in production (kitchensync.restaurant), use production API
-  if (window.location.hostname === 'kitchensync.restaurant' || window.location.hostname === 'www.kitchensync.restaurant') {
+  // If running in production (kitchensync.restaurant or any subdomain), use production API
+  const hostname = window.location.hostname;
+  if (hostname === 'kitchensync.restaurant' || 
+      hostname === 'www.kitchensync.restaurant' ||
+      hostname.endsWith('.kitchensync.restaurant')) {
     return 'https://api.kitchensync.restaurant';
   }
   
