@@ -4,7 +4,12 @@ import { authenticateCustomer } from '../middleware/authenticateCustomer';
 
 const router = Router();
 
-// All routes require customer authentication
+// Create a new reservation (public - doesn't require authentication)
+router.post('/', async (req: Request, res: Response) => {
+  await customerReservationController.createReservation(req as any, res);
+});
+
+// All other routes require customer authentication
 router.use(authenticateCustomer);
 
 // Get customer's reservations
@@ -15,11 +20,6 @@ router.get('/', async (req: Request, res: Response) => {
 // Get a specific reservation
 router.get('/:id', async (req: Request, res: Response) => {
   await customerReservationController.getReservation(req as any, res);
-});
-
-// Create a new reservation
-router.post('/', async (req: Request, res: Response) => {
-  await customerReservationController.createReservation(req as any, res);
 });
 
 // Update a reservation

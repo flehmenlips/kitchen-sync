@@ -36,6 +36,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { format, addDays, isBefore, isAfter, startOfDay } from 'date-fns';
 import { customerReservationService, ReservationFormData } from '../../services/customerReservationService';
 import { restaurantSettingsService, RestaurantSettings } from '../../services/restaurantSettingsService';
+import { getCurrentRestaurantSlug } from '../../utils/subdomain';
 import { useSnackbar } from 'notistack';
 import { useCustomerAuth } from '../../context/CustomerAuthContext';
 
@@ -231,21 +232,35 @@ const CustomerReservationPage: React.FC = () => {
     setLoading(true);
     
     try {
-      const data: ReservationFormData = {
+      const restaurantSlug = getCurrentRestaurantSlug();
+      
+      const data: ReservationFormData & { 
+        restaurantSlug?: string;
+        customerName?: string;
+        customerEmail?: string;
+        customerPhone?: string;
+      } = {
         reservationDate: format(formData.reservationDate!, 'yyyy-MM-dd'),
         reservationTime: formData.reservationTime,
         partySize: parseInt(formData.partySize),
         notes: formData.specialRequests || undefined,
-        specialRequests: formData.specialRequests || undefined
+        specialRequests: formData.specialRequests || undefined,
+        // Include restaurant slug for public reservations
+        restaurantSlug: restaurantSlug || undefined,
+        // Include customer info for public reservations
+        customerName: formData.customerName,
+        customerEmail: formData.customerEmail,
+        customerPhone: formData.customerPhone
       };
       
       const response = await customerReservationService.createReservation(data);
       setConfirmationData(response.reservation);
       setActiveStep(2);
       enqueueSnackbar('Reservation confirmed!', { variant: 'success' });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating reservation:', error);
-      enqueueSnackbar('Failed to create reservation. Please try again.', { variant: 'error' });
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Failed to create reservation. Please try again.';
+      enqueueSnackbar(errorMessage, { variant: 'error' });
     } finally {
       setLoading(false);
     }

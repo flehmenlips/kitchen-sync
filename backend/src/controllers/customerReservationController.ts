@@ -305,25 +305,82 @@ export const customerReservationController = {
   // Create a new reservation
   async createReservation(req: CustomerAuthRequest, res: Response) {
     try {
-      const customerId = req.customer?.id || req.customerUser!.userId;
-      const customer = req.customer || (await prisma.customer.findUnique({
-        where: { id: customerId },
-        select: {
-          id: true,
-          email: true,
-          firstName: true,
-          lastName: true,
-          phone: true,
-          restaurantId: true
+      // Get restaurant from slug or ID
+      let restaurantId: number | undefined;
+      
+      // First try to get restaurant from slug (for public reservations)
+      const restaurantSlug = req.body.restaurantSlug || req.query.slug || req.params.slug;
+      if (restaurantSlug) {
+        const restaurant = await prisma.restaurant.findUnique({
+          where: { slug: restaurantSlug },
+          select: { id: true }
+        });
+        if (restaurant) {
+          restaurantId = restaurant.id;
         }
-      }));
+      }
+      
+      // Fall back to restaurantId from body or default
+      if (!restaurantId) {
+        restaurantId = req.body.restaurantId || 1;
+      }
+      
+      // Ensure restaurantId is set (required for Prisma)
+      if (!restaurantId) {
+        return res.status(400).json({
+          error: 'Restaurant ID or slug is required'
+        });
+      }
 
-      if (!customer) {
-        return res.status(404).json({ error: 'Customer not found' });
+      // Handle authenticated vs unauthenticated reservations
+      let customerId: number | undefined;
+      let customerName: string;
+      let customerEmail: string;
+      let customerPhone: string | undefined;
+
+      if (req.customer?.id || req.customerUser?.userId) {
+        // Authenticated customer
+        const customerIdFromAuth = req.customer?.id || req.customerUser!.userId;
+        const customer = req.customer || (await prisma.customer.findUnique({
+          where: { id: customerIdFromAuth },
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            restaurantId: true
+          }
+        }));
+
+        if (!customer) {
+          return res.status(404).json({ error: 'Customer not found' });
+        }
+
+        customerId = customer.id;
+        customerName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.email;
+        customerEmail = customer.email;
+        customerPhone = customer.phone || undefined;
+      } else {
+        // Unauthenticated (public) reservation - use data from request body
+        const {
+          customerName: reqCustomerName,
+          customerEmail: reqCustomerEmail,
+          customerPhone: reqCustomerPhone
+        } = req.body;
+
+        if (!reqCustomerName || !reqCustomerEmail) {
+          return res.status(400).json({
+            error: 'Customer name and email are required for public reservations'
+          });
+        }
+
+        customerName = reqCustomerName;
+        customerEmail = reqCustomerEmail;
+        customerPhone = reqCustomerPhone || undefined;
       }
 
       const {
-        restaurantId = 1, // Default to restaurant 1 for MVP
         reservationDate,
         reservationTime,
         partySize,
@@ -356,10 +413,10 @@ export const customerReservationController = {
       // Create the reservation
       const reservation = await prisma.reservation.create({
         data: {
-          customerId: customer.id, // Now using the correct foreign key
-          customerName: `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.email,
-          customerEmail: customer.email,
-          customerPhone: customer.phone,
+          customerId: customerId || null, // Null for unauthenticated reservations
+          customerName,
+          customerEmail,
+          customerPhone,
           restaurantId,
           reservationDate: new Date(reservationDate),
           reservationTime,
@@ -368,7 +425,7 @@ export const customerReservationController = {
           notes,
           specialRequests,
           // userId is now nullable, so we don't need to provide it for customer reservations
-          source: 'customer_portal'
+          source: customerId ? 'customer_portal' : 'public_website'
         },
         include: {
           restaurant: true
