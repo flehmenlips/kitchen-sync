@@ -39,6 +39,19 @@ export interface WebsiteBuilderData {
     contactZip?: string;
     openingHours?: any;
     
+    // Reservation Integration
+    reservationSettings?: {
+      enabled: boolean;
+      minPartySize?: number;
+      maxPartySize?: number;
+      advanceBookingDays?: number;
+      minAdvanceHours?: number;
+      cancellationPolicy?: string;
+      requireCreditCard?: boolean;
+      requireDeposit?: boolean;
+      depositAmount?: number;
+    };
+    
     // Menu Display
     menuDisplayMode?: string;
     activeMenuIds?: number[];

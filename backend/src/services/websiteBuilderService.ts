@@ -27,6 +27,19 @@ export interface WebsiteBuilderData {
     contactZip?: string;
     openingHours?: any;
     
+    // Reservation Integration
+    reservationSettings?: {
+      enabled: boolean;
+      minPartySize?: number;
+      maxPartySize?: number;
+      advanceBookingDays?: number;
+      minAdvanceHours?: number;
+      cancellationPolicy?: string;
+      requireCreditCard?: boolean;
+      requireDeposit?: boolean;
+      depositAmount?: number;
+    };
+    
     // Menu Display
     menuDisplayMode?: string;
     activeMenuIds?: number[];
@@ -398,13 +411,70 @@ export const websiteBuilderService = {
       // Get restaurant settings
       const settings = await this.getRestaurantSettings(restaurantId);
       
+      // Get reservation settings for operating hours and reservation integration
+      let reservationSettings = null;
+      let operatingHours = null;
+      if (restaurantId) {
+        try {
+          reservationSettings = await prisma.reservationSettings.findUnique({
+            where: { restaurantId },
+            select: {
+              operatingHours: true,
+              minPartySize: true,
+              maxPartySize: true,
+              advanceBookingDays: true,
+              minAdvanceHours: true,
+              cancellationPolicy: true,
+              requireCreditCard: true,
+              requireDeposit: true,
+              depositAmount: true
+            }
+          });
+          
+          // Use reservation operating hours if available (more accurate for reservations)
+          if (reservationSettings?.operatingHours) {
+            operatingHours = this.parseOpeningHours(reservationSettings.operatingHours);
+          }
+        } catch (error) {
+          console.warn('Could not fetch reservation settings for website builder:', error);
+        }
+      }
+      
+      // Fall back to RestaurantSettings opening hours if reservation settings don't have them
+      if (!operatingHours && settings?.openingHours) {
+        operatingHours = this.parseOpeningHours(settings.openingHours);
+      }
+      
+      // Get restaurant basic info to sync contact information
+      let restaurantInfo = null;
+      if (restaurantId) {
+        try {
+          restaurantInfo = await prisma.restaurant.findUnique({
+            where: { id: restaurantId },
+            select: {
+              name: true,
+              phone: true,
+              email: true,
+              address: true,
+              city: true,
+              state: true,
+              zipCode: true,
+              country: true,
+              website: true
+            }
+          });
+        } catch (error) {
+          console.warn('Could not fetch restaurant info for website builder:', error);
+        }
+      }
+      
       // Get pages from ContentBlocks
       const pages = await this.getPages(restaurantId);
       
       return {
         settings: settings ? {
           // Basic Info (site-wide configuration only)
-          websiteName: settings.websiteName || undefined,
+          websiteName: settings.websiteName || restaurantInfo?.name || undefined,
           tagline: settings.tagline || undefined,
           
           // Branding (keep - site-wide configuration)
@@ -416,14 +486,87 @@ export const websiteBuilderService = {
           logoUrl: settings.logoUrl || undefined,
           logoPublicId: settings.logoPublicId || undefined,
           
-          // Contact & Hours (keep for site-wide defaults, but content blocks take precedence)
-          contactPhone: settings.contactPhone || undefined,
-          contactEmail: settings.contactEmail || undefined,
-          contactAddress: settings.contactAddress || undefined,
-          contactCity: settings.contactCity || undefined,
-          contactState: settings.contactState || undefined,
-          contactZip: settings.contactZip || undefined,
-          openingHours: this.parseOpeningHours(settings.openingHours),
+          // Contact & Hours - prioritize Restaurant model, then RestaurantSettings, sync with ReservationSettings
+          contactPhone: settings.contactPhone || restaurantInfo?.phone || undefined,
+          contactEmail: settings.contactEmail || restaurantInfo?.email || undefined,
+          contactAddress: settings.contactAddress || restaurantInfo?.address || undefined,
+          contactCity: settings.contactCity || restaurantInfo?.city || undefined,
+          contactState: settings.contactState || restaurantInfo?.state || undefined,
+          contactZip: settings.contactZip || restaurantInfo?.zipCode || undefined,
+          openingHours: operatingHours,
+          
+          // Reservation integration data
+          reservationSettings: reservationSettings ? {
+            enabled: true,
+            minPartySize: reservationSettings.minPartySize,
+            maxPartySize: reservationSettings.maxPartySize,
+            advanceBookingDays: reservationSettings.advanceBookingDays,
+            minAdvanceHours: reservationSettings.minAdvanceHours,
+            cancellationPolicy: reservationSettings.cancellationPolicy,
+            requireCreditCard: reservationSettings.requireCreditCard,
+            requireDeposit: reservationSettings.requireDeposit,
+            depositAmount: reservationSettings.depositAmount ? Number(reservationSettings.depositAmount) : undefined
+          } : undefined,
+          
+          // Menu Display
+          menuDisplayMode: settings.menuDisplayMode || undefined,
+          activeMenuIds: settings.activeMenuIds || undefined,
+          
+          // Social & Footer (keep - site-wide configuration)
+          facebookUrl: settings.facebookUrl || undefined,
+          instagramUrl: settings.instagramUrl || undefined,
+          twitterUrl: settings.twitterUrl || undefined,
+          footerText: settings.footerText || undefined,
+          
+          // SEO (keep - site-wide defaults)
+          metaTitle: settings.metaTitle || undefined,
+          metaDescription: settings.metaDescription || undefined,
+          metaKeywords: settings.metaKeywords || undefined,
+          
+          // Info Panes Customization (keep - UI configuration)
+          infoPanesEnabled: (settings as any).infoPanesEnabled ?? true,
+          hoursCardTitle: (settings as any).hoursCardTitle || 'Opening Hours',
+          locationCardTitle: (settings as any).locationCardTitle || 'Our Location', 
+          contactCardTitle: (settings as any).contactCardTitle || 'Contact Us',
+          hoursCardShowDetails: (settings as any).hoursCardShowDetails ?? true,
+          locationCardShowDirections: (settings as any).locationCardShowDirections ?? true,
+          
+          // Navigation Customization (keep - UI configuration)
+          navigationEnabled: (settings as any).navigationEnabled ?? true,
+          navigationLayout: (settings as any).navigationLayout || 'topbar',
+          navigationAlignment: (settings as any).navigationAlignment || 'left',
+          navigationStyle: (settings as any).navigationStyle || 'modern',
+          showMobileMenu: (settings as any).showMobileMenu ?? true,
+          mobileMenuStyle: (settings as any).mobileMenuStyle || 'hamburger',
+          navigationItems: this.parseNavigationItems((settings as any).navigationItems) || [
+            {
+              id: 'home',
+              label: 'Home',
+              path: '/',
+              icon: 'home',
+              isActive: true,
+              displayOrder: 1,
+              isSystem: true
+            },
+            {
+              id: 'menu',
+              label: 'Menu',
+              path: '/menu',
+              icon: 'menu_book',
+              isActive: true,
+              displayOrder: 2,
+              isSystem: true
+            },
+            {
+              id: 'reservations',
+              label: 'Make Reservation',
+              path: '/reservations/new',
+              icon: 'event_seat',
+              isActive: reservationSettings ? true : false, // Only show if reservations are configured
+              displayOrder: 3,
+              isSystem: true
+            }
+          ]
           
           // Menu Display
           menuDisplayMode: settings.menuDisplayMode || undefined,

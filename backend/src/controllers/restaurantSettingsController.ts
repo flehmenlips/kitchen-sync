@@ -359,10 +359,46 @@ export const getPublicRestaurantSettings = async (req: Request, res: Response): 
       return;
     }
 
+    // Get reservation settings for operating hours (more accurate for reservations)
+    let operatingHours = parseOpeningHours(settings.openingHours);
+    try {
+      const reservationSettings = await prisma.reservationSettings.findUnique({
+        where: { restaurantId: restaurant.id },
+        select: { operatingHours: true }
+      });
+      
+      // Use reservation operating hours if available (they're more accurate)
+      if (reservationSettings?.operatingHours) {
+        operatingHours = parseOpeningHours(reservationSettings.operatingHours);
+      }
+    } catch (error) {
+      console.warn('Could not fetch reservation settings for public endpoint:', error);
+    }
+
+    // Get restaurant basic info to sync contact information
+    const restaurantInfo = await prisma.restaurant.findUnique({
+      where: { id: restaurant.id },
+      select: {
+        phone: true,
+        email: true,
+        address: true,
+        city: true,
+        state: true,
+        zipCode: true
+      }
+    });
+
     // Add restaurant info and parse opening hours
     const result = {
       ...settings,
-      openingHours: parseOpeningHours(settings.openingHours),
+      // Sync contact info from Restaurant model if not in RestaurantSettings
+      contactPhone: settings.contactPhone || restaurantInfo?.phone || undefined,
+      contactEmail: settings.contactEmail || restaurantInfo?.email || undefined,
+      contactAddress: settings.contactAddress || restaurantInfo?.address || undefined,
+      contactCity: settings.contactCity || restaurantInfo?.city || undefined,
+      contactState: settings.contactState || restaurantInfo?.state || undefined,
+      contactZip: settings.contactZip || restaurantInfo?.zipCode || undefined,
+      openingHours: operatingHours,
       restaurant: {
         id: restaurant.id,
         name: settings.websiteName || restaurant.name || 'Restaurant',
