@@ -31,9 +31,13 @@ import {
   People as PeopleIcon,
   Phone as PhoneIcon,
   Email as EmailIcon,
-  Restaurant as RestaurantIcon
+  Restaurant as RestaurantIcon,
+  ViewDay as ViewDayIcon,
+  ViewWeek as ViewWeekIcon,
+  CalendarMonth as CalendarMonthIcon
 } from '@mui/icons-material';
-import { format, startOfWeek, endOfWeek, addDays, isSameDay, isToday, addWeeks, subWeeks } from 'date-fns';
+import { format, startOfWeek, endOfWeek, addDays, isSameDay, isToday, startOfMonth, eachDayOfInterval, getDaysInMonth, getDay } from 'date-fns';
+import { ToggleButton, ToggleButtonGroup } from '@mui/material';
 import { reservationService, Reservation, ReservationStatus, CreateReservationInput } from '../../services/reservationService';
 import { reservationSettingsService } from '../../services/reservationSettingsService';
 import { useSnackbar } from 'notistack';
@@ -49,12 +53,15 @@ interface ReservationFormData {
   specialRequests: string;
 }
 
+type CalendarView = 'day' | 'week' | 'month';
+
 export const ReservationCalendar: React.FC = () => {
   const theme = useTheme();
   const { enqueueSnackbar } = useSnackbar();
   const { currentRestaurant } = useRestaurant();
   
-  const [currentWeek, setCurrentWeek] = useState(new Date());
+  const [view, setView] = useState<CalendarView>('week');
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [reservationSettings, setReservationSettings] = useState<any>(null);
@@ -147,8 +154,29 @@ export const ReservationCalendar: React.FC = () => {
     return slots;
   };
 
-  const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  // Calculate dates based on current view
+  const getViewDates = () => {
+    switch (view) {
+      case 'day':
+        return [currentDate];
+      case 'week':
+        const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+        return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+      case 'month':
+        const monthStart = startOfMonth(currentDate);
+        const firstDayOfWeek = getDay(monthStart);
+        const startDate = addDays(monthStart, -firstDayOfWeek); // Start from Sunday of first week
+        const daysInMonth = getDaysInMonth(currentDate);
+        const endDate = addDays(monthStart, daysInMonth - 1);
+        const lastDayOfWeek = getDay(endDate);
+        const finalEndDate = addDays(endDate, 6 - lastDayOfWeek); // End on Saturday of last week
+        return eachDayOfInterval({ start: startDate, end: finalEndDate });
+      default:
+        return [];
+    }
+  };
+
+  const viewDates = getViewDates();
 
   const fetchReservations = async () => {
     setLoading(true);
@@ -184,6 +212,17 @@ export const ReservationCalendar: React.FC = () => {
       }
     }
   }, [selectedDate, reservationSettings, currentRestaurant?.id]);
+
+  // Fetch availability for visible dates when view changes
+  useEffect(() => {
+    if (view === 'day' && viewDates.length > 0 && reservationSettings && currentRestaurant?.id) {
+      const date = viewDates[0];
+      const slots = generateTimeSlots(date);
+      if (slots.length > 0) {
+        fetchAvailabilityForDate(date, slots);
+      }
+    }
+  }, [view, currentDate, reservationSettings, currentRestaurant?.id]);
 
   const fetchAvailabilityForDate = async (date: Date, _slots: string[]) => {
     if (!currentRestaurant?.id) return;
@@ -255,16 +294,61 @@ export const ReservationCalendar: React.FC = () => {
     );
   };
 
-  const handlePreviousWeek = () => {
-    setCurrentWeek(subWeeks(currentWeek, 1));
+  const handlePreviousPeriod = () => {
+    switch (view) {
+      case 'day':
+        setCurrentDate(addDays(currentDate, -1));
+        break;
+      case 'week':
+        setCurrentDate(addDays(currentDate, -7));
+        break;
+      case 'month':
+        const newDate = new Date(currentDate);
+        newDate.setMonth(newDate.getMonth() - 1);
+        setCurrentDate(newDate);
+        break;
+    }
   };
 
-  const handleNextWeek = () => {
-    setCurrentWeek(addWeeks(currentWeek, 1));
+  const handleNextPeriod = () => {
+    switch (view) {
+      case 'day':
+        setCurrentDate(addDays(currentDate, 1));
+        break;
+      case 'week':
+        setCurrentDate(addDays(currentDate, 7));
+        break;
+      case 'month':
+        const newDate = new Date(currentDate);
+        newDate.setMonth(newDate.getMonth() + 1);
+        setCurrentDate(newDate);
+        break;
+    }
   };
 
   const handleToday = () => {
-    setCurrentWeek(new Date());
+    setCurrentDate(new Date());
+  };
+
+  const handleViewChange = (_event: React.MouseEvent<HTMLElement>, newView: CalendarView | null) => {
+    if (newView !== null) {
+      setView(newView);
+    }
+  };
+
+  const getPeriodLabel = () => {
+    switch (view) {
+      case 'day':
+        return format(currentDate, 'EEEE, MMMM d, yyyy');
+      case 'week':
+        const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+        const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
+        return `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d, yyyy')}`;
+      case 'month':
+        return format(currentDate, 'MMMM yyyy');
+      default:
+        return '';
+    }
   };
 
   const handleDateClick = (date: Date) => {
@@ -342,37 +426,338 @@ export const ReservationCalendar: React.FC = () => {
     }
   };
 
+  // Render day view with time slots
+  const renderDayView = (date: Date) => {
+    const dayReservations = getReservationsForDay(date);
+    const isCurrentDay = isToday(date);
+    const capacitySummary = getDayCapacitySummary(date);
+    const dayOfWeek = date.getDay();
+    const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][dayOfWeek];
+    const dayHours = reservationSettings?.operatingHours?.[dayName];
+    const isClosed = dayHours?.closed || !dayHours;
+    
+    // Generate time slots for the day
+    const timeSlots = reservationSettings 
+      ? generateTimeSlots(date)
+      : generateDefaultTimeSlots();
+    
+    // Group reservations by time slot
+    const reservationsByTimeSlot = new Map<string, Reservation[]>();
+    dayReservations.forEach(res => {
+      const timeSlot = res.reservationTime.substring(0, 5); // HH:MM format
+      if (!reservationsByTimeSlot.has(timeSlot)) {
+        reservationsByTimeSlot.set(timeSlot, []);
+      }
+      reservationsByTimeSlot.get(timeSlot)!.push(res);
+    });
+
+    return (
+      <Card
+        sx={{
+          border: isCurrentDay ? `2px solid ${theme.palette.primary.main}` : undefined,
+          backgroundColor: isCurrentDay ? theme.palette.action.hover : undefined
+        }}
+      >
+        <CardContent>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+            <Typography variant="h5" fontWeight="bold">
+              {format(date, 'EEEE, MMMM d, yyyy')}
+            </Typography>
+            {capacitySummary && (
+              <Chip
+                label={`${capacitySummary.totalBooked}/${capacitySummary.estimatedCapacity} covers`}
+                color={capacitySummary.utilization >= 90 ? 'error' : capacitySummary.utilization >= 70 ? 'warning' : 'success'}
+              />
+            )}
+            {isClosed && <Chip label="Closed" color="default" />}
+          </Box>
+
+          {isClosed ? (
+            <Alert severity="info">Restaurant is closed on this day.</Alert>
+          ) : (
+            <Box sx={{ maxHeight: '70vh', overflowY: 'auto' }}>
+              {timeSlots.map(timeSlot => {
+                const slotReservations = reservationsByTimeSlot.get(timeSlot) || [];
+                const availability = timeSlotAvailabilities.get(timeSlot);
+                
+                return (
+                  <Paper
+                    key={timeSlot}
+                    variant="outlined"
+                    sx={{
+                      p: 2,
+                      mb: 1,
+                      backgroundColor: availability?.available === false ? 'rgba(244, 67, 54, 0.05)' : undefined,
+                      cursor: 'pointer',
+                      '&:hover': {
+                        backgroundColor: theme.palette.action.hover
+                      }
+                    }}
+                    onClick={() => {
+                      setSelectedDate(date);
+                      setFormData(prev => ({ ...prev, reservationTime: timeSlot }));
+                      setFormOpen(true);
+                    }}
+                  >
+                    <Box display="flex" justifyContent="space-between" alignItems="center">
+                      <Typography variant="subtitle1" fontWeight="bold">
+                        {timeSlot}
+                      </Typography>
+                      <Box display="flex" alignItems="center" gap={1}>
+                        {availability && (
+                          <Typography variant="caption" color="text.secondary">
+                            {availability.remaining != null && availability.capacity != null
+                              ? `${availability.remaining}/${availability.capacity} available`
+                              : availability.available === false
+                              ? 'Full'
+                              : 'Available'}
+                          </Typography>
+                        )}
+                        {slotReservations.length > 0 && (
+                          <Badge badgeContent={slotReservations.length} color="primary">
+                            <EventIcon />
+                          </Badge>
+                        )}
+                      </Box>
+                    </Box>
+                    {slotReservations.length > 0 && (
+                      <Box sx={{ mt: 1 }}>
+                        {slotReservations.map(res => (
+                          <Chip
+                            key={res.id}
+                            label={`${res.customerName} - ${res.partySize} ${res.partySize === 1 ? 'guest' : 'guests'}`}
+                            color={getStatusColor(res.status) as any}
+                            size="small"
+                            sx={{ mr: 0.5, mb: 0.5 }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleReservationClick(res);
+                            }}
+                          />
+                        ))}
+                      </Box>
+                    )}
+                  </Paper>
+                );
+              })}
+            </Box>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
+  // Render month view
+  const renderMonthView = () => {
+    // Group dates into weeks
+    const weeks: Date[][] = [];
+    for (let i = 0; i < viewDates.length; i += 7) {
+      weeks.push(viewDates.slice(i, i + 7));
+    }
+
+    return (
+      <Box>
+        {/* Day headers */}
+        <Grid container spacing={0.5} sx={{ mb: 1 }}>
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+            <Grid item xs={12/7} key={day}>
+              <Paper
+                sx={{
+                  p: 1,
+                  textAlign: 'center',
+                  backgroundColor: theme.palette.primary.main,
+                  color: theme.palette.primary.contrastText,
+                  fontWeight: 'bold'
+                }}
+              >
+                <Typography variant="caption">{day}</Typography>
+              </Paper>
+            </Grid>
+          ))}
+        </Grid>
+
+        {/* Calendar grid */}
+        {weeks.map((week, weekIndex) => (
+          <Grid container spacing={0.5} key={weekIndex} sx={{ mb: 0.5 }}>
+            {week.map((day, dayIndex) => {
+              const dayReservations = getReservationsForDay(day);
+              const isCurrentDay = isToday(day);
+              const isCurrentMonth = day.getMonth() === currentDate.getMonth();
+              const capacitySummary = getDayCapacitySummary(day);
+              const dayOfWeek = day.getDay();
+              const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][dayOfWeek];
+              const dayHours = reservationSettings?.operatingHours?.[dayName];
+              const isClosed = dayHours?.closed || !dayHours;
+
+              return (
+                <Grid item xs={12/7} key={dayIndex}>
+                  <Card
+                    sx={{
+                      minHeight: 120,
+                      backgroundColor: !isCurrentMonth 
+                        ? theme.palette.action.disabledBackground
+                        : isCurrentDay 
+                        ? theme.palette.action.hover 
+                        : undefined,
+                      border: isCurrentDay ? `2px solid ${theme.palette.primary.main}` : undefined,
+                      cursor: 'pointer',
+                      opacity: !isCurrentMonth ? 0.5 : 1,
+                      '&:hover': {
+                        backgroundColor: theme.palette.action.hover,
+                        transform: 'scale(1.02)',
+                        transition: 'all 0.2s ease-in-out'
+                      }
+                    }}
+                    onClick={() => {
+                      if (isCurrentMonth) {
+                        handleDateClick(day);
+                      } else {
+                        // Navigate to that month
+                        setCurrentDate(day);
+                      }
+                    }}
+                  >
+                    <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
+                      <Box display="flex" justifyContent="space-between" alignItems="center" mb={0.5}>
+                        <Typography 
+                          variant="caption" 
+                          fontWeight={isCurrentDay ? 'bold' : 'normal'}
+                          color={!isCurrentMonth ? 'text.secondary' : 'text.primary'}
+                        >
+                          {format(day, 'd')}
+                        </Typography>
+                        {dayReservations.length > 0 && (
+                          <Badge badgeContent={dayReservations.length} color="primary" max={99}>
+                            <Box sx={{ width: 8, height: 8 }} />
+                          </Badge>
+                        )}
+                      </Box>
+                      
+                      {isClosed && (
+                        <Chip label="Closed" size="small" sx={{ fontSize: '0.65rem', height: 16 }} />
+                      )}
+                      
+                      {capacitySummary && !isClosed && (
+                        <Box sx={{ mt: 0.5 }}>
+                          <Box sx={{ width: '100%', height: 3, bgcolor: 'grey.200', borderRadius: 1, overflow: 'hidden' }}>
+                            <Box
+                              sx={{
+                                height: '100%',
+                                width: `${Math.min(capacitySummary.utilization, 100)}%`,
+                                bgcolor: capacitySummary.utilization >= 90 ? 'error.main' :
+                                         capacitySummary.utilization >= 70 ? 'warning.main' :
+                                         capacitySummary.utilization >= 50 ? 'info.main' : 'success.main'
+                              }}
+                            />
+                          </Box>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6rem' }}>
+                            {capacitySummary.totalBooked}/{capacitySummary.estimatedCapacity}
+                          </Typography>
+                        </Box>
+                      )}
+
+                      {dayReservations.length > 0 && (
+                        <Box sx={{ mt: 0.5 }}>
+                          {dayReservations.slice(0, 2).map(res => (
+                            <Chip
+                              key={res.id}
+                              label={`${format(new Date(res.reservationTime), 'HH:mm')} - ${res.partySize}`}
+                              size="small"
+                              color={getStatusColor(res.status) as any}
+                              sx={{ 
+                                fontSize: '0.6rem', 
+                                height: 16, 
+                                mb: 0.25,
+                                display: 'block',
+                                width: '100%',
+                                '& .MuiChip-label': { px: 0.5 }
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleReservationClick(res);
+                              }}
+                            />
+                          ))}
+                          {dayReservations.length > 2 && (
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6rem' }}>
+                              +{dayReservations.length - 2} more
+                            </Typography>
+                          )}
+                        </Box>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              );
+            })}
+          </Grid>
+        ))}
+      </Box>
+    );
+  };
+
   return (
     <Box>
       <Paper sx={{ p: 3, mb: 3 }}>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3} flexWrap="wrap" gap={2}>
           <Typography variant="h4" component="h1">
             <RestaurantIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />
             Reservation Calendar
           </Typography>
-          <Box>
-            <IconButton onClick={handlePreviousWeek}>
-              <ArrowBackIcon />
-            </IconButton>
-            <Button
-              startIcon={<TodayIcon />}
-              onClick={handleToday}
-              sx={{ mx: 1 }}
+          <Box display="flex" alignItems="center" gap={2}>
+            <ToggleButtonGroup
+              value={view}
+              exclusive
+              onChange={handleViewChange}
+              aria-label="calendar view"
+              size="small"
             >
-              Today
-            </Button>
-            <IconButton onClick={handleNextWeek}>
-              <ArrowForwardIcon />
-            </IconButton>
+              <ToggleButton value="day" aria-label="day view">
+                <ViewDayIcon sx={{ mr: 0.5 }} />
+                Day
+              </ToggleButton>
+              <ToggleButton value="week" aria-label="week view">
+                <ViewWeekIcon sx={{ mr: 0.5 }} />
+                Week
+              </ToggleButton>
+              <ToggleButton value="month" aria-label="month view">
+                <CalendarMonthIcon sx={{ mr: 0.5 }} />
+                Month
+              </ToggleButton>
+            </ToggleButtonGroup>
+            <Box display="flex" alignItems="center" ml={2}>
+              <IconButton onClick={handlePreviousPeriod}>
+                <ArrowBackIcon />
+              </IconButton>
+              <Button
+                startIcon={<TodayIcon />}
+                onClick={handleToday}
+                sx={{ mx: 1 }}
+              >
+                Today
+              </Button>
+              <IconButton onClick={handleNextPeriod}>
+                <ArrowForwardIcon />
+              </IconButton>
+            </Box>
           </Box>
         </Box>
 
         <Typography variant="h6" gutterBottom align="center">
-          {format(weekStart, 'MMMM d')} - {format(endOfWeek(currentWeek, { weekStartsOn: 1 }), 'MMMM d, yyyy')}
+          {getPeriodLabel()}
         </Typography>
 
-        <Grid container spacing={1} sx={{ mt: 2 }}>
-          {weekDays.map((day, index) => {
+        {/* Day View */}
+        {view === 'day' && viewDates.length > 0 && (
+          <Box sx={{ mt: 2 }}>
+            {renderDayView(viewDates[0])}
+          </Box>
+        )}
+
+        {/* Week View */}
+        {view === 'week' && (
+          <Grid container spacing={1} sx={{ mt: 2 }}>
+            {viewDates.map((day, index) => {
             const dayReservations = getReservationsForDay(day);
             const isCurrentDay = isToday(day);
             const capacitySummary = getDayCapacitySummary(day);
@@ -489,8 +874,16 @@ export const ReservationCalendar: React.FC = () => {
                 </Card>
               </Grid>
             );
-          })}
-        </Grid>
+            })}
+          </Grid>
+        )}
+
+        {/* Month View */}
+        {view === 'month' && (
+          <Box sx={{ mt: 2 }}>
+            {renderMonthView()}
+          </Box>
+        )}
       </Paper>
 
       {/* Create Reservation Dialog */}
