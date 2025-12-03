@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -35,6 +35,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { format, addDays, isBefore, isAfter, startOfDay } from 'date-fns';
 import { customerReservationService, ReservationFormData } from '../../services/customerReservationService';
+import { restaurantSettingsService, RestaurantSettings } from '../../services/restaurantSettingsService';
 import { useSnackbar } from 'notistack';
 import { useCustomerAuth } from '../../context/CustomerAuthContext';
 
@@ -58,6 +59,7 @@ const CustomerReservationPage: React.FC = () => {
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [confirmationData, setConfirmationData] = useState<any>(null);
+  const [restaurantSettings, setRestaurantSettings] = useState<RestaurantSettings | null>(null);
   
   const [formData, setFormData] = useState<FormData>({
     customerName: user?.name || '',
@@ -71,8 +73,22 @@ const CustomerReservationPage: React.FC = () => {
 
   const steps = ['Select Date & Time', 'Guest Information', 'Confirmation'];
 
-  // Generate time slots from 11:00 to 22:00 in 30-minute intervals
-  const generateTimeSlots = () => {
+  // Fetch restaurant settings on mount
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const settings = await restaurantSettingsService.getPublicSettings();
+        setRestaurantSettings(settings);
+      } catch (error) {
+        console.error('Error fetching restaurant settings:', error);
+        // Continue with default time slots if fetch fails
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  // Generate default time slots (fallback)
+  const generateDefaultTimeSlots = (): string[] => {
     const slots = [];
     for (let hour = 11; hour < 22; hour++) {
       slots.push(`${hour.toString().padStart(2, '0')}:00`);
@@ -81,7 +97,77 @@ const CustomerReservationPage: React.FC = () => {
     return slots;
   };
 
-  const timeSlots = generateTimeSlots();
+  // Generate time slots based on selected date and operating hours
+  const generateTimeSlots = (date: Date | null): string[] => {
+    if (!date) {
+      return generateDefaultTimeSlots();
+    }
+
+    // If no restaurant settings or no opening hours, use default
+    if (!restaurantSettings?.openingHours || typeof restaurantSettings.openingHours !== 'object') {
+      return generateDefaultTimeSlots();
+    }
+
+    const dayOfWeek = date.getDay();
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayName = dayNames[dayOfWeek];
+    const operatingHours = restaurantSettings.openingHours;
+    const dayHours = operatingHours[dayName];
+
+    // If day is closed or no hours configured, return empty array
+    if (!dayHours || dayHours.closed || !dayHours.open || !dayHours.close) {
+      return [];
+    }
+
+    const { open, close } = dayHours;
+    const interval = 30; // 30-minute intervals
+
+    // Parse times and generate slots
+    const [openHour, openMin] = open.split(':').map(Number);
+    const [closeHour, closeMin] = close.split(':').map(Number);
+    const startMinutes = openHour * 60 + openMin;
+    let endMinutes = closeHour * 60 + closeMin;
+
+    const slots: string[] = [];
+    let currentMinutes = startMinutes;
+
+    // Handle midnight crossing - if end time is earlier than start time,
+    // it means the end time is the next day (e.g., 20:00 to 02:00)
+    const crossesMidnight = endMinutes <= startMinutes;
+    
+    if (crossesMidnight) {
+      // Generate slots from start time to end of day (23:59)
+      const endOfDay = 24 * 60; // 1440 minutes
+      while (currentMinutes < endOfDay) {
+        const hour = Math.floor(currentMinutes / 60);
+        const minute = currentMinutes % 60;
+        slots.push(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
+        currentMinutes += interval;
+      }
+      
+      // Generate slots from start of next day (00:00) to end time
+      currentMinutes = 0;
+      while (currentMinutes <= endMinutes) {
+        const hour = Math.floor(currentMinutes / 60);
+        const minute = currentMinutes % 60;
+        slots.push(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
+        currentMinutes += interval;
+      }
+    } else {
+      // Normal case: end time is after start time on the same day
+      while (currentMinutes <= endMinutes) {
+        const hour = Math.floor(currentMinutes / 60);
+        const minute = currentMinutes % 60;
+        slots.push(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
+        currentMinutes += interval;
+      }
+    }
+
+    return slots;
+  };
+
+  // Get time slots for the selected date
+  const timeSlots = generateTimeSlots(formData.reservationDate);
 
   const handleNext = () => {
     if (activeStep === 0 && (!formData.reservationDate || !formData.reservationTime)) {
@@ -146,7 +232,13 @@ const CustomerReservationPage: React.FC = () => {
                 <DatePicker
                   label="Reservation Date"
                   value={formData.reservationDate}
-                  onChange={(newValue: Date | null) => setFormData({ ...formData, reservationDate: newValue })}
+                  onChange={(newValue: Date | null) => {
+                    setFormData({ 
+                      ...formData, 
+                      reservationDate: newValue,
+                      reservationTime: '' // Reset time when date changes
+                    });
+                  }}
                   minDate={new Date()}
                   maxDate={addDays(new Date(), 90)}
                   slotProps={{
@@ -180,19 +272,29 @@ const CustomerReservationPage: React.FC = () => {
               <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
                 Available Times
               </Typography>
-              <Grid container spacing={1}>
-                {timeSlots.map((time) => (
-                  <Grid item key={time}>
-                    <Button
-                      variant={formData.reservationTime === time ? 'contained' : 'outlined'}
-                      onClick={() => setFormData({ ...formData, reservationTime: time })}
-                      sx={{ minWidth: 80 }}
-                    >
-                      {time}
-                    </Button>
-                  </Grid>
-                ))}
-              </Grid>
+              {!formData.reservationDate ? (
+                <Alert severity="info" sx={{ mt: 1 }}>
+                  Please select a date to see available times
+                </Alert>
+              ) : timeSlots.length === 0 ? (
+                <Alert severity="warning" sx={{ mt: 1 }}>
+                  The restaurant is closed on this day. Please select a different date.
+                </Alert>
+              ) : (
+                <Grid container spacing={1}>
+                  {timeSlots.map((time) => (
+                    <Grid item key={time}>
+                      <Button
+                        variant={formData.reservationTime === time ? 'contained' : 'outlined'}
+                        onClick={() => setFormData({ ...formData, reservationTime: time })}
+                        sx={{ minWidth: 80 }}
+                      >
+                        {time}
+                      </Button>
+                    </Grid>
+                  ))}
+                </Grid>
+              )}
             </Grid>
           </Grid>
         );
