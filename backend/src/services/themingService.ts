@@ -612,7 +612,8 @@ export const themingService = {
     }
     
     // Return all pairings sorted by category
-    return FONT_PAIRINGS.sort((a, b) => {
+    // Create a copy to avoid mutating the shared constant
+    return [...FONT_PAIRINGS].sort((a, b) => {
       if (a.category < b.category) return -1;
       if (a.category > b.category) return 1;
       return 0;

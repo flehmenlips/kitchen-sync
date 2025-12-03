@@ -135,7 +135,9 @@ export const migrateRestaurantAssets = async (
       .max_results(500)
       .execute();
 
-    // Filter assets that belong to this restaurant (based on various patterns)
+    // Filter assets that belong to this restaurant
+    // IMPORTANT: Only migrate assets that explicitly belong to this restaurant
+    // to prevent cross-tenant data corruption in multi-tenant system
     const restaurantAssets = allAssets.resources.filter((asset: any) => {
       const publicId = asset.public_id;
       
@@ -144,13 +146,10 @@ export const migrateRestaurantAssets = async (
         return false; // Skip, already migrated
       }
       
-      // Check if asset belongs to this restaurant based on old patterns
-      const isRestaurantAsset = 
-        publicId.startsWith(`restaurants/${restaurantId}/`) ||
-        publicId.startsWith('content-blocks/') ||
-        publicId.startsWith('recipe-photos/') ||
-        publicId.startsWith('restaurant-settings/') ||
-        publicId.startsWith('menu-logos/');
+      // Only migrate assets that explicitly belong to this restaurant
+      // Do NOT use global folder patterns (content-blocks/, recipe-photos/, etc.)
+      // as they are shared across restaurants and would cause data corruption
+      const isRestaurantAsset = publicId.startsWith(`restaurants/${restaurantId}/`);
       
       return isRestaurantAsset;
     });

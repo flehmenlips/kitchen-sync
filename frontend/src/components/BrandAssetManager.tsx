@@ -215,7 +215,7 @@ const BrandAssetManager: React.FC<BrandAssetManagerProps> = ({
   const handleAssetSelect = (asset: any) => {
     setFormData({
       ...formData,
-      fileUrl: asset.url,
+      fileUrl: asset.fileUrl || asset.url, // Support both property names for compatibility
       fileName: asset.fileName || asset.name,
       cloudinaryPublicId: asset.cloudinaryPublicId
     });

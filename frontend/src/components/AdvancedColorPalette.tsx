@@ -76,6 +76,7 @@ const AdvancedColorPalette: React.FC<AdvancedColorPaletteProps> = ({
   const [showPredefined, setShowPredefined] = useState(true);
   const [extractingColors, setExtractingColors] = useState(false);
   const [colorExtractionDialogOpen, setColorExtractionDialogOpen] = useState(false);
+  const [imageUrlInput, setImageUrlInput] = useState('');
 
   // Form state for creating/editing palettes
   const [formData, setFormData] = useState<ColorPaletteData>({
@@ -291,11 +292,16 @@ const AdvancedColorPalette: React.FC<AdvancedColorPaletteProps> = ({
             if (a < 128) continue;
             
             // Quantize colors to reduce noise
-            const quantizedR = Math.round(r / 32) * 32;
-            const quantizedG = Math.round(g / 32) * 32;
-            const quantizedB = Math.round(b / 32) * 32;
+            // Clamp values to 0-255 to prevent invalid hex colors
+            const quantizedR = Math.min(255, Math.max(0, Math.round(r / 32) * 32));
+            const quantizedG = Math.min(255, Math.max(0, Math.round(g / 32) * 32));
+            const quantizedB = Math.min(255, Math.max(0, Math.round(b / 32) * 32));
             
-            const color = `#${quantizedR.toString(16).padStart(2, '0')}${quantizedG.toString(16).padStart(2, '0')}${quantizedB.toString(16).padStart(2, '0')}`;
+            // Ensure hex values are exactly 2 characters
+            const rHex = quantizedR.toString(16).padStart(2, '0').slice(0, 2);
+            const gHex = quantizedG.toString(16).padStart(2, '0').slice(0, 2);
+            const bHex = quantizedB.toString(16).padStart(2, '0').slice(0, 2);
+            const color = `#${rHex}${gHex}${bHex}`;
             colorMap.set(color, (colorMap.get(color) || 0) + 1);
           }
           
@@ -701,19 +707,32 @@ const AdvancedColorPalette: React.FC<AdvancedColorPaletteProps> = ({
             <Alert severity="info" sx={{ mb: 2 }}>
               Upload your logo image to automatically extract a color palette that matches your brand.
             </Alert>
-            <TextField
-              fullWidth
-              label="Image URL"
-              placeholder="https://example.com/logo.png"
-              helperText="Enter the URL of your logo image"
-              sx={{ mb: 2 }}
-              onChange={(e) => {
-                const url = e.target.value;
-                if (url && url.startsWith('http')) {
-                  handleExtractColorsFromImage(url);
-                }
-              }}
-            />
+            <Box sx={{ mb: 2 }}>
+              <TextField
+                fullWidth
+                label="Image URL"
+                placeholder="https://example.com/logo.png"
+                helperText="Enter the URL of your logo image and click Extract"
+                value={imageUrlInput}
+                onChange={(e) => setImageUrlInput(e.target.value)}
+                sx={{ mb: 1 }}
+              />
+              <Button
+                variant="contained"
+                fullWidth
+                onClick={() => {
+                  if (imageUrlInput && imageUrlInput.startsWith('http')) {
+                    handleExtractColorsFromImage(imageUrlInput);
+                  } else {
+                    alert('Please enter a valid image URL');
+                  }
+                }}
+                disabled={extractingColors || !imageUrlInput}
+                startIcon={extractingColors ? <CircularProgress size={16} /> : <UploadIcon />}
+              >
+                {extractingColors ? 'Extracting...' : 'Extract Colors'}
+              </Button>
+            </Box>
             <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 2 }}>
               OR
             </Typography>
