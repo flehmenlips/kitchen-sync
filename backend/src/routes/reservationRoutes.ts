@@ -4,7 +4,8 @@ import {
     getReservationById,
     createReservation,
     updateReservation,
-    deleteReservation
+    deleteReservation,
+    getAvailability
 } from '../controllers/reservationController';
 import { protect } from '../middleware/authMiddleware';
 
@@ -16,6 +17,9 @@ router.use(protect);
 router.route('/')
     .get(getReservations)
     .post(createReservation);
+
+router.route('/availability/:restaurantId')
+    .get(getAvailability);
 
 router.route('/:id')
     .get(getReservationById)

@@ -3,6 +3,7 @@ import prisma from '../config/db';
 import { ReservationStatus } from '@prisma/client';
 import { emailService } from '../services/emailService';
 import { format } from 'date-fns';
+import { checkAvailability, getTimeSlotAvailabilities, generateTimeSlots } from '../services/reservationCapacityService';
 
 // Helper function for safe integer parsing
 const safeParseInt = (val: unknown): number | undefined => {
@@ -190,13 +191,43 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
             return;
         }
 
+        const reservationDateObj = new Date(reservationDate);
+        
+        // Check capacity before creating reservation
+        const availability = await checkAvailability(
+            userRestaurant.restaurantId,
+            reservationDateObj,
+            reservationTime,
+            partySizeNum
+        );
+
+        if (!availability.available) {
+            const capacityMsg = availability.capacity 
+                ? `Capacity limit of ${availability.capacity} reached. Current bookings: ${availability.currentBookings}`
+                : 'This time slot is not available';
+            res.status(400).json({ 
+                message: capacityMsg,
+                availability: {
+                    currentBookings: availability.currentBookings,
+                    capacity: availability.capacity,
+                    remaining: availability.remaining
+                }
+            });
+            return;
+        }
+
+        // Warn if overbooking (but still allow it)
+        if (availability.overbooked) {
+            console.warn(`Overbooking reservation: ${partySizeNum} guests at ${reservationTime} on ${reservationDate}. Capacity: ${availability.capacity}, Current: ${availability.currentBookings}`);
+        }
+
         const newReservation = await prisma.reservation.create({
             data: {
                 customerName,
                 customerPhone,
                 customerEmail,
                 partySize: partySizeNum,
-                reservationDate: new Date(reservationDate),
+                reservationDate: reservationDateObj,
                 reservationTime,
                 notes,
                 userId: req.user.id,
@@ -363,5 +394,95 @@ export const deleteReservation = async (req: Request, res: Response): Promise<vo
     } catch (error) {
         console.error('Error deleting reservation:', error);
         res.status(500).json({ message: 'Error deleting reservation' });
+    }
+};
+
+// @desc    Get available time slots for a date
+// @route   GET /api/reservations/availability/:restaurantId
+// @access  Private
+export const getAvailability = async (req: Request, res: Response): Promise<void> => {
+    if (!req.user?.id) {
+        res.status(401).json({ message: 'Not authorized, user ID missing' });
+        return;
+    }
+
+    try {
+        const restaurantId = parseInt(req.params.restaurantId);
+        const { date, partySize } = req.query;
+
+        if (isNaN(restaurantId)) {
+            res.status(400).json({ message: 'Invalid restaurant ID' });
+            return;
+        }
+
+        if (!date) {
+            res.status(400).json({ message: 'Date parameter is required' });
+            return;
+        }
+
+        // Verify user has access to this restaurant
+        const userRestaurant = await prisma.restaurantStaff.findFirst({
+            where: {
+                userId: req.user.id,
+                restaurantId: restaurantId,
+                isActive: true
+            }
+        });
+
+        if (!userRestaurant) {
+            res.status(403).json({ message: 'You do not have access to this restaurant' });
+            return;
+        }
+
+        const targetDate = new Date(date as string);
+        const requestedPartySize = partySize ? parseInt(partySize as string) : 1;
+
+        // Generate time slots based on reservation settings
+        const timeSlots = await generateTimeSlots(restaurantId, targetDate);
+
+        if (timeSlots.length === 0) {
+            res.status(200).json({
+                date: date,
+                timeSlots: [],
+                message: 'Restaurant is closed on this date'
+            });
+            return;
+        }
+
+        // Get availability for all time slots
+        const availabilities = await getTimeSlotAvailabilities(
+            restaurantId,
+            targetDate,
+            timeSlots
+        );
+
+        // Filter and format results
+        const availableSlots = availabilities
+            .filter(avail => {
+                // If party size specified, check if slot can accommodate it
+                if (requestedPartySize > 0) {
+                    if (avail.capacity === null) return true; // Unlimited capacity
+                    return avail.remaining === null || avail.remaining >= requestedPartySize;
+                }
+                return avail.available;
+            })
+            .map(avail => ({
+                timeSlot: avail.timeSlot,
+                available: avail.available,
+                currentBookings: avail.currentBookings,
+                capacity: avail.capacity,
+                remaining: avail.remaining,
+                canAccommodate: avail.capacity === null || (avail.remaining !== null && avail.remaining >= requestedPartySize)
+            }));
+
+        res.status(200).json({
+            date: date,
+            partySize: requestedPartySize,
+            timeSlots: availableSlots,
+            allSlots: availabilities
+        });
+    } catch (error) {
+        console.error('Error fetching availability:', error);
+        res.status(500).json({ message: 'Error fetching availability' });
     }
 }; 
