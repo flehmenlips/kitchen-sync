@@ -24,23 +24,18 @@ import {
   Alert,
   Tabs,
   Tab,
-  Divider,
   Tooltip,
   Checkbox,
   FormControlLabel
 } from '@mui/material';
 import {
-  Image as ImageIcon,
   Upload as UploadIcon,
   Delete as DeleteIcon,
   Edit as EditIcon,
   Star as StarIcon,
   StarBorder as StarBorderIcon,
   PhotoLibrary as PhotoLibraryIcon,
-  Description as DescriptionIcon,
-  CheckCircle as CheckCircleIcon,
-  Close as CloseIcon,
-  Info as InfoIcon
+  Description as DescriptionIcon
 } from '@mui/icons-material';
 import { themingService, BrandAsset, BrandAssetData } from '../services/themingService';
 import { useSnackbar } from '../context/SnackbarContext';
@@ -97,7 +92,7 @@ const BrandAssetManager: React.FC<BrandAssetManagerProps> = ({
   const [uploading, setUploading] = useState(false);
   const { showSnackbar } = useSnackbar();
 
-  const [formData, setFormData] = useState<Partial<BrandAssetData>>({
+  const [formData, setFormData] = useState<Partial<BrandAssetData> & { cloudinaryPublicId?: string }>({
     assetType: 'logo',
     fileName: '',
     fileUrl: '',
@@ -133,7 +128,8 @@ const BrandAssetManager: React.FC<BrandAssetManagerProps> = ({
         fileUrl: asset.fileUrl,
         altText: asset.altText || '',
         description: asset.description || '',
-        isPrimary: asset.isPrimary
+        isPrimary: asset.isPrimary,
+        cloudinaryPublicId: asset.cloudinaryPublicId // Include cloudinaryPublicId when editing
       });
     } else {
       setEditingAsset(null);
@@ -143,7 +139,8 @@ const BrandAssetManager: React.FC<BrandAssetManagerProps> = ({
         fileUrl: '',
         altText: '',
         description: '',
-        isPrimary: false
+        isPrimary: false,
+        cloudinaryPublicId: undefined // Reset cloudinaryPublicId for new assets
       });
     }
     setDialogOpen(true);
@@ -158,26 +155,44 @@ const BrandAssetManager: React.FC<BrandAssetManagerProps> = ({
       fileUrl: '',
       altText: '',
       description: '',
-      isPrimary: false
+      isPrimary: false,
+      cloudinaryPublicId: undefined // Reset cloudinaryPublicId
     });
   };
 
   const handleSaveAsset = async () => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BrandAssetManager.tsx:165',message:'handleSaveAsset entry',data:{editingAsset:!!editingAsset,formDataKeys:Object.keys(formData),hasCloudinaryPublicId:!!formData.cloudinaryPublicId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     try {
       setUploading(true);
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BrandAssetManager.tsx:170',message:'Before API call',data:{formDataCloudinaryId:formData.cloudinaryPublicId,formDataType:typeof formData},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       
       if (editingAsset) {
         await themingService.updateBrandAsset(editingAsset.id, formData);
         showSnackbar('Brand asset updated successfully', 'success');
       } else {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BrandAssetManager.tsx:180',message:'Before createBrandAsset',data:{originalHasCloudinaryId:!!formData.cloudinaryPublicId,formDataKeys:Object.keys(formData)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
         await themingService.createBrandAsset(restaurantId, formData as BrandAssetData);
         showSnackbar('Brand asset created successfully', 'success');
       }
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BrandAssetManager.tsx:177',message:'handleSaveAsset success',data:{success:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       
       handleCloseDialog();
       loadBrandAssets();
       if (onAssetChange) onAssetChange();
     } catch (error) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BrandAssetManager.tsx:181',message:'handleSaveAsset error',data:{errorMessage:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       console.error('Error saving brand asset:', error);
       showSnackbar('Failed to save brand asset', 'error');
     } finally {
@@ -214,12 +229,19 @@ const BrandAssetManager: React.FC<BrandAssetManagerProps> = ({
   };
 
   const handleAssetSelect = (asset: any) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BrandAssetManager.tsx:216',message:'handleAssetSelect entry',data:{assetHasFileUrl:!!asset.fileUrl,assetHasUrl:!!asset.url,assetHasCloudinaryId:!!asset.cloudinaryPublicId,assetHasMimeType:!!asset.mimeType},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
     setFormData({
       ...formData,
       fileUrl: asset.fileUrl || asset.url, // Support both property names for compatibility
       fileName: asset.fileName || asset.name,
+      mimeType: asset.mimeType, // FIXED: Include mimeType for proper image preview
       cloudinaryPublicId: asset.cloudinaryPublicId
     });
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BrandAssetManager.tsx:223',message:'handleAssetSelect after setFormData',data:{cloudinaryPublicId:asset.cloudinaryPublicId,mimeType:asset.mimeType},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
     setAssetLibraryOpen(false);
   };
 
@@ -237,6 +259,10 @@ const BrandAssetManager: React.FC<BrandAssetManagerProps> = ({
       
       // Upload to Cloudinary via asset API
       const uploadedAsset = await assetApi.uploadAsset(restaurantId, uploadFormData);
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BrandAssetManager.tsx:248',message:'After upload, setting formData',data:{uploadedAssetHasCloudinaryId:!!uploadedAsset.cloudinaryPublicId,uploadedAssetCloudinaryId:uploadedAsset.cloudinaryPublicId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       
       // Update form with uploaded asset details
       setFormData({
@@ -261,9 +287,6 @@ const BrandAssetManager: React.FC<BrandAssetManagerProps> = ({
     return assets.filter(asset => asset.assetType === type);
   };
 
-  const getPrimaryAsset = (type: string) => {
-    return assets.find(asset => asset.assetType === type && asset.isPrimary);
-  };
 
   const renderAssetCard = (asset: BrandAsset) => {
     const isPrimary = asset.isPrimary;
@@ -619,7 +642,6 @@ const BrandAssetManager: React.FC<BrandAssetManagerProps> = ({
         open={assetLibraryOpen}
         onClose={() => setAssetLibraryOpen(false)}
         onSelect={handleAssetSelect}
-        restaurantId={restaurantId}
         allowedTypes={['image']}
       />
     </Box>

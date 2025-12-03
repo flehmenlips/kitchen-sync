@@ -56,7 +56,9 @@ export interface BrandAssetData {
     height: number;
   };
   altText?: string;
+  description?: string;
   isPrimary?: boolean;
+  cloudinaryPublicId?: string;
 }
 
 export interface GoogleFont {
@@ -377,7 +379,7 @@ export const themingService = {
   },
 
   async createColorPalette(restaurantId: number, data: ColorPaletteData) {
-    // Validate accessibility
+    // Validate accessibility and get contrast ratio/WCAG level
     const validation = validateColorPaletteAccessibility(data);
     
     return await prisma.colorPalette.create({
@@ -393,18 +395,10 @@ export const themingService = {
         warningColor: data.warningColor || '#ff9800',
         errorColor: data.errorColor || '#f44336',
         contrastRatio: validation.contrastRatio,
-        wcagLevel: validation.wcagLevel,
+        wcagLevel: validation.wcagLevel, // Will be 'AA', 'AAA', or null (fits VarChar(3))
         isActive: false
       }
     });
-  },
-  
-  async getPredefinedColorSchemes() {
-    return PREDEFINED_COLOR_SCHEMES;
-  },
-  
-  async extractColorsFromImage(imageUrl: string) {
-    return await extractColorsFromImage(imageUrl);
   },
 
   async updateColorPalette(paletteId: string, data: Partial<ColorPaletteData>) {
@@ -533,7 +527,9 @@ export const themingService = {
         mimeType: data.mimeType,
         dimensions: data.dimensions,
         altText: data.altText,
-        isPrimary: data.isPrimary || false
+        description: data.description,
+        isPrimary: data.isPrimary || false,
+        cloudinaryPublicId: data.cloudinaryPublicId || null
       }
     });
   },
@@ -575,60 +571,12 @@ export const themingService = {
 
   async getFontPairings(fontFamily?: string): Promise<FontPairing[]> {
     if (fontFamily) {
-      // Enhanced pairing algorithm: find fonts that complement the specified font
-      const specifiedFont = RESTAURANT_GOOGLE_FONTS.find(f => f.family === fontFamily);
-      
-      if (specifiedFont) {
-        // If it's a serif font, suggest sans-serif pairings
-        if (specifiedFont.category === 'serif') {
-          const complementaryPairings = FONT_PAIRINGS.filter(pairing => {
-            const bodyFont = RESTAURANT_GOOGLE_FONTS.find(f => f.family === pairing.body);
-            return bodyFont && bodyFont.category === 'sans-serif';
-          });
-          const directPairings = FONT_PAIRINGS.filter(pairing => 
-            pairing.heading === fontFamily || pairing.body === fontFamily
-          );
-          
-          // Deduplicate by combining and filtering unique pairings
-          const allPairings = [...complementaryPairings, ...directPairings];
-          const uniquePairings = allPairings.filter((pairing, index, self) =>
-            index === self.findIndex(p => p.heading === pairing.heading && p.body === pairing.body)
-          );
-          return uniquePairings;
-        }
-        
-        // If it's a sans-serif font, suggest serif pairings
-        if (specifiedFont.category === 'sans-serif') {
-          const complementaryPairings = FONT_PAIRINGS.filter(pairing => {
-            const headingFont = RESTAURANT_GOOGLE_FONTS.find(f => f.family === pairing.heading);
-            return headingFont && headingFont.category === 'serif';
-          });
-          const directPairings = FONT_PAIRINGS.filter(pairing => 
-            pairing.heading === fontFamily || pairing.body === fontFamily
-          );
-          
-          // Deduplicate by combining and filtering unique pairings
-          const allPairings = [...complementaryPairings, ...directPairings];
-          const uniquePairings = allPairings.filter((pairing, index, self) =>
-            index === self.findIndex(p => p.heading === pairing.heading && p.body === pairing.body)
-          );
-          return uniquePairings;
-        }
-      }
-      
-      // Fallback: return pairings that include the specified font
+      // Return pairings that include the specified font
       return FONT_PAIRINGS.filter(pairing => 
         pairing.heading === fontFamily || pairing.body === fontFamily
       );
     }
-    
-    // Return all pairings sorted by category
-    // Create a copy to avoid mutating the shared constant
-    return [...FONT_PAIRINGS].sort((a, b) => {
-      if (a.category < b.category) return -1;
-      if (a.category > b.category) return 1;
-      return 0;
-    });
+    return FONT_PAIRINGS;
   },
 
   async getDefaultTypographyConfigs(): Promise<typeof DEFAULT_TYPOGRAPHY_CONFIGS> {
@@ -682,131 +630,6 @@ export const themingService = {
   }
 };
 
-// Predefined Color Schemes Library (50+ restaurant color palettes)
-export const PREDEFINED_COLOR_SCHEMES: ColorPaletteData[] = [
-  // Fine Dining Palettes
-  { name: 'Classic Elegance', primaryColor: '#1a1a1a', secondaryColor: '#d4af37', accentColor: '#8b7355', backgroundColor: '#f5f5f0', textColor: '#2c2c2c', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#d32f2f' },
-  { name: 'Royal Gold', primaryColor: '#2c1810', secondaryColor: '#d4af37', accentColor: '#8b6914', backgroundColor: '#fffef7', textColor: '#1a1a1a', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#c62828' },
-  { name: 'Midnight Blue', primaryColor: '#0d1b2a', secondaryColor: '#415a77', accentColor: '#778da9', backgroundColor: '#f8f9fa', textColor: '#212529', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#d32f2f' },
-  { name: 'Burgundy Luxury', primaryColor: '#6b2c3e', secondaryColor: '#8b4a5c', accentColor: '#a67c7c', backgroundColor: '#faf8f5', textColor: '#2c1810', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#c62828' },
-  { name: 'Forest Green', primaryColor: '#1b4332', secondaryColor: '#2d6a4f', accentColor: '#40916c', backgroundColor: '#f1f8f4', textColor: '#081c15', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#d32f2f' },
-  
-  // Casual Dining Palettes
-  { name: 'Warm Terracotta', primaryColor: '#c97d60', secondaryColor: '#e07a5f', accentColor: '#f2cc8f', backgroundColor: '#fff8f0', textColor: '#3d405b', successColor: '#81b29a', warningColor: '#f2cc8f', errorColor: '#e07a5f' },
-  { name: 'Sunset Orange', primaryColor: '#ff6b35', secondaryColor: '#f7931e', accentColor: '#ffc857', backgroundColor: '#fffef0', textColor: '#2c1810', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#d32f2f' },
-  { name: 'Ocean Breeze', primaryColor: '#0077be', secondaryColor: '#00a8e8', accentColor: '#89cff0', backgroundColor: '#f0f8ff', textColor: '#1a1a2e', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#d32f2f' },
-  { name: 'Lavender Dream', primaryColor: '#6c5ce7', secondaryColor: '#a29bfe', accentColor: '#dfe6e9', backgroundColor: '#f8f9fa', textColor: '#2d3436', successColor: '#00b894', warningColor: '#fdcb6e', errorColor: '#d63031' },
-  { name: 'Rustic Brown', primaryColor: '#8b4513', secondaryColor: '#a0522d', accentColor: '#cd853f', backgroundColor: '#fff8dc', textColor: '#3e2723', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#c62828' },
-  
-  // Modern Café Palettes
-  { name: 'Espresso', primaryColor: '#3e2723', secondaryColor: '#5d4037', accentColor: '#8d6e63', backgroundColor: '#fafafa', textColor: '#212121', successColor: '#66bb6a', warningColor: '#ffa726', errorColor: '#ef5350' },
-  { name: 'Mint Fresh', primaryColor: '#00b894', secondaryColor: '#00cec9', accentColor: '#55efc4', backgroundColor: '#ffffff', textColor: '#2d3436', successColor: '#00b894', warningColor: '#fdcb6e', errorColor: '#d63031' },
-  { name: 'Coral Reef', primaryColor: '#ff7675', secondaryColor: '#fd79a8', accentColor: '#fdcb6e', backgroundColor: '#fffef0', textColor: '#2d3436', successColor: '#00b894', warningColor: '#fdcb6e', errorColor: '#d63031' },
-  { name: 'Sky Blue', primaryColor: '#0984e3', secondaryColor: '#74b9ff', accentColor: '#dfe6e9', backgroundColor: '#ffffff', textColor: '#2d3436', successColor: '#00b894', warningColor: '#fdcb6e', errorColor: '#d63031' },
-  { name: 'Peach Blush', primaryColor: '#fd79a8', secondaryColor: '#fdcb6e', accentColor: '#ffeaa7', backgroundColor: '#fffef0', textColor: '#2d3436', successColor: '#00b894', warningColor: '#fdcb6e', errorColor: '#d63031' },
-  
-  // Italian Restaurant Palettes
-  { name: 'Italian Red', primaryColor: '#c41e3a', secondaryColor: '#dc143c', accentColor: '#8b0000', backgroundColor: '#fff5ee', textColor: '#2c1810', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#c41e3a' },
-  { name: 'Tuscan Sun', primaryColor: '#d2691e', secondaryColor: '#cd853f', accentColor: '#daa520', backgroundColor: '#fffef0', textColor: '#3e2723', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#c62828' },
-  { name: 'Olive Grove', primaryColor: '#556b2f', secondaryColor: '#6b8e23', accentColor: '#9acd32', backgroundColor: '#f5f5dc', textColor: '#2c1810', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#c62828' },
-  
-  // Asian Restaurant Palettes
-  { name: 'Cherry Blossom', primaryColor: '#d81b60', secondaryColor: '#e91e63', accentColor: '#f06292', backgroundColor: '#fffef0', textColor: '#1a1a1a', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#c62828' },
-  { name: 'Bamboo Green', primaryColor: '#2e7d32', secondaryColor: '#388e3c', accentColor: '#66bb6a', backgroundColor: '#f1f8f4', textColor: '#1b5e20', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#c62828' },
-  { name: 'Dragon Red', primaryColor: '#b71c1c', secondaryColor: '#c62828', accentColor: '#d32f2f', backgroundColor: '#fff5f5', textColor: '#1a0000', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#b71c1c' },
-  
-  // Mexican Restaurant Palettes
-  { name: 'Fiesta', primaryColor: '#e63946', secondaryColor: '#f77f00', accentColor: '#fcbf49', backgroundColor: '#fffef0', textColor: '#1a1a1a', successColor: '#4caf50', warningColor: '#f77f00', errorColor: '#e63946' },
-  { name: 'Desert Sunset', primaryColor: '#d2691e', secondaryColor: '#cd853f', accentColor: '#daa520', backgroundColor: '#fff8dc', textColor: '#3e2723', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#c62828' },
-  
-  // Seafood Restaurant Palettes
-  { name: 'Ocean Deep', primaryColor: '#0d47a1', secondaryColor: '#1565c0', accentColor: '#42a5f5', backgroundColor: '#e3f2fd', textColor: '#0d47a1', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#d32f2f' },
-  { name: 'Aqua Marine', primaryColor: '#00695c', secondaryColor: '#00897b', accentColor: '#26a69a', backgroundColor: '#e0f2f1', textColor: '#004d40', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#d32f2f' },
-  
-  // Bakery/Café Palettes
-  { name: 'Vanilla Cream', primaryColor: '#8b7355', secondaryColor: '#a0826d', accentColor: '#d4af37', backgroundColor: '#fffef7', textColor: '#3e2723', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#c62828' },
-  { name: 'Chocolate', primaryColor: '#3e2723', secondaryColor: '#5d4037', accentColor: '#8d6e63', backgroundColor: '#fff8e1', textColor: '#3e2723', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#c62828' },
-  
-  // More Fine Dining
-  { name: 'Platinum', primaryColor: '#424242', secondaryColor: '#616161', accentColor: '#9e9e9e', backgroundColor: '#fafafa', textColor: '#212121', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#d32f2f' },
-  { name: 'Ivory Elegance', primaryColor: '#5d4e37', secondaryColor: '#8b7355', accentColor: '#c9a961', backgroundColor: '#fffef7', textColor: '#3e2723', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#c62828' },
-  { name: 'Wine Cellar', primaryColor: '#4a148c', secondaryColor: '#6a1b9a', accentColor: '#9c27b0', backgroundColor: '#f3e5f5', textColor: '#1a0000', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#c62828' },
-  
-  // More Casual
-  { name: 'Farm Fresh', primaryColor: '#558b2f', secondaryColor: '#689f38', accentColor: '#8bc34a', backgroundColor: '#f1f8e9', textColor: '#33691e', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#d32f2f' },
-  { name: 'Country Kitchen', primaryColor: '#8d6e63', secondaryColor: '#a1887f', accentColor: '#bcaaa4', backgroundColor: '#fafafa', textColor: '#3e2723', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#c62828' },
-  { name: 'Garden Party', primaryColor: '#2e7d32', secondaryColor: '#388e3c', accentColor: '#66bb6a', backgroundColor: '#e8f5e9', textColor: '#1b5e20', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#c62828' },
-  
-  // Modern Minimalist
-  { name: 'Monochrome', primaryColor: '#212121', secondaryColor: '#424242', accentColor: '#616161', backgroundColor: '#ffffff', textColor: '#212121', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#d32f2f' },
-  { name: 'Clean White', primaryColor: '#757575', secondaryColor: '#9e9e9e', accentColor: '#bdbdbd', backgroundColor: '#ffffff', textColor: '#212121', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#d32f2f' },
-  { name: 'Charcoal', primaryColor: '#212121', secondaryColor: '#424242', accentColor: '#757575', backgroundColor: '#f5f5f5', textColor: '#212121', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#d32f2f' },
-  
-  // Vibrant & Bold
-  { name: 'Electric Blue', primaryColor: '#0d47a1', secondaryColor: '#1976d2', accentColor: '#42a5f5', backgroundColor: '#e3f2fd', textColor: '#0d47a1', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#d32f2f' },
-  { name: 'Vibrant Purple', primaryColor: '#4a148c', secondaryColor: '#7b1fa2', accentColor: '#ba68c8', backgroundColor: '#f3e5f5', textColor: '#1a0000', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#c62828' },
-  { name: 'Hot Pink', primaryColor: '#880e4f', secondaryColor: '#c2185b', accentColor: '#f06292', backgroundColor: '#fce4ec', textColor: '#1a0000', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#c62828' },
-  
-  // Earth Tones
-  { name: 'Sage Green', primaryColor: '#558b2f', secondaryColor: '#689f38', accentColor: '#9ccc65', backgroundColor: '#f1f8e9', textColor: '#33691e', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#d32f2f' },
-  { name: 'Terracotta', primaryColor: '#bf360c', secondaryColor: '#d84315', accentColor: '#ff6f00', backgroundColor: '#fff3e0', textColor: '#3e2723', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#c62828' },
-  { name: 'Sandstone', primaryColor: '#8d6e63', secondaryColor: '#a1887f', accentColor: '#bcaaa4', backgroundColor: '#fafafa', textColor: '#3e2723', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#c62828' },
-  
-  // Coastal
-  { name: 'Beach House', primaryColor: '#0277bd', secondaryColor: '#0288d1', accentColor: '#81d4fa', backgroundColor: '#e1f5fe', textColor: '#01579b', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#d32f2f' },
-  { name: 'Seashell', primaryColor: '#5d4037', secondaryColor: '#6d4c41', accentColor: '#8d6e63', backgroundColor: '#fff8e1', textColor: '#3e2723', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#c62828' },
-  
-  // More options to reach 50+
-  { name: 'Amber Glow', primaryColor: '#ff6f00', secondaryColor: '#ff8f00', accentColor: '#ffb300', backgroundColor: '#fff8e1', textColor: '#3e2723', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#c62828' },
-  { name: 'Emerald', primaryColor: '#004d40', secondaryColor: '#00695c', accentColor: '#26a69a', backgroundColor: '#e0f2f1', textColor: '#004d40', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#d32f2f' },
-  { name: 'Rose Gold', primaryColor: '#b71c1c', secondaryColor: '#c62828', accentColor: '#e57373', backgroundColor: '#ffebee', textColor: '#1a0000', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#c62828' },
-  { name: 'Slate Blue', primaryColor: '#283593', secondaryColor: '#3949ab', accentColor: '#5c6bc0', backgroundColor: '#e8eaf6', textColor: '#1a237e', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#d32f2f' },
-  { name: 'Mocha', primaryColor: '#3e2723', secondaryColor: '#5d4037', accentColor: '#8d6e63', backgroundColor: '#efebe9', textColor: '#3e2723', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#c62828' },
-  { name: 'Lime Fresh', primaryColor: '#827717', secondaryColor: '#9e9d24', accentColor: '#c5ca33', backgroundColor: '#f9fbe7', textColor: '#33691e', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#d32f2f' },
-  { name: 'Crimson', primaryColor: '#b71c1c', secondaryColor: '#c62828', accentColor: '#d32f2f', backgroundColor: '#ffebee', textColor: '#1a0000', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#c62828' },
-  { name: 'Teal', primaryColor: '#004d40', secondaryColor: '#00796b', accentColor: '#00897b', backgroundColor: '#e0f2f1', textColor: '#004d40', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#d32f2f' },
-  { name: 'Indigo', primaryColor: '#1a237e', secondaryColor: '#283593', accentColor: '#3949ab', backgroundColor: '#e8eaf6', textColor: '#1a237e', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#d32f2f' },
-  { name: 'Coral', primaryColor: '#d84315', secondaryColor: '#e64a19', accentColor: '#ff5722', backgroundColor: '#fff3e0', textColor: '#3e2723', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#c62828' },
-  { name: 'Turquoise', primaryColor: '#006064', secondaryColor: '#00838f', accentColor: '#00acc1', backgroundColor: '#e0f7fa', textColor: '#004d40', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#d32f2f' },
-  { name: 'Magenta', primaryColor: '#880e4f', secondaryColor: '#ad1457', accentColor: '#c2185b', backgroundColor: '#fce4ec', textColor: '#1a0000', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#c62828' },
-  { name: 'Navy', primaryColor: '#0d47a1', secondaryColor: '#1565c0', accentColor: '#1976d2', backgroundColor: '#e3f2fd', textColor: '#0d47a1', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#d32f2f' },
-  { name: 'Olive', primaryColor: '#558b2f', secondaryColor: '#689f38', accentColor: '#7cb342', backgroundColor: '#f1f8e9', textColor: '#33691e', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#d32f2f' },
-  { name: 'Maroon', primaryColor: '#b71c1c', secondaryColor: '#c62828', accentColor: '#d32f2f', backgroundColor: '#ffebee', textColor: '#1a0000', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#c62828' },
-  { name: 'Cyan', primaryColor: '#006064', secondaryColor: '#00838f', accentColor: '#00bcd4', backgroundColor: '#e0f7fa', textColor: '#004d40', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#d32f2f' },
-  { name: 'Amethyst', primaryColor: '#4a148c', secondaryColor: '#6a1b9a', accentColor: '#9c27b0', backgroundColor: '#f3e5f5', textColor: '#1a0000', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#c62828' },
-  { name: 'Topaz', primaryColor: '#ff6f00', secondaryColor: '#ff8f00', accentColor: '#ffa726', backgroundColor: '#fff3e0', textColor: '#3e2723', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#c62828' },
-  { name: 'Jade', primaryColor: '#004d40', secondaryColor: '#00695c', accentColor: '#26a69a', backgroundColor: '#e0f2f1', textColor: '#004d40', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#d32f2f' },
-  { name: 'Ruby', primaryColor: '#b71c1c', secondaryColor: '#c62828', accentColor: '#e57373', backgroundColor: '#ffebee', textColor: '#1a0000', successColor: '#4caf50', warningColor: '#ff9800', errorColor: '#c62828' }
-];
-
-// Color extraction using Canvas API (client-side) or server-side library
-export async function extractColorsFromImage(imageUrl: string): Promise<string[]> {
-  try {
-    // For server-side, we can use a library like 'node-vibrant' or 'colorthief'
-    // For now, return a placeholder that will be implemented with actual extraction
-    // Client-side extraction will be handled in the frontend component
-    
-    // TODO: Implement server-side color extraction using a library
-    // Example with node-vibrant (would need to be installed):
-    // const vibrant = require('node-vibrant');
-    // const palette = await vibrant.from(imageUrl).getPalette();
-    // return Object.values(palette).map(color => color.hex);
-    
-    // Placeholder return
-    return [
-      '#8B4513', // Saddle Brown
-      '#DEB887', // Burlywood  
-      '#F4A460', // Sandy Brown
-      '#CD853F', // Peru
-      '#D2691E'  // Chocolate
-    ];
-  } catch (error) {
-    console.error('Error extracting colors:', error);
-    // Return default colors on error
-    return ['#1976d2', '#dc004e', '#333333'];
-  }
-}
-
 // Calculate contrast ratio for accessibility validation
 export function calculateContrastRatio(color1: string, color2: string): number {
   // Convert hex to RGB
@@ -841,10 +664,12 @@ export function calculateContrastRatio(color1: string, color2: string): number {
 }
 
 // Validate color palette accessibility
+// FIXED: Return null instead of 'FAIL' for wcagLevel when contrast is below AA standards
+// Database column is VarChar(3) and cannot store 'FAIL' (4 characters)
 export function validateColorPaletteAccessibility(palette: ColorPaletteData): {
   isValid: boolean;
   contrastRatio: number;
-  wcagLevel: 'AA' | 'AAA' | 'FAIL';
+  wcagLevel: 'AA' | 'AAA' | null; // Changed from 'FAIL' to null to fit VarChar(3) constraint
   warnings: string[];
 } {
   const warnings: string[] = [];
@@ -853,7 +678,7 @@ export function validateColorPaletteAccessibility(palette: ColorPaletteData): {
   const textBgContrast = calculateContrastRatio(palette.textColor, palette.backgroundColor);
   const primaryBgContrast = calculateContrastRatio(palette.primaryColor, palette.backgroundColor);
   
-  let wcagLevel: 'AA' | 'AAA' | 'FAIL' = 'FAIL';
+  let wcagLevel: 'AA' | 'AAA' | null = null; // Use null instead of 'FAIL' to fit database constraint
   
   if (textBgContrast >= 7) {
     wcagLevel = 'AAA';
@@ -875,7 +700,15 @@ export function validateColorPaletteAccessibility(palette: ColorPaletteData): {
   };
 }
 
-// Get predefined color schemes
-export function getPredefinedColorSchemes(): ColorPaletteData[] {
-  return PREDEFINED_COLOR_SCHEMES;
+// Helper function to extract colors from uploaded images (placeholder)
+export async function extractColorsFromImage(imageUrl: string): Promise<string[]> {
+  // TODO: Implement actual color extraction using a service like Cloudinary or a color extraction library
+  // For now, return some sample colors
+  return [
+    '#8B4513', // Saddle Brown
+    '#DEB887', // Burlywood  
+    '#F4A460', // Sandy Brown
+    '#CD853F', // Peru
+    '#D2691E'  // Chocolate
+  ];
 } 

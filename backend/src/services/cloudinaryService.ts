@@ -15,41 +15,23 @@ cloudinary.config({
  * Uploads a file to Cloudinary with restaurant-specific folder isolation
  * @param filePath Local path to the file to upload
  * @param folder Restaurant-specific folder (format: restaurants/{restaurantId}/assets)
- * @param restaurantId Restaurant ID for standardized folder structure
  * @returns Promise with the upload result
  */
-export const uploadImage = async (
-  filePath: string, 
-  folder: string = 'recipe-photos',
-  restaurantId?: number
-): Promise<{url: string, publicId: string, bytes?: number}> => {
+export const uploadImage = async (filePath: string, folder: string = 'recipe-photos'): Promise<{url: string, publicId: string}> => {
   try {
-    // Enforce standardized folder structure: restaurants/{restaurantId}/assets/{subfolder}
-    let targetFolder = folder;
-    if (restaurantId) {
-      // Standardize to restaurants/{id}/assets/{subfolder} format
-      if (folder.startsWith('restaurants/')) {
-        // Already in correct format, use as-is
-        targetFolder = folder;
-      } else {
-        // Convert old format to new standardized format
-        targetFolder = `restaurants/${restaurantId}/assets/${folder}`;
-      }
-    }
-    
     // Validate folder format for security
-    if (targetFolder.startsWith('restaurants/') && !targetFolder.match(/^restaurants\/\d+\/[a-zA-Z0-9_\/-]+$/)) {
-      throw new Error('Invalid folder format. Must be restaurants/{restaurantId}/assets/{subfolder}');
+    if (folder.startsWith('restaurants/') && !folder.match(/^restaurants\/\d+\/[a-zA-Z0-9_-]+$/)) {
+      throw new Error('Invalid folder format. Must be restaurants/{restaurantId}/{subfolder}');
     }
     
     // Upload the image
     const result = await cloudinary.uploader.upload(filePath, {
-      folder: targetFolder,
+      folder: folder,
       resource_type: 'auto', // Support images, videos, and documents
       access_mode: 'public' // Ensure public access for web display
     });
     
-    console.log(`Uploaded to Cloudinary: ${result.public_id} in folder: ${targetFolder}`);
+    console.log(`Uploaded to Cloudinary: ${result.public_id} in folder: ${folder}`);
     
     // Delete the local file after successful upload
     try {
@@ -61,11 +43,83 @@ export const uploadImage = async (
     
     return {
       url: result.secure_url,
-      publicId: result.public_id,
-      bytes: result.bytes
+      publicId: result.public_id
     };
   } catch (error) {
     console.error('Error uploading to Cloudinary:', error);
+    throw error;
+  }
+};
+
+/**
+ * Lists all assets in a restaurant-specific folder
+ * @param restaurantId The restaurant ID for folder isolation
+ * @param maxResults Maximum number of results to return (default: 100)
+ * @returns Promise with array of Cloudinary assets
+ */
+export const listRestaurantAssets = async (restaurantId: number, maxResults: number = 100): Promise<any[]> => {
+  try {
+    const folderPrefix = `restaurants/${restaurantId}/`;
+    
+    // Search for all assets in the restaurant's folder
+    const result = await cloudinary.search
+      .expression(`folder:${folderPrefix}*`)
+      .sort_by('created_at', 'desc')
+      .max_results(maxResults)
+      .execute();
+    
+    console.log(`Found ${result.resources.length} existing assets for restaurant ${restaurantId}`);
+    
+    return result.resources.map((asset: any) => ({
+      publicId: asset.public_id,
+      url: asset.secure_url,
+      fileName: asset.filename || asset.public_id.split('/').pop(),
+      fileSize: asset.bytes,
+      mimeType: asset.format ? `${asset.resource_type}/${asset.format}` : 'unknown',
+      assetType: asset.resource_type,
+      createdAt: asset.created_at,
+      width: asset.width,
+      height: asset.height,
+      folder: asset.folder
+    }));
+  } catch (error) {
+    console.error(`Error listing assets for restaurant ${restaurantId}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Validates that a public_id belongs to a specific restaurant (security check)
+ * @param publicId The Cloudinary public ID to validate
+ * @param restaurantId The restaurant ID that should own this asset
+ * @returns boolean indicating if the asset belongs to the restaurant
+ */
+export const validateAssetOwnership = (publicId: string, restaurantId: number): boolean => {
+  const expectedPrefix = `restaurants/${restaurantId}/`;
+  return publicId.startsWith(expectedPrefix);
+};
+
+/**
+ * Deletes an image from Cloudinary with optional ownership validation
+ * @param publicId The public ID of the image to delete
+ * @param restaurantId Optional restaurant ID for security validation (for new assets)
+ */
+export const deleteImage = async (publicId: string, restaurantId?: number): Promise<void> => {
+  if (!publicId) {
+    console.warn('No publicId provided for deletion, skipping');
+    return;
+  }
+  
+  // Security check: ensure the asset belongs to the restaurant (only for new assets with restaurant folder structure)
+  if (restaurantId && publicId.startsWith('restaurants/') && !validateAssetOwnership(publicId, restaurantId)) {
+    throw new Error(`Security violation: Asset ${publicId} does not belong to restaurant ${restaurantId}`);
+  }
+  
+  try {
+    const result = await cloudinary.uploader.destroy(publicId);
+    console.log(`Deleted image from Cloudinary: ${publicId}, result: ${result.result}`);
+  } catch (error) {
+    console.error(`Error deleting image from Cloudinary (${publicId}):`, error);
     throw error;
   }
 };
@@ -128,9 +182,11 @@ export const migrateRestaurantAssets = async (
   };
 
   try {
-    // Get all assets for this restaurant from Cloudinary
+    // FIXED: Search specifically for restaurant's folder instead of all folders
+    // This ensures we get the correct assets even in multi-tenant environments
+    const restaurantFolderPrefix = `restaurants/${restaurantId}/`;
     const allAssets = await cloudinary.search
-      .expression(`folder:*`)
+      .expression(`folder:${restaurantFolderPrefix}*`)
       .sort_by('created_at', 'desc')
       .max_results(500)
       .execute();
@@ -209,79 +265,6 @@ export const migrateRestaurantAssets = async (
     return results;
   } catch (error) {
     console.error('Error migrating restaurant assets:', error);
-    throw error;
-  }
-};
-
-/**
- * Lists all assets in a restaurant-specific folder
- * @param restaurantId The restaurant ID for folder isolation
- * @param maxResults Maximum number of results to return (default: 100)
- * @returns Promise with array of Cloudinary assets
- */
-export const listRestaurantAssets = async (restaurantId: number, maxResults: number = 100): Promise<any[]> => {
-  try {
-    const folderPrefix = `restaurants/${restaurantId}/`;
-    
-    // Search for all assets in the restaurant's folder
-    const result = await cloudinary.search
-      .expression(`folder:${folderPrefix}*`)
-      .sort_by('created_at', 'desc')
-      .max_results(maxResults)
-      .execute();
-    
-    console.log(`Found ${result.resources.length} existing assets for restaurant ${restaurantId}`);
-    
-    return result.resources.map((asset: any) => ({
-      publicId: asset.public_id,
-      url: asset.secure_url,
-      fileName: asset.filename || asset.public_id.split('/').pop(),
-      fileSize: asset.bytes,
-      mimeType: asset.format ? `${asset.resource_type}/${asset.format}` : 'unknown',
-      assetType: asset.resource_type,
-      createdAt: asset.created_at,
-      width: asset.width,
-      height: asset.height,
-      folder: asset.folder
-    }));
-  } catch (error) {
-    console.error(`Error listing assets for restaurant ${restaurantId}:`, error);
-    throw error;
-  }
-};
-
-/**
- * Validates that a public_id belongs to a specific restaurant (security check)
- * @param publicId The Cloudinary public ID to validate
- * @param restaurantId The restaurant ID that should own this asset
- * @returns boolean indicating if the asset belongs to the restaurant
- */
-export const validateAssetOwnership = (publicId: string, restaurantId: number): boolean => {
-  const expectedPrefix = `restaurants/${restaurantId}/`;
-  return publicId.startsWith(expectedPrefix);
-};
-
-/**
- * Deletes an image from Cloudinary with optional ownership validation
- * @param publicId The public ID of the image to delete
- * @param restaurantId Optional restaurant ID for security validation (for new assets)
- */
-export const deleteImage = async (publicId: string, restaurantId?: number): Promise<void> => {
-  if (!publicId) {
-    console.warn('No publicId provided for deletion, skipping');
-    return;
-  }
-  
-  // Security check: ensure the asset belongs to the restaurant (only for new assets with restaurant folder structure)
-  if (restaurantId && publicId.startsWith('restaurants/') && !validateAssetOwnership(publicId, restaurantId)) {
-    throw new Error(`Security violation: Asset ${publicId} does not belong to restaurant ${restaurantId}`);
-  }
-  
-  try {
-    const result = await cloudinary.uploader.destroy(publicId);
-    console.log(`Deleted image from Cloudinary: ${publicId}, result: ${result.result}`);
-  } catch (error) {
-    console.error(`Error deleting image from Cloudinary (${publicId}):`, error);
     throw error;
   }
 };

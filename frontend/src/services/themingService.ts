@@ -116,6 +116,7 @@ export interface BrandAsset {
   altText?: string;
   description?: string;
   isPrimary: boolean;
+  cloudinaryPublicId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -133,6 +134,7 @@ export interface BrandAssetData {
   altText?: string;
   description?: string;
   isPrimary?: boolean;
+  cloudinaryPublicId?: string;
 }
 
 export interface GoogleFont {
