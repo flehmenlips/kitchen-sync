@@ -226,8 +226,14 @@ const CustomerReservationPage: React.FC = () => {
   }
 
   const handleNext = () => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CustomerReservationPage.tsx:228',message:'handleNext entry',data:{hasUser:!!user,emailVerified:user?.emailVerified,activeStep},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     // Check authentication before proceeding
     if (!user) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CustomerReservationPage.tsx:230',message:'handleNext no user',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       enqueueSnackbar('Please sign in to make a reservation', { variant: 'warning' });
       navigate(buildCustomerUrl('login'), { 
         state: { from: '/reservations/new', message: 'Please sign in to make a reservation' }
@@ -236,7 +242,13 @@ const CustomerReservationPage: React.FC = () => {
     }
 
     // Check email verification (handles false, undefined, and null)
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CustomerReservationPage.tsx:239',message:'email verification check frontend',data:{emailVerified:user.emailVerified,emailVerifiedType:typeof user.emailVerified,emailVerifiedStrict:user.emailVerified === true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
     if (user.emailVerified !== true) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CustomerReservationPage.tsx:240',message:'email verification failed frontend',data:{emailVerified:user.emailVerified},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
       enqueueSnackbar('Please verify your email address before making a reservation', { variant: 'warning' });
       navigate(buildCustomerUrl('verify-email-sent'), {
         state: { from: '/reservations/new', message: 'Email verification required' }
@@ -263,8 +275,14 @@ const CustomerReservationPage: React.FC = () => {
   };
 
   const handleSubmit = async () => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CustomerReservationPage.tsx:265',message:'handleSubmit entry',data:{hasUser:!!user,emailVerified:user?.emailVerified,formData:JSON.stringify({reservationDate:formData.reservationDate,reservationTime:formData.reservationTime,partySize:formData.partySize})},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     // Double-check authentication before submitting
     if (!user) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CustomerReservationPage.tsx:267',message:'handleSubmit no user',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       enqueueSnackbar('Please sign in to make a reservation', { variant: 'error' });
       navigate(buildCustomerUrl('login'), { 
         state: { from: '/reservations/new', message: 'Please sign in to make a reservation' }
@@ -273,7 +291,13 @@ const CustomerReservationPage: React.FC = () => {
     }
 
     // Double-check email verification (handles false, undefined, and null)
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CustomerReservationPage.tsx:276',message:'email verification check handleSubmit',data:{emailVerified:user.emailVerified},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
     if (user.emailVerified !== true) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CustomerReservationPage.tsx:277',message:'email verification failed handleSubmit',data:{emailVerified:user.emailVerified},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
       enqueueSnackbar('Please verify your email address before making a reservation', { variant: 'error' });
       navigate(buildCustomerUrl('verify-email-sent'), {
         state: { from: '/reservations/new', message: 'Email verification required' }
@@ -285,7 +309,9 @@ const CustomerReservationPage: React.FC = () => {
     
     try {
       const restaurantSlug = getCurrentRestaurantSlug();
-      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CustomerReservationPage.tsx:287',message:'preparing reservation data',data:{restaurantSlug,reservationDate:format(formData.reservationDate!,'yyyy-MM-dd'),reservationTime:formData.reservationTime,partySize:parseInt(formData.partySize)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
       const data: ReservationFormData & { 
         restaurantSlug?: string;
       } = {
@@ -297,17 +323,28 @@ const CustomerReservationPage: React.FC = () => {
         // Include restaurant slug
         restaurantSlug: restaurantSlug || undefined
       };
-      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CustomerReservationPage.tsx:300',message:'calling createReservation API',data:{data:JSON.stringify(data)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       const response = await customerReservationService.createReservation(data);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CustomerReservationPage.tsx:301',message:'createReservation API success',data:{reservationId:response.reservation?.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       setConfirmationData(response.reservation);
       setActiveStep(1); // Move to confirmation step
       enqueueSnackbar('Reservation confirmed!', { variant: 'success' });
     } catch (error: any) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CustomerReservationPage.tsx:305',message:'createReservation API error',data:{errorStatus:error.response?.status,errorData:JSON.stringify(error.response?.data),errorMessage:error.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       console.error('Error creating reservation:', error);
       const errorResponse = error.response?.data;
       
       // Handle specific error cases
       if (errorResponse?.requiresVerification) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CustomerReservationPage.tsx:310',message:'requiresVerification error handled',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+        // #endregion
         enqueueSnackbar('Please verify your email address before making a reservation', { variant: 'error' });
         navigate(buildCustomerUrl('verify-email-sent'), {
           state: { from: '/reservations/new', message: errorResponse.message }
@@ -316,6 +353,9 @@ const CustomerReservationPage: React.FC = () => {
       }
       
       if (error.response?.status === 401) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CustomerReservationPage.tsx:318',message:'401 error handled',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
         enqueueSnackbar('Please sign in to make a reservation', { variant: 'error' });
         navigate(buildCustomerUrl('login'), { 
           state: { from: '/reservations/new', message: 'Authentication required' }

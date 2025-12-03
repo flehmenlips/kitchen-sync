@@ -305,8 +305,14 @@ export const customerReservationController = {
   // Create a new reservation
   async createReservation(req: CustomerAuthRequest, res: Response) {
     try {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'customerReservationController.ts:306',message:'createReservation entry',data:{hasCustomer:!!req.customer,hasCustomerUser:!!req.customerUser,customerId:req.customer?.id,customerUserId:req.customerUser?.userId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       // REQUIRE AUTHENTICATION - No more public reservations
       if (!req.customer?.id && !req.customerUser?.userId) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'customerReservationController.ts:310',message:'auth check failed',data:{hasCustomer:!!req.customer,hasCustomerUser:!!req.customerUser},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
         return res.status(401).json({
           error: 'Authentication required',
           message: 'Please sign in or create an account to make a reservation'
@@ -318,6 +324,9 @@ export const customerReservationController = {
       
       // First try to get restaurant from slug
       const restaurantSlug = req.body.restaurantSlug || req.query.slug || req.params.slug;
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'customerReservationController.ts:320',message:'restaurant resolution start',data:{restaurantSlug,bodyRestaurantId:req.body.restaurantId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
       if (restaurantSlug) {
         const restaurant = await prisma.restaurant.findUnique({
           where: { slug: restaurantSlug },
@@ -328,20 +337,38 @@ export const customerReservationController = {
         }
       }
       
-      // Fall back to restaurantId from body or default
+      // Fall back to restaurantId from body (but never default to 1 - that's dangerous)
       if (!restaurantId) {
-        restaurantId = req.body.restaurantId || 1;
+        restaurantId = req.body.restaurantId;
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'customerReservationController.ts:333',message:'restaurant fallback check',data:{restaurantId,bodyRestaurantId:req.body.restaurantId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
       }
       
-      // Ensure restaurantId is set (required for Prisma)
+      // Fix Bug B: Ensure restaurantId is set - fail if not provided (never default to 1)
       if (!restaurantId) {
         return res.status(400).json({
-          error: 'Restaurant ID or slug is required'
+          error: 'Restaurant ID or slug is required',
+          message: 'Please provide a restaurant slug or restaurant ID'
         });
       }
 
       // Get authenticated customer
-      const customerIdFromAuth = req.customer?.id || req.customerUser!.userId;
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'customerReservationController.ts:344',message:'customer ID extraction before',data:{hasCustomer:!!req.customer,hasCustomerUser:!!req.customerUser,customerId:req.customer?.id,customerUserId:req.customerUser?.userId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      // Fix Bug A: Remove non-null assertion and add defensive check
+      const customerIdFromAuth = req.customer?.id || req.customerUser?.userId;
+      if (!customerIdFromAuth) {
+        // This should never happen due to check above, but be defensive
+        return res.status(401).json({
+          error: 'Authentication required',
+          message: 'Please sign in or create an account to make a reservation'
+        });
+      }
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'customerReservationController.ts:344',message:'customer ID extraction after',data:{customerIdFromAuth},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       
       // Fetch customer with email verification status
       const customer = await prisma.customer.findUnique({
@@ -362,6 +389,9 @@ export const customerReservationController = {
       }
 
       // REQUIRE EMAIL VERIFICATION
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'customerReservationController.ts:365',message:'email verification check',data:{emailVerified:customer.emailVerified,customerId:customer.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
       if (!customer.emailVerified) {
         return res.status(403).json({
           error: 'Email verification required',
@@ -370,25 +400,8 @@ export const customerReservationController = {
         });
       }
 
-      // Ensure customer-restaurant link exists (create if needed)
-      // Use upsert to prevent race condition from concurrent requests
-      await prisma.customerRestaurant.upsert({
-        where: {
-          customerId_restaurantId: {
-            customerId: customer.id,
-            restaurantId: restaurantId
-          }
-        },
-        create: {
-          customerId: customer.id,
-          restaurantId: restaurantId,
-          firstVisit: new Date()
-        },
-        update: {
-          // No-op: don't update existing records, just ensure they exist
-        }
-      });
-
+      // Fix Bug C: Wrap customerRestaurant upsert and reservation creation in transaction
+      // This ensures atomicity - if reservation creation fails, customerRestaurant upsert is rolled back
       const customerId = customer.id;
       const customerName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.email;
       const customerEmail = customer.email;
@@ -417,34 +430,67 @@ export const customerReservationController = {
       }
 
       // Validate date is not in the past
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'customerReservationController.ts:420',message:'date parsing before',data:{reservationDate,reservationTime,dateString:`${reservationDate}T${reservationTime}`},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       const reservationDateTime = new Date(`${reservationDate}T${reservationTime}`);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'customerReservationController.ts:421',message:'date parsing after',data:{reservationDateTime:reservationDateTime.toISOString(),now:new Date().toISOString(),isPast:reservationDateTime < new Date()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       if (reservationDateTime < new Date()) {
         return res.status(400).json({
           error: 'Cannot create reservations in the past'
         });
       }
 
-      // Create the reservation
-      const reservation = await prisma.reservation.create({
-        data: {
-          customerId: customerId || null, // Null for unauthenticated reservations
-          customerName,
-          customerEmail,
-          customerPhone,
-          restaurantId,
-          reservationDate: new Date(reservationDate),
-          reservationTime,
-          partySize: parseInt(partySize),
-          status: 'CONFIRMED',
-          notes,
-          specialRequests,
-          // userId is now nullable, so we don't need to provide it for customer reservations
-          source: 'customer_portal'
-        },
-        include: {
-          restaurant: true
-        }
+      // Use transaction to ensure atomicity
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'customerReservationController.ts:428',message:'transaction start',data:{customerId,restaurantId,reservationDate,reservationTime,partySize},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      const reservation = await prisma.$transaction(async (tx) => {
+        // Ensure customer-restaurant link exists (create if needed)
+        // Use upsert to prevent race condition from concurrent requests
+        await tx.customerRestaurant.upsert({
+          where: {
+            customerId_restaurantId: {
+              customerId: customer.id,
+              restaurantId: restaurantId
+            }
+          },
+          create: {
+            customerId: customer.id,
+            restaurantId: restaurantId,
+            firstVisit: new Date()
+          },
+          update: {
+            // No-op: don't update existing records, just ensure they exist
+          }
+        });
+
+        // Create the reservation
+        return await tx.reservation.create({
+          data: {
+            customerId: customerId || null,
+            customerName,
+            customerEmail,
+            customerPhone,
+            restaurantId,
+            reservationDate: new Date(reservationDate),
+            reservationTime,
+            partySize: parseInt(partySize),
+            status: 'CONFIRMED',
+            notes,
+            specialRequests,
+            source: 'customer_portal'
+          },
+          include: {
+            restaurant: true
+          }
+        });
       });
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'customerReservationController.ts:447',message:'transaction complete',data:{reservationId:reservation.id,restaurantId:reservation.restaurantId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
 
       // TODO: Send confirmation email
       // await emailService.sendReservationConfirmation(customer.email, reservation);
@@ -454,6 +500,9 @@ export const customerReservationController = {
         reservation
       });
     } catch (error: any) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'customerReservationController.ts:456',message:'createReservation error',data:{errorMessage:error.message,errorStack:error.stack,hasCustomer:!!req.customer,hasCustomerUser:!!req.customerUser},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       console.error('Create reservation error:', error);
       res.status(500).json({ 
         error: 'Failed to create reservation',

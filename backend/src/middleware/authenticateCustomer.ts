@@ -71,7 +71,13 @@ export const authenticateCustomer = async (
       // Use req.originalUrl instead of req.path because when middleware is applied via router.use(),
       // req.path is relative to the router (e.g., '/'), not the full path
       const requiresVerification = req.originalUrl.includes('/reservations') && req.method === 'POST';
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authenticateCustomer.ts:73',message:'email verification check middleware',data:{requiresVerification,emailVerified:customer.emailVerified,originalUrl:req.originalUrl,method:req.method},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
       if (requiresVerification && !customer.emailVerified) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authenticateCustomer.ts:74',message:'email verification blocked',data:{emailVerified:customer.emailVerified},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+        // #endregion
         res.status(403).json({ 
           error: 'Email verification required',
           message: 'Please verify your email address before making a reservation. Check your inbox for the verification email.',
