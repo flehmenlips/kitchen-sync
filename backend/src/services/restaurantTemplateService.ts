@@ -457,6 +457,580 @@ export const RESTAURANT_TEMPLATES: RestaurantTemplate[] = [
     isPremium: false,
     isActive: true,
     sortOrder: 6
+  },
+
+  // FAST CASUAL CATEGORY
+  {
+    id: 'fresh-fast',
+    name: 'Fresh & Fast',
+    category: 'fast-casual',
+    description: 'Clean and modern template for fast-casual restaurants emphasizing freshness and speed',
+    layoutConfig: {
+      heroStyle: 'standard',
+      menuStyle: 'grid',
+      aboutStyle: 'centered',
+      navigationStyle: 'modern',
+      footerStyle: 'minimal',
+      sectionSpacing: 'tight',
+      containerMaxWidth: 'wide',
+      borderRadius: 'standard',
+      shadows: 'subtle'
+    },
+    defaultColors: {
+      primary: '#4caf50',
+      secondary: '#81c784',
+      accent: '#ff9800',
+      background: '#ffffff',
+      surface: '#f1f8e9',
+      text: '#1b5e20',
+      textSecondary: '#388e3c',
+      border: '#c8e6c9',
+      success: '#4caf50',
+      warning: '#ff9800',
+      error: '#f44336'
+    },
+    defaultTypography: {
+      headingFont: 'Montserrat, sans-serif',
+      bodyFont: 'Roboto, sans-serif',
+      headingSizes: {
+        h1: '2.5rem',
+        h2: '2rem',
+        h3: '1.75rem',
+        h4: '1.5rem',
+        h5: '1.25rem',
+        h6: '1.125rem'
+      },
+      bodySize: '1rem',
+      lineHeight: {
+        heading: '1.2',
+        body: '1.5'
+      },
+      fontWeights: {
+        light: 300,
+        regular: 400,
+        medium: 500,
+        bold: 700
+      },
+      letterSpacing: {
+        tight: '0',
+        normal: '0',
+        wide: '0.01em'
+      }
+    },
+    features: ['online-ordering', 'nutrition-info', 'allergy-alerts', 'meal-prep', 'loyalty-program'],
+    isPremium: false,
+    isActive: true,
+    sortOrder: 7
+  },
+
+  // BAKERY CATEGORY
+  {
+    id: 'artisan-bakery',
+    name: 'Artisan Bakery',
+    category: 'bakery',
+    description: 'Warm and inviting template showcasing fresh baked goods and artisan craftsmanship',
+    layoutConfig: {
+      heroStyle: 'carousel',
+      menuStyle: 'masonry',
+      aboutStyle: 'side-by-side',
+      navigationStyle: 'header',
+      footerStyle: 'expanded',
+      sectionSpacing: 'relaxed',
+      containerMaxWidth: 'standard',
+      borderRadius: 'rounded',
+      shadows: 'standard'
+    },
+    defaultColors: {
+      primary: '#8d6e63',
+      secondary: '#d7ccc8',
+      accent: '#ffb74d',
+      background: '#fff8e1',
+      surface: '#ffffff',
+      text: '#3e2723',
+      textSecondary: '#6d4c41',
+      border: '#d7ccc8',
+      success: '#66bb6a',
+      warning: '#ffa726',
+      error: '#ef5350'
+    },
+    defaultTypography: {
+      headingFont: 'Dancing Script, cursive',
+      bodyFont: 'Lato, sans-serif',
+      accentFont: 'Great Vibes, cursive',
+      headingSizes: {
+        h1: '3rem',
+        h2: '2.5rem',
+        h3: '2rem',
+        h4: '1.75rem',
+        h5: '1.5rem',
+        h6: '1.25rem'
+      },
+      bodySize: '1rem',
+      lineHeight: {
+        heading: '1.3',
+        body: '1.6'
+      },
+      fontWeights: {
+        light: 300,
+        regular: 400,
+        medium: 500,
+        bold: 600
+      },
+      letterSpacing: {
+        tight: '0',
+        normal: '0',
+        wide: '0.02em'
+      }
+    },
+    features: ['daily-specials', 'custom-orders', 'catering', 'recipe-blog', 'seasonal-items'],
+    isPremium: false,
+    isActive: true,
+    sortOrder: 8
+  },
+
+  // BAR CATEGORY
+  {
+    id: 'craft-cocktails',
+    name: 'Craft Cocktails',
+    category: 'bar',
+    description: 'Bold and sophisticated template for bars, breweries, and cocktail lounges',
+    layoutConfig: {
+      heroStyle: 'fullscreen',
+      menuStyle: 'tabs',
+      aboutStyle: 'overlay',
+      navigationStyle: 'floating',
+      footerStyle: 'minimal',
+      sectionSpacing: 'standard',
+      containerMaxWidth: 'standard',
+      borderRadius: 'subtle',
+      shadows: 'dramatic'
+    },
+    defaultColors: {
+      primary: '#1a1a1a',
+      secondary: '#ffd700',
+      accent: '#c9a961',
+      background: '#0a0a0a',
+      surface: '#1a1a1a',
+      text: '#ffffff',
+      textSecondary: '#b0b0b0',
+      border: '#333333',
+      success: '#4caf50',
+      warning: '#ff9800',
+      error: '#f44336'
+    },
+    defaultTypography: {
+      headingFont: 'Cormorant Garamond, serif',
+      bodyFont: 'Montserrat, sans-serif',
+      headingSizes: {
+        h1: '4rem',
+        h2: '3rem',
+        h3: '2.25rem',
+        h4: '1.875rem',
+        h5: '1.5rem',
+        h6: '1.25rem'
+      },
+      bodySize: '1rem',
+      lineHeight: {
+        heading: '1.1',
+        body: '1.6'
+      },
+      fontWeights: {
+        light: 300,
+        regular: 400,
+        medium: 500,
+        bold: 700
+      },
+      letterSpacing: {
+        tight: '-0.02em',
+        normal: '0',
+        wide: '0.05em'
+      }
+    },
+    features: ['cocktail-menu', 'live-music', 'happy-hour', 'private-events', 'bar-food'],
+    isPremium: true,
+    isActive: true,
+    sortOrder: 9
+  },
+
+  // SUSTAINABLE DINING
+  {
+    id: 'farm-to-table',
+    name: 'Farm to Table',
+    category: 'sustainable',
+    description: 'Eco-friendly template emphasizing local sourcing, sustainability, and organic ingredients',
+    layoutConfig: {
+      heroStyle: 'split',
+      menuStyle: 'accordion',
+      aboutStyle: 'stacked',
+      navigationStyle: 'header',
+      footerStyle: 'contact-focused',
+      sectionSpacing: 'generous',
+      containerMaxWidth: 'standard',
+      borderRadius: 'standard',
+      shadows: 'subtle'
+    },
+    defaultColors: {
+      primary: '#2e7d32',
+      secondary: '#66bb6a',
+      accent: '#ffb74d',
+      background: '#f1f8e9',
+      surface: '#ffffff',
+      text: '#1b5e20',
+      textSecondary: '#388e3c',
+      border: '#c8e6c9',
+      success: '#4caf50',
+      warning: '#ff9800',
+      error: '#e57373'
+    },
+    defaultTypography: {
+      headingFont: 'Merriweather, serif',
+      bodyFont: 'Source Sans Pro, sans-serif',
+      headingSizes: {
+        h1: '3rem',
+        h2: '2.5rem',
+        h3: '2rem',
+        h4: '1.75rem',
+        h5: '1.5rem',
+        h6: '1.25rem'
+      },
+      bodySize: '1rem',
+      lineHeight: {
+        heading: '1.3',
+        body: '1.7'
+      },
+      fontWeights: {
+        light: 300,
+        regular: 400,
+        medium: 500,
+        bold: 700
+      },
+      letterSpacing: {
+        tight: '-0.01em',
+        normal: '0',
+        wide: '0.01em'
+      }
+    },
+    features: ['local-sourcing', 'sustainability', 'seasonal-menu', 'farmer-partnerships', 'eco-practices'],
+    isPremium: false,
+    isActive: true,
+    sortOrder: 10
+  },
+
+  // WORLD CUISINE
+  {
+    id: 'asian-fusion',
+    name: 'Asian Fusion',
+    category: 'world-cuisine',
+    description: 'Modern template celebrating Asian cuisine with contemporary design elements',
+    layoutConfig: {
+      heroStyle: 'fullscreen',
+      menuStyle: 'grid',
+      aboutStyle: 'columns',
+      navigationStyle: 'modern',
+      footerStyle: 'standard',
+      sectionSpacing: 'standard',
+      containerMaxWidth: 'wide',
+      borderRadius: 'standard',
+      shadows: 'standard'
+    },
+    defaultColors: {
+      primary: '#d32f2f',
+      secondary: '#ff7043',
+      accent: '#ffa726',
+      background: '#fff3e0',
+      surface: '#ffffff',
+      text: '#1a1a1a',
+      textSecondary: '#424242',
+      border: '#ffccbc',
+      success: '#66bb6a',
+      warning: '#ff9800',
+      error: '#ef5350'
+    },
+    defaultTypography: {
+      headingFont: 'Crimson Text, serif',
+      bodyFont: 'Open Sans, sans-serif',
+      headingSizes: {
+        h1: '3.25rem',
+        h2: '2.75rem',
+        h3: '2.25rem',
+        h4: '1.875rem',
+        h5: '1.5rem',
+        h6: '1.25rem'
+      },
+      bodySize: '1rem',
+      lineHeight: {
+        heading: '1.2',
+        body: '1.6'
+      },
+      fontWeights: {
+        light: 300,
+        regular: 400,
+        medium: 500,
+        bold: 700
+      },
+      letterSpacing: {
+        tight: '-0.01em',
+        normal: '0',
+        wide: '0.01em'
+      }
+    },
+    features: ['dim-sum', 'sushi-bar', 'hot-pot', 'teppanyaki', 'private-dining'],
+    isPremium: false,
+    isActive: true,
+    sortOrder: 11
+  },
+
+  {
+    id: 'mexican-cantina',
+    name: 'Mexican Cantina',
+    category: 'world-cuisine',
+    description: 'Vibrant template capturing the energy and flavors of Mexican cuisine',
+    layoutConfig: {
+      heroStyle: 'carousel',
+      menuStyle: 'tabs',
+      aboutStyle: 'side-by-side',
+      navigationStyle: 'header',
+      footerStyle: 'expanded',
+      sectionSpacing: 'relaxed',
+      containerMaxWidth: 'standard',
+      borderRadius: 'rounded',
+      shadows: 'standard'
+    },
+    defaultColors: {
+      primary: '#e64a19',
+      secondary: '#ff6f00',
+      accent: '#ffc107',
+      background: '#fff3e0',
+      surface: '#ffffff',
+      text: '#1a1a1a',
+      textSecondary: '#424242',
+      border: '#ffccbc',
+      success: '#4caf50',
+      warning: '#ff9800',
+      error: '#d32f2f'
+    },
+    defaultTypography: {
+      headingFont: 'Montserrat, sans-serif',
+      bodyFont: 'Roboto, sans-serif',
+      headingSizes: {
+        h1: '3rem',
+        h2: '2.5rem',
+        h3: '2rem',
+        h4: '1.75rem',
+        h5: '1.5rem',
+        h6: '1.25rem'
+      },
+      bodySize: '1rem',
+      lineHeight: {
+        heading: '1.2',
+        body: '1.5'
+      },
+      fontWeights: {
+        light: 300,
+        regular: 400,
+        medium: 500,
+        bold: 700
+      },
+      letterSpacing: {
+        tight: '0',
+        normal: '0',
+        wide: '0.01em'
+      }
+    },
+    features: ['taco-bar', 'margarita-menu', 'live-music', 'happy-hour', 'catering'],
+    isPremium: false,
+    isActive: true,
+    sortOrder: 12
+  },
+
+  // PREMIUM TEMPLATES
+  {
+    id: 'luxury-dining',
+    name: 'Luxury Dining',
+    category: 'premium',
+    description: 'Ultra-premium template for Michelin-starred restaurants and exclusive dining experiences',
+    layoutConfig: {
+      heroStyle: 'fullscreen',
+      menuStyle: 'accordion',
+      aboutStyle: 'centered',
+      navigationStyle: 'minimal',
+      footerStyle: 'minimal',
+      sectionSpacing: 'generous',
+      containerMaxWidth: 'narrow',
+      borderRadius: 'none',
+      shadows: 'none'
+    },
+    defaultColors: {
+      primary: '#000000',
+      secondary: '#ffffff',
+      accent: '#d4af37',
+      background: '#ffffff',
+      surface: '#fafafa',
+      text: '#000000',
+      textSecondary: '#666666',
+      border: '#e0e0e0',
+      success: '#4caf50',
+      warning: '#ff9800',
+      error: '#f44336'
+    },
+    defaultTypography: {
+      headingFont: 'Playfair Display, serif',
+      bodyFont: 'Source Sans Pro, sans-serif',
+      headingSizes: {
+        h1: '4.5rem',
+        h2: '3.5rem',
+        h3: '2.75rem',
+        h4: '2.25rem',
+        h5: '1.875rem',
+        h6: '1.5rem'
+      },
+      bodySize: '1.125rem',
+      lineHeight: {
+        heading: '1.1',
+        body: '1.8'
+      },
+      fontWeights: {
+        light: 300,
+        regular: 400,
+        medium: 500,
+        bold: 700
+      },
+      letterSpacing: {
+        tight: '-0.05em',
+        normal: '0',
+        wide: '0.1em'
+      }
+    },
+    features: ['tasting-menus', 'sommelier-service', 'private-chef', 'wine-cellar', 'exclusive-events'],
+    isPremium: true,
+    isActive: true,
+    sortOrder: 13
+  },
+
+  {
+    id: 'seaside-bistro',
+    name: 'Seaside Bistro',
+    category: 'casual-dining',
+    description: 'Coastal-inspired template perfect for seafood restaurants and beachside dining',
+    layoutConfig: {
+      heroStyle: 'fullscreen',
+      menuStyle: 'masonry',
+      aboutStyle: 'overlay',
+      navigationStyle: 'floating',
+      footerStyle: 'minimal',
+      sectionSpacing: 'generous',
+      containerMaxWidth: 'standard',
+      borderRadius: 'standard',
+      shadows: 'subtle'
+    },
+    defaultColors: {
+      primary: '#0277bd',
+      secondary: '#03a9f4',
+      accent: '#ffc107',
+      background: '#e3f2fd',
+      surface: '#ffffff',
+      text: '#01579b',
+      textSecondary: '#0277bd',
+      border: '#90caf9',
+      success: '#4caf50',
+      warning: '#ff9800',
+      error: '#f44336'
+    },
+    defaultTypography: {
+      headingFont: 'Lora, serif',
+      bodyFont: 'Open Sans, sans-serif',
+      headingSizes: {
+        h1: '3.5rem',
+        h2: '2.75rem',
+        h3: '2.25rem',
+        h4: '1.875rem',
+        h5: '1.5rem',
+        h6: '1.25rem'
+      },
+      bodySize: '1rem',
+      lineHeight: {
+        heading: '1.2',
+        body: '1.6'
+      },
+      fontWeights: {
+        light: 300,
+        regular: 400,
+        medium: 500,
+        bold: 700
+      },
+      letterSpacing: {
+        tight: '-0.01em',
+        normal: '0',
+        wide: '0.01em'
+      }
+    },
+    features: ['fresh-seafood', 'ocean-views', 'outdoor-dining', 'sunset-specials', 'boat-access'],
+    isPremium: false,
+    isActive: true,
+    sortOrder: 14
+  },
+
+  {
+    id: 'urban-steakhouse',
+    name: 'Urban Steakhouse',
+    category: 'fine-dining',
+    description: 'Bold and masculine template for modern steakhouses and grill restaurants',
+    layoutConfig: {
+      heroStyle: 'split',
+      menuStyle: 'list',
+      aboutStyle: 'side-by-side',
+      navigationStyle: 'header',
+      footerStyle: 'standard',
+      sectionSpacing: 'standard',
+      containerMaxWidth: 'wide',
+      borderRadius: 'subtle',
+      shadows: 'dramatic'
+    },
+    defaultColors: {
+      primary: '#1a1a1a',
+      secondary: '#8b4513',
+      accent: '#d2691e',
+      background: '#ffffff',
+      surface: '#f5f5f5',
+      text: '#1a1a1a',
+      textSecondary: '#424242',
+      border: '#bdbdbd',
+      success: '#4caf50',
+      warning: '#ff9800',
+      error: '#d32f2f'
+    },
+    defaultTypography: {
+      headingFont: 'Crimson Text, serif',
+      bodyFont: 'Montserrat, sans-serif',
+      headingSizes: {
+        h1: '3.5rem',
+        h2: '2.75rem',
+        h3: '2.25rem',
+        h4: '1.875rem',
+        h5: '1.5rem',
+        h6: '1.25rem'
+      },
+      bodySize: '1rem',
+      lineHeight: {
+        heading: '1.2',
+        body: '1.5'
+      },
+      fontWeights: {
+        light: 300,
+        regular: 400,
+        medium: 500,
+        bold: 700
+      },
+      letterSpacing: {
+        tight: '-0.01em',
+        normal: '0',
+        wide: '0.02em'
+      }
+    },
+    features: ['dry-aged-beef', 'wine-pairing', 'private-dining', 'chef-table', 'wine-cellar'],
+    isPremium: true,
+    isActive: true,
+    sortOrder: 15
   }
 ];
 

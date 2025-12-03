@@ -56,7 +56,9 @@ export interface BrandAssetData {
     height: number;
   };
   altText?: string;
+  description?: string;
   isPrimary?: boolean;
+  cloudinaryPublicId?: string;
 }
 
 export interface GoogleFont {
@@ -377,6 +379,9 @@ export const themingService = {
   },
 
   async createColorPalette(restaurantId: number, data: ColorPaletteData) {
+    // Validate accessibility and get contrast ratio/WCAG level
+    const validation = validateColorPaletteAccessibility(data);
+    
     return await prisma.colorPalette.create({
       data: {
         restaurantId,
@@ -389,6 +394,8 @@ export const themingService = {
         successColor: data.successColor || '#4caf50',
         warningColor: data.warningColor || '#ff9800',
         errorColor: data.errorColor || '#f44336',
+        contrastRatio: validation.contrastRatio,
+        wcagLevel: validation.wcagLevel, // Will be 'AA', 'AAA', or null (fits VarChar(3))
         isActive: false
       }
     });
@@ -520,7 +527,9 @@ export const themingService = {
         mimeType: data.mimeType,
         dimensions: data.dimensions,
         altText: data.altText,
-        isPrimary: data.isPrimary || false
+        description: data.description,
+        isPrimary: data.isPrimary || false,
+        cloudinaryPublicId: data.cloudinaryPublicId || null
       }
     });
   },
@@ -620,6 +629,76 @@ export const themingService = {
     };
   }
 };
+
+// Calculate contrast ratio for accessibility validation
+export function calculateContrastRatio(color1: string, color2: string): number {
+  // Convert hex to RGB
+  const hexToRgb = (hex: string): [number, number, number] => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? [
+      parseInt(result[1], 16),
+      parseInt(result[2], 16),
+      parseInt(result[3], 16)
+    ] : [0, 0, 0];
+  };
+
+  // Calculate relative luminance
+  const getLuminance = (r: number, g: number, b: number): number => {
+    const [rs, gs, bs] = [r, g, b].map(val => {
+      val = val / 255;
+      return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+  };
+
+  const [r1, g1, b1] = hexToRgb(color1);
+  const [r2, g2, b2] = hexToRgb(color2);
+  
+  const lum1 = getLuminance(r1, g1, b1);
+  const lum2 = getLuminance(r2, g2, b2);
+  
+  const lighter = Math.max(lum1, lum2);
+  const darker = Math.min(lum1, lum2);
+  
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+// Validate color palette accessibility
+// FIXED: Return null instead of 'FAIL' for wcagLevel when contrast is below AA standards
+// Database column is VarChar(3) and cannot store 'FAIL' (4 characters)
+export function validateColorPaletteAccessibility(palette: ColorPaletteData): {
+  isValid: boolean;
+  contrastRatio: number;
+  wcagLevel: 'AA' | 'AAA' | null; // Changed from 'FAIL' to null to fit VarChar(3) constraint
+  warnings: string[];
+} {
+  const warnings: string[] = [];
+  
+  // Check text/background contrast
+  const textBgContrast = calculateContrastRatio(palette.textColor, palette.backgroundColor);
+  const primaryBgContrast = calculateContrastRatio(palette.primaryColor, palette.backgroundColor);
+  
+  let wcagLevel: 'AA' | 'AAA' | null = null; // Use null instead of 'FAIL' to fit database constraint
+  
+  if (textBgContrast >= 7) {
+    wcagLevel = 'AAA';
+  } else if (textBgContrast >= 4.5) {
+    wcagLevel = 'AA';
+  } else {
+    warnings.push('Text/background contrast ratio is below WCAG AA standards (4.5:1)');
+  }
+  
+  if (primaryBgContrast < 3) {
+    warnings.push('Primary color contrast with background is low - may affect visibility');
+  }
+  
+  return {
+    isValid: warnings.length === 0,
+    contrastRatio: textBgContrast,
+    wcagLevel,
+    warnings
+  };
+}
 
 // Helper function to extract colors from uploaded images (placeholder)
 export async function extractColorsFromImage(imageUrl: string): Promise<string[]> {

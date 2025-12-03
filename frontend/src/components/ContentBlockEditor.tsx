@@ -43,6 +43,8 @@ import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { WBBlock } from '../services/websiteBuilderService';
 import AssetLibraryModal from './AssetLibraryModal';
+import { useRestaurant } from '../context/RestaurantContext';
+import { assetApi } from '../services/assetApi';
 
 interface ContentBlockEditorProps {
   block: WBBlock;
@@ -121,6 +123,7 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
   dragHandleProps,
   onPostCreateImageUpload
 }) => {
+  const { currentRestaurant } = useRestaurant();
   const [editMode, setEditMode] = useState(isEditing);
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -136,6 +139,7 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
     subtitle: block.subtitle || '',
     content: block.content || '',
     imageUrl: block.imageUrl || '',
+    videoUrl: (block as any).videoUrl || '',
     buttonText: block.buttonText || '',
     buttonLink: block.buttonLink || '',
     buttonStyle: block.buttonStyle || 'primary',
@@ -366,13 +370,49 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
     setAssetPickerField('');
   };
 
-  const handleAssetSelect = (asset: any) => {
+  const handleAssetSelect = async (asset: any) => {
+    // Track asset usage
+    if (currentRestaurant && asset.id) {
+      try {
+        await assetApi.trackAssetUsage(currentRestaurant.id, asset.id, {
+          moduleName: 'website-builder',
+          referenceId: block.id?.toString() || 'new',
+          referenceType: `content-block-${block.blockType}`
+        });
+      } catch (error) {
+        console.warn('Failed to track asset usage:', error);
+        // Don't fail the selection if tracking fails
+      }
+    }
+    
     // Update the form data with the selected asset
-    const newFormData = {
-      ...formData,
-      [assetPickerField]: asset.fileUrl,
-      [`${assetPickerField}PublicId`]: asset.cloudinaryPublicId || ''
-    };
+    let newFormData: Partial<WBBlock>;
+    
+    if (assetPickerField === 'galleryImages') {
+      // For gallery, add to array in settings
+      const currentImages = ((formData.settings as any)?.galleryImages || []);
+      const updatedImages = [...currentImages, {
+        url: asset.fileUrl,
+        publicId: asset.cloudinaryPublicId,
+        id: asset.id,
+        fileName: asset.fileName
+      }];
+      newFormData = {
+        ...formData,
+        settings: {
+          ...formData.settings,
+          galleryImages: updatedImages
+        }
+      };
+    } else {
+      // For single asset fields (imageUrl, videoUrl)
+      newFormData = {
+        ...formData,
+        [assetPickerField]: asset.fileUrl,
+        [`${assetPickerField}PublicId`]: asset.cloudinaryPublicId || ''
+      };
+    }
+    
     setFormData(newFormData);
     
     // Trigger auto-save if in edit mode
@@ -380,7 +420,10 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
       scheduleAutoSave(newFormData);
     }
     
-    handleAssetPickerClose();
+    // Don't close for gallery (allow multiple selections)
+    if (assetPickerField !== 'galleryImages') {
+      handleAssetPickerClose();
+    }
   };
 
   const getBlockTypeDisplay = (blockType: string) => {
@@ -669,6 +712,151 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
                 value={formData.content || ''}
                 onChange={(e) => handleFieldChange('content', e.target.value)}
               />
+            </Grid>
+          </>
+        );
+
+      case 'video':
+        return (
+          <>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Video Title"
+                value={formData.title || ''}
+                onChange={(e) => handleFieldChange('title', e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Box>
+                <Typography variant="body2" gutterBottom>Video URL or Asset</Typography>
+                <Box display="flex" alignItems="center" gap={2} mb={2}>
+                  <TextField
+                    fullWidth
+                    label="Video URL (YouTube, Vimeo, or direct link)"
+                    value={(formData as any).videoUrl || ''}
+                    onChange={(e) => handleFieldChange('videoUrl' as any, e.target.value)}
+                    placeholder="https://youtube.com/watch?v=..."
+                    helperText="Enter a video URL or select from asset library"
+                  />
+                </Box>
+                <ButtonGroup variant="outlined" fullWidth>
+                  <Button
+                    startIcon={<PhotoLibraryIcon />}
+                    onClick={() => handleAssetPickerOpen('videoUrl')}
+                  >
+                    Select Video from Asset Library
+                  </Button>
+                </ButtonGroup>
+                {(formData as any).videoUrl && (
+                  <Box mt={2}>
+                    {(formData as any).videoUrl.startsWith('http') && !(formData as any).videoUrl.includes('cloudinary') ? (
+                      <Alert severity="info" sx={{ mt: 1 }}>
+                        External video URL: {(formData as any).videoUrl}
+                      </Alert>
+                    ) : (
+                      <Box
+                        component="video"
+                        src={(formData as any).videoUrl}
+                        controls
+                        sx={{ width: '100%', maxHeight: 200, borderRadius: 1 }}
+                      />
+                    )}
+                  </Box>
+                )}
+              </Box>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                label="Video Description"
+                value={formData.content || ''}
+                onChange={(e) => handleFieldChange('content', e.target.value)}
+              />
+            </Grid>
+          </>
+        );
+
+      case 'gallery':
+        return (
+          <>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Gallery Title"
+                value={formData.title || ''}
+                onChange={(e) => handleFieldChange('title', e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                multiline
+                rows={2}
+                label="Gallery Description"
+                value={formData.content || ''}
+                onChange={(e) => handleFieldChange('content', e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Box>
+                <Typography variant="body2" gutterBottom>Gallery Images</Typography>
+                <Box display="flex" alignItems="center" gap={2} mb={2}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<PhotoLibraryIcon />}
+                    onClick={() => handleAssetPickerOpen('galleryImages')}
+                  >
+                    Select Images from Asset Library
+                  </Button>
+                </Box>
+                {((formData.settings as any)?.galleryImages || []).length > 0 && (
+                  <Grid container spacing={2} mt={1}>
+                    {((formData.settings as any).galleryImages || []).map((img: any, index: number) => (
+                      <Grid item xs={6} sm={4} md={3} key={index}>
+                        <Box sx={{ position: 'relative' }}>
+                          <Box
+                            component="img"
+                            src={typeof img === 'string' ? img : img.url}
+                            alt={`Gallery ${index + 1}`}
+                            sx={{ width: '100%', height: 100, objectFit: 'cover', borderRadius: 1 }}
+                          />
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              const currentImages = ((formData.settings as any)?.galleryImages || []);
+                              const updatedImages = currentImages.filter((_: any, i: number) => i !== index);
+                              const newFormData = {
+                                ...formData,
+                                settings: {
+                                  ...formData.settings,
+                                  galleryImages: updatedImages
+                                }
+                              };
+                              setFormData(newFormData);
+                              if (editMode) {
+                                scheduleAutoSave(newFormData);
+                              }
+                            }}
+                            sx={{
+                              position: 'absolute',
+                              top: 4,
+                              right: 4,
+                              bgcolor: 'rgba(0,0,0,0.5)',
+                              color: 'white',
+                              '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' }
+                            }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      </Grid>
+                    ))}
+                  </Grid>
+                )}
+              </Box>
             </Grid>
           </>
         );
@@ -1158,8 +1346,20 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({
         open={assetPickerOpen}
         onClose={handleAssetPickerClose}
         onSelect={handleAssetSelect}
-        allowedTypes={['image']}
-        title="Select Image from Asset Library"
+        allowedTypes={
+          assetPickerField === 'videoUrl' 
+            ? ['video'] 
+            : assetPickerField === 'galleryImages'
+            ? ['image']
+            : ['image']
+        }
+        title={
+          assetPickerField === 'videoUrl'
+            ? 'Select Video from Asset Library'
+            : assetPickerField === 'galleryImages'
+            ? 'Select Images for Gallery'
+            : 'Select Image from Asset Library'
+        }
       />
     </Paper>
   );

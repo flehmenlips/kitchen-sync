@@ -114,7 +114,9 @@ export interface BrandAsset {
     height: number;
   };
   altText?: string;
+  description?: string;
   isPrimary: boolean;
+  cloudinaryPublicId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -130,7 +132,9 @@ export interface BrandAssetData {
     height: number;
   };
   altText?: string;
+  description?: string;
   isPrimary?: boolean;
+  cloudinaryPublicId?: string;
 }
 
 export interface GoogleFont {

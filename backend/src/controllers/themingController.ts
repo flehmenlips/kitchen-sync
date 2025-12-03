@@ -3,7 +3,9 @@ import {
   themingService, 
   ColorPaletteData, 
   TypographyConfigData, 
-  BrandAssetData
+  BrandAssetData,
+  getPredefinedColorSchemes,
+  extractColorsFromImage as extractColors
 } from '../services/themingService';
 
 export const themingController = {
@@ -231,106 +233,7 @@ export const themingController = {
   // Utility Endpoints
   async getPredefinedColorSchemes(req: Request, res: Response) {
     try {
-      // Predefined color schemes for restaurants
-      const schemes = [
-        {
-          name: 'Classic Fine Dining',
-          primaryColor: '#8B4513',
-          secondaryColor: '#D2691E',
-          accentColor: '#2F1B14',
-          backgroundColor: '#FFFEF7',
-          textColor: '#2F1B14'
-        },
-        {
-          name: 'Modern Minimalist',
-          primaryColor: '#2E2E2E',
-          secondaryColor: '#FFD700',
-          accentColor: '#4A4A4A',
-          backgroundColor: '#FFFFFF',
-          textColor: '#2E2E2E'
-        },
-        {
-          name: 'Mediterranean Blue',
-          primaryColor: '#1E3A8A',
-          secondaryColor: '#3B82F6',
-          accentColor: '#1E40AF',
-          backgroundColor: '#F8FAFC',
-          textColor: '#1E293B'
-        },
-        {
-          name: 'Warm Bistro',
-          primaryColor: '#DC2626',
-          secondaryColor: '#F59E0B',
-          accentColor: '#7C2D12',
-          backgroundColor: '#FEF3C7',
-          textColor: '#7C2D12'
-        },
-        {
-          name: 'Fresh Garden',
-          primaryColor: '#059669',
-          secondaryColor: '#10B981',
-          accentColor: '#047857',
-          backgroundColor: '#F0FDF4',
-          textColor: '#064E3B'
-        },
-        {
-          name: 'Elegant Purple',
-          primaryColor: '#7C3AED',
-          secondaryColor: '#A855F7',
-          accentColor: '#5B21B6',
-          backgroundColor: '#FAF5FF',
-          textColor: '#4C1D95'
-        },
-        {
-          name: 'Rustic Brick',
-          primaryColor: '#B91C1C',
-          secondaryColor: '#DC2626',
-          accentColor: '#7F1D1D',
-          backgroundColor: '#FEF2F2',
-          textColor: '#7F1D1D'
-        },
-        {
-          name: 'Ocean Breeze',
-          primaryColor: '#0EA5E9',
-          secondaryColor: '#38BDF8',
-          accentColor: '#0284C7',
-          backgroundColor: '#F0F9FF',
-          textColor: '#0C4A6E'
-        },
-        {
-          name: 'Sunset Orange',
-          primaryColor: '#EA580C',
-          secondaryColor: '#FB923C',
-          accentColor: '#C2410C',
-          backgroundColor: '#FFF7ED',
-          textColor: '#9A3412'
-        },
-        {
-          name: 'Forest Green',
-          primaryColor: '#166534',
-          secondaryColor: '#22C55E',
-          accentColor: '#14532D',
-          backgroundColor: '#F0FDF4',
-          textColor: '#14532D'
-        },
-        {
-          name: 'Royal Gold',
-          primaryColor: '#D97706',
-          secondaryColor: '#F59E0B',
-          accentColor: '#92400E',
-          backgroundColor: '#FFFBEB',
-          textColor: '#78350F'
-        },
-        {
-          name: 'Vintage Wine',
-          primaryColor: '#7C2D12',
-          secondaryColor: '#DC2626',
-          accentColor: '#451A03',
-          backgroundColor: '#FEF2F2',
-          textColor: '#451A03'
-        }
-      ];
-      
+      const schemes = await themingService.getPredefinedColorSchemes();
       res.json(schemes);
     } catch (error) {
       console.error('Error fetching predefined color schemes:', error);
@@ -346,16 +249,7 @@ export const themingController = {
         return res.status(400).json({ error: 'Image URL is required' });
       }
       
-      // TODO: Implement actual color extraction
-      // For now, return sample colors based on common restaurant themes
-      const colors = [
-        '#8B4513', // Saddle Brown
-        '#DEB887', // Burlywood  
-        '#F4A460', // Sandy Brown
-        '#CD853F', // Peru
-        '#D2691E'  // Chocolate
-      ];
-      
+      const colors = await themingService.extractColorsFromImage(imageUrl);
       res.json({ colors });
     } catch (error) {
       console.error('Error extracting colors from image:', error);

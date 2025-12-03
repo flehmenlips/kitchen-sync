@@ -247,5 +247,21 @@ export const assetApi = {
   }> {
     const response = await api.get(`/assets/restaurants/${restaurantId}/test`);
     return response.data;
+  },
+
+  // Migrate assets to standardized folder structure
+  async migrateFolderStructure(restaurantId: number, folderMapping?: Record<string, string>): Promise<{
+    success: boolean;
+    message: string;
+    migration: {
+      migrated: number;
+      failed: number;
+      skipped: number;
+      details: Array<{ oldPublicId: string; newPublicId: string; status: string }>;
+    };
+    databaseUpdates: number;
+  }> {
+    const response = await api.post(`/assets/restaurants/${restaurantId}/migrate-folder-structure`, { folderMapping });
+    return response.data;
   }
 }; 

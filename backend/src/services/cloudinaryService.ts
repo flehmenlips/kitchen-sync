@@ -124,9 +124,156 @@ export const deleteImage = async (publicId: string, restaurantId?: number): Prom
   }
 };
 
+/**
+ * Migrates an asset from old folder structure to new standardized structure
+ * @param publicId Current public ID of the asset
+ * @param restaurantId Restaurant ID
+ * @param targetSubfolder Target subfolder within restaurants/{id}/assets/
+ * @returns New public ID after migration
+ */
+export const migrateAssetFolder = async (
+  publicId: string,
+  restaurantId: number,
+  targetSubfolder: string = 'general'
+): Promise<string> => {
+  try {
+    const newPublicId = `restaurants/${restaurantId}/assets/${targetSubfolder}/${publicId.split('/').pop()}`;
+    
+    // Use Cloudinary's rename API to move the asset
+    const result = await cloudinary.uploader.rename(publicId, newPublicId);
+    
+    if (result.public_id) {
+      console.log(`✅ Migrated asset: ${publicId} → ${result.public_id}`);
+      return result.public_id;
+    } else {
+      throw new Error('Migration failed: No public_id returned');
+    }
+  } catch (error: any) {
+    // If asset already exists at destination, that's okay
+    if (error.message?.includes('already exists')) {
+      console.log(`ℹ️ Asset already exists at destination: ${publicId}`);
+      return `restaurants/${restaurantId}/assets/${targetSubfolder}/${publicId.split('/').pop()}`;
+    }
+    console.error(`Error migrating asset ${publicId}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Migrates all assets for a restaurant to standardized folder structure
+ * @param restaurantId Restaurant ID
+ * @param folderMapping Map of old folder patterns to new subfolder names
+ * @returns Migration results
+ */
+export const migrateRestaurantAssets = async (
+  restaurantId: number,
+  folderMapping: Record<string, string> = {}
+): Promise<{
+  migrated: number;
+  failed: number;
+  skipped: number;
+  details: Array<{ oldPublicId: string; newPublicId: string; status: string }>;
+}> => {
+  const results = {
+    migrated: 0,
+    failed: 0,
+    skipped: 0,
+    details: [] as Array<{ oldPublicId: string; newPublicId: string; status: string }>
+  };
+
+  try {
+    // FIXED: Search specifically for restaurant's folder instead of all folders
+    // This ensures we get the correct assets even in multi-tenant environments
+    const restaurantFolderPrefix = `restaurants/${restaurantId}/`;
+    const allAssets = await cloudinary.search
+      .expression(`folder:${restaurantFolderPrefix}*`)
+      .sort_by('created_at', 'desc')
+      .max_results(500)
+      .execute();
+
+    // Filter assets that belong to this restaurant
+    // IMPORTANT: Only migrate assets that explicitly belong to this restaurant
+    // to prevent cross-tenant data corruption in multi-tenant system
+    const restaurantAssets = allAssets.resources.filter((asset: any) => {
+      const publicId = asset.public_id;
+      
+      // Already in new structure
+      if (publicId.startsWith(`restaurants/${restaurantId}/assets/`)) {
+        return false; // Skip, already migrated
+      }
+      
+      // Only migrate assets that explicitly belong to this restaurant
+      // Do NOT use global folder patterns (content-blocks/, recipe-photos/, etc.)
+      // as they are shared across restaurants and would cause data corruption
+      const isRestaurantAsset = publicId.startsWith(`restaurants/${restaurantId}/`);
+      
+      return isRestaurantAsset;
+    });
+
+    console.log(`Found ${restaurantAssets.length} assets to migrate for restaurant ${restaurantId}`);
+
+    // Determine target subfolder based on current folder
+    const getTargetSubfolder = (publicId: string): string => {
+      // Check folder mapping first
+      for (const [pattern, subfolder] of Object.entries(folderMapping)) {
+        if (publicId.includes(pattern)) {
+          return subfolder;
+        }
+      }
+      
+      // Default mapping based on folder patterns
+      if (publicId.includes('content-blocks')) return 'content-blocks';
+      if (publicId.includes('recipe-photos') || publicId.includes('recipe')) return 'recipes';
+      if (publicId.includes('restaurant-settings') || publicId.includes('menu-logos')) return 'branding';
+      if (publicId.includes('restaurants/')) {
+        // Extract subfolder from existing structure
+        // Format: restaurants/{id}/{subfolder}/{filename} or restaurants/{id}/{filename}
+        const parts = publicId.split('/');
+        // Check if there's an actual subfolder (parts.length > 3 means: restaurants, id, subfolder, filename)
+        if (parts.length > 3) {
+          return parts[parts.length - 2] || 'general';
+        }
+        // If directly in restaurant folder (restaurants/{id}/{filename}), use 'general'
+      }
+      
+      return 'general';
+    };
+
+    // Migrate each asset
+    for (const asset of restaurantAssets) {
+      try {
+        const targetSubfolder = getTargetSubfolder(asset.public_id);
+        const newPublicId = await migrateAssetFolder(asset.public_id, restaurantId, targetSubfolder);
+        
+        results.migrated++;
+        results.details.push({
+          oldPublicId: asset.public_id,
+          newPublicId,
+          status: 'success'
+        });
+      } catch (error: any) {
+        results.failed++;
+        results.details.push({
+          oldPublicId: asset.public_id,
+          newPublicId: '',
+          status: `error: ${error.message}`
+        });
+      }
+    }
+
+    console.log(`Migration complete: ${results.migrated} migrated, ${results.failed} failed, ${results.skipped} skipped`);
+    return results;
+  } catch (error) {
+    console.error('Error migrating restaurant assets:', error);
+    throw error;
+  }
+};
+
 export default {
   uploadImage,
   deleteImage,
   listRestaurantAssets,
-  validateAssetOwnership
+  validateAssetOwnership,
+  migrateAssetFolder,
+  migrateRestaurantAssets
 }; 

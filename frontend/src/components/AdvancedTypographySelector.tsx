@@ -144,6 +144,26 @@ const AdvancedTypographySelector: React.FC<AdvancedTypographySelectorProps> = ({
     }
   });
 
+  // Load Google Fonts dynamically
+  const loadGoogleFont = (fontFamily: string) => {
+    if (!document.querySelector(`link[href*="${fontFamily.replace(/\s+/g, '+')}"]`)) {
+      const link = document.createElement('link');
+      link.href = `https://fonts.googleapis.com/css2?family=${fontFamily.replace(/\s+/g, '+')}:wght@300;400;500;600;700&display=swap`;
+      link.rel = 'stylesheet';
+      document.head.appendChild(link);
+    }
+  };
+
+  // Load fonts when form data changes
+  useEffect(() => {
+    if (formData.headingFontFamily) {
+      loadGoogleFont(formData.headingFontFamily);
+    }
+    if (formData.bodyFontFamily) {
+      loadGoogleFont(formData.bodyFontFamily);
+    }
+  }, [formData.headingFontFamily, formData.bodyFontFamily]);
+
   // Load data on component mount
   useEffect(() => {
     loadTypographyData();
@@ -711,10 +731,72 @@ const AdvancedTypographySelector: React.FC<AdvancedTypographySelectorProps> = ({
                 />
               </Grid>
 
-              {/* Preview */}
+              {/* Enhanced Preview */}
               <Grid item xs={12}>
-                <Typography variant="subtitle2" gutterBottom>Preview</Typography>
-                <TypographyPreview config={formData} name={formData.name || 'New Configuration'} />
+                <Typography variant="subtitle2" gutterBottom>Live Preview</Typography>
+                <Paper sx={{ p: 3, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
+                  <Box sx={{ 
+                    fontFamily: formData.bodyFontFamily,
+                    '& h1, & h2, & h3, & h4, & h5, & h6': {
+                      fontFamily: formData.headingFontFamily,
+                      fontWeight: formData.fontWeights?.bold || 700,
+                      lineHeight: formData.lineHeights?.heading || 1.3
+                    },
+                    '& p': {
+                      fontFamily: formData.bodyFontFamily,
+                      fontWeight: formData.fontWeights?.normal || 400,
+                      lineHeight: formData.lineHeights?.body || 1.6
+                    }
+                  }}>
+                    <Typography
+                      variant="h1"
+                      sx={{
+                        fontSize: formData.fontSizes.h1,
+                        mb: 2,
+                        fontFamily: formData.headingFontFamily,
+                        fontWeight: formData.fontWeights?.bold || 700,
+                        lineHeight: formData.lineHeights?.heading || 1.3
+                      }}
+                    >
+                      Restaurant Name
+                    </Typography>
+                    <Typography
+                      variant="h2"
+                      sx={{
+                        fontSize: formData.fontSizes.h2,
+                        mb: 2,
+                        fontFamily: formData.headingFontFamily,
+                        fontWeight: formData.fontWeights?.bold || 700,
+                        lineHeight: formData.lineHeights?.heading || 1.3
+                      }}
+                    >
+                      Welcome to Our Restaurant
+                    </Typography>
+                    <Typography
+                      variant="body1"
+                      sx={{
+                        fontSize: formData.fontSizes.body1,
+                        mb: 2,
+                        fontFamily: formData.bodyFontFamily,
+                        fontWeight: formData.fontWeights?.normal || 400,
+                        lineHeight: formData.lineHeights?.body || 1.6
+                      }}
+                    >
+                      Experience the finest dining with our carefully crafted menu featuring fresh, locally-sourced ingredients. Our chefs combine traditional techniques with modern innovation to create unforgettable flavors.
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontSize: formData.fontSizes.body2,
+                        fontFamily: formData.bodyFontFamily,
+                        fontWeight: formData.fontWeights?.normal || 400,
+                        lineHeight: formData.lineHeights?.body || 1.6
+                      }}
+                    >
+                      Visit us for lunch, dinner, or weekend brunch. We offer private dining options for special events and celebrations.
+                    </Typography>
+                  </Box>
+                </Paper>
               </Grid>
 
               {/* Validation */}
