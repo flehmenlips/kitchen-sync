@@ -160,7 +160,7 @@ export const ReservationCalendar: React.FC = () => {
     }
   }, [selectedDate, reservationSettings, currentRestaurant?.id]);
 
-  const fetchAvailabilityForDate = async (date: Date, slots: string[]) => {
+  const fetchAvailabilityForDate = async (date: Date, _slots: string[]) => {
     if (!currentRestaurant?.id) return;
     
     try {
