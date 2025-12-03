@@ -21,12 +21,9 @@ import {
   InputLabel,
   Skeleton,
   Alert,
-  Tooltip,
-  useTheme,
-  useMediaQuery
+  useTheme
 } from '@mui/material';
 import {
-  Add as AddIcon,
   ArrowBack as ArrowBackIcon,
   ArrowForward as ArrowForwardIcon,
   Today as TodayIcon,
@@ -34,12 +31,13 @@ import {
   People as PeopleIcon,
   Phone as PhoneIcon,
   Email as EmailIcon,
-  Notes as NotesIcon,
   Restaurant as RestaurantIcon
 } from '@mui/icons-material';
 import { format, startOfWeek, endOfWeek, addDays, isSameDay, isToday, addWeeks, subWeeks } from 'date-fns';
 import { reservationService, Reservation, ReservationStatus, CreateReservationInput } from '../../services/reservationService';
+import { reservationSettingsService } from '../../services/reservationSettingsService';
 import { useSnackbar } from 'notistack';
+import { useRestaurant } from '../../context/RestaurantContext';
 
 interface ReservationFormData {
   customerName: string;
@@ -53,15 +51,17 @@ interface ReservationFormData {
 
 export const ReservationCalendar: React.FC = () => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { enqueueSnackbar } = useSnackbar();
+  const { currentRestaurant } = useRestaurant();
   
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reservationSettings, setReservationSettings] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [viewReservation, setViewReservation] = useState<Reservation | null>(null);
+  const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
   const [formData, setFormData] = useState<ReservationFormData>({
     customerName: '',
     customerPhone: '',
@@ -72,12 +72,54 @@ export const ReservationCalendar: React.FC = () => {
     specialRequests: ''
   });
 
-  // Generate time slots from 11:00 to 22:00 in 30-minute intervals
-  const timeSlots = Array.from({ length: 23 }, (_, i) => {
-    const hour = Math.floor(11 + i * 0.5);
-    const minute = i % 2 === 0 ? '00' : '30';
-    return `${hour.toString().padStart(2, '0')}:${minute}`;
-  });
+  // Generate default time slots (fallback)
+  const generateDefaultTimeSlots = (): string[] => {
+    const slots: string[] = [];
+    for (let hour = 11; hour < 22; hour++) {
+      slots.push(`${hour.toString().padStart(2, '0')}:00`);
+      slots.push(`${hour.toString().padStart(2, '0')}:30`);
+    }
+    slots.push('22:00');
+    return slots;
+  };
+
+  // Generate time slots based on reservation settings
+  const generateTimeSlots = (date: Date): string[] => {
+    if (!reservationSettings) {
+      return generateDefaultTimeSlots();
+    }
+
+    const dayOfWeek = date.getDay();
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayName = dayNames[dayOfWeek];
+    const operatingHours = reservationSettings.operatingHours || {};
+    const dayHours = operatingHours[dayName];
+
+    if (!dayHours || dayHours.closed) {
+      return []; // Restaurant closed this day
+    }
+
+    const { open, close } = dayHours;
+    const interval = reservationSettings.timeSlotInterval || 30;
+
+    // Parse times and generate slots
+    const [openHour, openMin] = open.split(':').map(Number);
+    const [closeHour, closeMin] = close.split(':').map(Number);
+    const startMinutes = openHour * 60 + openMin;
+    const endMinutes = closeHour * 60 + closeMin;
+
+    const slots: string[] = [];
+    let currentMinutes = startMinutes;
+
+    while (currentMinutes <= endMinutes) {
+      const hour = Math.floor(currentMinutes / 60);
+      const minute = currentMinutes % 60;
+      slots.push(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
+      currentMinutes += interval;
+    }
+
+    return slots;
+  };
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -97,7 +139,32 @@ export const ReservationCalendar: React.FC = () => {
 
   useEffect(() => {
     fetchReservations();
-  }, []);
+    if (currentRestaurant?.id) {
+      fetchReservationSettings();
+    }
+  }, [currentRestaurant?.id]);
+
+  useEffect(() => {
+    if (selectedDate && reservationSettings) {
+      const slots = generateTimeSlots(selectedDate);
+      setAvailableTimeSlots(slots);
+      if (slots.length > 0 && !slots.includes(formData.reservationTime)) {
+        setFormData(prev => ({ ...prev, reservationTime: slots[0] }));
+      }
+    }
+  }, [selectedDate, reservationSettings]);
+
+  const fetchReservationSettings = async () => {
+    if (!currentRestaurant?.id) return;
+    
+    try {
+      const settings = await reservationSettingsService.getReservationSettings(currentRestaurant.id);
+      setReservationSettings(settings);
+    } catch (error) {
+      console.error('Error fetching reservation settings:', error);
+      // Use default slots if settings fetch fails
+    }
+  };
 
   const getReservationsForDay = (date: Date) => {
     return reservations.filter(res => 
@@ -140,7 +207,7 @@ export const ReservationCalendar: React.FC = () => {
         reservationTime: formData.reservationTime,
         notes: formData.notes || undefined,
         specialRequests: formData.specialRequests || undefined,
-        restaurantId: 1 // TODO: Get from context or props
+        restaurantId: currentRestaurant?.id || 0
       };
       
       await reservationService.createReservation(data);
@@ -295,6 +362,11 @@ export const ReservationCalendar: React.FC = () => {
         </DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
+            {availableTimeSlots.length === 0 && selectedDate && (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                Restaurant is closed on {format(selectedDate, 'EEEE, MMMM d')}. Please select a different date.
+              </Alert>
+            )}
             <TextField
               fullWidth
               label="Customer Name"
@@ -344,12 +416,17 @@ export const ReservationCalendar: React.FC = () => {
                   <Select
                     value={formData.reservationTime}
                     onChange={(e) => setFormData({ ...formData, reservationTime: e.target.value })}
+                    disabled={availableTimeSlots.length === 0}
                   >
-                    {timeSlots.map((time) => (
-                      <MenuItem key={time} value={time}>
-                        {time}
-                      </MenuItem>
-                    ))}
+                    {availableTimeSlots.length === 0 ? (
+                      <MenuItem disabled>Restaurant closed on this day</MenuItem>
+                    ) : (
+                      availableTimeSlots.map((time) => (
+                        <MenuItem key={time} value={time}>
+                          {time}
+                        </MenuItem>
+                      ))
+                    )}
                   </Select>
                 </FormControl>
               </Grid>

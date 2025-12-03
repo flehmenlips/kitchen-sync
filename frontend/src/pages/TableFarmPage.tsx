@@ -10,11 +10,13 @@ import {
   CalendarMonth as CalendarIcon,
   ListAlt as ListIcon,
   Receipt as OrderIcon,
-  Assessment as AssessmentIcon
+  Assessment as AssessmentIcon,
+  Settings as SettingsIcon
 } from '@mui/icons-material';
 import { ReservationCalendar } from '../components/tablefarm/ReservationCalendar';
 import OrderListPage from './OrderListPage';
 import ReservationManagementPage from './ReservationManagementPage';
+import ReservationSettingsPage from './ReservationSettingsPage';
 // import { TableFarmAnalytics } from '../components/tablefarm/TableFarmAnalytics';
 
 interface TabPanelProps {
@@ -149,6 +151,11 @@ export const TableFarmPage: React.FC = () => {
               iconPosition="start"
             />
             <Tab
+              label="Settings"
+              icon={<SettingsIcon />}
+              iconPosition="start"
+            />
+            <Tab
               label="Analytics"
               icon={<AssessmentIcon />}
               iconPosition="start"
@@ -187,6 +194,16 @@ export const TableFarmPage: React.FC = () => {
         </TabPanel>
 
         <TabPanel value={tabValue} index={3}>
+          <Box sx={{ 
+            py: 4,
+            background: 'rgba(255,255,255,0.3)',
+            minHeight: '400px'
+          }}>
+            <ReservationSettingsPage />
+          </Box>
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={4}>
           <Box sx={{ 
             py: 6, 
             textAlign: 'center',
