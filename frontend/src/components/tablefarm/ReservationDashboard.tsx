@@ -18,7 +18,7 @@ import {
   TrendingUp as TrendingUpIcon,
   AccessTime as AccessTimeIcon
 } from '@mui/icons-material';
-import { format, startOfDay, endOfDay, subDays } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { reservationService, ReservationStats } from '../../services/reservationService';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { useSnackbar } from '../../context/SnackbarContext';
@@ -41,7 +41,10 @@ export const ReservationDashboard: React.FC = () => {
   }, [dateRange, currentRestaurant?.id]);
 
   const fetchStats = async () => {
-    if (!currentRestaurant?.id) return;
+    if (!currentRestaurant?.id) {
+      setLoading(false);
+      return;
+    }
     
     setLoading(true);
     setError(null);
@@ -74,6 +77,14 @@ export const ReservationDashboard: React.FC = () => {
     return (
       <Alert severity="error" sx={{ mb: 2 }}>
         {error}
+      </Alert>
+    );
+  }
+
+  if (!currentRestaurant?.id) {
+    return (
+      <Alert severity="info" sx={{ mb: 2 }}>
+        Please select a restaurant to view reservation analytics.
       </Alert>
     );
   }
