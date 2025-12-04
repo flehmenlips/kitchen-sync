@@ -35,7 +35,8 @@ import {
   Restaurant as RestaurantIcon,
   ViewDay as ViewDayIcon,
   ViewWeek as ViewWeekIcon,
-  CalendarMonth as CalendarMonthIcon
+  CalendarMonth as CalendarMonthIcon,
+  Add as AddIcon
 } from '@mui/icons-material';
 import { format, startOfWeek, endOfWeek, addDays, isSameDay, isToday, startOfMonth, eachDayOfInterval, getDaysInMonth, getDay, differenceInHours, differenceInDays, startOfDay } from 'date-fns';
 import { ToggleButton, ToggleButtonGroup } from '@mui/material';
@@ -366,7 +367,18 @@ export const ReservationCalendar: React.FC = () => {
   };
 
   const handleDateClick = (date: Date) => {
-    setSelectedDate(date);
+    // In month view, clicking a day should switch to day view
+    if (view === 'month') {
+      setCurrentDate(date);
+      setView('day');
+    } else {
+      // In day/week view, clicking opens create reservation dialog
+      handleCreateReservation(date);
+    }
+  };
+
+  const handleCreateReservation = (date?: Date) => {
+    setSelectedDate(date || currentDate);
     setFormOpen(true);
   };
 
@@ -969,6 +981,15 @@ export const ReservationCalendar: React.FC = () => {
                 Month
               </ToggleButton>
             </ToggleButtonGroup>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<AddIcon />}
+              onClick={() => handleCreateReservation()}
+              sx={{ ml: 2 }}
+            >
+              Create Reservation
+            </Button>
             <Box display="flex" alignItems="center" ml={2}>
               <IconButton onClick={handlePreviousPeriod}>
               <ArrowBackIcon />
