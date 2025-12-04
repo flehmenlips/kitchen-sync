@@ -25,6 +25,7 @@ import {
   Event as EventIcon,
   AccessTime as TimeIcon,
   People as PeopleIcon,
+  Person as PersonIcon,
   Phone as PhoneIcon,
   Email as EmailIcon,
   Notes as NotesIcon,
@@ -84,7 +85,7 @@ const CustomerReservationPage: React.FC = () => {
     }
   }, [user, authLoading]);
 
-  // Fetch customer profile to get phone number
+  // Fetch customer profile to get phone number, name, and email
   useEffect(() => {
     let isMounted = true;
     const currentUserId = user?.id; // Capture current user ID to check against stale responses
@@ -94,15 +95,20 @@ const CustomerReservationPage: React.FC = () => {
         try {
           const profile = await customerAuthService.getProfile();
           // Only update state if component is still mounted and user hasn't changed
-          const phoneNumber = profile?.user?.phone;
-          if (isMounted && currentUserId === user?.id && phoneNumber) {
+          if (isMounted && currentUserId === user?.id) {
+            const phoneNumber = profile?.user?.phone;
+            const profileName = profile?.user?.name;
+            const profileEmail = profile?.user?.email;
+            
             setFormData(prev => ({
               ...prev,
-              customerPhone: prev.customerPhone || phoneNumber
+              customerPhone: prev.customerPhone || phoneNumber || '',
+              customerName: prev.customerName || profileName || '',
+              customerEmail: prev.customerEmail || profileEmail || ''
             }));
           }
         } catch (error) {
-          // Silently fail - phone is optional
+          // Silently fail - profile data is optional
           if (isMounted && currentUserId === user?.id) {
             console.error('Failed to fetch profile:', error);
           }
@@ -513,6 +519,48 @@ const CustomerReservationPage: React.FC = () => {
               </Grid>
             )}
 
+            {/* Contact Information Section - Show when user is logged in */}
+            {user && (
+              <>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, fontWeight: 600 }}>
+                    Your Contact Information
+                  </Typography>
+                </Grid>
+
+                {/* Name field */}
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Name"
+                    value={formData.customerName}
+                    onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
+                    autoComplete="name"
+                    required
+                    InputProps={{
+                      startAdornment: <PersonIcon sx={{ mr: 1, color: 'action.active' }} />
+                    }}
+                  />
+                </Grid>
+
+                {/* Email field */}
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Email"
+                    type="email"
+                    value={formData.customerEmail}
+                    onChange={(e) => setFormData({ ...formData, customerEmail: e.target.value })}
+                    autoComplete="email"
+                    required
+                    InputProps={{
+                      startAdornment: <EmailIcon sx={{ mr: 1, color: 'action.active' }} />
+                    }}
+                  />
+                </Grid>
+              </>
+            )}
+
             {/* Phone number field */}
             <Grid item xs={12}>
               <TextField
@@ -603,6 +651,14 @@ const CustomerReservationPage: React.FC = () => {
                       {formData.customerName}
                     </Typography>
                   </Grid>
+                  {formData.customerEmail && (
+                    <Grid item xs={6}>
+                      <Typography variant="body2" color="text.secondary">Email</Typography>
+                      <Typography variant="body1" fontWeight="medium">
+                        {formData.customerEmail}
+                      </Typography>
+                    </Grid>
+                  )}
                   {formData.customerPhone && (
                     <Grid item xs={6}>
                       <Typography variant="body2" color="text.secondary">Phone</Typography>
