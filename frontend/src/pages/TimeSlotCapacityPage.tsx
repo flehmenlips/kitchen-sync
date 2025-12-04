@@ -174,9 +174,22 @@ const TimeSlotCapacityPage: React.FC = () => {
 
       capacities.forEach(cap => {
         // If maxCovers is 0, it means "use default capacity"
-        // If this capacity exists in DB (has id), delete it
-        // Otherwise, don't save it (it will use default)
+        // However, if isActive is explicitly false, we need to preserve that state
+        // even if maxCovers is 0 (user wants to disable this time slot)
         if (cap.maxCovers === 0 || cap.maxCovers < 1) {
+          // If explicitly inactive, save it with minimum covers to preserve the inactive state
+          if (cap.isActive === false) {
+            capacityArray.push({
+              dayOfWeek: cap.dayOfWeek,
+              timeSlot: cap.timeSlot,
+              maxCovers: 1, // Use minimum value to preserve inactive state
+              isActive: false
+            });
+            return;
+          }
+          
+          // If this capacity exists in DB (has id), delete it
+          // Otherwise, don't save it (it will use default)
           if (cap.id && cap.id > 0) {
             capacitiesToDelete.push(cap.id);
           }
