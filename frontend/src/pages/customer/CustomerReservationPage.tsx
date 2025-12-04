@@ -96,6 +96,10 @@ const CustomerReservationPage: React.FC = () => {
     if (!phone || !phone.trim()) {
       return 'Phone number is required';
     }
+    // Prevent email addresses - check before other validations to provide specific error message
+    if (phone.includes('@')) {
+      return 'Please enter a valid phone number, not an email address';
+    }
     // Remove common formatting characters for validation
     const cleanedPhone = phone.replace(/[\s\-\(\)\+]/g, '');
     // Check if it contains only digits and has reasonable length (7-15 digits)
@@ -104,10 +108,6 @@ const CustomerReservationPage: React.FC = () => {
     }
     if (cleanedPhone.length < 7 || cleanedPhone.length > 15) {
       return 'Phone number must be between 7 and 15 digits';
-    }
-    // Prevent email addresses
-    if (phone.includes('@')) {
-      return 'Please enter a valid phone number, not an email address';
     }
     return undefined;
   };
