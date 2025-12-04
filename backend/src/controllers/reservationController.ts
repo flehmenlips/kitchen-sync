@@ -22,7 +22,7 @@ const generateConfirmationNumber = (id: number): string => {
     return `${prefix}${paddedId}`;
 };
 
-// @desc    Get all reservations
+// @desc    Get all reservations with enhanced filtering, search, and pagination
 // @route   GET /api/reservations
 // @access  Private
 export const getReservations = async (req: Request, res: Response): Promise<void> => {
@@ -32,7 +32,31 @@ export const getReservations = async (req: Request, res: Response): Promise<void
     }
 
     try {
-        const { date, status } = req.query;
+        const { 
+            // Date filtering (backward compatible)
+            date,
+            startDate,
+            endDate,
+            // Status filtering
+            status,
+            // Customer search
+            customerName,
+            customerEmail,
+            customerPhone,
+            // Party size filtering
+            partySizeMin,
+            partySizeMax,
+            // General search
+            search,
+            // Restaurant filter (for multi-restaurant users)
+            restaurantId,
+            // Pagination
+            page,
+            limit,
+            // Sorting
+            sortBy = 'reservationDate',
+            sortOrder = 'asc'
+        } = req.query;
         
         // Get the restaurants this user has access to
         const userRestaurants = await prisma.restaurantStaff.findMany({
@@ -43,9 +67,12 @@ export const getReservations = async (req: Request, res: Response): Promise<void
             select: { restaurantId: true }
         });
 
+        // Pagination setup (check early for empty response)
+        const paginationEnabled = page !== undefined || limit !== undefined;
+        
         // If user has no restaurant associations, they shouldn't see any reservations
         if (userRestaurants.length === 0) {
-            res.status(200).json([]);
+            res.status(200).json(paginationEnabled ? { data: [], pagination: { page: 1, limit: 50, total: 0, totalPages: 0, hasNext: false, hasPrev: false } } : []);
             return;
         }
 
@@ -56,27 +83,131 @@ export const getReservations = async (req: Request, res: Response): Promise<void
             restaurantId: { in: restaurantIds }
         };
         
+        // Restaurant filter (if explicitly requested and user has access)
+        if (restaurantId) {
+            const requestedId = safeParseInt(restaurantId as string);
+            if (requestedId && restaurantIds.includes(requestedId)) {
+                where.restaurantId = requestedId;
+            }
+        }
+        
+        // Date filtering - support both date (backward compatible) and date range
         if (date) {
-            const startDate = new Date(date as string);
-            const endDate = new Date(date as string);
-            endDate.setDate(endDate.getDate() + 1);
+            // Backward compatibility: single date parameter
+            const startDateObj = new Date(date as string);
+            const endDateObj = new Date(date as string);
+            endDateObj.setDate(endDateObj.getDate() + 1);
             
             where.reservationDate = {
-                gte: startDate,
-                lt: endDate
+                gte: startDateObj,
+                lt: endDateObj
+            };
+        } else if (startDate || endDate) {
+            // New date range filtering
+            const dateFilter: any = {};
+            if (startDate) {
+                dateFilter.gte = new Date(startDate as string);
+            }
+            if (endDate) {
+                const endDateObj = new Date(endDate as string);
+                endDateObj.setDate(endDateObj.getDate() + 1); // Include the entire end date
+                dateFilter.lt = endDateObj;
+            }
+            if (Object.keys(dateFilter).length > 0) {
+                where.reservationDate = dateFilter;
+            }
+        }
+        
+        // Status filtering
+        if (status && status !== 'all') {
+            where.status = status as ReservationStatus;
+        }
+        
+        // Customer name search (case-insensitive partial match)
+        if (customerName) {
+            where.customerName = {
+                contains: customerName as string,
+                mode: 'insensitive'
             };
         }
         
-        if (status && status !== 'all') {
-            where.status = status as ReservationStatus;
+        // Customer email search (case-insensitive partial match)
+        if (customerEmail) {
+            where.customerEmail = {
+                contains: customerEmail as string,
+                mode: 'insensitive'
+            };
+        }
+        
+        // Customer phone search (partial match)
+        if (customerPhone) {
+            where.customerPhone = {
+                contains: customerPhone as string
+            };
+        }
+        
+        // Party size filtering
+        if (partySizeMin || partySizeMax) {
+            const partySizeFilter: any = {};
+            if (partySizeMin) {
+                const min = safeParseInt(partySizeMin as string);
+                if (min !== undefined) {
+                    partySizeFilter.gte = min;
+                }
+            }
+            if (partySizeMax) {
+                const max = safeParseInt(partySizeMax as string);
+                if (max !== undefined) {
+                    partySizeFilter.lte = max;
+                }
+            }
+            if (Object.keys(partySizeFilter).length > 0) {
+                where.partySize = partySizeFilter;
+            }
+        }
+        
+        // General search across name, email, and phone
+        if (search) {
+            where.OR = [
+                { customerName: { contains: search as string, mode: 'insensitive' } },
+                { customerEmail: { contains: search as string, mode: 'insensitive' } },
+                { customerPhone: { contains: search as string } }
+            ];
+        }
+
+        // Pagination parameters
+        const pageNum = page ? Math.max(1, parseInt(page as string)) : 1;
+        const limitNum = limit ? Math.min(200, Math.max(1, parseInt(limit as string))) : 50;
+        const skip = paginationEnabled ? (pageNum - 1) * limitNum : undefined;
+        const take = paginationEnabled ? limitNum : undefined;
+
+        // Get total count for pagination
+        let totalCount = 0;
+        if (paginationEnabled) {
+            totalCount = await prisma.reservation.count({ where });
+        }
+
+        // Build orderBy clause
+        const orderBy: any[] = [];
+        const validSortFields = ['reservationDate', 'reservationTime', 'customerName', 'partySize', 'status', 'createdAt'];
+        const sortField = validSortFields.includes(sortBy as string) ? sortBy as string : 'reservationDate';
+        const order = sortOrder === 'desc' ? 'desc' : 'asc';
+        
+        // Default ordering: date and time
+        if (sortField === 'reservationDate') {
+            orderBy.push({ reservationDate: order });
+            orderBy.push({ reservationTime: 'asc' }); // Always sort time ascending within same date
+        } else {
+            orderBy.push({ [sortField]: order });
+            orderBy.push({ reservationDate: 'asc' }); // Secondary sort by date
+            orderBy.push({ reservationTime: 'asc' }); // Tertiary sort by time
         }
 
         const reservations = await prisma.reservation.findMany({
             where,
-            orderBy: [
-                { reservationDate: 'asc' },
-                { reservationTime: 'asc' }
-            ],
+            orderBy,
+            skip,
+            take,
             include: {
                 orders: {
                     select: {
@@ -88,7 +219,24 @@ export const getReservations = async (req: Request, res: Response): Promise<void
             }
         });
 
-        res.status(200).json(reservations);
+        // Return paginated response if pagination is enabled
+        if (paginationEnabled) {
+            const totalPages = Math.ceil(totalCount / limitNum);
+            res.status(200).json({
+                data: reservations,
+                pagination: {
+                    page: pageNum,
+                    limit: limitNum,
+                    total: totalCount,
+                    totalPages,
+                    hasNext: pageNum < totalPages,
+                    hasPrev: pageNum > 1
+                }
+            });
+        } else {
+            // Backward compatible: return array directly
+            res.status(200).json(reservations);
+        }
     } catch (error) {
         console.error('Error fetching reservations:', error);
         res.status(500).json({ message: 'Error fetching reservations' });
