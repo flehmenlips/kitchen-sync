@@ -86,23 +86,35 @@ const CustomerReservationPage: React.FC = () => {
 
   // Fetch customer profile to get phone number
   useEffect(() => {
+    let isMounted = true;
+    const currentUserId = user?.id; // Capture current user ID to check against stale responses
+    
     const fetchProfile = async () => {
       if (user) {
         try {
           const profile = await customerAuthService.getProfile();
-          if (profile?.user?.phone) {
+          // Only update state if component is still mounted and user hasn't changed
+          const phoneNumber = profile?.user?.phone;
+          if (isMounted && currentUserId === user?.id && phoneNumber) {
             setFormData(prev => ({
               ...prev,
-              customerPhone: profile.user.phone
+              customerPhone: phoneNumber
             }));
           }
         } catch (error) {
           // Silently fail - phone is optional
-          console.error('Failed to fetch profile:', error);
+          if (isMounted && currentUserId === user?.id) {
+            console.error('Failed to fetch profile:', error);
+          }
         }
       }
     };
     fetchProfile();
+    
+    // Cleanup function to prevent stale responses from updating state
+    return () => {
+      isMounted = false;
+    };
   }, [user]);
 
   // Update form data when user changes
