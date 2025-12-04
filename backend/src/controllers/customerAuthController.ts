@@ -19,13 +19,86 @@ export const customerAuthController = {
   // Customer registration
   async register(req: Request, res: Response) {
     try {
-      const { email, password, firstName, lastName, phone, restaurantId = 1 } = req.body;
+      const { email, password, firstName, lastName, phone, restaurantId, restaurantSlug } = req.body;
 
       // Validate input
       if (!email || !password || !firstName) {
         return res.status(400).json({ 
           error: 'Email, password, and first name are required' 
         });
+      }
+
+      // Determine restaurant ID from slug or provided ID
+      let finalRestaurantId: number | undefined;
+      
+      // First try to get restaurant from slug (preferred method)
+      if (restaurantSlug) {
+        const restaurant = await prisma.restaurant.findUnique({
+          where: { slug: restaurantSlug },
+          select: { id: true, isActive: true }
+        });
+        
+        if (restaurant && restaurant.isActive) {
+          finalRestaurantId = restaurant.id;
+        } else if (restaurant && !restaurant.isActive) {
+          return res.status(400).json({
+            error: 'Restaurant is not active',
+            message: 'This restaurant is currently not accepting new registrations'
+          });
+        } else {
+          return res.status(400).json({
+            error: 'Invalid restaurant',
+            message: 'The restaurant you are trying to register with does not exist'
+          });
+        }
+      } else if (restaurantId) {
+        // Validate restaurant exists and is active
+        const restaurant = await prisma.restaurant.findUnique({
+          where: { id: restaurantId },
+          select: { id: true, isActive: true }
+        });
+        
+        if (restaurant && restaurant.isActive) {
+          finalRestaurantId = restaurant.id;
+        } else if (restaurant && !restaurant.isActive) {
+          return res.status(400).json({
+            error: 'Restaurant is not active',
+            message: 'This restaurant is currently not accepting new registrations'
+          });
+        } else {
+          return res.status(400).json({
+            error: 'Invalid restaurant',
+            message: 'The restaurant you are trying to register with does not exist'
+          });
+        }
+      } else {
+        // No restaurant context provided - this is an error for customer registration
+        return res.status(400).json({
+          error: 'Restaurant context required',
+          message: 'Please register from a restaurant-specific page'
+        });
+      }
+
+      // Validate phone number if provided (prevent email addresses)
+      let validatedPhone: string | undefined = undefined;
+      if (phone && typeof phone === 'string') {
+        const phoneValue = phone.trim();
+        if (phoneValue) {
+          if (phoneValue.includes('@')) {
+            return res.status(400).json({
+              error: 'Invalid phone number',
+              message: 'Please enter a valid phone number, not an email address'
+            });
+          }
+          // Basic phone validation - should contain digits
+          if (!/[\d]/.test(phoneValue)) {
+            return res.status(400).json({
+              error: 'Invalid phone number',
+              message: 'Phone number must contain at least one digit'
+            });
+          }
+          validatedPhone = phoneValue;
+        }
       }
 
       // Check if customer already exists
@@ -42,6 +115,13 @@ export const customerAuthController = {
       // Hash password
       const hashedPassword = await bcrypt.hash(password, 10);
 
+      // Get restaurant slug for verification email redirect
+      const restaurant = await prisma.restaurant.findUnique({
+        where: { id: finalRestaurantId },
+        select: { slug: true }
+      });
+      const restaurantSlugForRedirect = restaurant?.slug || restaurantSlug;
+
       // Create customer and related data in a transaction
       const customer = await prisma.$transaction(async (tx) => {
         // Create customer
@@ -51,8 +131,8 @@ export const customerAuthController = {
             password: hashedPassword,
             firstName,
             lastName,
-            phone,
-            restaurantId
+            phone: validatedPhone,
+            restaurantId: finalRestaurantId
           }
         });
 
@@ -67,7 +147,7 @@ export const customerAuthController = {
         await tx.customerRestaurant.create({
           data: {
             customerId: newCustomer.id,
-            restaurantId: restaurantId
+            restaurantId: finalRestaurantId
           }
         });
 
@@ -84,8 +164,10 @@ export const customerAuthController = {
           }
         });
 
-        // Send verification email
-        const verificationUrl = `${process.env.FRONTEND_URL}/customer/verify-email?token=${verificationToken}`;
+        // Send verification email with restaurant context in URL
+        const verificationUrl = restaurantSlugForRedirect
+          ? `${process.env.FRONTEND_URL}/customer/verify-email?token=${verificationToken}&restaurant=${restaurantSlugForRedirect}`
+          : `${process.env.FRONTEND_URL}/customer/verify-email?token=${verificationToken}`;
         await emailService.sendVerificationEmail(email, firstName, verificationUrl);
 
         return newCustomer;
@@ -137,6 +219,7 @@ export const customerAuthController = {
           isCustomer: true,
           emailVerified: customer.emailVerified
         },
+        restaurantSlug: restaurantSlugForRedirect, // Include restaurant slug for frontend redirects
         accessToken,
         refreshToken: updatedSession.token
       });

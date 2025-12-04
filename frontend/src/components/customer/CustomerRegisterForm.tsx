@@ -170,6 +170,7 @@ export const CustomerRegisterForm: React.FC<CustomerRegisterFormProps> = ({ onSu
           helperText={fieldErrors.name}
           margin="normal"
           required
+          autoComplete="name"
           sx={mobileResponsiveStyles.textField(isMobile)}
           InputProps={{
             startAdornment: (
@@ -190,6 +191,7 @@ export const CustomerRegisterForm: React.FC<CustomerRegisterFormProps> = ({ onSu
           helperText={fieldErrors.email}
           margin="normal"
           required
+          autoComplete="email"
           sx={mobileResponsiveStyles.textField(isMobile)}
           InputProps={{
             startAdornment: (
@@ -203,11 +205,20 @@ export const CustomerRegisterForm: React.FC<CustomerRegisterFormProps> = ({ onSu
         <TextField
           fullWidth
           label="Phone Number"
+          type="tel"
           value={formData.phone}
-          onChange={handleChange('phone')}
+          onChange={(e) => {
+            const value = e.target.value;
+            // Prevent email addresses from being entered in phone field
+            if (!value.includes('@')) {
+              handleChange('phone')(e);
+            }
+          }}
           error={!!fieldErrors.phone}
           helperText={fieldErrors.phone || 'Optional - for reservation confirmations'}
           margin="normal"
+          autoComplete="tel"
+          placeholder="(555) 123-4567"
           sx={mobileResponsiveStyles.textField(isMobile)}
           InputProps={{
             startAdornment: (
@@ -215,6 +226,11 @@ export const CustomerRegisterForm: React.FC<CustomerRegisterFormProps> = ({ onSu
                 <PhoneIcon color="action" />
               </InputAdornment>
             ),
+          }}
+          inputProps={{
+            inputMode: 'tel',
+            pattern: '[0-9\\s\\-\\(\\)\\+]*',
+            maxLength: 20
           }}
         />
 
@@ -228,6 +244,7 @@ export const CustomerRegisterForm: React.FC<CustomerRegisterFormProps> = ({ onSu
           helperText={fieldErrors.password || 'At least 8 characters'}
           margin="normal"
           required
+          autoComplete="new-password"
           sx={mobileResponsiveStyles.textField(isMobile)}
           InputProps={{
             startAdornment: (
@@ -260,6 +277,7 @@ export const CustomerRegisterForm: React.FC<CustomerRegisterFormProps> = ({ onSu
           }}
           margin="normal"
           required
+          autoComplete="new-password"
           sx={mobileResponsiveStyles.textField(isMobile)}
           InputProps={{
             startAdornment: (

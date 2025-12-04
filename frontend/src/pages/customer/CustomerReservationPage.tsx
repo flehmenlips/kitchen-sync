@@ -39,6 +39,7 @@ import { restaurantSettingsService, RestaurantSettings } from '../../services/re
 import { getCurrentRestaurantSlug, buildCustomerUrl } from '../../utils/subdomain';
 import { useSnackbar } from 'notistack';
 import { useCustomerAuth } from '../../context/CustomerAuthContext';
+import { customerAuthService } from '../../services/customerAuthService';
 import { Link } from '@mui/material';
 
 interface FormData {
@@ -82,6 +83,39 @@ const CustomerReservationPage: React.FC = () => {
       // They'll be blocked when trying to submit
     }
   }, [user, authLoading]);
+
+  // Fetch customer profile to get phone number
+  useEffect(() => {
+    let isMounted = true;
+    const currentUserId = user?.id; // Capture current user ID to check against stale responses
+    
+    const fetchProfile = async () => {
+      if (user) {
+        try {
+          const profile = await customerAuthService.getProfile();
+          // Only update state if component is still mounted and user hasn't changed
+          const phoneNumber = profile?.user?.phone;
+          if (isMounted && currentUserId === user?.id && phoneNumber) {
+            setFormData(prev => ({
+              ...prev,
+              customerPhone: prev.customerPhone || phoneNumber
+            }));
+          }
+        } catch (error) {
+          // Silently fail - phone is optional
+          if (isMounted && currentUserId === user?.id) {
+            console.error('Failed to fetch profile:', error);
+          }
+        }
+      }
+    };
+    fetchProfile();
+    
+    // Cleanup function to prevent stale responses from updating state
+    return () => {
+      isMounted = false;
+    };
+  }, [user]);
 
   // Update form data when user changes
   useEffect(() => {
@@ -285,14 +319,22 @@ const CustomerReservationPage: React.FC = () => {
     
     try {
       const restaurantSlug = getCurrentRestaurantSlug();
+      // Validate phone number if provided (prevent email addresses)
+      if (formData.customerPhone && formData.customerPhone.includes('@')) {
+        enqueueSnackbar('Please enter a valid phone number, not an email address', { variant: 'error' });
+        return;
+      }
+
       const data: ReservationFormData & { 
         restaurantSlug?: string;
+        customerPhone?: string;
       } = {
         reservationDate: format(formData.reservationDate!, 'yyyy-MM-dd'),
         reservationTime: formData.reservationTime,
         partySize: parseInt(formData.partySize),
         notes: formData.specialRequests || undefined,
         specialRequests: formData.specialRequests || undefined,
+        customerPhone: formData.customerPhone || undefined,
         // Include restaurant slug
         restaurantSlug: restaurantSlug || undefined
       };
@@ -471,6 +513,34 @@ const CustomerReservationPage: React.FC = () => {
               </Grid>
             )}
 
+            {/* Phone number field */}
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Phone Number"
+                type="tel"
+                value={formData.customerPhone}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Prevent email addresses from being entered
+                  if (!value.includes('@')) {
+                    setFormData({ ...formData, customerPhone: value });
+                  }
+                }}
+                autoComplete="tel"
+                placeholder="(555) 123-4567"
+                helperText="Optional - for reservation confirmations and updates"
+                InputProps={{
+                  startAdornment: <PhoneIcon sx={{ mr: 1, color: 'action.active' }} />
+                }}
+                inputProps={{
+                  inputMode: 'tel',
+                  pattern: '[0-9\\s\\-\\(\\)\\+]*',
+                  maxLength: 20
+                }}
+              />
+            </Grid>
+
             {/* Special requests field */}
             <Grid item xs={12}>
               <TextField
@@ -481,6 +551,7 @@ const CustomerReservationPage: React.FC = () => {
                 multiline
                 rows={3}
                 placeholder="Dietary restrictions, special occasions, seating preferences..."
+                autoComplete="off"
                 InputProps={{
                   startAdornment: <NotesIcon sx={{ mr: 1, color: 'action.active', alignSelf: 'flex-start', mt: 1 }} />
                 }}
@@ -532,6 +603,14 @@ const CustomerReservationPage: React.FC = () => {
                       {formData.customerName}
                     </Typography>
                   </Grid>
+                  {formData.customerPhone && (
+                    <Grid item xs={6}>
+                      <Typography variant="body2" color="text.secondary">Phone</Typography>
+                      <Typography variant="body1" fontWeight="medium">
+                        {formData.customerPhone}
+                      </Typography>
+                    </Grid>
+                  )}
                   {confirmationData && (
                     <Grid item xs={12}>
                       <Typography variant="body2" color="text.secondary">Confirmation Number</Typography>
@@ -571,9 +650,49 @@ const CustomerReservationPage: React.FC = () => {
 
   return (
     <Box>
-      <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ mb: 4 }}>
-        Make a Reservation
-      </Typography>
+      {/* Restaurant Branding Header */}
+      {restaurantSettings && (
+        <Box sx={{ mb: 4, textAlign: 'center' }}>
+          {restaurantSettings.logoUrl && (
+            <Box sx={{ mb: 2 }}>
+              <img 
+                src={restaurantSettings.logoUrl} 
+                alt={restaurantSettings.restaurant?.name || 'Restaurant Logo'}
+                style={{ 
+                  maxHeight: isMobile ? '60px' : '80px', 
+                  maxWidth: '100%',
+                  objectFit: 'contain'
+                }}
+              />
+            </Box>
+          )}
+          <Typography 
+            variant={isMobile ? "h5" : "h4"} 
+            component="h1" 
+            gutterBottom
+            sx={{ 
+              fontWeight: 600,
+              color: restaurantSettings.primaryColor || 'primary.main'
+            }}
+          >
+            {restaurantSettings.restaurant?.name || 'Restaurant'}
+          </Typography>
+          {restaurantSettings.tagline && (
+            <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 1 }}>
+              {restaurantSettings.tagline}
+            </Typography>
+          )}
+          <Typography variant="h6" component="h2" sx={{ mt: 3, mb: 2 }}>
+            Make a Reservation
+          </Typography>
+        </Box>
+      )}
+      
+      {!restaurantSettings && (
+        <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ mb: 4 }}>
+          Make a Reservation
+        </Typography>
+      )}
 
       <Paper sx={{ p: { xs: 2, md: 4 }, maxWidth: 800, mx: 'auto' }}>
         <Stepper activeStep={activeStep} alternativeLabel={!isMobile} sx={{ mb: 4 }}>

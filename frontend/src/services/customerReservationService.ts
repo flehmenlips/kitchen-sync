@@ -6,6 +6,7 @@ export interface ReservationFormData {
   partySize: number;
   notes?: string;
   specialRequests?: string;
+  customerPhone?: string;
 }
 
 export interface Reservation {

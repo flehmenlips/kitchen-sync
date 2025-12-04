@@ -384,7 +384,8 @@ export const customerReservationController = {
       const customerId = customer.id;
       const customerName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.email;
       const customerEmail = customer.email;
-      const customerPhone = customer.phone || undefined;
+      // Use phone from request body if provided, otherwise fall back to customer profile phone
+      const customerPhone = req.body.customerPhone?.trim() || customer.phone || undefined;
 
       const {
         reservationDate,
@@ -406,6 +407,24 @@ export const customerReservationController = {
         return res.status(400).json({
           error: 'Party size must be between 1 and 20'
         });
+      }
+
+      // Validate phone number if provided (prevent email addresses)
+      if (req.body.customerPhone && typeof req.body.customerPhone === 'string') {
+        const phoneValue = req.body.customerPhone.trim();
+        if (phoneValue.includes('@')) {
+          return res.status(400).json({
+            error: 'Invalid phone number',
+            message: 'Please enter a valid phone number, not an email address'
+          });
+        }
+        // Basic phone validation - should contain digits
+        if (phoneValue && !/[\d]/.test(phoneValue)) {
+          return res.status(400).json({
+            error: 'Invalid phone number',
+            message: 'Phone number must contain at least one digit'
+          });
+        }
       }
 
       // Validate date is not in the past
