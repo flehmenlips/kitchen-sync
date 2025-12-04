@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   TextField,
@@ -24,6 +24,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { customerAuthService, RegisterData } from '../../services/customerAuthService';
 import { useMobileResponsive, mobileResponsiveStyles } from '../../utils/mobileUtils';
+import { restaurantSettingsService, RestaurantSettings } from '../../services/restaurantSettingsService';
 
 interface CustomerRegisterFormProps {
   onSuccess?: () => void;
@@ -45,6 +46,20 @@ export const CustomerRegisterForm: React.FC<CustomerRegisterFormProps> = ({ onSu
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Partial<RegisterData>>({});
+  const [restaurantSettings, setRestaurantSettings] = useState<RestaurantSettings | null>(null);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const settings = await restaurantSettingsService.getPublicSettings();
+        setRestaurantSettings(settings);
+      } catch (error) {
+        console.error('Error fetching restaurant settings:', error);
+        // Continue without settings - will use fallback
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const validateForm = (): boolean => {
     const errors: Partial<RegisterData> = {};
@@ -152,7 +167,7 @@ export const CustomerRegisterForm: React.FC<CustomerRegisterFormProps> = ({ onSu
           mb={3}
           sx={mobileResponsiveStyles.typography.body2}
         >
-          Join Seabreeze Kitchen for easy online reservations
+          Join {restaurantSettings?.websiteName || restaurantSettings?.restaurant?.name || 'our restaurant'} for easy online reservations
         </Typography>
 
         {error && (

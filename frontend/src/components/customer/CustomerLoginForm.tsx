@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   TextField,
@@ -24,6 +24,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCustomerAuth } from '../../context/CustomerAuthContext';
 import { LoginData } from '../../services/customerAuthService';
 import { buildCustomerUrl } from '../../utils/subdomain';
+import { restaurantSettingsService, RestaurantSettings } from '../../services/restaurantSettingsService';
 
 interface CustomerLoginFormProps {
   onSuccess?: () => void;
@@ -44,6 +45,20 @@ export const CustomerLoginForm: React.FC<CustomerLoginFormProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [restaurantSettings, setRestaurantSettings] = useState<RestaurantSettings | null>(null);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const settings = await restaurantSettingsService.getPublicSettings();
+        setRestaurantSettings(settings);
+      } catch (error) {
+        console.error('Error fetching restaurant settings:', error);
+        // Continue without settings - will use fallback
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,7 +105,7 @@ export const CustomerLoginForm: React.FC<CustomerLoginFormProps> = ({
         </Typography>
         
         <Typography variant="body2" color="text.secondary" align="center" mb={3}>
-          Welcome back to Seabreeze Kitchen
+          Welcome back to {restaurantSettings?.websiteName || restaurantSettings?.restaurant?.name || 'our restaurant'}
         </Typography>
 
         {error && (

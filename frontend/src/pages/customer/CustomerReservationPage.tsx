@@ -64,6 +64,11 @@ const CustomerReservationPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [confirmationData, setConfirmationData] = useState<any>(null);
   const [restaurantSettings, setRestaurantSettings] = useState<RestaurantSettings | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{
+    customerName?: string;
+    customerEmail?: string;
+    customerPhone?: string;
+  }>({});
   
   const [formData, setFormData] = useState<FormData>({
     customerName: user?.name || '',
@@ -74,6 +79,62 @@ const CustomerReservationPage: React.FC = () => {
     reservationTime: '',
     specialRequests: ''
   });
+
+  // Validation functions
+  const validateEmail = (email: string): string | undefined => {
+    if (!email || !email.trim()) {
+      return 'Email is required';
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      return 'Please enter a valid email address';
+    }
+    return undefined;
+  };
+
+  const validatePhone = (phone: string): string | undefined => {
+    if (!phone || !phone.trim()) {
+      return 'Phone number is required';
+    }
+    // Remove common formatting characters for validation
+    const cleanedPhone = phone.replace(/[\s\-\(\)\+]/g, '');
+    // Check if it contains only digits and has reasonable length (7-15 digits)
+    if (!/^\d+$/.test(cleanedPhone)) {
+      return 'Please enter a valid phone number (digits only, with optional formatting)';
+    }
+    if (cleanedPhone.length < 7 || cleanedPhone.length > 15) {
+      return 'Phone number must be between 7 and 15 digits';
+    }
+    // Prevent email addresses
+    if (phone.includes('@')) {
+      return 'Please enter a valid phone number, not an email address';
+    }
+    return undefined;
+  };
+
+  const validateForm = (): boolean => {
+    const errors: typeof fieldErrors = {};
+    
+    // Validate name
+    if (!formData.customerName || !formData.customerName.trim()) {
+      errors.customerName = 'Name is required';
+    }
+    
+    // Validate email
+    const emailError = validateEmail(formData.customerEmail);
+    if (emailError) {
+      errors.customerEmail = emailError;
+    }
+    
+    // Validate phone
+    const phoneError = validatePhone(formData.customerPhone);
+    if (phoneError) {
+      errors.customerPhone = phoneError;
+    }
+    
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const steps = ['Select Date & Time', 'Confirmation'];
 
@@ -321,15 +382,16 @@ const CustomerReservationPage: React.FC = () => {
       return;
     }
 
+    // Validate form before submitting
+    if (!validateForm()) {
+      enqueueSnackbar('Please fix the errors in the form', { variant: 'error' });
+      return;
+    }
+
     setLoading(true);
     
     try {
       const restaurantSlug = getCurrentRestaurantSlug();
-      // Validate phone number if provided (prevent email addresses)
-      if (formData.customerPhone && formData.customerPhone.includes('@')) {
-        enqueueSnackbar('Please enter a valid phone number, not an email address', { variant: 'error' });
-        return;
-      }
 
       const data: ReservationFormData & { 
         restaurantSlug?: string;
@@ -535,7 +597,12 @@ const CustomerReservationPage: React.FC = () => {
                     fullWidth
                     label="Name"
                     value={formData.customerName}
-                    onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, customerName: e.target.value });
+                      setFieldErrors({ ...fieldErrors, customerName: undefined });
+                    }}
+                    error={!!fieldErrors.customerName}
+                    helperText={fieldErrors.customerName}
                     autoComplete="name"
                     required
                     InputProps={{
@@ -551,7 +618,12 @@ const CustomerReservationPage: React.FC = () => {
                     label="Email"
                     type="email"
                     value={formData.customerEmail}
-                    onChange={(e) => setFormData({ ...formData, customerEmail: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, customerEmail: e.target.value });
+                      setFieldErrors({ ...fieldErrors, customerEmail: undefined });
+                    }}
+                    error={!!fieldErrors.customerEmail}
+                    helperText={fieldErrors.customerEmail}
                     autoComplete="email"
                     required
                     InputProps={{
@@ -574,11 +646,14 @@ const CustomerReservationPage: React.FC = () => {
                   // Prevent email addresses from being entered
                   if (!value.includes('@')) {
                     setFormData({ ...formData, customerPhone: value });
+                    setFieldErrors({ ...fieldErrors, customerPhone: undefined });
                   }
                 }}
+                error={!!fieldErrors.customerPhone}
+                helperText={fieldErrors.customerPhone || 'Required - for reservation confirmations and updates'}
                 autoComplete="tel"
                 placeholder="(555) 123-4567"
-                helperText="Optional - for reservation confirmations and updates"
+                required
                 InputProps={{
                   startAdornment: <PhoneIcon sx={{ mr: 1, color: 'action.active' }} />
                 }}
