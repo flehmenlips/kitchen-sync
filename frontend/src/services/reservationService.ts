@@ -88,6 +88,7 @@ export interface PaginatedReservations {
     totalPages: number;
     hasNext: boolean;
     hasPrev: boolean;
+    totalCovers?: number;
   };
 }
 

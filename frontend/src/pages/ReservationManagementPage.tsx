@@ -602,6 +602,7 @@ const ReservationManagementPage: React.FC = () => {
     totalPages: number;
     hasNext: boolean;
     hasPrev: boolean;
+    totalCovers?: number;
   } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
@@ -716,6 +717,11 @@ const ReservationManagementPage: React.FC = () => {
   };
 
   const getTotalCovers = () => {
+    // If pagination is enabled and totalCovers is available, use it (accurate for all matching reservations)
+    if (pagination?.totalCovers !== undefined) {
+      return pagination.totalCovers;
+    }
+    // Fallback: calculate from current page (for backward compatibility when pagination is not enabled)
     return reservations
       .filter(r => r.status !== ReservationStatus.CANCELLED)
       .reduce((sum, r) => sum + r.partySize, 0);

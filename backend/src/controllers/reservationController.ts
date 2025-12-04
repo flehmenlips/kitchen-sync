@@ -185,8 +185,21 @@ export const getReservations = async (req: Request, res: Response): Promise<void
 
         // Get total count for pagination
         let totalCount = 0;
+        let totalCovers = 0;
         if (paginationEnabled) {
             totalCount = await prisma.reservation.count({ where });
+            
+            // Calculate total covers (sum of party sizes excluding cancelled reservations)
+            const coversResult = await prisma.reservation.aggregate({
+                where: {
+                    ...where,
+                    status: { not: ReservationStatus.CANCELLED }
+                },
+                _sum: {
+                    partySize: true
+                }
+            });
+            totalCovers = coversResult._sum.partySize || 0;
         }
 
         // Build orderBy clause
@@ -232,7 +245,8 @@ export const getReservations = async (req: Request, res: Response): Promise<void
                     total: totalCount,
                     totalPages,
                     hasNext: pageNum < totalPages,
-                    hasPrev: pageNum > 1
+                    hasPrev: pageNum > 1,
+                    totalCovers
                 }
             });
         } else {
