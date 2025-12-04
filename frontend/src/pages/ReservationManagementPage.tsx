@@ -40,10 +40,12 @@ import {
   Group as GroupIcon,
   AccessTime as TimeIcon,
   CalendarToday as CalendarIcon,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  Search as SearchIcon,
+  Clear as ClearIcon
 } from '@mui/icons-material';
 import { format, parseISO, differenceInHours, differenceInDays, startOfDay } from 'date-fns';
-import { reservationService, Reservation, ReservationStatus } from '../services/reservationService';
+import { reservationService, Reservation, ReservationStatus, ReservationFilters, PaginatedReservations } from '../services/reservationService';
 import { reservationSettingsService } from '../services/reservationSettingsService';
 import { useSnackbar } from '../context/SnackbarContext';
 import { useRestaurant } from '../context/RestaurantContext';
@@ -582,18 +584,77 @@ const ReservationManagementPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingReservation, setEditingReservation] = useState<Reservation | null>(null);
+  
+  // Filter state
   const [selectedDate, setSelectedDate] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [partySizeMin, setPartySizeMin] = useState<number | ''>('');
+  const [partySizeMax, setPartySizeMax] = useState<number | ''>('');
+  
+  // Pagination state
+  const [pagination, setPagination] = useState<{
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  } | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  
   const { showSnackbar } = useSnackbar();
 
   const fetchReservations = async () => {
     setLoading(true);
     try {
-      const data = await reservationService.getReservations({
-        date: selectedDate || undefined,  // Only pass date if one is selected
-        status: statusFilter === 'all' ? undefined : statusFilter
-      });
-      setReservations(data);
+      const filters: ReservationFilters = {
+        page: currentPage,
+        limit: pageSize,
+        sortBy: 'reservationDate',
+        sortOrder: 'desc'
+      };
+      
+      // Date filtering - use date range if provided, otherwise single date
+      if (startDate && endDate) {
+        filters.startDate = startDate;
+        filters.endDate = endDate;
+      } else if (selectedDate) {
+        filters.date = selectedDate;
+      }
+      
+      // Status filter
+      if (statusFilter !== 'all') {
+        filters.status = statusFilter;
+      }
+      
+      // Search filters
+      if (searchQuery) {
+        filters.search = searchQuery;
+      } else {
+        // Individual customer filters if no general search
+        if (customerName) filters.customerName = customerName;
+      }
+      
+      // Party size filters
+      if (partySizeMin !== '') filters.partySizeMin = Number(partySizeMin);
+      if (partySizeMax !== '') filters.partySizeMax = Number(partySizeMax);
+      
+      const response = await reservationService.getReservations(filters);
+      
+      // Handle paginated or non-paginated response
+      if (response && 'pagination' in response) {
+        const paginatedResponse = response as PaginatedReservations;
+        setReservations(paginatedResponse.data);
+        setPagination(paginatedResponse.pagination);
+      } else {
+        setReservations(response as Reservation[]);
+        setPagination(null);
+      }
     } catch (error) {
       showSnackbar('Failed to load reservations', 'error');
     } finally {
@@ -603,7 +664,19 @@ const ReservationManagementPage: React.FC = () => {
 
   useEffect(() => {
     fetchReservations();
-  }, [selectedDate, statusFilter]);
+  }, [selectedDate, startDate, endDate, statusFilter, searchQuery, customerName, partySizeMin, partySizeMax, currentPage, pageSize]);
+  
+  const handleClearFilters = () => {
+    setSelectedDate('');
+    setStartDate('');
+    setEndDate('');
+    setStatusFilter('all');
+    setSearchQuery('');
+    setCustomerName('');
+    setPartySizeMin('');
+    setPartySizeMax('');
+    setCurrentPage(1);
+  };
 
   const handleEdit = (reservation: Reservation) => {
     setEditingReservation(reservation);
@@ -771,25 +844,93 @@ const ReservationManagementPage: React.FC = () => {
 
       {/* Filters */}
       <Paper sx={{ p: 2, mb: 3 }}>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+          <Typography variant="h6">Filters & Search</Typography>
+          <Button
+            size="small"
+            startIcon={<ClearIcon />}
+            onClick={handleClearFilters}
+            disabled={!selectedDate && !startDate && !endDate && statusFilter === 'all' && !searchQuery && !customerName && partySizeMin === '' && partySizeMax === ''}
+          >
+            Clear All
+          </Button>
+        </Box>
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} sm={3}>
+          {/* Search Bar */}
+          <Grid item xs={12} md={6}>
             <TextField
               fullWidth
-              label="Date"
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              placeholder="All dates"
-              helperText={!selectedDate ? "Showing all dates" : ""}
+              label="Search"
+              placeholder="Search by name, email, or phone..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1); // Reset to first page on search
+              }}
+              InputProps={{
+                startAdornment: <SearchIcon sx={{ mr: 1, color: 'action.active' }} />
+              }}
             />
           </Grid>
-          <Grid item xs={12} sm={3}>
+          
+          {/* Date Range or Single Date */}
+          <Grid item xs={12} sm={6} md={3}>
+            <TextField
+              fullWidth
+              label="Start Date"
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                setStartDate(e.target.value);
+                setSelectedDate(''); // Clear single date when using range
+                setCurrentPage(1);
+              }}
+              InputLabelProps={{ shrink: true }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <TextField
+              fullWidth
+              label="End Date"
+              type="date"
+              value={endDate}
+              onChange={(e) => {
+                setEndDate(e.target.value);
+                setSelectedDate(''); // Clear single date when using range
+                setCurrentPage(1);
+              }}
+              InputLabelProps={{ shrink: true }}
+            />
+          </Grid>
+          
+          {/* Single Date (alternative to range) */}
+          <Grid item xs={12} sm={6} md={3}>
+            <TextField
+              fullWidth
+              label="Or Single Date"
+              type="date"
+              value={selectedDate}
+              onChange={(e) => {
+                setSelectedDate(e.target.value);
+                setStartDate(''); // Clear range when using single date
+                setEndDate('');
+                setCurrentPage(1);
+              }}
+              InputLabelProps={{ shrink: true }}
+              helperText={selectedDate ? "Using single date" : "Or use date range above"}
+            />
+          </Grid>
+          
+          {/* Status Filter */}
+          <Grid item xs={12} sm={6} md={3}>
             <FormControl fullWidth>
               <InputLabel>Status</InputLabel>
               <Select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
                 label="Status"
               >
                 <MenuItem value="all">All</MenuItem>
@@ -799,7 +940,53 @@ const ReservationManagementPage: React.FC = () => {
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} sm={3}>
+          
+          {/* Customer Name Filter */}
+          <Grid item xs={12} sm={6} md={3}>
+            <TextField
+              fullWidth
+              label="Customer Name"
+              value={customerName}
+              onChange={(e) => {
+                setCustomerName(e.target.value);
+                setSearchQuery(''); // Clear general search when using specific filter
+                setCurrentPage(1);
+              }}
+              disabled={!!searchQuery}
+              helperText={searchQuery ? "Disabled when using general search" : ""}
+            />
+          </Grid>
+          
+          {/* Party Size Range */}
+          <Grid item xs={12} sm={6} md={3}>
+            <TextField
+              fullWidth
+              label="Min Party Size"
+              type="number"
+              value={partySizeMin}
+              onChange={(e) => {
+                setPartySizeMin(e.target.value === '' ? '' : Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              inputProps={{ min: 1 }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <TextField
+              fullWidth
+              label="Max Party Size"
+              type="number"
+              value={partySizeMax}
+              onChange={(e) => {
+                setPartySizeMax(e.target.value === '' ? '' : Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              inputProps={{ min: 1 }}
+            />
+          </Grid>
+          
+          {/* Summary Stats */}
+          <Grid item xs={12} sm={6} md={3}>
             <Box display="flex" alignItems="center">
               <GroupIcon sx={{ mr: 1 }} />
               <Typography>
@@ -807,18 +994,74 @@ const ReservationManagementPage: React.FC = () => {
               </Typography>
             </Box>
           </Grid>
-          <Grid item xs={12} sm={3}>
-            <Button
-              fullWidth
-              variant="outlined"
-              startIcon={<RefreshIcon />}
-              onClick={fetchReservations}
-            >
-              Refresh
-            </Button>
-          </Grid>
+          
+          {/* Results Count */}
+          {pagination && (
+            <Grid item xs={12} sm={6} md={3}>
+              <Typography variant="body2" color="text.secondary">
+                Showing {((currentPage - 1) * pageSize) + 1}-{Math.min(currentPage * pageSize, pagination.total)} of {pagination.total}
+              </Typography>
+            </Grid>
+          )}
         </Grid>
       </Paper>
+      
+      {/* Pagination Controls */}
+      {pagination && pagination.totalPages > 1 && (
+        <Paper sx={{ p: 2, mb: 3 }}>
+          <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
+            <Box display="flex" alignItems="center" gap={2}>
+              <Typography variant="body2">Page {pagination.page} of {pagination.totalPages}</Typography>
+              <FormControl size="small" sx={{ minWidth: 100 }}>
+                <InputLabel>Per Page</InputLabel>
+                <Select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  label="Per Page"
+                >
+                  <MenuItem value={25}>25</MenuItem>
+                  <MenuItem value={50}>50</MenuItem>
+                  <MenuItem value={100}>100</MenuItem>
+                  <MenuItem value={200}>200</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+            <Box display="flex" gap={1}>
+              <Button
+                variant="outlined"
+                onClick={() => setCurrentPage(1)}
+                disabled={!pagination.hasPrev}
+              >
+                First
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={!pagination.hasPrev}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={!pagination.hasNext}
+              >
+                Next
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => setCurrentPage(pagination.totalPages)}
+                disabled={!pagination.hasNext}
+              >
+                Last
+              </Button>
+            </Box>
+          </Box>
+        </Paper>
+      )}
 
       {/* Reservations Table - Desktop */}
       <TableContainer component={Paper} sx={mobileResponsiveStyles.table.desktopTable(isMobile)}>

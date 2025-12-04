@@ -53,13 +53,74 @@ export enum ReservationStatus {
   NO_SHOW = 'NO_SHOW'
 }
 
+export interface ReservationFilters {
+  // Date filtering (backward compatible)
+  date?: string;
+  startDate?: string;
+  endDate?: string;
+  // Status filtering
+  status?: string;
+  // Customer search
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  // Party size filtering
+  partySizeMin?: number;
+  partySizeMax?: number;
+  // General search
+  search?: string;
+  // Restaurant filter
+  restaurantId?: number;
+  // Pagination
+  page?: number;
+  limit?: number;
+  // Sorting
+  sortBy?: 'reservationDate' | 'reservationTime' | 'customerName' | 'partySize' | 'status' | 'createdAt';
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface PaginatedReservations {
+  data: Reservation[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+}
+
+export interface ReservationStats {
+  totalReservations: number;
+  confirmed: number;
+  cancelled: number;
+  pending: number;
+  totalGuests: number;
+  averagePartySize: number;
+  byStatus: Record<string, number>;
+  byDate: Array<{
+    date: string;
+    count: number;
+    totalGuests: number;
+  }>;
+  peakHours: Array<{
+    hour: string;
+    count: number;
+  }>;
+}
+
 const BASE_URL = '/reservations';
 
 export const reservationService = {
-  // Get all reservations with optional filters
-  async getReservations(params?: { date?: string; status?: string }): Promise<Reservation[]> {
+  // Get all reservations with enhanced filtering and pagination
+  async getReservations(params?: ReservationFilters): Promise<Reservation[] | PaginatedReservations> {
     const response = await api.get(BASE_URL, { params });
-    return response.data;
+    // Check if response is paginated (has pagination property) or plain array (backward compatible)
+    if (response.data && typeof response.data === 'object' && 'pagination' in response.data) {
+      return response.data as PaginatedReservations;
+    }
+    return response.data as Reservation[];
   },
 
   // Get single reservation by ID
@@ -119,6 +180,17 @@ export const reservationService = {
       params.partySize = partySize;
     }
     const response = await api.get(`/reservations/availability/${restaurantId}`, { params });
+    return response.data;
+  },
+
+  // Get reservation statistics
+  async getStats(params?: {
+    startDate?: string;
+    endDate?: string;
+    restaurantId?: number;
+    groupBy?: 'day' | 'week' | 'month';
+  }): Promise<ReservationStats> {
+    const response = await api.get(`${BASE_URL}/stats`, { params });
     return response.data;
   }
 }; 

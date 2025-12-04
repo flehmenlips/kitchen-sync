@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../config/db';
 import { ReservationStatus } from '@prisma/client';
 import { emailService } from '../services/emailService';
-import { format } from 'date-fns';
+import { format, startOfWeek } from 'date-fns';
 import { checkAvailability, getTimeSlotAvailabilities, generateTimeSlots } from '../services/reservationCapacityService';
 
 // Helper function for safe integer parsing
@@ -814,5 +814,165 @@ export const getAvailability = async (req: Request, res: Response): Promise<void
             message: 'Error fetching availability',
             error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
+    }
+};
+
+// @desc    Get reservation statistics
+// @route   GET /api/reservations/stats
+// @access  Private
+export const getReservationStats = async (req: Request, res: Response): Promise<void> => {
+    if (!req.user?.id) {
+        res.status(401).json({ message: 'Not authorized, user ID missing' });
+        return;
+    }
+
+    try {
+        const { startDate, endDate, restaurantId, groupBy = 'day' } = req.query;
+        
+        // Get the restaurants this user has access to
+        const userRestaurants = await prisma.restaurantStaff.findMany({
+            where: { 
+                userId: req.user.id,
+                isActive: true
+            },
+            select: { restaurantId: true }
+        });
+
+        if (userRestaurants.length === 0) {
+            res.status(200).json({
+                totalReservations: 0,
+                confirmed: 0,
+                cancelled: 0,
+                pending: 0,
+                totalGuests: 0,
+                averagePartySize: 0,
+                byStatus: {},
+                byDate: [],
+                peakHours: []
+            });
+            return;
+        }
+
+        const restaurantIds = userRestaurants.map(r => r.restaurantId);
+        
+        // Build where clause
+        const where: any = {
+            restaurantId: { in: restaurantIds }
+        };
+        
+        // Restaurant filter (if explicitly requested and user has access)
+        if (restaurantId) {
+            const requestedId = safeParseInt(restaurantId as string);
+            if (requestedId && restaurantIds.includes(requestedId)) {
+                where.restaurantId = requestedId;
+            }
+        }
+        
+        // Date range filtering
+        if (startDate || endDate) {
+            const dateFilter: any = {};
+            if (startDate) {
+                dateFilter.gte = new Date(startDate as string);
+            }
+            if (endDate) {
+                const endDateObj = new Date(endDate as string);
+                endDateObj.setDate(endDateObj.getDate() + 1);
+                dateFilter.lt = endDateObj;
+            }
+            if (Object.keys(dateFilter).length > 0) {
+                where.reservationDate = dateFilter;
+            }
+        }
+
+        // Get all reservations for calculations
+        const reservations = await prisma.reservation.findMany({
+            where,
+            select: {
+                id: true,
+                status: true,
+                partySize: true,
+                reservationDate: true,
+                reservationTime: true
+            }
+        });
+
+        // Calculate basic statistics
+        const totalReservations = reservations.length;
+        const totalGuests = reservations.reduce((sum, r) => sum + r.partySize, 0);
+        const averagePartySize = totalReservations > 0 ? totalGuests / totalReservations : 0;
+
+        // Status breakdown
+        const byStatus: Record<string, number> = {};
+        reservations.forEach(r => {
+            byStatus[r.status] = (byStatus[r.status] || 0) + 1;
+        });
+
+        const confirmed = byStatus[ReservationStatus.CONFIRMED] || 0;
+        const cancelled = byStatus[ReservationStatus.CANCELLED] || 0;
+        const pending = byStatus[ReservationStatus.PENDING] || 0;
+
+        // Peak hours analysis
+        const hourCounts: Record<string, number> = {};
+        reservations.forEach(r => {
+            if (r.reservationTime) {
+                const hour = r.reservationTime.substring(0, 5); // Extract HH:MM
+                hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+            }
+        });
+
+        const peakHours = Object.entries(hourCounts)
+            .map(([hour, count]) => ({ hour, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 10); // Top 10 peak hours
+
+        // Group by date if requested
+        let byDate: Array<{ date: string; count: number; totalGuests: number }> = [];
+        
+        if (groupBy && ['day', 'week', 'month'].includes(groupBy as string)) {
+            const dateGroups: Record<string, { count: number; totalGuests: number }> = {};
+            
+            reservations.forEach(r => {
+                const date = new Date(r.reservationDate);
+                let key: string;
+                
+                if (groupBy === 'day') {
+                    key = format(date, 'yyyy-MM-dd');
+                } else if (groupBy === 'week') {
+                    const weekStart = startOfWeek(date, { weekStartsOn: 1 });
+                    key = format(weekStart, 'yyyy-MM-dd');
+                } else { // month
+                    key = format(date, 'yyyy-MM');
+                }
+                
+                if (!dateGroups[key]) {
+                    dateGroups[key] = { count: 0, totalGuests: 0 };
+                }
+                dateGroups[key].count++;
+                dateGroups[key].totalGuests += r.partySize;
+            });
+            
+            byDate = Object.entries(dateGroups)
+                .map(([date, stats]) => ({
+                    date,
+                    count: stats.count,
+                    totalGuests: stats.totalGuests
+                }))
+                .sort((a, b) => a.date.localeCompare(b.date));
+        }
+
+        res.status(200).json({
+            totalReservations,
+            confirmed,
+            cancelled,
+            pending,
+            totalGuests,
+            averagePartySize: Math.round(averagePartySize * 100) / 100, // Round to 2 decimal places
+            byStatus,
+            byDate,
+            peakHours
+        });
+    } catch (error) {
+        console.error('Error fetching reservation statistics:', error);
+        res.status(500).json({ message: 'Error fetching reservation statistics' });
     }
 }; 
