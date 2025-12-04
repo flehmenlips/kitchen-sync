@@ -935,12 +935,13 @@ export const getReservationStats = async (req: Request, res: Response): Promise<
         // Setting pending to 0 to maintain backward compatibility with frontend interface
         const pending = 0;
 
-        // Peak hours analysis
+        // Peak hours analysis - aggregate by hour (e.g., all reservations in 6 PM hour)
         const hourCounts: Record<string, number> = {};
         reservations.forEach(r => {
             if (r.reservationTime) {
-                const hour = r.reservationTime.substring(0, 5); // Extract HH:MM
-                hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+                const hour = r.reservationTime.substring(0, 2); // Extract HH (hour portion only)
+                const hourKey = `${hour}:00`; // Format as HH:00 for consistency
+                hourCounts[hourKey] = (hourCounts[hourKey] || 0) + 1;
             }
         });
 
