@@ -189,12 +189,18 @@ export const getReservations = async (req: Request, res: Response): Promise<void
         if (paginationEnabled) {
             totalCount = await prisma.reservation.count({ where });
             
-            // Calculate total covers (sum of party sizes excluding cancelled reservations)
+            // Calculate total covers (sum of party sizes)
+            // Respect existing status filter if present, otherwise exclude cancelled
+            const coversWhere = { ...where };
+            if (!coversWhere.status) {
+                // No status filter specified, exclude cancelled reservations
+                coversWhere.status = { not: ReservationStatus.CANCELLED };
+            }
+            // If status filter exists, use it as-is (e.g., if filtering by COMPLETED, 
+            // count covers for completed only; if filtering by CANCELLED, covers will be 0)
+            
             const coversResult = await prisma.reservation.aggregate({
-                where: {
-                    ...where,
-                    status: { not: ReservationStatus.CANCELLED }
-                },
+                where: coversWhere,
                 _sum: {
                     partySize: true
                 }
