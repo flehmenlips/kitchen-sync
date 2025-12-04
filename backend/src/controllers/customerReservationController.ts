@@ -459,8 +459,24 @@ export const customerReservationController = {
         });
       });
 
-      // TODO: Send confirmation email
-      // await emailService.sendReservationConfirmation(customer.email, reservation);
+      // Send confirmation email
+      try {
+        const formattedDate = format(reservation.reservationDate, 'EEEE, MMMM d, yyyy');
+        await emailService.sendReservationConfirmation(
+          customer.email,
+          customerName,
+          {
+            date: formattedDate,
+            time: reservation.reservationTime,
+            partySize: reservation.partySize,
+            specialRequests: reservation.specialRequests || reservation.notes || undefined,
+            confirmationNumber: generateConfirmationNumber(reservation.id)
+          }
+        );
+      } catch (emailError) {
+        console.error('Failed to send confirmation email:', emailError);
+        // Don't fail the reservation creation if email fails
+      }
 
       res.status(201).json({
         message: 'Reservation created successfully',

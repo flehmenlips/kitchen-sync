@@ -1,4 +1,4 @@
-require('dotenv').config({ path: '.env' }); // Use production config
+require('dotenv').config({ path: '.env.local' }); // Use local config
 const { emailService } = require('../dist/services/emailService');
 
 // Test email configuration
@@ -8,24 +8,36 @@ const TEST_NAME = 'Test User';
 async function testEmailService() {
   console.log('🧪 Testing Email Service Configuration\n');
   
-  // Check if SendGrid is configured
-  if (!process.env.SENDGRID_API_KEY) {
-    console.error('❌ SENDGRID_API_KEY is not set!');
-    console.log('   Please set this environment variable to test email sending.');
+  // Check which provider is configured
+  const hasResend = !!process.env.RESEND_API_KEY;
+  const hasSendgrid = !!process.env.SENDGRID_API_KEY;
+
+  console.log('📋 Configuration Status:');
+  console.log(`   Resend API Key: ${hasResend ? '✅ Found' : '❌ Not found'}`);
+  console.log(`   SendGrid API Key: ${hasSendgrid ? '✅ Found' : '❌ Not found'}`);
+  
+  if (!hasResend && !hasSendgrid) {
+    console.error('\n❌ No email provider configured!');
+    console.log('   Please set either RESEND_API_KEY or SENDGRID_API_KEY in your .env.local file.');
+    console.log('\n💡 Recommended: Use Resend (https://resend.com)');
+    console.log('   - Free tier: 3,000 emails/month');
+    console.log('   - Better developer experience');
+    console.log('   - Modern TypeScript support\n');
     return;
   }
 
-  if (!process.env.FROM_EMAIL) {
-    console.warn('⚠️  FROM_EMAIL is not set, using default: noreply@seabreezekitchen.com');
+  if (!process.env.FROM_EMAIL && !process.env.EMAIL_FROM) {
+    console.warn('⚠️  FROM_EMAIL not set, using default: noreply@seabreezekitchen.com');
   }
 
   if (!process.env.FRONTEND_URL) {
-    console.warn('⚠️  FRONTEND_URL is not set, using default for test links');
+    console.warn('⚠️  FRONTEND_URL not set, using default for test links');
   }
 
-  console.log('✅ SendGrid configuration found');
+  const provider = hasResend ? 'Resend' : 'SendGrid';
+  console.log(`\n✅ ${provider} configuration found`);
   console.log(`📧 Sending test emails to: ${TEST_EMAIL}`);
-  console.log(`📤 From email: ${process.env.FROM_EMAIL || 'noreply@seabreezekitchen.com'}\n`);
+  console.log(`📤 From email: ${process.env.FROM_EMAIL || process.env.EMAIL_FROM || 'noreply@seabreezekitchen.com'}\n`);
 
   // Test 1: Verification Email
   try {
@@ -78,6 +90,14 @@ async function testEmailService() {
   // Additional debugging info
   if (process.env.NODE_ENV !== 'production') {
     console.log('\n💡 Tip: In development mode, emails are also logged to console.');
+  }
+
+  if (hasResend) {
+    console.log('\n📚 Resend Dashboard: https://resend.com/emails');
+    console.log('   Check your Resend dashboard to see email delivery status.');
+  } else if (hasSendgrid) {
+    console.log('\n📚 SendGrid Dashboard: https://app.sendgrid.com');
+    console.log('   Check your SendGrid dashboard to see email delivery status.');
   }
 }
 
