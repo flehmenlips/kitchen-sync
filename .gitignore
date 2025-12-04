@@ -14,6 +14,11 @@ build/
 .svelte-kit/
 *.tsbuildinfo
 
+# Frontend build artifacts (Vite output)
+backend/public/assets/*.js
+backend/public/assets/*.css
+!backend/public/assets/*.map
+
 # Environment Variables
 .env
 .env.*
