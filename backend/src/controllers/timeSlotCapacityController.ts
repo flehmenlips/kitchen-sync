@@ -66,22 +66,56 @@ export const getTimeSlotCapacities = async (req: Request, res: Response): Promis
 
     console.log('[getTimeSlotCapacities] Query where clause:', where);
 
-    const capacities = await prisma.timeSlotCapacity.findMany({
-      where,
-      orderBy: [
-        { dayOfWeek: 'asc' },
-        { timeSlot: 'asc' }
-      ]
-    });
+    let capacities;
+    try {
+      capacities = await prisma.timeSlotCapacity.findMany({
+        where,
+        orderBy: [
+          { dayOfWeek: 'asc' },
+          { timeSlot: 'asc' }
+        ]
+      });
+      console.log('[getTimeSlotCapacities] Found capacities:', capacities.length);
+    } catch (dbError: any) {
+      console.error('[getTimeSlotCapacities] Database query error:', dbError);
+      console.error('[getTimeSlotCapacities] Database error code:', dbError.code);
+      console.error('[getTimeSlotCapacities] Database error meta:', dbError.meta);
+      
+      // Check for common Prisma errors
+      if (dbError.code === 'P2001' || dbError.message?.includes('does not exist')) {
+        res.status(500).json({ 
+          message: 'Time slot capacity table does not exist. Please run database migrations.',
+          error: dbError.message,
+          code: dbError.code,
+          hint: 'Run: npx prisma migrate deploy'
+        });
+        return;
+      }
+      
+      // Re-throw to be caught by outer catch
+      throw dbError;
+    }
 
-    console.log('[getTimeSlotCapacities] Found capacities:', capacities.length);
     res.status(200).json(capacities);
   } catch (error: any) {
     console.error('[getTimeSlotCapacities] Error fetching time slot capacities:', error);
     console.error('[getTimeSlotCapacities] Error stack:', error.stack);
+    console.error('[getTimeSlotCapacities] Error details:', {
+      message: error.message,
+      code: error.code,
+      meta: error.meta,
+      name: error.name
+    });
+    
+    // Return detailed error in response for debugging
     res.status(500).json({ 
       message: 'Error fetching time slot capacities',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: error.message || 'Unknown error',
+      details: process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'production' ? {
+        code: error.code,
+        meta: error.meta,
+        stack: error.stack
+      } : undefined
     });
   }
 };
