@@ -98,7 +98,7 @@ const CustomerReservationPage: React.FC = () => {
           if (isMounted && currentUserId === user?.id && phoneNumber) {
             setFormData(prev => ({
               ...prev,
-              customerPhone: phoneNumber
+              customerPhone: prev.customerPhone || phoneNumber
             }));
           }
         } catch (error) {
