@@ -387,7 +387,7 @@ export const ReservationCalendar: React.FC = () => {
   };
 
   // Validate form against reservation settings
-  const validateForm = (): boolean => {
+  const validateForm = (): { isValid: boolean; errors: { [key: string]: string } } => {
     const errors: { [key: string]: string } = {};
     
     // Customer name validation
@@ -467,7 +467,7 @@ export const ReservationCalendar: React.FC = () => {
     }
     
     setFormErrors(errors);
-    return Object.keys(errors).length === 0;
+    return { isValid: Object.keys(errors).length === 0, errors };
   };
 
   const handleFormSubmit = async () => {
@@ -478,8 +478,9 @@ export const ReservationCalendar: React.FC = () => {
     }
     
     // Validate form
-    if (!validateForm()) {
-      const errorCount = Object.keys(formErrors).length;
+    const validation = validateForm();
+    if (!validation.isValid) {
+      const errorCount = Object.keys(validation.errors).length;
       enqueueSnackbar(
         `Please fix ${errorCount} error${errorCount > 1 ? 's' : ''} in the form`,
         { variant: 'error', autoHideDuration: 4000 }
