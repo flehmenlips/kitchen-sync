@@ -40,7 +40,6 @@ import {
   Group as GroupIcon,
   AccessTime as TimeIcon,
   CalendarToday as CalendarIcon,
-  Refresh as RefreshIcon,
   Search as SearchIcon,
   Clear as ClearIcon
 } from '@mui/icons-material';
@@ -999,7 +998,11 @@ const ReservationManagementPage: React.FC = () => {
           {pagination && (
             <Grid item xs={12} sm={6} md={3}>
               <Typography variant="body2" color="text.secondary">
-                Showing {((currentPage - 1) * pageSize) + 1}-{Math.min(currentPage * pageSize, pagination.total)} of {pagination.total}
+                {pagination.total === 0 ? (
+                  'No results found'
+                ) : (
+                  `Showing ${((currentPage - 1) * pageSize) + 1}-${Math.min(currentPage * pageSize, pagination.total)} of ${pagination.total}`
+                )}
               </Typography>
             </Grid>
           )}

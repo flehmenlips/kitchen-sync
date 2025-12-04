@@ -911,7 +911,9 @@ export const getReservationStats = async (req: Request, res: Response): Promise<
 
         const confirmed = byStatus[ReservationStatus.CONFIRMED] || 0;
         const cancelled = byStatus[ReservationStatus.CANCELLED] || 0;
-        const pending = byStatus[ReservationStatus.PENDING] || 0;
+        // Note: PENDING status doesn't exist in ReservationStatus enum (only CONFIRMED, CANCELLED, COMPLETED, NO_SHOW)
+        // Setting pending to 0 to maintain backward compatibility with frontend interface
+        const pending = 0;
 
         // Peak hours analysis
         const hourCounts: Record<string, number> = {};
