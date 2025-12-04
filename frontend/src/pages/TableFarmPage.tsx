@@ -15,10 +15,10 @@ import {
   Settings as SettingsIcon
 } from '@mui/icons-material';
 import { ReservationCalendar } from '../components/tablefarm/ReservationCalendar';
+import { ReservationDashboard } from '../components/tablefarm/ReservationDashboard';
 import OrderListPage from './OrderListPage';
 import ReservationManagementPage from './ReservationManagementPage';
 import ReservationSettingsPage from './ReservationSettingsPage';
-// import { TableFarmAnalytics } from '../components/tablefarm/TableFarmAnalytics';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -228,41 +228,11 @@ export const TableFarmPage: React.FC = () => {
 
         <TabPanel value={tabValue} index={4}>
           <Box sx={{ 
-            py: 6, 
-            textAlign: 'center',
+            py: 4,
             background: 'rgba(255,255,255,0.3)',
             minHeight: '400px'
           }}>
-            <Box sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '120px',
-              height: '120px',
-              background: 'linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%)',
-              borderRadius: '30px',
-              mx: 'auto',
-              mb: 4,
-              boxShadow: '0 8px 24px rgba(0,0,0,0.1)'
-            }}>
-              <AssessmentIcon sx={{ fontSize: 60, color: '#64748b' }} />
-            </Box>
-            <Typography 
-              variant="h5" 
-              sx={{ 
-                mb: 2,
-                fontWeight: 700,
-                background: 'linear-gradient(135deg, #1e40af 0%, #8b5cf6 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text'
-              }}
-            >
-              Analytics Dashboard Coming Soon
-            </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ fontSize: '1.1rem' }}>
-              Track reservations, orders, and customer insights
-            </Typography>
+            <ReservationDashboard />
           </Box>
         </TabPanel>
       </Paper>

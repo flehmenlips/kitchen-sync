@@ -436,6 +436,13 @@ model Reservation {
   @@index([restaurantId])
   @@index([reservationDate])
   @@index([status])
+  // Composite indexes for common query patterns
+  @@index([reservationDate, reservationTime])
+  @@index([status, reservationDate])
+  @@index([restaurantId, reservationDate])
+  // Indexes for search functionality
+  @@index([customerEmail])
+  @@index([customerName])
   @@map("reservations")
 }
 
@@ -474,65 +481,65 @@ model GuestReservation {
 
 // Restaurant reservation settings and configuration
 model ReservationSettings {
-  id                      Int        @id @default(autoincrement())
-  restaurantId            Int        @unique @map("restaurant_id")
-  
+  id           Int @id @default(autoincrement())
+  restaurantId Int @unique @map("restaurant_id")
+
   // Operating Hours (JSON format: { "monday": { "open": "17:00", "close": "22:00", "closed": false }, ... })
-  operatingHours          Json       @default("{}") @map("operating_hours") @db.Json
-  
+  operatingHours Json @default("{}") @map("operating_hours") @db.Json
+
   // Reservation Rules
-  minPartySize            Int        @default(1) @map("min_party_size")
-  maxPartySize            Int        @default(20) @map("max_party_size")
-  defaultDuration         Int        @default(90) @map("default_duration") // minutes
-  advanceBookingDays      Int        @default(60) @map("advance_booking_days")
-  minAdvanceHours         Int        @default(2) @map("min_advance_hours")
-  
+  minPartySize       Int @default(1) @map("min_party_size")
+  maxPartySize       Int @default(20) @map("max_party_size")
+  defaultDuration    Int @default(90) @map("default_duration") // minutes
+  advanceBookingDays Int @default(60) @map("advance_booking_days")
+  minAdvanceHours    Int @default(2) @map("min_advance_hours")
+
   // Time Slot Configuration
-  timeSlotInterval        Int        @default(15) @map("time_slot_interval") // minutes (15, 30, 60)
-  seatingIntervals        Json?      @map("seating_intervals") @db.Json // ["17:00", "17:30", "18:00", ...]
-  
+  timeSlotInterval Int   @default(15) @map("time_slot_interval") // minutes (15, 30, 60)
+  seatingIntervals Json? @map("seating_intervals") @db.Json // ["17:00", "17:30", "18:00", ...]
+
   // Capacity Management
-  maxCoversPerSlot        Int?       @map("max_covers_per_slot") // Optional overall capacity limit
-  allowOverbooking        Boolean    @default(false) @map("allow_overbooking")
-  overbookingPercentage   Int        @default(10) @map("overbooking_percentage")
-  
+  maxCoversPerSlot      Int?    @map("max_covers_per_slot") // Optional overall capacity limit
+  allowOverbooking      Boolean @default(false) @map("allow_overbooking")
+  overbookingPercentage Int     @default(10) @map("overbooking_percentage")
+
   // Policies
-  cancellationPolicy      String?    @map("cancellation_policy") @db.Text
-  cancellationHours       Int        @default(24) @map("cancellation_hours") // Hours before reservation
-  requireCreditCard       Boolean    @default(false) @map("require_credit_card")
-  requireDeposit          Boolean    @default(false) @map("require_deposit")
-  depositAmount           Decimal?   @map("deposit_amount") @db.Decimal(10, 2)
-  autoConfirm             Boolean    @default(true) @map("auto_confirm")
-  
+  cancellationPolicy String?  @map("cancellation_policy") @db.Text
+  cancellationHours  Int      @default(24) @map("cancellation_hours") // Hours before reservation
+  requireCreditCard  Boolean  @default(false) @map("require_credit_card")
+  requireDeposit     Boolean  @default(false) @map("require_deposit")
+  depositAmount      Decimal? @map("deposit_amount") @db.Decimal(10, 2)
+  autoConfirm        Boolean  @default(true) @map("auto_confirm")
+
   // Communication
-  sendConfirmation        Boolean    @default(true) @map("send_confirmation")
-  sendReminder            Boolean    @default(true) @map("send_reminder")
-  reminderHours           Int        @default(24) @map("reminder_hours") // Hours before reservation
-  
+  sendConfirmation Boolean @default(true) @map("send_confirmation")
+  sendReminder     Boolean @default(true) @map("send_reminder")
+  reminderHours    Int     @default(24) @map("reminder_hours") // Hours before reservation
+
   // Metadata
-  createdAt               DateTime   @default(now()) @map("created_at")
-  updatedAt               DateTime   @updatedAt @map("updated_at")
-  
-  restaurant              Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
   @@index([restaurantId])
   @@map("reservation_settings")
 }
 
 // Time slot capacity configuration for specific days/times
 model TimeSlotCapacity {
-  id                Int        @id @default(autoincrement())
-  restaurantId      Int        @map("restaurant_id")
-  dayOfWeek         Int        // 0-6 (Sunday-Saturday)
-  timeSlot          String     @db.VarChar(10) // "18:00"
-  maxCovers         Int        @map("max_covers") // Maximum guests for this slot
-  isActive          Boolean    @default(true) @map("is_active")
-  
-  createdAt         DateTime   @default(now()) @map("created_at")
-  updatedAt         DateTime   @updatedAt @map("updated_at")
-  
-  restaurant        Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  
+  id           Int     @id @default(autoincrement())
+  restaurantId Int     @map("restaurant_id")
+  dayOfWeek    Int // 0-6 (Sunday-Saturday)
+  timeSlot     String  @db.VarChar(10) // "18:00"
+  maxCovers    Int     @map("max_covers") // Maximum guests for this slot
+  isActive     Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
   @@unique([restaurantId, dayOfWeek, timeSlot])
   @@index([restaurantId])
   @@index([dayOfWeek])
@@ -934,7 +941,7 @@ model Subscription {
   maxCustomerAccounts    Int                @default(100) @map("max_customer_accounts")
   maxLocations           Int                @default(1) @map("max_locations")
   maxStaffAccounts       Int                @default(2) @map("max_staff_accounts")
-  module_access          Json?              @db.Json @map("module_access")
+  module_access          Json?              @map("module_access") @db.Json
   prioritySupport        Boolean            @default(false) @map("priority_support")
   whiteLabel             Boolean            @default(false) @map("white_label")
   invoices               Invoice[]
@@ -1109,32 +1116,32 @@ model RestaurantTemplate {
 }
 
 model BrandAsset {
-  id           String        @id @default(uuid())
-  restaurantId Int           @map("restaurant_id")
-  assetType    String        @map("asset_type") @db.VarChar(50)
-  fileName     String        @map("file_name") @db.VarChar(255)
-  fileUrl      String        @map("file_url") @db.VarChar(255)
-  fileSize     Int?          @map("file_size")
-  mimeType     String?       @map("mime_type") @db.VarChar(100)
+  id           String  @id @default(uuid())
+  restaurantId Int     @map("restaurant_id")
+  assetType    String  @map("asset_type") @db.VarChar(50)
+  fileName     String  @map("file_name") @db.VarChar(255)
+  fileUrl      String  @map("file_url") @db.VarChar(255)
+  fileSize     Int?    @map("file_size")
+  mimeType     String? @map("mime_type") @db.VarChar(100)
   dimensions   Json?
-  altText      String?       @map("alt_text") @db.VarChar(255)
-  isPrimary    Boolean       @default(false) @map("is_primary")
-  
+  altText      String? @map("alt_text") @db.VarChar(255)
+  isPrimary    Boolean @default(false) @map("is_primary")
+
   // Enhanced Asset Management fields
-  folderId     String?       @map("folder_id")
-  folderPath   String?       @map("folder_path") @db.VarChar(255)
-  tags         String[]      @default([])
-  description  String?       @db.Text
-  usageCount   Int           @default(0) @map("usage_count")
-  lastUsedAt   DateTime?     @map("last_used_at")
-  cloudinaryPublicId String? @map("cloudinary_public_id") @db.VarChar(255)
-  
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @default(now()) @updatedAt @map("updated_at")
-  
+  folderId           String?   @map("folder_id")
+  folderPath         String?   @map("folder_path") @db.VarChar(255)
+  tags               String[]  @default([])
+  description        String?   @db.Text
+  usageCount         Int       @default(0) @map("usage_count")
+  lastUsedAt         DateTime? @map("last_used_at")
+  cloudinaryPublicId String?   @map("cloudinary_public_id") @db.VarChar(255)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
   // Relations
-  restaurant   Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  folder       AssetFolder?  @relation(fields: [folderId], references: [id])
+  restaurant   Restaurant   @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  folder       AssetFolder? @relation(fields: [folderId], references: [id])
   usageRecords AssetUsage[]
 
   @@index([restaurantId])
@@ -1148,22 +1155,22 @@ model BrandAsset {
 }
 
 model AssetFolder {
-  id               String        @id @default(uuid())
-  restaurantId     Int           @map("restaurant_id")
-  name             String        @db.VarChar(255)
-  parentFolderId   String?       @map("parent_folder_id")
-  colorHex         String        @default("#1976d2") @map("color_hex") @db.VarChar(7)
-  sortOrder        Int           @default(0) @map("sort_order")
-  description      String?       @db.Text
-  isSystemFolder   Boolean       @default(false) @map("is_system_folder")
-  createdAt        DateTime      @default(now()) @map("created_at")
-  updatedAt        DateTime      @default(now()) @updatedAt @map("updated_at")
-  
+  id             String   @id @default(uuid())
+  restaurantId   Int      @map("restaurant_id")
+  name           String   @db.VarChar(255)
+  parentFolderId String?  @map("parent_folder_id")
+  colorHex       String   @default("#1976d2") @map("color_hex") @db.VarChar(7)
+  sortOrder      Int      @default(0) @map("sort_order")
+  description    String?  @db.Text
+  isSystemFolder Boolean  @default(false) @map("is_system_folder")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at")
+
   // Relations
-  restaurant       Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  parentFolder     AssetFolder?  @relation("FolderHierarchy", fields: [parentFolderId], references: [id])
-  subFolders       AssetFolder[] @relation("FolderHierarchy")
-  assets           BrandAsset[]
+  restaurant   Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  parentFolder AssetFolder?  @relation("FolderHierarchy", fields: [parentFolderId], references: [id])
+  subFolders   AssetFolder[] @relation("FolderHierarchy")
+  assets       BrandAsset[]
 
   @@unique([restaurantId, name, parentFolderId])
   @@index([restaurantId])
@@ -1173,15 +1180,15 @@ model AssetFolder {
 }
 
 model AssetUsage {
-  id            String     @id @default(uuid())
-  assetId       String     @map("asset_id")
-  moduleName    String     @map("module_name") @db.VarChar(50)
-  referenceId   String     @map("reference_id") @db.VarChar(50)
-  referenceType String     @map("reference_type") @db.VarChar(50)
-  usedAt        DateTime   @default(now()) @map("used_at")
-  
+  id            String   @id @default(uuid())
+  assetId       String   @map("asset_id")
+  moduleName    String   @map("module_name") @db.VarChar(50)
+  referenceId   String   @map("reference_id") @db.VarChar(50)
+  referenceType String   @map("reference_type") @db.VarChar(50)
+  usedAt        DateTime @default(now()) @map("used_at")
+
   // Relations
-  asset         BrandAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  asset BrandAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
 
   @@index([assetId])
   @@index([moduleName])
