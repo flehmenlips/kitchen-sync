@@ -650,9 +650,49 @@ const CustomerReservationPage: React.FC = () => {
 
   return (
     <Box>
-      <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ mb: 4 }}>
-        Make a Reservation
-      </Typography>
+      {/* Restaurant Branding Header */}
+      {restaurantSettings && (
+        <Box sx={{ mb: 4, textAlign: 'center' }}>
+          {restaurantSettings.logoUrl && (
+            <Box sx={{ mb: 2 }}>
+              <img 
+                src={restaurantSettings.logoUrl} 
+                alt={restaurantSettings.restaurant?.name || 'Restaurant Logo'}
+                style={{ 
+                  maxHeight: isMobile ? '60px' : '80px', 
+                  maxWidth: '100%',
+                  objectFit: 'contain'
+                }}
+              />
+            </Box>
+          )}
+          <Typography 
+            variant={isMobile ? "h5" : "h4"} 
+            component="h1" 
+            gutterBottom
+            sx={{ 
+              fontWeight: 600,
+              color: restaurantSettings.primaryColor || 'primary.main'
+            }}
+          >
+            {restaurantSettings.restaurant?.name || 'Restaurant'}
+          </Typography>
+          {restaurantSettings.tagline && (
+            <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 1 }}>
+              {restaurantSettings.tagline}
+            </Typography>
+          )}
+          <Typography variant="h6" component="h2" sx={{ mt: 3, mb: 2 }}>
+            Make a Reservation
+          </Typography>
+        </Box>
+      )}
+      
+      {!restaurantSettings && (
+        <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ mb: 4 }}>
+          Make a Reservation
+        </Typography>
+      )}
 
       <Paper sx={{ p: { xs: 2, md: 4 }, maxWidth: 800, mx: 'auto' }}>
         <Stepper activeStep={activeStep} alternativeLabel={!isMobile} sx={{ mb: 4 }}>

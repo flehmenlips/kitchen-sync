@@ -1,4 +1,5 @@
 import { customerApi } from './customerApi';
+import { getCurrentRestaurantSlug } from '../utils/subdomain';
 
 export interface RegisterData {
   email: string;
@@ -51,12 +52,16 @@ export const customerAuthService = {
     const firstName = nameParts[0];
     const lastName = nameParts.slice(1).join(' ') || undefined;
     
+    // Capture restaurant context from subdomain
+    const restaurantSlug = getCurrentRestaurantSlug();
+    
     const registrationData = {
       email: data.email,
       password: data.password,
       firstName,
       lastName,
-      phone: data.phone
+      phone: data.phone,
+      restaurantSlug: restaurantSlug || undefined // Include restaurant slug if available
     };
     
     const response = await customerApi.post('/auth/customer/register', registrationData);

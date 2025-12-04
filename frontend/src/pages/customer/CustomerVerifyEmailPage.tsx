@@ -14,6 +14,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { customerAuthService } from '../../services/customerAuthService';
+import { buildCustomerUrl } from '../../utils/subdomain';
 
 export const CustomerVerifyEmailPage: React.FC = () => {
   const navigate = useNavigate();
@@ -21,9 +22,16 @@ export const CustomerVerifyEmailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [restaurantSlug, setRestaurantSlug] = useState<string | null>(null);
 
   useEffect(() => {
     const token = searchParams.get('token');
+    const restaurant = searchParams.get('restaurant');
+    
+    if (restaurant) {
+      setRestaurantSlug(restaurant);
+    }
+    
     if (token) {
       verifyEmail(token);
     } else {
@@ -99,7 +107,13 @@ export const CustomerVerifyEmailPage: React.FC = () => {
               <Button
                 variant="contained"
                 size="large"
-                onClick={() => navigate('/customer/login')}
+                onClick={() => {
+                  // Redirect to restaurant-specific login page if restaurant context exists
+                  const loginUrl = restaurantSlug 
+                    ? buildCustomerUrl('login')
+                    : '/customer/login';
+                  navigate(loginUrl);
+                }}
                 sx={{ mt: 2 }}
               >
                 Sign In to Your Account
@@ -138,14 +152,24 @@ export const CustomerVerifyEmailPage: React.FC = () => {
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <Button
                   variant="contained"
-                  onClick={() => navigate('/customer/register')}
+                  onClick={() => {
+                    const registerUrl = restaurantSlug 
+                      ? buildCustomerUrl('register')
+                      : '/customer/register';
+                    navigate(registerUrl);
+                  }}
                 >
                   Try Registering Again
                 </Button>
                 
                 <Button
                   variant="outlined"
-                  onClick={() => navigate('/customer')}
+                  onClick={() => {
+                    const homeUrl = restaurantSlug 
+                      ? buildCustomerUrl()
+                      : '/customer';
+                    navigate(homeUrl);
+                  }}
                 >
                   Back to Home
                 </Button>
