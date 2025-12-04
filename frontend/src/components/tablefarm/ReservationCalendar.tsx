@@ -63,6 +63,7 @@ export const ReservationCalendar: React.FC = () => {
   const { currentRestaurant } = useRestaurant();
   
   const [view, setView] = useState<CalendarView>('week');
+  const [previousView, setPreviousView] = useState<CalendarView | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -347,8 +348,14 @@ export const ReservationCalendar: React.FC = () => {
 
   const handleViewChange = (_event: React.MouseEvent<HTMLElement>, newView: CalendarView | null) => {
     if (newView !== null) {
+      setPreviousView(view);
       setView(newView);
     }
+  };
+
+  const handleBackToMonth = () => {
+    setView('month');
+    setPreviousView(null);
   };
 
   const getPeriodLabel = () => {
@@ -370,6 +377,7 @@ export const ReservationCalendar: React.FC = () => {
     // In month view, clicking a day should switch to day view
     if (view === 'month') {
       setCurrentDate(date);
+      setPreviousView('month');
       setView('day');
     } else {
       // In day/week view, clicking opens create reservation dialog
@@ -1009,9 +1017,21 @@ export const ReservationCalendar: React.FC = () => {
           </Box>
         </Box>
 
-        <Typography variant="h6" gutterBottom align="center">
-          {getPeriodLabel()}
-        </Typography>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+          <Typography variant="h6" gutterBottom>
+            {getPeriodLabel()}
+          </Typography>
+          {view === 'day' && previousView === 'month' && (
+            <Button
+              variant="outlined"
+              startIcon={<CalendarMonthIcon />}
+              onClick={handleBackToMonth}
+              size="small"
+            >
+              Back to Month View
+            </Button>
+          )}
+        </Box>
 
         {/* Day View */}
         {view === 'day' && viewDates.length > 0 && (
