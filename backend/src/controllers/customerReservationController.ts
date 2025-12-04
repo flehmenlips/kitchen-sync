@@ -125,6 +125,7 @@ export const createCustomerReservation = async (req: CustomerAuthRequest, res: R
             return;
         }
 
+        const restaurantId = 1; // Single restaurant MVP
         const newReservation = await prisma.reservation.create({
             data: {
                 customerName: customerName || customerProfile.user.name || 'Guest',
@@ -137,9 +138,55 @@ export const createCustomerReservation = async (req: CustomerAuthRequest, res: R
                 notes,
                 specialRequests,
                 userId: 1, // Default staff user for now
-                restaurantId: 1 // Single restaurant MVP
+                restaurantId
             }
         });
+
+        // Get restaurant info for confirmation email
+        let restaurantInfo = null;
+        try {
+            const restaurant = await prisma.restaurant.findUnique({
+                where: { id: restaurantId },
+                select: {
+                    name: true,
+                    phone: true,
+                    address: true,
+                    city: true,
+                    state: true,
+                    zipCode: true,
+                    website: true,
+                    email: true,
+                }
+            });
+
+            if (restaurant) {
+                const restaurantSettings = await prisma.restaurantSettings.findUnique({
+                    where: { restaurantId },
+                    select: {
+                        contactPhone: true,
+                        contactEmail: true,
+                        contactAddress: true,
+                        contactCity: true,
+                        contactState: true,
+                        contactZip: true,
+                        websiteName: true,
+                    }
+                });
+
+                restaurantInfo = {
+                    name: restaurantSettings?.websiteName || restaurant.name,
+                    phone: restaurantSettings?.contactPhone || restaurant.phone,
+                    address: restaurantSettings?.contactAddress || restaurant.address,
+                    city: restaurantSettings?.contactCity || restaurant.city,
+                    state: restaurantSettings?.contactState || restaurant.state,
+                    zipCode: restaurantSettings?.contactZip || restaurant.zipCode,
+                    website: restaurant.website,
+                    email: restaurantSettings?.contactEmail || restaurant.email,
+                };
+            }
+        } catch (error) {
+            console.error('Error fetching restaurant info for email:', error);
+        }
 
         // Send confirmation email
         const emailToUse = customerEmail || customerProfile.user.email;
@@ -155,7 +202,8 @@ export const createCustomerReservation = async (req: CustomerAuthRequest, res: R
                         partySize,
                         specialRequests: notes || specialRequests,
                         confirmationNumber: generateConfirmationNumber(newReservation.id)
-                    }
+                    },
+                    restaurantInfo
                 );
             } catch (emailError) {
                 console.error('Failed to send confirmation email:', emailError);
@@ -478,6 +526,34 @@ export const customerReservationController = {
         });
       });
 
+      // Get restaurant info for confirmation email
+      let restaurantInfo = null;
+      if (reservation.restaurant) {
+        const restaurantSettings = await prisma.restaurantSettings.findUnique({
+          where: { restaurantId: reservation.restaurantId },
+          select: {
+            contactPhone: true,
+            contactEmail: true,
+            contactAddress: true,
+            contactCity: true,
+            contactState: true,
+            contactZip: true,
+            websiteName: true,
+          }
+        });
+
+        restaurantInfo = {
+          name: restaurantSettings?.websiteName || reservation.restaurant.name,
+          phone: restaurantSettings?.contactPhone || reservation.restaurant.phone,
+          address: restaurantSettings?.contactAddress || reservation.restaurant.address,
+          city: restaurantSettings?.contactCity || reservation.restaurant.city,
+          state: restaurantSettings?.contactState || reservation.restaurant.state,
+          zipCode: restaurantSettings?.contactZip || reservation.restaurant.zipCode,
+          website: reservation.restaurant.website,
+          email: restaurantSettings?.contactEmail || reservation.restaurant.email,
+        };
+      }
+
       // Send confirmation email
       try {
         const formattedDate = format(reservation.reservationDate, 'EEEE, MMMM d, yyyy');
@@ -490,7 +566,8 @@ export const customerReservationController = {
             partySize: reservation.partySize,
             specialRequests: reservation.specialRequests || reservation.notes || undefined,
             confirmationNumber: generateConfirmationNumber(reservation.id)
-          }
+          },
+          restaurantInfo
         );
       } catch (emailError) {
         console.error('Failed to send confirmation email:', emailError);

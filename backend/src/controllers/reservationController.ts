@@ -317,6 +317,52 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
             data: reservationData
         });
 
+        // Get restaurant info for confirmation email
+        let restaurantInfo = null;
+        try {
+            const restaurant = await prisma.restaurant.findUnique({
+                where: { id: restaurantId },
+                select: {
+                    name: true,
+                    phone: true,
+                    address: true,
+                    city: true,
+                    state: true,
+                    zipCode: true,
+                    website: true,
+                    email: true,
+                }
+            });
+
+            if (restaurant) {
+                const restaurantSettings = await prisma.restaurantSettings.findUnique({
+                    where: { restaurantId },
+                    select: {
+                        contactPhone: true,
+                        contactEmail: true,
+                        contactAddress: true,
+                        contactCity: true,
+                        contactState: true,
+                        contactZip: true,
+                        websiteName: true,
+                    }
+                });
+
+                restaurantInfo = {
+                    name: restaurantSettings?.websiteName || restaurant.name,
+                    phone: restaurantSettings?.contactPhone || restaurant.phone,
+                    address: restaurantSettings?.contactAddress || restaurant.address,
+                    city: restaurantSettings?.contactCity || restaurant.city,
+                    state: restaurantSettings?.contactState || restaurant.state,
+                    zipCode: restaurantSettings?.contactZip || restaurant.zipCode,
+                    website: restaurant.website,
+                    email: restaurantSettings?.contactEmail || restaurant.email,
+                };
+            }
+        } catch (error) {
+            console.error('Error fetching restaurant info for email:', error);
+        }
+
         // Send confirmation email if customer email is provided
         if (customerEmail && customerEmail.trim()) {
             try {
@@ -330,7 +376,8 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
                         partySize: partySizeNum,
                         specialRequests: specialRequests || notes || undefined,
                         confirmationNumber: generateConfirmationNumber(newReservation.id)
-                    }
+                    },
+                    restaurantInfo
                 );
             } catch (emailError) {
                 console.error('Failed to send confirmation email:', emailError);

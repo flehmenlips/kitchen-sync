@@ -115,12 +115,48 @@ export const customerAuthController = {
       // Hash password
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      // Get restaurant slug for verification email redirect
+      // Get restaurant info for emails
       const restaurant = await prisma.restaurant.findUnique({
         where: { id: finalRestaurantId },
-        select: { slug: true }
+        select: {
+          slug: true,
+          name: true,
+          phone: true,
+          address: true,
+          city: true,
+          state: true,
+          zipCode: true,
+          website: true,
+          email: true,
+        }
       });
       const restaurantSlugForRedirect = restaurant?.slug || restaurantSlug;
+
+      // Get restaurant settings for contact info (may override restaurant table)
+      const restaurantSettings = await prisma.restaurantSettings.findUnique({
+        where: { restaurantId: finalRestaurantId },
+        select: {
+          contactPhone: true,
+          contactEmail: true,
+          contactAddress: true,
+          contactCity: true,
+          contactState: true,
+          contactZip: true,
+          websiteName: true,
+        }
+      });
+
+      // Build restaurant info for emails
+      const restaurantInfo = restaurant ? {
+        name: restaurantSettings?.websiteName || restaurant.name,
+        phone: restaurantSettings?.contactPhone || restaurant.phone,
+        address: restaurantSettings?.contactAddress || restaurant.address,
+        city: restaurantSettings?.contactCity || restaurant.city,
+        state: restaurantSettings?.contactState || restaurant.state,
+        zipCode: restaurantSettings?.contactZip || restaurant.zipCode,
+        website: restaurant.website,
+        email: restaurantSettings?.contactEmail || restaurant.email,
+      } : null;
 
       // Create customer and related data in a transaction
       const customer = await prisma.$transaction(async (tx) => {
@@ -168,7 +204,7 @@ export const customerAuthController = {
         const verificationUrl = restaurantSlugForRedirect
           ? `${process.env.FRONTEND_URL}/customer/verify-email?token=${verificationToken}&restaurant=${restaurantSlugForRedirect}`
           : `${process.env.FRONTEND_URL}/customer/verify-email?token=${verificationToken}`;
-        await emailService.sendVerificationEmail(email, firstName, verificationUrl);
+        await emailService.sendVerificationEmail(email, firstName, verificationUrl, restaurantInfo);
 
         return newCustomer;
       });
@@ -364,10 +400,55 @@ export const customerAuthController = {
         }
       });
 
+      // Get restaurant info for welcome email
+      let restaurantInfo = null;
+      if (customer.restaurantId) {
+        const restaurant = await prisma.restaurant.findUnique({
+          where: { id: customer.restaurantId },
+          select: {
+            name: true,
+            phone: true,
+            address: true,
+            city: true,
+            state: true,
+            zipCode: true,
+            website: true,
+            email: true,
+          }
+        });
+
+        if (restaurant) {
+          const restaurantSettings = await prisma.restaurantSettings.findUnique({
+            where: { restaurantId: customer.restaurantId },
+            select: {
+              contactPhone: true,
+              contactEmail: true,
+              contactAddress: true,
+              contactCity: true,
+              contactState: true,
+              contactZip: true,
+              websiteName: true,
+            }
+          });
+
+          restaurantInfo = {
+            name: restaurantSettings?.websiteName || restaurant.name,
+            phone: restaurantSettings?.contactPhone || restaurant.phone,
+            address: restaurantSettings?.contactAddress || restaurant.address,
+            city: restaurantSettings?.contactCity || restaurant.city,
+            state: restaurantSettings?.contactState || restaurant.state,
+            zipCode: restaurantSettings?.contactZip || restaurant.zipCode,
+            website: restaurant.website,
+            email: restaurantSettings?.contactEmail || restaurant.email,
+          };
+        }
+      }
+
       // Send welcome email
       await emailService.sendWelcomeEmail(
         customer.email,
-        customer.firstName || 'Customer'
+        customer.firstName || 'Customer',
+        restaurantInfo
       );
 
       res.json({

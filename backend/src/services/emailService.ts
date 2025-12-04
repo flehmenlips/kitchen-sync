@@ -8,6 +8,17 @@ interface EmailOptions {
   text?: string;
 }
 
+interface RestaurantEmailInfo {
+  name: string;
+  phone?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zipCode?: string | null;
+  website?: string | null;
+  email?: string | null;
+}
+
 type EmailProvider = 'resend' | 'sendgrid' | 'none';
 
 /**
@@ -134,11 +145,17 @@ export class EmailService {
     }
   }
 
-  async sendVerificationEmail(email: string, name: string, verificationUrl: string): Promise<void> {
-    const subject = 'Verify your email - Seabreeze Kitchen';
+  async sendVerificationEmail(
+    email: string, 
+    name: string, 
+    verificationUrl: string, 
+    restaurantInfo?: RestaurantEmailInfo | null
+  ): Promise<void> {
+    const restaurantName = restaurantInfo?.name || 'our restaurant';
+    const subject = `Verify your email - ${restaurantName}`;
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>Welcome to Seabreeze Kitchen, ${name}!</h2>
+        <h2>Welcome to ${restaurantName}, ${name}!</h2>
         <p>Thank you for creating an account. Please verify your email address by clicking the link below:</p>
         <div style="margin: 30px 0;">
           <a href="${verificationUrl}" 
@@ -151,20 +168,20 @@ export class EmailService {
         <p>This link will expire in 24 hours.</p>
         <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
         <p style="color: #666; font-size: 14px;">
-          If you didn't create an account with Seabreeze Kitchen, please ignore this email.
+          If you didn't create an account with ${restaurantName}, please ignore this email.
         </p>
       </div>
     `;
     
     const text = `
-Welcome to Seabreeze Kitchen, ${name}!
+Welcome to ${restaurantName}, ${name}!
 
 Please verify your email address by clicking this link:
 ${verificationUrl}
 
 This link will expire in 24 hours.
 
-If you didn't create an account with Seabreeze Kitchen, please ignore this email.
+If you didn't create an account with ${restaurantName}, please ignore this email.
     `.trim();
 
     await this.sendEmail({ to: email, subject, html, text });
@@ -218,14 +235,39 @@ If you didn't request a password reset, please ignore this email. Your password 
       partySize: number;
       specialRequests?: string;
       confirmationNumber?: string;
-    }
+    },
+    restaurantInfo?: RestaurantEmailInfo | null
   ): Promise<void> {
-    const subject = 'Reservation Confirmed - Seabreeze Kitchen';
+    const restaurantName = restaurantInfo?.name || 'our restaurant';
+    const restaurantPhone = restaurantInfo?.phone || undefined;
+    const restaurantAddress = restaurantInfo?.address || undefined;
+    const restaurantCity = restaurantInfo?.city || undefined;
+    const restaurantState = restaurantInfo?.state || undefined;
+    const restaurantZip = restaurantInfo?.zipCode || undefined;
+    const restaurantWebsite = restaurantInfo?.website || undefined;
+    
+    // Build address string
+    const addressParts = [];
+    if (restaurantAddress) addressParts.push(restaurantAddress);
+    if (restaurantCity) addressParts.push(restaurantCity);
+    if (restaurantState || restaurantZip) {
+      addressParts.push([restaurantState, restaurantZip].filter(Boolean).join(' '));
+    }
+    const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : undefined;
+    
+    // Build website URL
+    let websiteUrl = restaurantWebsite;
+    if (websiteUrl && !websiteUrl.startsWith('http')) {
+      websiteUrl = `https://${websiteUrl}`;
+    }
+    const websiteDisplay = restaurantWebsite?.replace(/^https?:\/\//, '') || undefined;
+
+    const subject = `Reservation Confirmed - ${restaurantName}`;
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2>Reservation Confirmed!</h2>
         <p>Dear ${name},</p>
-        <p>Your reservation at Seabreeze Kitchen has been confirmed.</p>
+        <p>Your reservation at ${restaurantName} has been confirmed.</p>
         <div style="background-color: #f5f5f5; padding: 20px; border-radius: 4px; margin: 20px 0;">
           <h3 style="margin-top: 0;">Reservation Details</h3>
           ${reservationDetails.confirmationNumber ? `<p><strong>Confirmation #:</strong> ${reservationDetails.confirmationNumber}</p>` : ''}
@@ -235,14 +277,16 @@ If you didn't request a password reset, please ignore this email. Your password 
           ${reservationDetails.specialRequests ? `<p><strong>Special Requests:</strong> ${reservationDetails.specialRequests}</p>` : ''}
         </div>
         <p>We look forward to seeing you!</p>
-        <p>If you need to modify or cancel your reservation, please call us at (555) 123-4567.</p>
+        ${restaurantPhone ? `<p>If you need to modify or cancel your reservation, please call us at ${restaurantPhone}.</p>` : ''}
+        ${fullAddress || restaurantPhone || websiteDisplay ? `
         <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
         <p style="color: #666; font-size: 14px;">
-          Seabreeze Kitchen<br>
-          123 Ocean Drive, Beach City<br>
-          Phone: (555) 123-4567<br>
-          <a href="https://seabreezekitchen.com">www.seabreezekitchen.com</a>
+          ${restaurantName}<br>
+          ${fullAddress ? `${fullAddress}<br>` : ''}
+          ${restaurantPhone ? `Phone: ${restaurantPhone}<br>` : ''}
+          ${websiteDisplay ? `<a href="${websiteUrl || '#'}">${websiteDisplay}</a>` : ''}
         </p>
+        ` : ''}
       </div>
     `;
 
@@ -251,7 +295,7 @@ Reservation Confirmed!
 
 Dear ${name},
 
-Your reservation at Seabreeze Kitchen has been confirmed.
+Your reservation at ${restaurantName} has been confirmed.
 
 Reservation Details:
 ${reservationDetails.confirmationNumber ? `Confirmation #: ${reservationDetails.confirmationNumber}` : ''}
@@ -262,22 +306,50 @@ ${reservationDetails.specialRequests ? `Special Requests: ${reservationDetails.s
 
 We look forward to seeing you!
 
-If you need to modify or cancel your reservation, please call us at (555) 123-4567.
+${restaurantPhone ? `If you need to modify or cancel your reservation, please call us at ${restaurantPhone}.` : ''}
 
-Seabreeze Kitchen
-123 Ocean Drive, Beach City
-Phone: (555) 123-4567
-www.seabreezekitchen.com
+${fullAddress || restaurantPhone || websiteDisplay ? `${restaurantName}
+${fullAddress || ''}
+${restaurantPhone ? `Phone: ${restaurantPhone}` : ''}
+${websiteDisplay || ''}` : ''}
     `.trim();
 
     await this.sendEmail({ to: email, subject, html, text });
   }
 
-  async sendWelcomeEmail(email: string, name: string): Promise<void> {
-    const subject = 'Welcome to Seabreeze Kitchen!';
+  async sendWelcomeEmail(
+    email: string, 
+    name: string, 
+    restaurantInfo?: RestaurantEmailInfo | null
+  ): Promise<void> {
+    const restaurantName = restaurantInfo?.name || 'our restaurant';
+    const restaurantPhone = restaurantInfo?.phone || undefined;
+    const restaurantAddress = restaurantInfo?.address || undefined;
+    const restaurantCity = restaurantInfo?.city || undefined;
+    const restaurantState = restaurantInfo?.state || undefined;
+    const restaurantZip = restaurantInfo?.zipCode || undefined;
+    const restaurantWebsite = restaurantInfo?.website || undefined;
+    
+    // Build address string
+    const addressParts = [];
+    if (restaurantAddress) addressParts.push(restaurantAddress);
+    if (restaurantCity) addressParts.push(restaurantCity);
+    if (restaurantState || restaurantZip) {
+      addressParts.push([restaurantState, restaurantZip].filter(Boolean).join(' '));
+    }
+    const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : undefined;
+    
+    // Build website URL
+    let websiteUrl = restaurantWebsite;
+    if (websiteUrl && !websiteUrl.startsWith('http')) {
+      websiteUrl = `https://${websiteUrl}`;
+    }
+    const websiteDisplay = restaurantWebsite?.replace(/^https?:\/\//, '') || undefined;
+
+    const subject = `Welcome to ${restaurantName}!`;
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>Welcome to Seabreeze Kitchen!</h2>
+        <h2>Welcome to ${restaurantName}!</h2>
         <p>Hi ${name},</p>
         <p>Thank you for creating an account with us. We're excited to have you as part of our community!</p>
         <p>With your account, you can:</p>
@@ -288,18 +360,20 @@ www.seabreezekitchen.com
           <li>Receive exclusive offers and updates</li>
         </ul>
         <p>We look forward to serving you soon!</p>
+        ${fullAddress || restaurantPhone || websiteDisplay ? `
         <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
         <p style="color: #666; font-size: 14px;">
-          Seabreeze Kitchen<br>
-          123 Ocean Drive, Beach City<br>
-          Phone: (555) 123-4567<br>
-          <a href="https://seabreezekitchen.com">www.seabreezekitchen.com</a>
+          ${restaurantName}<br>
+          ${fullAddress ? `${fullAddress}<br>` : ''}
+          ${restaurantPhone ? `Phone: ${restaurantPhone}<br>` : ''}
+          ${websiteDisplay ? `<a href="${websiteUrl || '#'}">${websiteDisplay}</a>` : ''}
         </p>
+        ` : ''}
       </div>
     `;
 
     const text = `
-Welcome to Seabreeze Kitchen!
+Welcome to ${restaurantName}!
 
 Hi ${name},
 
@@ -313,10 +387,10 @@ With your account, you can:
 
 We look forward to serving you soon!
 
-Seabreeze Kitchen
-123 Ocean Drive, Beach City
-Phone: (555) 123-4567
-www.seabreezekitchen.com
+${fullAddress || restaurantPhone || websiteDisplay ? `${restaurantName}
+${fullAddress || ''}
+${restaurantPhone ? `Phone: ${restaurantPhone}` : ''}
+${websiteDisplay || ''}` : ''}
     `.trim();
 
     await this.sendEmail({ to: email, subject, html, text });
