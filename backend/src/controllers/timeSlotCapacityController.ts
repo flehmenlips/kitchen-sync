@@ -11,22 +11,11 @@ export const getTimeSlotCapacities = async (req: Request, res: Response): Promis
   }
 
   try {
-    const restaurantIdParam = req.params.restaurantId;
-    console.log('[getTimeSlotCapacities] Received restaurantId param:', restaurantIdParam);
-    
-    const restaurantId = parseInt(restaurantIdParam);
+    const restaurantId = parseInt(req.params.restaurantId);
     const { dayOfWeek, timeSlot } = req.query;
     
-    console.log('[getTimeSlotCapacities] Parsed values:', {
-      restaurantId,
-      dayOfWeek,
-      timeSlot,
-      userId: req.user.id
-    });
-    
     if (isNaN(restaurantId)) {
-      console.error('[getTimeSlotCapacities] Invalid restaurant ID:', restaurantIdParam);
-      res.status(400).json({ message: `Invalid restaurant ID: ${restaurantIdParam}` });
+      res.status(400).json({ message: `Invalid restaurant ID: ${req.params.restaurantId}` });
       return;
     }
 
@@ -40,10 +29,6 @@ export const getTimeSlotCapacities = async (req: Request, res: Response): Promis
     });
 
     if (!userRestaurant) {
-      console.error('[getTimeSlotCapacities] User does not have access:', {
-        userId: req.user.id,
-        restaurantId
-      });
       res.status(403).json({ message: 'You do not have access to this restaurant' });
       return;
     }
@@ -64,58 +49,31 @@ export const getTimeSlotCapacities = async (req: Request, res: Response): Promis
       where.timeSlot = timeSlot as string;
     }
 
-    console.log('[getTimeSlotCapacities] Query where clause:', where);
-
-    let capacities;
-    try {
-      capacities = await prisma.timeSlotCapacity.findMany({
-        where,
-        orderBy: [
-          { dayOfWeek: 'asc' },
-          { timeSlot: 'asc' }
-        ]
-      });
-      console.log('[getTimeSlotCapacities] Found capacities:', capacities.length);
-    } catch (dbError: any) {
-      console.error('[getTimeSlotCapacities] Database query error:', dbError);
-      console.error('[getTimeSlotCapacities] Database error code:', dbError.code);
-      console.error('[getTimeSlotCapacities] Database error meta:', dbError.meta);
-      
-      // Check for common Prisma errors
-      if (dbError.code === 'P2001' || dbError.message?.includes('does not exist')) {
-        res.status(500).json({ 
-          message: 'Time slot capacity table does not exist. Please run database migrations.',
-          error: dbError.message,
-          code: dbError.code,
-          hint: 'Run: npx prisma migrate deploy'
-        });
-        return;
-      }
-      
-      // Re-throw to be caught by outer catch
-      throw dbError;
-    }
+    const capacities = await prisma.timeSlotCapacity.findMany({
+      where,
+      orderBy: [
+        { dayOfWeek: 'asc' },
+        { timeSlot: 'asc' }
+      ]
+    });
 
     res.status(200).json(capacities);
   } catch (error: any) {
-    console.error('[getTimeSlotCapacities] Error fetching time slot capacities:', error);
-    console.error('[getTimeSlotCapacities] Error stack:', error.stack);
-    console.error('[getTimeSlotCapacities] Error details:', {
-      message: error.message,
-      code: error.code,
-      meta: error.meta,
-      name: error.name
-    });
+    console.error('Error fetching time slot capacities:', error);
     
-    // Return detailed error in response for debugging
+    // Check for common Prisma errors
+    if (error.code === 'P2001' || error.message?.includes('does not exist')) {
+      res.status(500).json({ 
+        message: 'Time slot capacity table does not exist. Please run database migrations.',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        hint: process.env.NODE_ENV === 'development' ? 'Run: npx prisma migrate deploy' : undefined
+      });
+      return;
+    }
+    
     res.status(500).json({ 
       message: 'Error fetching time slot capacities',
-      error: error.message || 'Unknown error',
-      details: process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'production' ? {
-        code: error.code,
-        meta: error.meta,
-        stack: error.stack
-      } : undefined
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
