@@ -1,3 +1,4 @@
+import { Resend } from 'resend';
 import sgMail from '@sendgrid/mail';
 
 interface EmailOptions {
@@ -7,52 +8,129 @@ interface EmailOptions {
   text?: string;
 }
 
-// Placeholder email service - in production, integrate with SendGrid, AWS SES, etc.
+type EmailProvider = 'resend' | 'sendgrid' | 'none';
+
+/**
+ * Email Service with support for Resend (primary) and SendGrid (fallback)
+ * 
+ * Priority:
+ * 1. Resend (if RESEND_API_KEY is set) - Recommended for modern apps
+ * 2. SendGrid (if SENDGRID_API_KEY is set) - Legacy support
+ * 3. Log only (development mode)
+ */
 export class EmailService {
+  private resend: Resend | null = null;
+  private provider: EmailProvider = 'none';
+  private fromEmail: string;
+  private replyToEmail: string;
+
   constructor() {
-    // Initialize SendGrid with API key if available
-    const apiKey = process.env.SENDGRID_API_KEY;
-    if (apiKey) {
-      sgMail.setApiKey(apiKey);
-      console.log('✅ SendGrid initialized for email delivery');
-    } else {
-      console.warn('⚠️ SENDGRID_API_KEY not set - emails will be logged only');
+    // Determine email provider based on available API keys
+    const resendApiKey = process.env.RESEND_API_KEY;
+    const sendgridApiKey = process.env.SENDGRID_API_KEY;
+
+    // Initialize Resend (preferred)
+    if (resendApiKey) {
+      try {
+        this.resend = new Resend(resendApiKey);
+        this.provider = 'resend';
+        console.log('✅ Resend initialized for email delivery');
+      } catch (error) {
+        console.error('❌ Failed to initialize Resend:', error);
+      }
     }
+    // Fallback to SendGrid
+    else if (sendgridApiKey) {
+      try {
+        sgMail.setApiKey(sendgridApiKey);
+        this.provider = 'sendgrid';
+      console.log('✅ SendGrid initialized for email delivery');
+      } catch (error) {
+        console.error('❌ Failed to initialize SendGrid:', error);
+      }
+    }
+    // No provider configured
+    else {
+      this.provider = 'none';
+      console.warn('⚠️ No email provider configured (RESEND_API_KEY or SENDGRID_API_KEY) - emails will be logged only');
+    }
+
+    // Set email addresses
+    this.fromEmail = process.env.FROM_EMAIL || process.env.EMAIL_FROM || 'noreply@seabreezekitchen.com';
+    this.replyToEmail = process.env.REPLY_TO_EMAIL || process.env.EMAIL_REPLY_TO || this.fromEmail;
   }
 
   private async sendEmail(options: EmailOptions): Promise<void> {
-    const fromEmail = process.env.FROM_EMAIL || 'noreply@seabreezekitchen.com';
     const isDevelopment = process.env.NODE_ENV !== 'production';
     
     // Always log in development
     if (isDevelopment) {
       console.log('📧 Email Service - Sending email:');
-      console.log(`To: ${options.to}`);
-      console.log(`From: ${fromEmail}`);
-      console.log(`Subject: ${options.subject}`);
-      console.log(`Content: ${options.text || 'See HTML content'}`);
+      console.log(`   Provider: ${this.provider}`);
+      console.log(`   To: ${options.to}`);
+      console.log(`   From: ${this.fromEmail}`);
+      console.log(`   Subject: ${options.subject}`);
+      console.log(`   Content: ${options.text || 'See HTML content'}`);
     }
     
-    // Send actual email if SendGrid is configured
-    if (process.env.SENDGRID_API_KEY) {
+    // Send via Resend
+    if (this.provider === 'resend' && this.resend) {
+      try {
+        const result = await this.resend.emails.send({
+          from: this.fromEmail,
+          to: options.to,
+          replyTo: this.replyToEmail,
+          subject: options.subject,
+          html: options.html,
+          text: options.text,
+        });
+
+        if (result.error) {
+          throw new Error(`Resend error: ${JSON.stringify(result.error)}`);
+        }
+
+        console.log(`✅ Email sent successfully via Resend to ${options.to} (ID: ${result.data?.id || 'unknown'})`);
+        return;
+      } catch (error: any) {
+        console.error('❌ Resend error:', error);
+        // Don't throw in production to avoid breaking the flow
+        if (isDevelopment) {
+          throw error;
+        }
+        return;
+      }
+    }
+
+    // Fallback to SendGrid
+    if (this.provider === 'sendgrid') {
       try {
         const msg = {
           to: options.to,
-          from: fromEmail,
+          from: this.fromEmail,
+          replyTo: this.replyToEmail,
           subject: options.subject,
           text: options.text,
           html: options.html,
         };
         
         await sgMail.send(msg);
-        console.log(`✅ Email sent successfully to ${options.to}`);
-      } catch (error) {
+        console.log(`✅ Email sent successfully via SendGrid to ${options.to}`);
+        return;
+      } catch (error: any) {
         console.error('❌ SendGrid error:', error);
         // Don't throw in production to avoid breaking the flow
         if (isDevelopment) {
           throw error;
         }
+        return;
       }
+    }
+
+    // No provider - just log
+    if (this.provider === 'none') {
+      console.log('⚠️ Email not sent - no provider configured. Email would have been:');
+      console.log(`   To: ${options.to}`);
+      console.log(`   Subject: ${options.subject}`);
     }
   }
 
