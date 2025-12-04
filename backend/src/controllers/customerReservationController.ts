@@ -328,20 +328,29 @@ export const customerReservationController = {
         }
       }
       
-      // Fall back to restaurantId from body or default
+      // Fall back to restaurantId from body (but never default to 1 - that's dangerous)
       if (!restaurantId) {
-        restaurantId = req.body.restaurantId || 1;
+        restaurantId = req.body.restaurantId;
       }
       
-      // Ensure restaurantId is set (required for Prisma)
+      // Fix Bug B: Ensure restaurantId is set - fail if not provided (never default to 1)
       if (!restaurantId) {
         return res.status(400).json({
-          error: 'Restaurant ID or slug is required'
+          error: 'Restaurant ID or slug is required',
+          message: 'Please provide a restaurant slug or restaurant ID'
         });
       }
 
       // Get authenticated customer
-      const customerIdFromAuth = req.customer?.id || req.customerUser!.userId;
+      // Fix Bug A: Remove non-null assertion and add defensive check
+      const customerIdFromAuth = req.customer?.id || req.customerUser?.userId;
+      if (!customerIdFromAuth) {
+        // This should never happen due to check above, but be defensive
+        return res.status(401).json({
+          error: 'Authentication required',
+          message: 'Please sign in or create an account to make a reservation'
+        });
+      }
       
       // Fetch customer with email verification status
       const customer = await prisma.customer.findUnique({
@@ -370,25 +379,8 @@ export const customerReservationController = {
         });
       }
 
-      // Ensure customer-restaurant link exists (create if needed)
-      // Use upsert to prevent race condition from concurrent requests
-      await prisma.customerRestaurant.upsert({
-        where: {
-          customerId_restaurantId: {
-            customerId: customer.id,
-            restaurantId: restaurantId
-          }
-        },
-        create: {
-          customerId: customer.id,
-          restaurantId: restaurantId,
-          firstVisit: new Date()
-        },
-        update: {
-          // No-op: don't update existing records, just ensure they exist
-        }
-      });
-
+      // Fix Bug C: Wrap customerRestaurant upsert and reservation creation in transaction
+      // This ensures atomicity - if reservation creation fails, customerRestaurant upsert is rolled back
       const customerId = customer.id;
       const customerName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.email;
       const customerEmail = customer.email;
@@ -424,26 +416,47 @@ export const customerReservationController = {
         });
       }
 
-      // Create the reservation
-      const reservation = await prisma.reservation.create({
-        data: {
-          customerId: customerId || null, // Null for unauthenticated reservations
-          customerName,
-          customerEmail,
-          customerPhone,
-          restaurantId,
-          reservationDate: new Date(reservationDate),
-          reservationTime,
-          partySize: parseInt(partySize),
-          status: 'CONFIRMED',
-          notes,
-          specialRequests,
-          // userId is now nullable, so we don't need to provide it for customer reservations
-          source: 'customer_portal'
-        },
-        include: {
-          restaurant: true
-        }
+      // Use transaction to ensure atomicity
+      const reservation = await prisma.$transaction(async (tx) => {
+        // Ensure customer-restaurant link exists (create if needed)
+        // Use upsert to prevent race condition from concurrent requests
+        await tx.customerRestaurant.upsert({
+          where: {
+            customerId_restaurantId: {
+              customerId: customer.id,
+              restaurantId: restaurantId
+            }
+          },
+          create: {
+            customerId: customer.id,
+            restaurantId: restaurantId,
+            firstVisit: new Date()
+          },
+          update: {
+            // No-op: don't update existing records, just ensure they exist
+          }
+        });
+
+        // Create the reservation
+        return await tx.reservation.create({
+          data: {
+            customerId: customerId || null,
+            customerName,
+            customerEmail,
+            customerPhone,
+            restaurantId,
+            reservationDate: new Date(reservationDate),
+            reservationTime,
+            partySize: parseInt(partySize),
+            status: 'CONFIRMED',
+            notes,
+            specialRequests,
+            source: 'customer_portal'
+          },
+          include: {
+            restaurant: true
+          }
+        });
       });
 
       // TODO: Send confirmation email

@@ -220,7 +220,7 @@ const CustomerReservationPage: React.FC = () => {
   const maxPartySize = restaurantSettings?.reservationSettings?.maxPartySize || 10;
   
   // Generate party size options
-  const partySizeOptions = [];
+  const partySizeOptions: number[] = [];
   for (let size = minPartySize; size <= maxPartySize; size++) {
     partySizeOptions.push(size);
   }
@@ -285,7 +285,6 @@ const CustomerReservationPage: React.FC = () => {
     
     try {
       const restaurantSlug = getCurrentRestaurantSlug();
-      
       const data: ReservationFormData & { 
         restaurantSlug?: string;
       } = {
@@ -297,7 +296,6 @@ const CustomerReservationPage: React.FC = () => {
         // Include restaurant slug
         restaurantSlug: restaurantSlug || undefined
       };
-      
       const response = await customerReservationService.createReservation(data);
       setConfirmationData(response.reservation);
       setActiveStep(1); // Move to confirmation step
