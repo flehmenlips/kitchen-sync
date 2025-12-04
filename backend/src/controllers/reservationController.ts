@@ -72,7 +72,7 @@ export const getReservations = async (req: Request, res: Response): Promise<void
         
         // If user has no restaurant associations, they shouldn't see any reservations
         if (userRestaurants.length === 0) {
-            res.status(200).json(paginationEnabled ? { data: [], pagination: { page: 1, limit: 50, total: 0, totalPages: 0, hasNext: false, hasPrev: false } } : []);
+            res.status(200).json(paginationEnabled ? { data: [], pagination: { page: 1, limit: 50, total: 0, totalPages: 0, hasNext: false, hasPrev: false, totalCovers: 0 } } : []);
             return;
         }
 
