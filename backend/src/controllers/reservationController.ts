@@ -176,8 +176,10 @@ export const getReservations = async (req: Request, res: Response): Promise<void
         }
 
         // Pagination parameters
-        const pageNum = page ? Math.max(1, parseInt(page as string)) : 1;
-        const limitNum = limit ? Math.min(200, Math.max(1, parseInt(limit as string))) : 50;
+        const parsedPage = safeParseInt(page);
+        const parsedLimit = safeParseInt(limit);
+        const pageNum = parsedPage ? Math.max(1, parsedPage) : 1;
+        const limitNum = parsedLimit ? Math.min(200, Math.max(1, parsedLimit)) : 50;
         const skip = paginationEnabled ? (pageNum - 1) * limitNum : undefined;
         const take = paginationEnabled ? limitNum : undefined;
 
