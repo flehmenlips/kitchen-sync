@@ -232,9 +232,17 @@ const TimeSlotCapacityPage: React.FC = () => {
     // Copy to target day
     sourceCapacities.forEach(sourceCap => {
       const key = `${targetDay}-${sourceCap.timeSlot}`;
+      const existingTarget = updated.get(key);
+      
+      // Preserve existing ID if target already has a database entry
+      // This ensures deletion logic works correctly when maxCovers is set to 0
+      const preservedId = existingTarget?.id && existingTarget.id > 0 
+        ? existingTarget.id 
+        : 0;
+      
       updated.set(key, {
         ...sourceCap,
-        id: 0,
+        id: preservedId,
         dayOfWeek: targetDay,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
