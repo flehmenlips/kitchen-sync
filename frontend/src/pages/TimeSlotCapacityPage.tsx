@@ -136,6 +136,22 @@ const TimeSlotCapacityPage: React.FC = () => {
       const updated = new Map(capacities);
       updated.set(key, { ...existing, isActive: !existing.isActive });
       setCapacities(updated);
+    } else {
+      // If capacity doesn't exist (using default), create a new one when toggling inactive
+      // Use a default maxCovers value (100) so it can be saved
+      const newCapacity: TimeSlotCapacity = {
+        id: 0,
+        restaurantId: restaurantId!,
+        dayOfWeek,
+        timeSlot,
+        maxCovers: 100, // Default value - user can change it
+        isActive: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      const updated = new Map(capacities);
+      updated.set(key, newCapacity);
+      setCapacities(updated);
     }
   };
 
@@ -231,6 +247,12 @@ const TimeSlotCapacityPage: React.FC = () => {
 
     // Copy to target day
     sourceCapacities.forEach(sourceCap => {
+      // Skip capacities with maxCovers: 0 that don't have an ID
+      // These represent "use default" and shouldn't be copied
+      if (sourceCap.maxCovers === 0 && (!sourceCap.id || sourceCap.id === 0)) {
+        return;
+      }
+      
       const key = `${targetDay}-${sourceCap.timeSlot}`;
       const existingTarget = updated.get(key);
       

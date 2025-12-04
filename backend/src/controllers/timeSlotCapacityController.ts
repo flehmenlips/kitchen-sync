@@ -11,11 +11,22 @@ export const getTimeSlotCapacities = async (req: Request, res: Response): Promis
   }
 
   try {
-    const restaurantId = parseInt(req.params.restaurantId);
+    const restaurantIdParam = req.params.restaurantId;
+    console.log('[getTimeSlotCapacities] Received restaurantId param:', restaurantIdParam);
+    
+    const restaurantId = parseInt(restaurantIdParam);
     const { dayOfWeek, timeSlot } = req.query;
     
+    console.log('[getTimeSlotCapacities] Parsed values:', {
+      restaurantId,
+      dayOfWeek,
+      timeSlot,
+      userId: req.user.id
+    });
+    
     if (isNaN(restaurantId)) {
-      res.status(400).json({ message: 'Invalid restaurant ID' });
+      console.error('[getTimeSlotCapacities] Invalid restaurant ID:', restaurantIdParam);
+      res.status(400).json({ message: `Invalid restaurant ID: ${restaurantIdParam}` });
       return;
     }
 
@@ -29,14 +40,17 @@ export const getTimeSlotCapacities = async (req: Request, res: Response): Promis
     });
 
     if (!userRestaurant) {
+      console.error('[getTimeSlotCapacities] User does not have access:', {
+        userId: req.user.id,
+        restaurantId
+      });
       res.status(403).json({ message: 'You do not have access to this restaurant' });
       return;
     }
 
-    // Build where clause
+    // Build where clause - don't filter by isActive so we can show all capacities for management
     const where: any = {
-      restaurantId,
-      isActive: true
+      restaurantId
     };
 
     if (dayOfWeek !== undefined) {
@@ -50,6 +64,8 @@ export const getTimeSlotCapacities = async (req: Request, res: Response): Promis
       where.timeSlot = timeSlot as string;
     }
 
+    console.log('[getTimeSlotCapacities] Query where clause:', where);
+
     const capacities = await prisma.timeSlotCapacity.findMany({
       where,
       orderBy: [
@@ -58,10 +74,15 @@ export const getTimeSlotCapacities = async (req: Request, res: Response): Promis
       ]
     });
 
+    console.log('[getTimeSlotCapacities] Found capacities:', capacities.length);
     res.status(200).json(capacities);
-  } catch (error) {
-    console.error('Error fetching time slot capacities:', error);
-    res.status(500).json({ message: 'Error fetching time slot capacities' });
+  } catch (error: any) {
+    console.error('[getTimeSlotCapacities] Error fetching time slot capacities:', error);
+    console.error('[getTimeSlotCapacities] Error stack:', error.stack);
+    res.status(500).json({ 
+      message: 'Error fetching time slot capacities',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
