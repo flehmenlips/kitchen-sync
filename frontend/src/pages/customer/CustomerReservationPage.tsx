@@ -39,6 +39,7 @@ import { restaurantSettingsService, RestaurantSettings } from '../../services/re
 import { getCurrentRestaurantSlug, buildCustomerUrl } from '../../utils/subdomain';
 import { useSnackbar } from 'notistack';
 import { useCustomerAuth } from '../../context/CustomerAuthContext';
+import { customerAuthService } from '../../services/customerAuthService';
 import { Link } from '@mui/material';
 
 interface FormData {
@@ -82,6 +83,27 @@ const CustomerReservationPage: React.FC = () => {
       // They'll be blocked when trying to submit
     }
   }, [user, authLoading]);
+
+  // Fetch customer profile to get phone number
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (user) {
+        try {
+          const profile = await customerAuthService.getProfile();
+          if (profile?.user?.phone) {
+            setFormData(prev => ({
+              ...prev,
+              customerPhone: profile.user.phone
+            }));
+          }
+        } catch (error) {
+          // Silently fail - phone is optional
+          console.error('Failed to fetch profile:', error);
+        }
+      }
+    };
+    fetchProfile();
+  }, [user]);
 
   // Update form data when user changes
   useEffect(() => {
@@ -285,14 +307,22 @@ const CustomerReservationPage: React.FC = () => {
     
     try {
       const restaurantSlug = getCurrentRestaurantSlug();
+      // Validate phone number if provided (prevent email addresses)
+      if (formData.customerPhone && formData.customerPhone.includes('@')) {
+        enqueueSnackbar('Please enter a valid phone number, not an email address', { variant: 'error' });
+        return;
+      }
+
       const data: ReservationFormData & { 
         restaurantSlug?: string;
+        customerPhone?: string;
       } = {
         reservationDate: format(formData.reservationDate!, 'yyyy-MM-dd'),
         reservationTime: formData.reservationTime,
         partySize: parseInt(formData.partySize),
         notes: formData.specialRequests || undefined,
         specialRequests: formData.specialRequests || undefined,
+        customerPhone: formData.customerPhone || undefined,
         // Include restaurant slug
         restaurantSlug: restaurantSlug || undefined
       };
@@ -471,6 +501,34 @@ const CustomerReservationPage: React.FC = () => {
               </Grid>
             )}
 
+            {/* Phone number field */}
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Phone Number"
+                type="tel"
+                value={formData.customerPhone}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Prevent email addresses from being entered
+                  if (!value.includes('@')) {
+                    setFormData({ ...formData, customerPhone: value });
+                  }
+                }}
+                autoComplete="tel"
+                placeholder="(555) 123-4567"
+                helperText="Optional - for reservation confirmations and updates"
+                InputProps={{
+                  startAdornment: <PhoneIcon sx={{ mr: 1, color: 'action.active' }} />
+                }}
+                inputProps={{
+                  inputMode: 'tel',
+                  pattern: '[0-9\\s\\-\\(\\)\\+]*',
+                  maxLength: 20
+                }}
+              />
+            </Grid>
+
             {/* Special requests field */}
             <Grid item xs={12}>
               <TextField
@@ -481,6 +539,7 @@ const CustomerReservationPage: React.FC = () => {
                 multiline
                 rows={3}
                 placeholder="Dietary restrictions, special occasions, seating preferences..."
+                autoComplete="off"
                 InputProps={{
                   startAdornment: <NotesIcon sx={{ mr: 1, color: 'action.active', alignSelf: 'flex-start', mt: 1 }} />
                 }}
@@ -532,6 +591,14 @@ const CustomerReservationPage: React.FC = () => {
                       {formData.customerName}
                     </Typography>
                   </Grid>
+                  {formData.customerPhone && (
+                    <Grid item xs={6}>
+                      <Typography variant="body2" color="text.secondary">Phone</Typography>
+                      <Typography variant="body1" fontWeight="medium">
+                        {formData.customerPhone}
+                      </Typography>
+                    </Grid>
+                  )}
                   {confirmationData && (
                     <Grid item xs={12}>
                       <Typography variant="body2" color="text.secondary">Confirmation Number</Typography>
