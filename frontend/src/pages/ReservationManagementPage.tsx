@@ -618,10 +618,11 @@ const ReservationManagementPage: React.FC = () => {
         sortOrder: 'desc'
       };
       
-      // Date filtering - use date range if provided, otherwise single date
-      if (startDate && endDate) {
-        filters.startDate = startDate;
-        filters.endDate = endDate;
+      // Date filtering - use date range if provided (supports partial ranges), otherwise single date
+      if (startDate || endDate) {
+        // Backend supports open-ended ranges (just startDate or just endDate)
+        if (startDate) filters.startDate = startDate;
+        if (endDate) filters.endDate = endDate;
       } else if (selectedDate) {
         filters.date = selectedDate;
       }
