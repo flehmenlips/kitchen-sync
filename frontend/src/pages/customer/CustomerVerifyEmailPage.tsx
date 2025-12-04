@@ -14,7 +14,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { customerAuthService } from '../../services/customerAuthService';
-import { buildCustomerUrl } from '../../utils/subdomain';
+import { buildRestaurantPageUrl } from '../../utils/subdomain';
 
 export const CustomerVerifyEmailPage: React.FC = () => {
   const navigate = useNavigate();
@@ -109,10 +109,13 @@ export const CustomerVerifyEmailPage: React.FC = () => {
                 size="large"
                 onClick={() => {
                   // Redirect to restaurant-specific login page if restaurant context exists
-                  const loginUrl = restaurantSlug 
-                    ? buildCustomerUrl('login')
-                    : '/customer/login';
-                  navigate(loginUrl);
+                  if (restaurantSlug) {
+                    // Use buildRestaurantPageUrl to create full URL with restaurant context
+                    // This handles both subdomain navigation (production) and query params (dev)
+                    window.location.href = buildRestaurantPageUrl(restaurantSlug, 'login');
+                  } else {
+                    navigate('/customer/login');
+                  }
                 }}
                 sx={{ mt: 2 }}
               >
@@ -153,10 +156,12 @@ export const CustomerVerifyEmailPage: React.FC = () => {
                 <Button
                   variant="contained"
                   onClick={() => {
-                    const registerUrl = restaurantSlug 
-                      ? buildCustomerUrl('register')
-                      : '/customer/register';
-                    navigate(registerUrl);
+                    if (restaurantSlug) {
+                      // Use buildRestaurantPageUrl to create full URL with restaurant context
+                      window.location.href = buildRestaurantPageUrl(restaurantSlug, 'register');
+                    } else {
+                      navigate('/customer/register');
+                    }
                   }}
                 >
                   Try Registering Again
@@ -165,10 +170,12 @@ export const CustomerVerifyEmailPage: React.FC = () => {
                 <Button
                   variant="outlined"
                   onClick={() => {
-                    const homeUrl = restaurantSlug 
-                      ? buildCustomerUrl()
-                      : '/customer';
-                    navigate(homeUrl);
+                    if (restaurantSlug) {
+                      // Use buildRestaurantPageUrl to create full URL with restaurant context
+                      window.location.href = buildRestaurantPageUrl(restaurantSlug, '');
+                    } else {
+                      navigate('/customer');
+                    }
                   }}
                 >
                   Back to Home

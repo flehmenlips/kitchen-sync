@@ -79,6 +79,28 @@ export const customerAuthController = {
         });
       }
 
+      // Validate phone number if provided (prevent email addresses)
+      let validatedPhone: string | undefined = undefined;
+      if (phone && typeof phone === 'string') {
+        const phoneValue = phone.trim();
+        if (phoneValue) {
+          if (phoneValue.includes('@')) {
+            return res.status(400).json({
+              error: 'Invalid phone number',
+              message: 'Please enter a valid phone number, not an email address'
+            });
+          }
+          // Basic phone validation - should contain digits
+          if (!/[\d]/.test(phoneValue)) {
+            return res.status(400).json({
+              error: 'Invalid phone number',
+              message: 'Phone number must contain at least one digit'
+            });
+          }
+          validatedPhone = phoneValue;
+        }
+      }
+
       // Check if customer already exists
       const existingCustomer = await prisma.customer.findUnique({
         where: { email }
@@ -109,7 +131,7 @@ export const customerAuthController = {
             password: hashedPassword,
             firstName,
             lastName,
-            phone,
+            phone: validatedPhone,
             restaurantId: finalRestaurantId
           }
         });
