@@ -333,7 +333,6 @@ const CustomerReservationPage: React.FC = () => {
 
       const data: ReservationFormData & { 
         restaurantSlug?: string;
-        customerPhone?: string;
       } = {
         reservationDate: format(formData.reservationDate!, 'yyyy-MM-dd'),
         reservationTime: formData.reservationTime,
@@ -341,6 +340,8 @@ const CustomerReservationPage: React.FC = () => {
         notes: formData.specialRequests || undefined,
         specialRequests: formData.specialRequests || undefined,
         customerPhone: formData.customerPhone || undefined,
+        customerName: formData.customerName || undefined,
+        customerEmail: formData.customerEmail || undefined,
         // Include restaurant slug
         restaurantSlug: restaurantSlug || undefined
       };

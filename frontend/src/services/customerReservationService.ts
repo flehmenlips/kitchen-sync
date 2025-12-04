@@ -7,6 +7,8 @@ export interface ReservationFormData {
   notes?: string;
   specialRequests?: string;
   customerPhone?: string;
+  customerName?: string;
+  customerEmail?: string;
 }
 
 export interface Reservation {
