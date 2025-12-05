@@ -29,7 +29,7 @@ import { useCustomerAuth } from '../../context/CustomerAuthContext';
 interface SignUpDialogProps {
   open: boolean;
   onClose: () => void;
-  onSuccess: () => void | Promise<void>;
+  onSuccess: (registrationData: { email: string; name: string; phone: string }) => void | Promise<void>;
   prefillData?: {
     email?: string;
     name?: string;
@@ -142,9 +142,13 @@ export const SignUpDialog: React.FC<SignUpDialogProps> = ({
       // Automatically log them in
       await contextLogin(formData.email, formData.password, false);
       
-      // Call success callback (which will submit the reservation or handle navigation)
-      // Await to ensure async operations complete before closing dialog
-      await onSuccess();
+      // Call success callback with the actual registration data used
+      // This ensures the reservation uses the same email/name/phone as the account
+      await onSuccess({
+        email: formData.email,
+        name: formData.name,
+        phone: formData.phone || ''
+      });
       onClose();
     } catch (err: any) {
       console.error('Registration error:', err);

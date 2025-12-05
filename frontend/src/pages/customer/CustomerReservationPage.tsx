@@ -468,7 +468,26 @@ const CustomerReservationPage: React.FC = () => {
     }
   };
 
-  const handleSignUpSuccess = async () => {
+  const handleSignUpSuccess = async (registrationData: { email: string; name: string; phone: string }) => {
+    // Update formData with the actual registration data used to create the account
+    // This ensures the reservation uses the same email/name/phone as the account
+    setFormData(prev => ({
+      ...prev,
+      customerEmail: registrationData.email,
+      customerName: registrationData.name,
+      customerPhone: registrationData.phone
+    }));
+
+    // Update pendingReservationData with the actual registration data
+    if (pendingReservationData) {
+      setPendingReservationData(prev => prev ? {
+        ...prev,
+        customerEmail: registrationData.email,
+        customerName: registrationData.name,
+        customerPhone: registrationData.phone
+      } : null);
+    }
+
     // After successful sign-up, refresh auth state to get the latest user data
     refreshAuth();
     
@@ -507,10 +526,9 @@ const CustomerReservationPage: React.FC = () => {
     }
 
     // Email is verified, proceed with reservation submission
-    if (pendingReservationData) {
-      await submitReservation();
-      setPendingReservationData(null);
-    }
+    // submitReservation will use the updated formData with the correct contact info
+    await submitReservation();
+    setPendingReservationData(null);
   };
 
   const renderStepContent = () => {
