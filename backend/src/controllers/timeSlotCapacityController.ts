@@ -60,20 +60,47 @@ export const getTimeSlotCapacities = async (req: Request, res: Response): Promis
     res.status(200).json(capacities);
   } catch (error: any) {
     console.error('Error fetching time slot capacities:', error);
+    console.error('Error details:', {
+      code: error?.code,
+      message: error?.message,
+      meta: error?.meta,
+      stack: error?.stack
+    });
     
     // Check for common Prisma errors - use optional chaining for safety
-    if (error?.code === 'P2001' || error?.message?.includes('does not exist')) {
+    const errorCode = error?.code;
+    const errorMessage = error?.message || '';
+    
+    // P2001: Record not found (but this shouldn't cause issues with findMany)
+    // P1001: Can't reach database server
+    // P1008: Operations timed out
+    // P1017: Server has closed the connection
+    if (errorCode === 'P1001' || errorCode === 'P1008' || errorCode === 'P1017') {
+      res.status(503).json({ 
+        message: 'Database connection error. Please try again later.',
+        error: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+      });
+      return;
+    }
+    
+    // Check if table doesn't exist (various error messages)
+    if (errorCode === 'P2001' || 
+        errorMessage.includes('does not exist') || 
+        errorMessage.includes('Unknown table') ||
+        errorMessage.includes('relation') && errorMessage.includes('does not exist')) {
       res.status(500).json({ 
         message: 'Time slot capacity table does not exist. Please run database migrations.',
-        error: process.env.NODE_ENV === 'development' ? error?.message : undefined,
+        error: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
         hint: process.env.NODE_ENV === 'development' ? 'Run: npx prisma migrate deploy' : undefined
       });
       return;
     }
     
+    // Generic error response
     res.status(500).json({ 
       message: 'Error fetching time slot capacities',
-      error: process.env.NODE_ENV === 'development' ? error?.message : undefined
+      error: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
+      errorCode: process.env.NODE_ENV === 'development' ? errorCode : undefined
     });
   }
 };
