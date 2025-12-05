@@ -387,9 +387,29 @@ const CustomerReservationPage: React.FC = () => {
 
     // Check email verification for authenticated users
     if (user.emailVerified !== true) {
+      // Prepare reservation data to preserve form state during redirect
+      const restaurantSlug = getCurrentRestaurantSlug();
+      const reservationData: ReservationFormData & { 
+        restaurantSlug?: string;
+      } = {
+        reservationDate: format(formData.reservationDate!, 'yyyy-MM-dd'),
+        reservationTime: formData.reservationTime,
+        partySize: parseInt(formData.partySize),
+        notes: formData.specialRequests || undefined,
+        specialRequests: formData.specialRequests || undefined,
+        customerPhone: formData.customerPhone || undefined,
+        customerName: formData.customerName || undefined,
+        customerEmail: formData.customerEmail || undefined,
+        restaurantSlug: restaurantSlug || undefined
+      };
+      
       enqueueSnackbar('Please verify your email address before making a reservation', { variant: 'error' });
       navigate(buildCustomerUrl('verify-email-sent'), {
-        state: { from: '/reservations/new', message: 'Email verification required' }
+        state: { 
+          from: '/reservations/new', 
+          message: 'Email verification required to complete your reservation',
+          pendingReservation: reservationData
+        }
       });
       return;
     }
