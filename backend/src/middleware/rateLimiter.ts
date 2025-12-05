@@ -1,4 +1,4 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 
 /**
  * Rate Limiting Middleware
@@ -79,7 +79,7 @@ export const reservationLimiter = rateLimit({
     if (req.customerUser?.userId) {
       return `reservation:customer:${req.customerUser.userId}`;
     }
-    return `reservation:ip:${req.ip}`;
+    return `reservation:ip:${ipKeyGenerator(req)}`;
   },
   skipSuccessfulRequests: false, // Count successful reservations
   skipFailedRequests: true, // Don't count failed attempts

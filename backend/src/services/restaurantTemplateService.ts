@@ -1149,6 +1149,28 @@ export class RestaurantTemplateService {
         }
       });
 
+      // Create default content blocks based on template layout
+      // Check if content blocks already exist
+      const existingBlocks = await prisma.contentBlock.findMany({
+        where: { restaurantId },
+        select: { id: true }
+      });
+
+      // If blocks exist, delete them first to apply fresh template
+      if (existingBlocks.length > 0) {
+        await prisma.contentBlock.deleteMany({
+          where: { restaurantId }
+        });
+      }
+
+      // Create default blocks from template
+      const defaultBlocks = this.generateDefaultContentBlocks(template, restaurantId);
+      if (defaultBlocks.length > 0) {
+        await prisma.contentBlock.createMany({
+          data: defaultBlocks
+        });
+      }
+
       // Create template application record
       await prisma.templateApplication.create({
         data: {
@@ -1158,10 +1180,79 @@ export class RestaurantTemplateService {
         }
       });
 
+      // Update restaurant website settings
+      await prisma.restaurant.update({
+        where: { id: restaurantId },
+        data: {
+          websiteSettings: {
+            template: template.name,
+            templateId: template.id,
+            layoutConfig: template.layoutConfig,
+            features: template.features
+          },
+          website_builder_enabled: true
+        }
+      });
+
     } catch (error) {
       console.error('Error applying template:', error);
       throw error;
     }
+  }
+
+  /**
+   * Generate default content blocks based on template layout
+   */
+  private generateDefaultContentBlocks(template: RestaurantTemplate, restaurantId: number) {
+    const blocks: any[] = [];
+    let displayOrder = 0;
+
+    // Hero block based on template hero style
+    blocks.push({
+      restaurantId,
+      page: 'home',
+      blockType: 'hero',
+      title: 'Welcome to Our Restaurant',
+      subtitle: 'Experience exceptional dining',
+      displayOrder: displayOrder++,
+      isActive: true,
+      settings: {
+        style: template.layoutConfig.heroStyle,
+        overlay: true
+      }
+    });
+
+    // About block
+    blocks.push({
+      restaurantId,
+      page: 'home',
+      blockType: 'about',
+      title: 'About Us',
+      subtitle: 'Our Story',
+      content: 'We are passionate about creating memorable dining experiences with fresh, locally-sourced ingredients.',
+      displayOrder: displayOrder++,
+      isActive: true,
+      settings: {
+        style: template.layoutConfig.aboutStyle
+      }
+    });
+
+    // Contact block
+    blocks.push({
+      restaurantId,
+      page: 'home',
+      blockType: 'contact',
+      title: 'Contact Us',
+      subtitle: 'Get in Touch',
+      displayOrder: displayOrder++,
+      isActive: true,
+      settings: {
+        showMap: true,
+        showHours: true
+      }
+    });
+
+    return blocks;
   }
 
   // Get template categories

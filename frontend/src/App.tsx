@@ -227,6 +227,7 @@ const App: React.FC = () => {
                             
                             {/* Settings Routes */}
                             <Route path="settings/restaurant" element={<RestaurantManagementPage />} />
+                            <Route path="restaurant-management" element={<RestaurantManagementPage />} />
                             <Route path="settings/billing" element={<BillingPage />} />
 
                             {/* AgileChef Module Routes */}

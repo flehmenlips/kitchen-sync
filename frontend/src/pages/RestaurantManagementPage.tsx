@@ -27,10 +27,13 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { restaurantInfoService, RestaurantInfo } from '../services/restaurantInfoService';
 import { useSnackbar } from '../context/SnackbarContext';
+import { useRestaurant } from '../context/RestaurantContext';
+import NoRestaurantOnboarding from '../components/NoRestaurantOnboarding';
 
 const RestaurantManagementPage: React.FC = () => {
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
+  const { currentRestaurant, restaurants, isLoading: restaurantsLoading } = useRestaurant();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,10 +57,25 @@ const RestaurantManagementPage: React.FC = () => {
   });
 
   useEffect(() => {
-    loadRestaurantInfo();
-  }, []);
+    // Wait for restaurants to load before trying to load restaurant info
+    if (!restaurantsLoading) {
+      loadRestaurantInfo();
+    }
+  }, [restaurantsLoading, currentRestaurant]);
 
   const loadRestaurantInfo = async () => {
+    // Don't try to load if user has no restaurants
+    if (!restaurantsLoading && restaurants.length === 0) {
+      setLoading(false);
+      return;
+    }
+    
+    // Don't try to load if no restaurant is selected
+    if (!currentRestaurant) {
+      setLoading(false);
+      return;
+    }
+    
     try {
       setLoading(true);
       setError(null);
@@ -82,7 +100,12 @@ const RestaurantManagementPage: React.FC = () => {
       });
     } catch (err: any) {
       console.error('Failed to load restaurant info:', err);
-      setError(err.response?.data?.error || 'Failed to load restaurant information');
+      // If it's a 404 or restaurant context error, don't show error - user just needs to create one
+      if (err.response?.status === 404 || err.response?.status === 400) {
+        setError(null);
+      } else {
+        setError(err.response?.data?.error || 'Failed to load restaurant information');
+      }
     } finally {
       setLoading(false);
     }
@@ -134,10 +157,36 @@ const RestaurantManagementPage: React.FC = () => {
     }
   };
 
-  if (loading) {
+  // Show loading while restaurants are being fetched
+  if (restaurantsLoading || loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
         <CircularProgress />
+      </Box>
+    );
+  }
+
+  // Show onboarding if user has no restaurants
+  if (!restaurantsLoading && restaurants.length === 0) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <NoRestaurantOnboarding />
+      </Box>
+    );
+  }
+
+  // Show message if user has restaurants but none selected
+  if (!currentRestaurant && restaurants.length > 0) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          <Typography variant="body1" gutterBottom>
+            No restaurant selected
+          </Typography>
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            Please select a restaurant to manage its information.
+          </Typography>
+        </Alert>
       </Box>
     );
   }

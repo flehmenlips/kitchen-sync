@@ -105,6 +105,8 @@ import AdvancedTypographySelector from '../components/AdvancedTypographySelector
 import { themingService, ColorPalette, TypographyConfig } from '../services/themingService';
 import TemplateSelector from '../components/TemplateSelector';
 import AssetLibraryModal from '../components/AssetLibraryModal';
+import WebsiteManagementDialog from '../components/WebsiteManagementDialog';
+import NoRestaurantOnboarding from '../components/NoRestaurantOnboarding';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -138,6 +140,7 @@ const WebsiteBuilderPage: React.FC = () => {
   const [tabValue, setTabValue] = useState(0); // 0: Settings, 1: Pages, 2: Visual Editor, 3: Branding, 4: SEO, 5: Navigation
   const [hasChanges, setHasChanges] = useState(false);
   const [templateSelectorOpen, setTemplateSelectorOpen] = useState(false);
+  const [websiteManagementOpen, setWebsiteManagementOpen] = useState(false);
   const [pageDialogOpen, setPageDialogOpen] = useState(false);
   const [editPageDialogOpen, setEditPageDialogOpen] = useState(false);
   const [addBlockDialogOpen, setAddBlockDialogOpen] = useState(false);
@@ -172,15 +175,20 @@ const WebsiteBuilderPage: React.FC = () => {
     isActive: true
   });
   const navigate = useNavigate();
-  const { currentRestaurant } = useRestaurant();
+  const { currentRestaurant, restaurants, isLoading: restaurantsLoading } = useRestaurant();
 
   // Asset Picker state
   const [assetPickerOpen, setAssetPickerOpen] = useState(false);
   const [assetPickerField, setAssetPickerField] = useState<'cover' | 'logo' | 'hero' | 'about'>('cover');
 
   useEffect(() => {
-    fetchWebsiteData();
-  }, []);
+    // Check if restaurant is selected before fetching
+    if (currentRestaurant) {
+      fetchWebsiteData();
+    } else {
+      setLoading(false);
+    }
+  }, [currentRestaurant]);
 
   // Debug: Track editingBlockId changes
   useEffect(() => {
@@ -245,9 +253,19 @@ const WebsiteBuilderPage: React.FC = () => {
         }
       }
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching website data:', error);
-      showSnackbar('Failed to load website data', 'error');
+      
+      // Check if it's a restaurant context error
+      if (error.response?.status === 400 && error.response?.data?.error === 'Restaurant context required') {
+        showSnackbar('Please select a restaurant first', 'error');
+        // Optionally redirect to restaurant selection
+        if (!currentRestaurant) {
+          navigate('/restaurants');
+        }
+      } else {
+        showSnackbar(error.response?.data?.error || 'Failed to load website data', 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -1361,10 +1379,72 @@ const WebsiteBuilderPage: React.FC = () => {
     );
   }
 
-  if (!websiteData) {
+  if (!websiteData && !loading) {
+    // Wait for restaurants to finish loading before showing onboarding
+    if (restaurantsLoading) {
+      return (
+        <Container maxWidth="lg" sx={{ py: 4 }}>
+          <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+            <CircularProgress />
+          </Box>
+        </Container>
+      );
+    }
+    
+    // Check if user has no restaurants at all (after loading completes)
+    if (!currentRestaurant && restaurants.length === 0) {
+      // User has no restaurants - show onboarding
+      return (
+        <Container maxWidth="lg" sx={{ py: 4 }}>
+          <NoRestaurantOnboarding />
+        </Container>
+      );
+    }
+    
+    if (!currentRestaurant && restaurants.length > 0) {
+      // User has restaurants but none selected
+      return (
+        <Box sx={{ width: '100%', px: { xs: 2, sm: 3, md: 4 }, py: 4 }}>
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            <Typography variant="body1" gutterBottom>
+              No restaurant selected
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              Please select a restaurant to manage its website.
+            </Typography>
+            <Button 
+              variant="contained" 
+              onClick={() => navigate('/restaurant-management')}
+              sx={{ mt: 1 }}
+            >
+              Go to Restaurant Management
+            </Button>
+          </Alert>
+        </Box>
+      );
+    }
+    
+    // Error state - restaurant selected but data failed to load
     return (
-      <Box sx={{ width: '100%', px: { xs: 2, sm: 3, md: 4 } }}>
-        <Alert severity="error">Failed to load website data</Alert>
+      <Box sx={{ width: '100%', px: { xs: 2, sm: 3, md: 4 }, py: 4 }}>
+        <Alert severity="error">
+          <Typography variant="body1" gutterBottom>
+            Failed to load website data
+          </Typography>
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            {currentRestaurant 
+              ? `Unable to load website data for ${currentRestaurant.name}. Please try refreshing the page.`
+              : 'Please try refreshing the page or contact support if the issue persists.'
+            }
+          </Typography>
+          <Button 
+            variant="outlined" 
+            onClick={() => window.location.reload()}
+            sx={{ mt: 1 }}
+          >
+            Refresh Page
+          </Button>
+        </Alert>
       </Box>
     );
   }
@@ -1493,6 +1573,30 @@ const WebsiteBuilderPage: React.FC = () => {
               }}
             >
               Choose Template
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => setWebsiteManagementOpen(true)}
+              startIcon={<SettingsIcon />}
+              sx={{
+                border: '2px solid rgba(239, 68, 68, 0.3)',
+                borderRadius: '16px',
+                px: 4,
+                py: 1.5,
+                fontSize: '1rem',
+                fontWeight: 600,
+                color: '#ef4444',
+                background: 'rgba(255,255,255,0.7)',
+                backdropFilter: 'blur(20px)',
+                '&:hover': {
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '2px solid rgba(239, 68, 68, 0.5)',
+                  transform: 'translateY(-2px)'
+                },
+                transition: 'all 0.3s ease'
+              }}
+            >
+              Manage Website
             </Button>
           </Box>
         </Box>
@@ -3110,6 +3214,16 @@ const WebsiteBuilderPage: React.FC = () => {
         open={assetPickerOpen}
         onClose={() => setAssetPickerOpen(false)}
         onAssetSelect={handleAssetSelect}
+      />
+
+      {/* Website Management Dialog */}
+      <WebsiteManagementDialog
+        open={websiteManagementOpen}
+        onClose={() => setWebsiteManagementOpen(false)}
+        onWebsiteReset={() => {
+          fetchWebsiteData();
+          setWebsiteManagementOpen(false);
+        }}
       />
     </Box>
   );
