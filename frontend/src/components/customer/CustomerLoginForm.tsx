@@ -11,8 +11,7 @@ import {
   InputAdornment,
   IconButton,
   FormControlLabel,
-  Checkbox,
-  Divider
+  Checkbox
 } from '@mui/material';
 import {
   Visibility,
@@ -194,18 +193,6 @@ export const CustomerLoginForm: React.FC<CustomerLoginFormProps> = ({
           sx={{ mt: 2, mb: 2 }}
         >
           {loading ? <CircularProgress size={24} /> : 'Sign In'}
-        </Button>
-
-        <Divider sx={{ my: 3 }}>OR</Divider>
-
-        <Button
-          fullWidth
-          variant="outlined"
-          size="large"
-          onClick={() => navigate(buildCustomerUrl('reservations/new'))}
-          sx={{ mb: 2 }}
-        >
-          Continue as Guest
         </Button>
 
         <Typography variant="body2" align="center">
