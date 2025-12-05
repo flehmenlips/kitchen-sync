@@ -45,9 +45,10 @@ declare module 'multer' {
   
   function multer(options?: multer.Options): any;
   
-  // Add diskStorage method
+  // Add diskStorage and memoryStorage methods
   namespace multer {
     function diskStorage(options: multer.DiskStorageOptions): multer.StorageEngine;
+    function memoryStorage(): multer.StorageEngine;
   }
   
   export = multer;

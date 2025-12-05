@@ -87,6 +87,7 @@ const createProductionSafeAsset = async (assetData: any) => {
 };
 
 // Configure multer for memory storage
+// In multer 2.0, memoryStorage is a function that returns a storage engine
 const storage = multer.memoryStorage();
 
 // File filter for assets

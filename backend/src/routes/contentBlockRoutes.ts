@@ -15,7 +15,7 @@ import multer from 'multer';
 
 const router = express.Router();
 
-// Configure multer for image uploads
+// Configure multer for image uploads (memory storage)
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
