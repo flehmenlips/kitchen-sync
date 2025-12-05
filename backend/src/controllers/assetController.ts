@@ -24,8 +24,7 @@ const USE_LOCAL_STORAGE = STORAGE_MODE === 'local' || process.env.NODE_ENV === '
 
 console.log(`🔧 Asset storage mode: ${USE_LOCAL_STORAGE ? 'LOCAL' : 'CLOUDINARY'}`);
 
-// Use require for multer to avoid TypeScript issues temporarily
-const multer = require('multer');
+import multer from 'multer';
 
 /**
  * PRODUCTION COMPATIBILITY HELPER - RAW SQL VERSION
