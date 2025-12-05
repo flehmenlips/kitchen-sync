@@ -137,7 +137,8 @@ const TimeSlotCapacityPage: React.FC = () => {
       updated.set(key, { ...existing, isActive: !existing.isActive });
       setCapacities(updated);
     } else {
-      // If capacity doesn't exist (using default), create a new one when toggling inactive
+      // If capacity doesn't exist (using default), create a new one when toggling
+      // Toggling a non-existent capacity should activate it (isActive: true)
       // Use a default maxCovers value (100) so it can be saved
       const newCapacity: TimeSlotCapacity = {
         id: 0,
@@ -145,7 +146,7 @@ const TimeSlotCapacityPage: React.FC = () => {
         dayOfWeek,
         timeSlot,
         maxCovers: 100, // Default value - user can change it
-        isActive: false,
+        isActive: true, // Toggle activates non-existent capacity
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };

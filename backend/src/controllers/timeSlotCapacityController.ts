@@ -61,11 +61,11 @@ export const getTimeSlotCapacities = async (req: Request, res: Response): Promis
   } catch (error: any) {
     console.error('Error fetching time slot capacities:', error);
     
-    // Check for common Prisma errors
-    if (error.code === 'P2001' || error.message?.includes('does not exist')) {
+    // Check for common Prisma errors - use optional chaining for safety
+    if (error?.code === 'P2001' || error?.message?.includes('does not exist')) {
       res.status(500).json({ 
         message: 'Time slot capacity table does not exist. Please run database migrations.',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        error: process.env.NODE_ENV === 'development' ? error?.message : undefined,
         hint: process.env.NODE_ENV === 'development' ? 'Run: npx prisma migrate deploy' : undefined
       });
       return;
@@ -73,7 +73,7 @@ export const getTimeSlotCapacities = async (req: Request, res: Response): Promis
     
     res.status(500).json({ 
       message: 'Error fetching time slot capacities',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === 'development' ? error?.message : undefined
     });
   }
 };
