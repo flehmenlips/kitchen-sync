@@ -43,6 +43,11 @@
     "uuid": "^9.0.1",
     "zustand": "^4.5.1"
   },
+  "overrides": {
+    "react-quill": {
+      "quill": "^2.0.3"
+    }
+  },
   "devDependencies": {
     "@types/node": "^20.11.19",
     "@types/react": "^18.2.55",
