@@ -270,7 +270,8 @@ export const upsertTimeSlotCapacity = async (req: Request, res: Response): Promi
         dayOfWeek: dayOfWeekNum,
         timeSlot: timeSlot,
         maxCovers: maxCoversNum,
-        isActive: isActive !== undefined ? isActive : true
+        isActive: isActive !== undefined ? isActive : true,
+        updatedAt: new Date()
       }
     });
 
@@ -367,7 +368,8 @@ export const bulkUpsertTimeSlotCapacities = async (req: Request, res: Response):
             dayOfWeek: cap.dayOfWeekNum,
             timeSlot: cap.timeSlot,
             maxCovers: cap.maxCoversNum,
-            isActive: cap.isActive
+            isActive: cap.isActive,
+            updatedAt: new Date()
           }
         })
       )
@@ -379,6 +381,13 @@ export const bulkUpsertTimeSlotCapacities = async (req: Request, res: Response):
     });
   } catch (error: any) {
     console.error('Error bulk updating time slot capacities:', error);
+    console.error('Error details:', {
+      code: error?.code,
+      message: error?.message,
+      meta: error?.meta,
+      stack: error?.stack,
+      body: req.body
+    });
     
     // FIXED: Return 400 for validation errors with descriptive messages
     if (error.message && (
@@ -387,11 +396,36 @@ export const bulkUpsertTimeSlotCapacities = async (req: Request, res: Response):
       error.message.includes('Invalid timeSlot') ||
       error.message.includes('Invalid maxCovers')
     )) {
-      res.status(400).json({ message: error.message });
+      res.status(400).json({ 
+        message: error.message,
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
       return;
     }
     
-    res.status(500).json({ message: 'Error bulk updating time slot capacities' });
+    // Check for Prisma unique constraint violations
+    if (error?.code === 'P2002') {
+      res.status(400).json({ 
+        message: 'Duplicate time slot capacity entry. Each restaurant can only have one capacity setting per day/time slot.',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+      return;
+    }
+    
+    // Check for foreign key violations
+    if (error?.code === 'P2003') {
+      res.status(400).json({ 
+        message: 'Invalid restaurant ID. The restaurant does not exist.',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+      return;
+    }
+    
+    res.status(500).json({ 
+      message: 'Error bulk updating time slot capacities',
+      error: process.env.NODE_ENV === 'development' ? error?.message : undefined,
+      errorCode: process.env.NODE_ENV === 'development' ? error?.code : undefined
+    });
   }
 };
 
