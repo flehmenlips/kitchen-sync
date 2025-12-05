@@ -32,17 +32,18 @@ import {
   Settings as SettingsIcon
 } from '@mui/icons-material';
 import { timeSlotCapacityService, TimeSlotCapacity } from '../services/timeSlotCapacityService';
+import { reservationSettingsService, ReservationSettings } from '../services/reservationSettingsService';
 import { useSnackbar } from '../context/SnackbarContext';
 import { useRestaurant } from '../context/RestaurantContext';
 
 const DAYS_OF_WEEK = [
-  { value: 0, label: 'Sunday', short: 'Sun' },
-  { value: 1, label: 'Monday', short: 'Mon' },
-  { value: 2, label: 'Tuesday', short: 'Tue' },
-  { value: 3, label: 'Wednesday', short: 'Wed' },
-  { value: 4, label: 'Thursday', short: 'Thu' },
-  { value: 5, label: 'Friday', short: 'Fri' },
-  { value: 6, label: 'Saturday', short: 'Sat' }
+  { value: 0, label: 'Sunday', short: 'Sun', key: 'sunday' },
+  { value: 1, label: 'Monday', short: 'Mon', key: 'monday' },
+  { value: 2, label: 'Tuesday', short: 'Tue', key: 'tuesday' },
+  { value: 3, label: 'Wednesday', short: 'Wed', key: 'wednesday' },
+  { value: 4, label: 'Thursday', short: 'Thu', key: 'thursday' },
+  { value: 5, label: 'Friday', short: 'Fri', key: 'friday' },
+  { value: 6, label: 'Saturday', short: 'Sat', key: 'saturday' }
 ];
 
 const DEFAULT_TIME_SLOTS = [
@@ -64,19 +65,84 @@ const TimeSlotCapacityPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [capacities, setCapacities] = useState<Map<string, TimeSlotCapacity>>(new Map());
-  const [editingRow, setEditingRow] = useState<CapacityRow | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [timeSlotsByDay, setTimeSlotsByDay] = useState<Map<number, string[]>>(new Map());
 
   const restaurantId = currentRestaurant?.id || null;
 
   useEffect(() => {
     if (restaurantId) {
+      fetchReservationSettings();
       fetchCapacities();
     } else {
       setLoading(false);
     }
   }, [restaurantId]);
+
+  const fetchReservationSettings = async () => {
+    if (!restaurantId) return;
+    
+    try {
+      const settings = await reservationSettingsService.getReservationSettings(restaurantId);
+      setReservationSettings(settings);
+      generateTimeSlotsByDay(settings);
+    } catch (error) {
+      console.error('Error fetching reservation settings:', error);
+      // Use default time slots if settings can't be loaded
+      const defaultSlots = new Map<number, string[]>();
+      DAYS_OF_WEEK.forEach(day => {
+        defaultSlots.set(day.value, DEFAULT_TIME_SLOTS);
+      });
+      setTimeSlotsByDay(defaultSlots);
+    }
+  };
+
+  const generateTimeSlotsByDay = (settings: ReservationSettings) => {
+    const slotsByDay = new Map<number, string[]>();
+    const operatingHours = settings.operatingHours || {};
+    const interval = settings.timeSlotInterval || 30;
+
+    DAYS_OF_WEEK.forEach(day => {
+      const dayHours = operatingHours[day.key];
+      
+      if (!dayHours || dayHours.closed || !dayHours.open || !dayHours.close) {
+        // Restaurant closed this day - no time slots
+        slotsByDay.set(day.value, []);
+        return;
+      }
+
+      const slots = generateSlotsBetweenTimes(dayHours.open, dayHours.close, interval);
+      slotsByDay.set(day.value, slots);
+    });
+
+    setTimeSlotsByDay(slotsByDay);
+  };
+
+  const generateSlotsBetweenTimes = (startTime: string, endTime: string, intervalMinutes: number): string[] => {
+    const [startHour, startMin] = startTime.split(':').map(Number);
+    const [endHour, endMin] = endTime.split(':').map(Number);
+    const startMinutes = startHour * 60 + startMin;
+    let endMinutes = endHour * 60 + endMin;
+
+    const slots: string[] = [];
+    let currentMinutes = startMinutes;
+
+    // Handle midnight crossing
+    const crossesMidnight = endMinutes <= startMinutes;
+    if (crossesMidnight) {
+      endMinutes += 24 * 60; // Add 24 hours
+    }
+
+    while (currentMinutes < endMinutes) {
+      const hours = Math.floor(currentMinutes / 60) % 24;
+      const minutes = currentMinutes % 60;
+      slots.push(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`);
+      currentMinutes += intervalMinutes;
+    }
+
+    return slots;
+  };
 
   const fetchCapacities = async () => {
     if (!restaurantId) return;
@@ -385,19 +451,35 @@ const TimeSlotCapacityPage: React.FC = () => {
         Leave empty to use the default capacity from Reservation Settings.
       </Alert>
 
-      {DAYS_OF_WEEK.map(day => (
+      {DAYS_OF_WEEK.map(day => {
+        const dayTimeSlots = timeSlotsByDay.get(day.value) || [];
+        const isClosed = dayTimeSlots.length === 0;
+        
+        return (
         <Paper key={day.value} sx={{ p: 3, mb: 3 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-            <Typography variant="h6">{day.label}</Typography>
-            <Tooltip title={`Copy ${day.label} settings to another day`}>
-              <IconButton size="small" onClick={() => handleCopyDay(day.value)}>
-                <CopyIcon />
-              </IconButton>
-            </Tooltip>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="h6">{day.label}</Typography>
+              {isClosed && (
+                <Chip label="Closed" size="small" color="default" />
+              )}
+            </Box>
+            {!isClosed && (
+              <Tooltip title={`Copy ${day.label} settings to another day`}>
+                <IconButton size="small" onClick={() => handleCopyDay(day.value)}>
+                  <CopyIcon />
+                </IconButton>
+              </Tooltip>
+            )}
           </Box>
 
+          {isClosed ? (
+            <Alert severity="info">
+              This restaurant is closed on {day.label}. No time slots available.
+            </Alert>
+          ) : (
           <Grid container spacing={2}>
-            {DEFAULT_TIME_SLOTS.map(timeSlot => {
+            {dayTimeSlots.map(timeSlot => {
               const capacity = getCapacity(day.value, timeSlot);
               const maxCovers = capacity?.maxCovers || 0;
               const isActive = capacity?.isActive !== false;
@@ -450,8 +532,10 @@ const TimeSlotCapacityPage: React.FC = () => {
               );
             })}
           </Grid>
+          )}
         </Paper>
-      ))}
+        );
+      })}
 
       {/* Copy Day Dialog */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)}>
