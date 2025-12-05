@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -42,6 +42,7 @@ import { useSnackbar } from 'notistack';
 import { useCustomerAuth } from '../../context/CustomerAuthContext';
 import { customerAuthService } from '../../services/customerAuthService';
 import { Link } from '@mui/material';
+import { SignUpDialog } from '../../components/customer/SignUpDialog';
 
 interface FormData {
   customerName: string;
@@ -58,12 +59,14 @@ const CustomerReservationPage: React.FC = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
-  const { user, loading: authLoading } = useCustomerAuth();
+  const { user, loading: authLoading, refreshAuth } = useCustomerAuth();
   
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [confirmationData, setConfirmationData] = useState<any>(null);
   const [restaurantSettings, setRestaurantSettings] = useState<RestaurantSettings | null>(null);
+  const [showSignUpDialog, setShowSignUpDialog] = useState(false);
+  const [pendingReservationData, setPendingReservationData] = useState<ReservationFormData | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{
     customerName?: string;
     customerEmail?: string;
@@ -138,13 +141,15 @@ const CustomerReservationPage: React.FC = () => {
 
   const steps = ['Select Date & Time', 'Confirmation'];
 
-  // Check authentication on mount
-  useEffect(() => {
-    if (!authLoading && !user) {
-      // User not authenticated - show message but allow them to see the form
-      // They'll be blocked when trying to submit
-    }
-  }, [user, authLoading]);
+  // Memoize prefill data for SignUpDialog to avoid calling useMemo in JSX
+  const signUpPrefillData = useMemo(() => ({
+    email: formData.customerEmail,
+    name: formData.customerName,
+    phone: formData.customerPhone
+  }), [formData.customerEmail, formData.customerName, formData.customerPhone]);
+
+  // Note: Users can now fill out the form without authentication
+  // They will be prompted to create an account when submitting
 
   // Fetch customer profile to get phone number, name, and email
   useEffect(() => {
@@ -327,26 +332,15 @@ const CustomerReservationPage: React.FC = () => {
   }
 
   const handleNext = () => {
-    // Check authentication before proceeding
-    if (!user) {
-      enqueueSnackbar('Please sign in to make a reservation', { variant: 'warning' });
-      navigate(buildCustomerUrl('login'), { 
-        state: { from: '/reservations/new', message: 'Please sign in to make a reservation' }
-      });
-      return;
-    }
-
-    // Check email verification (handles false, undefined, and null)
-    if (user.emailVerified !== true) {
-      enqueueSnackbar('Please verify your email address before making a reservation', { variant: 'warning' });
-      navigate(buildCustomerUrl('verify-email-sent'), {
-        state: { from: '/reservations/new', message: 'Email verification required' }
-      });
-      return;
-    }
-
+    // Validate reservation details first
     if (activeStep === 0 && (!formData.reservationDate || !formData.reservationTime)) {
       enqueueSnackbar('Please select both date and time', { variant: 'error' });
+      return;
+    }
+
+    // Validate contact information
+    if (!validateForm()) {
+      enqueueSnackbar('Please fill in all required fields', { variant: 'error' });
       return;
     }
     
@@ -364,35 +358,15 @@ const CustomerReservationPage: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    // Double-check authentication before submitting
-    if (!user) {
-      enqueueSnackbar('Please sign in to make a reservation', { variant: 'error' });
-      navigate(buildCustomerUrl('login'), { 
-        state: { from: '/reservations/new', message: 'Please sign in to make a reservation' }
-      });
-      return;
-    }
-
-    // Double-check email verification (handles false, undefined, and null)
-    if (user.emailVerified !== true) {
-      enqueueSnackbar('Please verify your email address before making a reservation', { variant: 'error' });
-      navigate(buildCustomerUrl('verify-email-sent'), {
-        state: { from: '/reservations/new', message: 'Email verification required' }
-      });
-      return;
-    }
-
     // Validate form before submitting
     if (!validateForm()) {
       enqueueSnackbar('Please fix the errors in the form', { variant: 'error' });
       return;
     }
 
-    setLoading(true);
-    
-    try {
+    // If user is not authenticated, show sign-up dialog
+    if (!user) {
       const restaurantSlug = getCurrentRestaurantSlug();
-
       const data: ReservationFormData & { 
         restaurantSlug?: string;
       } = {
@@ -404,7 +378,62 @@ const CustomerReservationPage: React.FC = () => {
         customerPhone: formData.customerPhone || undefined,
         customerName: formData.customerName || undefined,
         customerEmail: formData.customerEmail || undefined,
-        // Include restaurant slug
+        restaurantSlug: restaurantSlug || undefined
+      };
+      setPendingReservationData(data);
+      setShowSignUpDialog(true);
+      return;
+    }
+
+    // Check email verification for authenticated users
+    if (user.emailVerified !== true) {
+      // Prepare reservation data to preserve form state during redirect
+      const restaurantSlug = getCurrentRestaurantSlug();
+      const reservationData: ReservationFormData & { 
+        restaurantSlug?: string;
+      } = {
+        reservationDate: format(formData.reservationDate!, 'yyyy-MM-dd'),
+        reservationTime: formData.reservationTime,
+        partySize: parseInt(formData.partySize),
+        notes: formData.specialRequests || undefined,
+        specialRequests: formData.specialRequests || undefined,
+        customerPhone: formData.customerPhone || undefined,
+        customerName: formData.customerName || undefined,
+        customerEmail: formData.customerEmail || undefined,
+        restaurantSlug: restaurantSlug || undefined
+      };
+      
+      enqueueSnackbar('Please verify your email address before making a reservation', { variant: 'error' });
+      navigate(buildCustomerUrl('verify-email-sent'), {
+        state: { 
+          from: '/reservations/new', 
+          message: 'Email verification required to complete your reservation',
+          pendingReservation: reservationData
+        }
+      });
+      return;
+    }
+
+    // Submit reservation
+    await submitReservation();
+  };
+
+  const submitReservation = async () => {
+    setLoading(true);
+    
+    try {
+      const restaurantSlug = getCurrentRestaurantSlug();
+      const data: ReservationFormData & { 
+        restaurantSlug?: string;
+      } = {
+        reservationDate: format(formData.reservationDate!, 'yyyy-MM-dd'),
+        reservationTime: formData.reservationTime,
+        partySize: parseInt(formData.partySize),
+        notes: formData.specialRequests || undefined,
+        specialRequests: formData.specialRequests || undefined,
+        customerPhone: formData.customerPhone || undefined,
+        customerName: formData.customerName || undefined,
+        customerEmail: formData.customerEmail || undefined,
         restaurantSlug: restaurantSlug || undefined
       };
       const response = await customerReservationService.createReservation(data);
@@ -437,6 +466,78 @@ const CustomerReservationPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSignUpSuccess = async (registrationData: { email: string; name: string; phone: string }) => {
+    // Update formData with the actual registration data used to create the account
+    // This ensures the reservation uses the same email/name/phone as the account
+    setFormData(prev => ({
+      ...prev,
+      customerEmail: registrationData.email,
+      customerName: registrationData.name,
+      customerPhone: registrationData.phone
+    }));
+
+    // Compute updated reservation data locally to avoid closure issues
+    // This ensures we use the latest registration data when navigating
+    const updatedReservationData = pendingReservationData ? {
+      ...pendingReservationData,
+      customerEmail: registrationData.email,
+      customerName: registrationData.name,
+      customerPhone: registrationData.phone
+    } : null;
+
+    // Update pendingReservationData state with the actual registration data
+    if (pendingReservationData) {
+      setPendingReservationData(prev => prev ? {
+        ...prev,
+        customerEmail: registrationData.email,
+        customerName: registrationData.name,
+        customerPhone: registrationData.phone
+      } : null);
+    }
+
+    // After successful sign-up, refresh auth state to get the latest user data
+    refreshAuth();
+    
+    // Wait a moment for the auth context to update after login
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
+    // Get the updated user from the auth service directly to ensure we have latest state
+    const currentUser = customerAuthService.getCurrentUser();
+    
+    // Check if user is authenticated
+    if (!currentUser) {
+      enqueueSnackbar('Please sign in to complete your reservation', { variant: 'error' });
+      navigate(buildCustomerUrl('login'), { 
+        state: { from: '/reservations/new', message: 'Authentication required' }
+      });
+      setPendingReservationData(null);
+      return;
+    }
+
+    // Check email verification - newly registered users have emailVerified: false by default
+    // The backend will reject reservations from unverified users with a 403 error
+    if (currentUser.emailVerified !== true) {
+      enqueueSnackbar('Please verify your email address to confirm your reservation. Check your inbox for the verification email.', { 
+        variant: 'info',
+        autoHideDuration: 6000
+      });
+      navigate(buildCustomerUrl('verify-email-sent'), {
+        state: { 
+          from: '/reservations/new', 
+          message: 'Email verification required to complete your reservation',
+          pendingReservation: updatedReservationData
+        }
+      });
+      setPendingReservationData(null);
+      return;
+    }
+
+    // Email is verified, proceed with reservation submission
+    // submitReservation will use the updated formData with the correct contact info
+    await submitReservation();
+    setPendingReservationData(null);
   };
 
   const renderStepContent = () => {
@@ -521,41 +622,6 @@ const CustomerReservationPage: React.FC = () => {
               )}
             </Grid>
 
-            {/* Authentication prompt */}
-            {!user && (
-              <Grid item xs={12}>
-                <Alert 
-                  severity="info" 
-                  sx={{ mt: 2 }}
-                  action={
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <Button 
-                        size="small" 
-                        variant="outlined"
-                        onClick={() => navigate(buildCustomerUrl('login'), { 
-                          state: { from: '/reservations/new' }
-                        })}
-                      >
-                        Sign In
-                      </Button>
-                      <Button 
-                        size="small" 
-                        variant="contained"
-                        onClick={() => navigate(buildCustomerUrl('register'), { 
-                          state: { from: '/reservations/new' }
-                        })}
-                      >
-                        Sign Up
-                      </Button>
-                    </Box>
-                  }
-                >
-                  <Typography variant="body2">
-                    <strong>Account required:</strong> Please sign in or create an account to make a reservation.
-                  </Typography>
-                </Alert>
-              </Grid>
-            )}
 
             {/* Email verification prompt */}
             {user && user.emailVerified !== true && (
@@ -582,57 +648,53 @@ const CustomerReservationPage: React.FC = () => {
               </Grid>
             )}
 
-            {/* Contact Information Section - Show when user is logged in */}
-            {user && (
-              <>
-                <Grid item xs={12}>
-                  <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, fontWeight: 600 }}>
-                    Your Contact Information
-                  </Typography>
-                </Grid>
+            {/* Contact Information Section */}
+            <Grid item xs={12}>
+              <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, fontWeight: 600 }}>
+                Your Contact Information
+              </Typography>
+            </Grid>
 
-                {/* Name field */}
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Name"
-                    value={formData.customerName}
-                    onChange={(e) => {
-                      setFormData({ ...formData, customerName: e.target.value });
-                      setFieldErrors({ ...fieldErrors, customerName: undefined });
-                    }}
-                    error={!!fieldErrors.customerName}
-                    helperText={fieldErrors.customerName}
-                    autoComplete="name"
-                    required
-                    InputProps={{
-                      startAdornment: <PersonIcon sx={{ mr: 1, color: 'action.active' }} />
-                    }}
-                  />
-                </Grid>
+            {/* Name field */}
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Name"
+                value={formData.customerName}
+                onChange={(e) => {
+                  setFormData({ ...formData, customerName: e.target.value });
+                  setFieldErrors({ ...fieldErrors, customerName: undefined });
+                }}
+                error={!!fieldErrors.customerName}
+                helperText={fieldErrors.customerName}
+                autoComplete="name"
+                required
+                InputProps={{
+                  startAdornment: <PersonIcon sx={{ mr: 1, color: 'action.active' }} />
+                }}
+              />
+            </Grid>
 
-                {/* Email field */}
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Email"
-                    type="email"
-                    value={formData.customerEmail}
-                    onChange={(e) => {
-                      setFormData({ ...formData, customerEmail: e.target.value });
-                      setFieldErrors({ ...fieldErrors, customerEmail: undefined });
-                    }}
-                    error={!!fieldErrors.customerEmail}
-                    helperText={fieldErrors.customerEmail}
-                    autoComplete="email"
-                    required
-                    InputProps={{
-                      startAdornment: <EmailIcon sx={{ mr: 1, color: 'action.active' }} />
-                    }}
-                  />
-                </Grid>
-              </>
-            )}
+            {/* Email field */}
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Email"
+                type="email"
+                value={formData.customerEmail}
+                onChange={(e) => {
+                  setFormData({ ...formData, customerEmail: e.target.value });
+                  setFieldErrors({ ...fieldErrors, customerEmail: undefined });
+                }}
+                error={!!fieldErrors.customerEmail}
+                helperText={fieldErrors.customerEmail}
+                autoComplete="email"
+                required
+                InputProps={{
+                  startAdornment: <EmailIcon sx={{ mr: 1, color: 'action.active' }} />
+                }}
+              />
+            </Grid>
 
             {/* Phone number field */}
             <Grid item xs={12}>
@@ -849,13 +911,24 @@ const CustomerReservationPage: React.FC = () => {
             <Button
               variant="contained"
               onClick={handleNext}
-              disabled={loading || !user || user.emailVerified !== true}
+              disabled={loading || !formData.reservationDate || !formData.reservationTime || !formData.customerName || !formData.customerEmail || !formData.customerPhone}
             >
               {loading ? 'Processing...' : 'Confirm Reservation'}
             </Button>
           </Box>
         )}
       </Paper>
+
+      {/* Sign Up Dialog */}
+      <SignUpDialog
+        open={showSignUpDialog}
+        onClose={() => {
+          setShowSignUpDialog(false);
+          setPendingReservationData(null);
+        }}
+        onSuccess={handleSignUpSuccess}
+        prefillData={signUpPrefillData}
+      />
     </Box>
   );
 };
