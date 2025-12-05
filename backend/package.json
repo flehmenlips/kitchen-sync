@@ -63,7 +63,7 @@
     "express": "^4.21.2",
     "express-rate-limit": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
-    "multer": "^1.4.5-lts.2",
+    "multer": "^2.0.1",
     "pg": "^8.14.1",
     "resend": "^6.5.2",
     "stripe": "^18.1.1",
@@ -72,7 +72,7 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",
-    "@types/multer": "^1.4.13",
+    "@types/multer": "^2.0.0",
     "@types/uuid": "^10.0.0",
     "dotenv-cli": "^8.0.0",
     "nodemon": "^3.1.10",
