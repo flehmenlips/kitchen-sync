@@ -478,7 +478,16 @@ const CustomerReservationPage: React.FC = () => {
       customerPhone: registrationData.phone
     }));
 
-    // Update pendingReservationData with the actual registration data
+    // Compute updated reservation data locally to avoid closure issues
+    // This ensures we use the latest registration data when navigating
+    const updatedReservationData = pendingReservationData ? {
+      ...pendingReservationData,
+      customerEmail: registrationData.email,
+      customerName: registrationData.name,
+      customerPhone: registrationData.phone
+    } : null;
+
+    // Update pendingReservationData state with the actual registration data
     if (pendingReservationData) {
       setPendingReservationData(prev => prev ? {
         ...prev,
@@ -518,7 +527,7 @@ const CustomerReservationPage: React.FC = () => {
         state: { 
           from: '/reservations/new', 
           message: 'Email verification required to complete your reservation',
-          pendingReservation: pendingReservationData
+          pendingReservation: updatedReservationData
         }
       });
       setPendingReservationData(null);
