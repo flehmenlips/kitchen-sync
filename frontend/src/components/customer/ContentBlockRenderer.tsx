@@ -1524,7 +1524,10 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
                     xs={12} 
                     sm={gridColumns === 2 ? 6 : gridColumns === 4 ? 6 : 12}
                     md={mdValue === 'auto' ? false : mdValue}
-                    sx={mdValue === 'auto' ? { flex: `1 1 ${100 / gridColumns}%`, minWidth: 0 } : undefined}
+                    sx={mdValue === 'auto' ? { 
+                      flex: { md: `1 1 ${100 / gridColumns}%` },
+                      minWidth: { md: 0 }
+                    } : undefined}
                     key={index}
                   >
                     <Card sx={getCardStyles()}>
