@@ -13,6 +13,9 @@ export const createRestaurant = async (req: Request, res: Response): Promise<voi
       return;
     }
 
+    // Store user in const for TypeScript narrowing
+    const user = req.user;
+
     const {
       name,
       address,
@@ -92,12 +95,12 @@ export const createRestaurant = async (req: Request, res: Response): Promise<voi
       }
       
       // 1. Create the restaurant
-      console.log(`[RESTAURANT CREATE] About to create restaurant with slug: "${slug}", name: "${name}", email: "${email || req.user.email}"`);
+      console.log(`[RESTAURANT CREATE] About to create restaurant with slug: "${slug}", name: "${name}", email: "${email || user.email}"`);
       const restaurant = await tx.restaurant.create({
         data: {
           name,
           slug,
-          email: email || req.user.email,
+          email: email || user.email,
           phone: phone || null,
           address: address || null,
           city: city || null,
@@ -108,8 +111,8 @@ export const createRestaurant = async (req: Request, res: Response): Promise<voi
           isActive: true,
           // Platform fields
           onboardingStatus: OnboardingStatus.ACTIVE,
-          ownerName: req.user.name || 'Restaurant Owner',
-          ownerEmail: req.user.email,
+          ownerName: user.name || 'Restaurant Owner',
+          ownerEmail: user.email,
           businessPhone: phone || null,
           businessAddress: address && city && state && zipCode 
             ? `${address}, ${city}, ${state} ${zipCode}` 
@@ -121,7 +124,7 @@ export const createRestaurant = async (req: Request, res: Response): Promise<voi
       // 2. Link user to restaurant as staff (OWNER role)
       await tx.restaurantStaff.create({
         data: {
-          userId: req.user.id,
+          userId: user.id,
           restaurantId: restaurant.id,
           role: 'OWNER',
           isActive: true
@@ -149,7 +152,7 @@ export const createRestaurant = async (req: Request, res: Response): Promise<voi
         // Check if this user already has a prep column with this name for this restaurant
         const existingColumn = await tx.prepColumn.findFirst({
           where: {
-            userId: req.user.id,
+            userId: user.id,
             restaurantId: restaurant.id,
             name: defaultColumns[i]
           }
@@ -160,7 +163,7 @@ export const createRestaurant = async (req: Request, res: Response): Promise<voi
           await tx.prepColumn.create({
             data: {
               restaurantId: restaurant.id,
-              userId: req.user.id,
+              userId: user.id,
               name: defaultColumns[i],
               order: i,
               color: '#1976d2'

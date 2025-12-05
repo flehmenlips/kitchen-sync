@@ -1,4 +1,5 @@
 import prisma from '../config/db';
+import { Prisma } from '@prisma/client';
 
 export interface WebsiteResetOptions {
   preserveAssets: boolean;
@@ -94,7 +95,7 @@ class WebsiteManagementService {
           template: {
             select: {
               name: true,
-              displayName: true
+              description: true
             }
           }
         },
@@ -105,7 +106,7 @@ class WebsiteManagementService {
     return {
       contentBlocksCount: contentBlocks,
       hasSettings: !!restaurantSettings,
-      currentTemplate: templateApplication?.template?.displayName || templateApplication?.template?.name || null,
+      currentTemplate: templateApplication?.template?.name || null,
       lastUpdated: restaurantSettings?.updatedAt || null
     };
   }
@@ -185,7 +186,7 @@ class WebsiteManagementService {
         await tx.restaurant.update({
           where: { id: restaurantId },
           data: {
-            websiteSettings: null
+            websiteSettings: Prisma.JsonNull
           }
         });
 
@@ -240,7 +241,7 @@ class WebsiteManagementService {
         await tx.restaurant.update({
           where: { id: restaurantId },
           data: {
-            websiteSettings: null,
+            websiteSettings: Prisma.JsonNull,
             website_builder_enabled: false
           }
         });
