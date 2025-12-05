@@ -136,6 +136,23 @@ const TimeSlotCapacityPage: React.FC = () => {
       const updated = new Map(capacities);
       updated.set(key, { ...existing, isActive: !existing.isActive });
       setCapacities(updated);
+    } else {
+      // If capacity doesn't exist (using default), create a new one when toggling
+      // Toggling a non-existent capacity should activate it (isActive: true)
+      // Use a default maxCovers value (100) so it can be saved
+      const newCapacity: TimeSlotCapacity = {
+        id: 0,
+        restaurantId: restaurantId!,
+        dayOfWeek,
+        timeSlot,
+        maxCovers: 100, // Default value - user can change it
+        isActive: true, // Toggle activates non-existent capacity
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      const updated = new Map(capacities);
+      updated.set(key, newCapacity);
+      setCapacities(updated);
     }
   };
 
@@ -158,6 +175,22 @@ const TimeSlotCapacityPage: React.FC = () => {
 
       capacities.forEach(cap => {
         // If maxCovers is 0, it means "use default capacity"
+        // However, if isActive is explicitly false, we need to preserve that state
+        // even if maxCovers is 0 (user wants to disable this time slot)
+        if (cap.maxCovers === 0 || cap.maxCovers < 1) {
+          // If explicitly inactive, save it with minimum covers to preserve the inactive state
+          if (cap.isActive === false) {
+            capacityArray.push({
+              dayOfWeek: cap.dayOfWeek,
+              timeSlot: cap.timeSlot,
+              maxCovers: 1, // Use minimum value to preserve inactive state
+              isActive: false
+            });
+            return;
+          }
+          
+          // If this capacity exists in DB (has id), delete it
+          // Otherwise, don't save it (it will use default)
         // If this capacity exists in DB (has id), delete it
         // Otherwise, don't save it (it will use default)
         if (cap.maxCovers === 0 || cap.maxCovers < 1) {
@@ -176,6 +209,25 @@ const TimeSlotCapacityPage: React.FC = () => {
       });
 
       // Delete capacities that were set to 0 (use default)
+      // Process deletions individually to handle partial failures gracefully
+      const deletionResults: Array<{ id: number; success: boolean; error?: any }> = [];
+      
+      for (const id of capacitiesToDelete) {
+        try {
+          await timeSlotCapacityService.deleteTimeSlotCapacity(id);
+          deletionResults.push({ id, success: true });
+        } catch (error: any) {
+          // Treat 404 as success (item already deleted) to avoid error loops
+          if (error.response?.status === 404) {
+            deletionResults.push({ id, success: true });
+          } else {
+            deletionResults.push({ id, success: false, error });
+          }
+        }
+      }
+
+      const successfulDeletions = deletionResults.filter(r => r.success).length;
+      const failedDeletions = deletionResults.filter(r => !r.success);
       await Promise.all(
         capacitiesToDelete.map(id => timeSlotCapacityService.deleteTimeSlotCapacity(id))
       );
@@ -185,6 +237,14 @@ const TimeSlotCapacityPage: React.FC = () => {
         await timeSlotCapacityService.bulkUpsertTimeSlotCapacities(restaurantId, capacityArray);
       }
 
+      const savedCount = capacityArray.length;
+      let message = 'Time slot capacities saved successfully';
+      
+      // Build success message
+      if (successfulDeletions > 0 && savedCount > 0) {
+        message = `Saved ${savedCount} capacity setting${savedCount !== 1 ? 's' : ''} and removed ${successfulDeletions} default setting${successfulDeletions !== 1 ? 's' : ''}`;
+      } else if (successfulDeletions > 0) {
+        message = `Removed ${successfulDeletions} capacity setting${successfulDeletions !== 1 ? 's' : ''} (using defaults)`;
       const deletedCount = capacitiesToDelete.length;
       const savedCount = capacityArray.length;
       let message = 'Time slot capacities saved successfully';
@@ -197,11 +257,28 @@ const TimeSlotCapacityPage: React.FC = () => {
       } else {
         message = 'No changes to save';
       }
+
+      // Show warning if some deletions failed
+      if (failedDeletions.length > 0) {
+        const errorMessage = failedDeletions[0].error?.response?.data?.message || 'Some deletions failed';
+        showSnackbar(
+          `${message}. Warning: ${failedDeletions.length} deletion${failedDeletions.length !== 1 ? 's' : ''} failed: ${errorMessage}`,
+          'warning'
+        );
+      } else {
+        showSnackbar(message, 'success');
+      }
+      
+      // Always refresh state to sync with database, even if there were errors
       
       showSnackbar(message, 'success');
       fetchCapacities();
     } catch (error: any) {
       console.error('Error saving time slot capacities:', error);
+      
+      // Always refresh state on error to prevent stale IDs from causing retry loops
+      fetchCapacities();
+      
       showSnackbar(
         error.response?.data?.message || 'Failed to save time slot capacities',
         'error'
@@ -231,6 +308,12 @@ const TimeSlotCapacityPage: React.FC = () => {
 
     // Copy to target day
     sourceCapacities.forEach(sourceCap => {
+      // Skip capacities with maxCovers: 0 that don't have an ID
+      // These represent "use default" and shouldn't be copied
+      if (sourceCap.maxCovers === 0 && (!sourceCap.id || sourceCap.id === 0)) {
+        return;
+      }
+      
       const key = `${targetDay}-${sourceCap.timeSlot}`;
       const existingTarget = updated.get(key);
       

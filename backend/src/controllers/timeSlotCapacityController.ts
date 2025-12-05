@@ -15,7 +15,7 @@ export const getTimeSlotCapacities = async (req: Request, res: Response): Promis
     const { dayOfWeek, timeSlot } = req.query;
     
     if (isNaN(restaurantId)) {
-      res.status(400).json({ message: 'Invalid restaurant ID' });
+      res.status(400).json({ message: `Invalid restaurant ID: ${req.params.restaurantId}` });
       return;
     }
 
@@ -33,10 +33,9 @@ export const getTimeSlotCapacities = async (req: Request, res: Response): Promis
       return;
     }
 
-    // Build where clause
+    // Build where clause - don't filter by isActive so we can show all capacities for management
     const where: any = {
-      restaurantId,
-      isActive: true
+      restaurantId
     };
 
     if (dayOfWeek !== undefined) {
@@ -59,9 +58,23 @@ export const getTimeSlotCapacities = async (req: Request, res: Response): Promis
     });
 
     res.status(200).json(capacities);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching time slot capacities:', error);
-    res.status(500).json({ message: 'Error fetching time slot capacities' });
+    
+    // Check for common Prisma errors - use optional chaining for safety
+    if (error?.code === 'P2001' || error?.message?.includes('does not exist')) {
+      res.status(500).json({ 
+        message: 'Time slot capacity table does not exist. Please run database migrations.',
+        error: process.env.NODE_ENV === 'development' ? error?.message : undefined,
+        hint: process.env.NODE_ENV === 'development' ? 'Run: npx prisma migrate deploy' : undefined
+      });
+      return;
+    }
+    
+    res.status(500).json({ 
+      message: 'Error fetching time slot capacities',
+      error: process.env.NODE_ENV === 'development' ? error?.message : undefined
+    });
   }
 };
 
