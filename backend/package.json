@@ -75,7 +75,7 @@
     "@types/multer": "^1.4.13",
     "@types/uuid": "^10.0.0",
     "dotenv-cli": "^8.0.0",
-    "nodemon": "^3.1.9",
+    "nodemon": "^3.1.10",
     "prisma": "^6.7.0",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
