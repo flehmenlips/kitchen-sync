@@ -60,47 +60,20 @@ export const getTimeSlotCapacities = async (req: Request, res: Response): Promis
     res.status(200).json(capacities);
   } catch (error: any) {
     console.error('Error fetching time slot capacities:', error);
-    console.error('Error details:', {
-      code: error?.code,
-      message: error?.message,
-      meta: error?.meta,
-      stack: error?.stack
-    });
     
     // Check for common Prisma errors - use optional chaining for safety
-    const errorCode = error?.code;
-    const errorMessage = error?.message || '';
-    
-    // P2001: Record not found (but this shouldn't cause issues with findMany)
-    // P1001: Can't reach database server
-    // P1008: Operations timed out
-    // P1017: Server has closed the connection
-    if (errorCode === 'P1001' || errorCode === 'P1008' || errorCode === 'P1017') {
-      res.status(503).json({ 
-        message: 'Database connection error. Please try again later.',
-        error: process.env.NODE_ENV === 'development' ? errorMessage : undefined
-      });
-      return;
-    }
-    
-    // Check if table doesn't exist (various error messages)
-    if (errorCode === 'P2001' || 
-        errorMessage.includes('does not exist') || 
-        errorMessage.includes('Unknown table') ||
-        errorMessage.includes('relation') && errorMessage.includes('does not exist')) {
+    if (error?.code === 'P2001' || error?.message?.includes('does not exist')) {
       res.status(500).json({ 
         message: 'Time slot capacity table does not exist. Please run database migrations.',
-        error: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
+        error: process.env.NODE_ENV === 'development' ? error?.message : undefined,
         hint: process.env.NODE_ENV === 'development' ? 'Run: npx prisma migrate deploy' : undefined
       });
       return;
     }
     
-    // Generic error response
     res.status(500).json({ 
       message: 'Error fetching time slot capacities',
-      error: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
-      errorCode: process.env.NODE_ENV === 'development' ? errorCode : undefined
+      error: process.env.NODE_ENV === 'development' ? error?.message : undefined
     });
   }
 };
@@ -270,8 +243,7 @@ export const upsertTimeSlotCapacity = async (req: Request, res: Response): Promi
         dayOfWeek: dayOfWeekNum,
         timeSlot: timeSlot,
         maxCovers: maxCoversNum,
-        isActive: isActive !== undefined ? isActive : true,
-        updatedAt: new Date()
+        isActive: isActive !== undefined ? isActive : true
       }
     });
 
@@ -368,8 +340,7 @@ export const bulkUpsertTimeSlotCapacities = async (req: Request, res: Response):
             dayOfWeek: cap.dayOfWeekNum,
             timeSlot: cap.timeSlot,
             maxCovers: cap.maxCoversNum,
-            isActive: cap.isActive,
-            updatedAt: new Date()
+            isActive: cap.isActive
           }
         })
       )
@@ -381,13 +352,6 @@ export const bulkUpsertTimeSlotCapacities = async (req: Request, res: Response):
     });
   } catch (error: any) {
     console.error('Error bulk updating time slot capacities:', error);
-    console.error('Error details:', {
-      code: error?.code,
-      message: error?.message,
-      meta: error?.meta,
-      stack: error?.stack,
-      body: req.body
-    });
     
     // FIXED: Return 400 for validation errors with descriptive messages
     if (error.message && (
@@ -396,36 +360,11 @@ export const bulkUpsertTimeSlotCapacities = async (req: Request, res: Response):
       error.message.includes('Invalid timeSlot') ||
       error.message.includes('Invalid maxCovers')
     )) {
-      res.status(400).json({ 
-        message: error.message,
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
-      });
+      res.status(400).json({ message: error.message });
       return;
     }
     
-    // Check for Prisma unique constraint violations
-    if (error?.code === 'P2002') {
-      res.status(400).json({ 
-        message: 'Duplicate time slot capacity entry. Each restaurant can only have one capacity setting per day/time slot.',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
-      });
-      return;
-    }
-    
-    // Check for foreign key violations
-    if (error?.code === 'P2003') {
-      res.status(400).json({ 
-        message: 'Invalid restaurant ID. The restaurant does not exist.',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
-      });
-      return;
-    }
-    
-    res.status(500).json({ 
-      message: 'Error bulk updating time slot capacities',
-      error: process.env.NODE_ENV === 'development' ? error?.message : undefined,
-      errorCode: process.env.NODE_ENV === 'development' ? error?.code : undefined
-    });
+    res.status(500).json({ message: 'Error bulk updating time slot capacities' });
   }
 };
 
