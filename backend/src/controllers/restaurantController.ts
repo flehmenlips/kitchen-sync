@@ -143,18 +143,19 @@ export const createRestaurant = async (req: Request, res: Response): Promise<voi
         }
       });
 
-      // 4. Create default prep columns (only if they don't already exist for this user)
+      // 4. Create default prep columns (only if they don't already exist for this restaurant)
       const defaultColumns = ['To Do', 'In Progress', 'Done'];
       for (let i = 0; i < defaultColumns.length; i++) {
-        // Check if this user already has a prep column with this name
+        // Check if this user already has a prep column with this name for this restaurant
         const existingColumn = await tx.prepColumn.findFirst({
           where: {
             userId: req.user.id,
+            restaurantId: restaurant.id,
             name: defaultColumns[i]
           }
         });
         
-        // Only create if it doesn't exist
+        // Only create if it doesn't exist for this restaurant
         if (!existingColumn) {
           await tx.prepColumn.create({
             data: {

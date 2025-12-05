@@ -1097,101 +1097,97 @@ export class RestaurantTemplateService {
         throw new Error('Template not found');
       }
 
-      // Get or create restaurant settings
+      // Get or create restaurant settings (outside transaction for read-only)
       const existingSettings = await prisma.restaurantSettings.findUnique({
         where: { restaurantId }
       });
 
       const now = new Date();
 
-      // Apply template to restaurant settings
-      await prisma.restaurantSettings.upsert({
-        where: { restaurantId },
-        create: {
-          restaurantId,
-          
-          // Apply colors
-          primaryColor: template.defaultColors.primary,
-          secondaryColor: template.defaultColors.secondary,
-          accentColor: template.defaultColors.accent,
-          
-          // Apply typography
-          fontPrimary: template.defaultTypography.headingFont,
-          fontSecondary: template.defaultTypography.bodyFont,
-          
-          // Keep existing content or use defaults
-          websiteName: existingSettings?.websiteName || 'Restaurant Name',
-          heroTitle: existingSettings?.heroTitle || 'Welcome to Our Restaurant',
-          heroSubtitle: existingSettings?.heroSubtitle || 'Experience Fine Dining at Its Best',
-          aboutTitle: existingSettings?.aboutTitle || 'About Us',
-          aboutDescription: existingSettings?.aboutDescription || 'Discover our story and passion for exceptional cuisine.',
-          
-          // Keep existing media
-          heroImageUrl: existingSettings?.heroImageUrl,
-          aboutImageUrl: existingSettings?.aboutImageUrl,
-          logoUrl: existingSettings?.logoUrl,
-          
-          updatedAt: now,
-          createdAt: now
-        },
-        update: {
-          
-          // Apply colors
-          primaryColor: template.defaultColors.primary,
-          secondaryColor: template.defaultColors.secondary,
-          accentColor: template.defaultColors.accent,
-          
-          // Apply typography
-          fontPrimary: template.defaultTypography.headingFont,
-          fontSecondary: template.defaultTypography.bodyFont,
-          
-          updatedAt: now
-        }
-      });
+      // Wrap all database operations in a transaction for atomicity
+      // This ensures that if any operation fails, all changes are rolled back
+      await prisma.$transaction(async (tx) => {
+        // 1. Apply template to restaurant settings
+        await tx.restaurantSettings.upsert({
+          where: { restaurantId },
+          create: {
+            restaurantId,
+            
+            // Apply colors
+            primaryColor: template.defaultColors.primary,
+            secondaryColor: template.defaultColors.secondary,
+            accentColor: template.defaultColors.accent,
+            
+            // Apply typography
+            fontPrimary: template.defaultTypography.headingFont,
+            fontSecondary: template.defaultTypography.bodyFont,
+            
+            // Keep existing content or use defaults
+            websiteName: existingSettings?.websiteName || 'Restaurant Name',
+            heroTitle: existingSettings?.heroTitle || 'Welcome to Our Restaurant',
+            heroSubtitle: existingSettings?.heroSubtitle || 'Experience Fine Dining at Its Best',
+            aboutTitle: existingSettings?.aboutTitle || 'About Us',
+            aboutDescription: existingSettings?.aboutDescription || 'Discover our story and passion for exceptional cuisine.',
+            
+            // Keep existing media
+            heroImageUrl: existingSettings?.heroImageUrl,
+            aboutImageUrl: existingSettings?.aboutImageUrl,
+            logoUrl: existingSettings?.logoUrl,
+            
+            updatedAt: now,
+            createdAt: now
+          },
+          update: {
+            
+            // Apply colors
+            primaryColor: template.defaultColors.primary,
+            secondaryColor: template.defaultColors.secondary,
+            accentColor: template.defaultColors.accent,
+            
+            // Apply typography
+            fontPrimary: template.defaultTypography.headingFont,
+            fontSecondary: template.defaultTypography.bodyFont,
+            
+            updatedAt: now
+          }
+        });
 
-      // Create default content blocks based on template layout
-      // Check if content blocks already exist
-      const existingBlocks = await prisma.contentBlock.findMany({
-        where: { restaurantId },
-        select: { id: true }
-      });
-
-      // If blocks exist, delete them first to apply fresh template
-      if (existingBlocks.length > 0) {
-        await prisma.contentBlock.deleteMany({
+        // 2. Delete existing content blocks (if any)
+        // This is safe because it's inside a transaction - if createMany fails, this will roll back
+        await tx.contentBlock.deleteMany({
           where: { restaurantId }
         });
-      }
 
-      // Create default blocks from template
-      const defaultBlocks = this.generateDefaultContentBlocks(template, restaurantId);
-      if (defaultBlocks.length > 0) {
-        await prisma.contentBlock.createMany({
-          data: defaultBlocks
+        // 3. Create default blocks from template
+        const defaultBlocks = this.generateDefaultContentBlocks(template, restaurantId);
+        if (defaultBlocks.length > 0) {
+          await tx.contentBlock.createMany({
+            data: defaultBlocks
+          });
+        }
+
+        // 4. Create template application record
+        await tx.templateApplication.create({
+          data: {
+            restaurantId,
+            templateId,
+            appliedAt: now
+          }
         });
-      }
 
-      // Create template application record
-      await prisma.templateApplication.create({
-        data: {
-          restaurantId,
-          templateId,
-          appliedAt: now
-        }
-      });
-
-      // Update restaurant website settings
-      await prisma.restaurant.update({
-        where: { id: restaurantId },
-        data: {
-          websiteSettings: {
-            template: template.name,
-            templateId: template.id,
-            layoutConfig: template.layoutConfig,
-            features: template.features
-          },
-          website_builder_enabled: true
-        }
+        // 5. Update restaurant website settings
+        await tx.restaurant.update({
+          where: { id: restaurantId },
+          data: {
+            websiteSettings: {
+              template: template.name,
+              templateId: template.id,
+              layoutConfig: template.layoutConfig,
+              features: template.features
+            } as any,
+            website_builder_enabled: true
+          }
+        });
       });
 
     } catch (error) {

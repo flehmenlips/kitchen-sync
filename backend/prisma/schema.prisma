@@ -154,7 +154,7 @@ model PrepColumn {
   user         User       @relation("UserPrepColumns", fields: [userId], references: [id], onDelete: Cascade)
   tasks        PrepTask[]
 
-  @@unique([name, userId])
+  @@unique([name, userId, restaurantId])
   @@index([userId])
   @@index([order])
   @@map("prep_columns")
