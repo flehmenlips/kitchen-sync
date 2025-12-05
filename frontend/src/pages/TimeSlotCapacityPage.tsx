@@ -205,32 +205,64 @@ const TimeSlotCapacityPage: React.FC = () => {
       });
 
       // Delete capacities that were set to 0 (use default)
-      await Promise.all(
-        capacitiesToDelete.map(id => timeSlotCapacityService.deleteTimeSlotCapacity(id))
-      );
+      // Process deletions individually to handle partial failures gracefully
+      const deletionResults: Array<{ id: number; success: boolean; error?: any }> = [];
+      
+      for (const id of capacitiesToDelete) {
+        try {
+          await timeSlotCapacityService.deleteTimeSlotCapacity(id);
+          deletionResults.push({ id, success: true });
+        } catch (error: any) {
+          // Treat 404 as success (item already deleted) to avoid error loops
+          if (error.response?.status === 404) {
+            deletionResults.push({ id, success: true });
+          } else {
+            deletionResults.push({ id, success: false, error });
+          }
+        }
+      }
+
+      const successfulDeletions = deletionResults.filter(r => r.success).length;
+      const failedDeletions = deletionResults.filter(r => !r.success);
 
       // Save capacities with valid maxCovers (> 0)
       if (capacityArray.length > 0) {
         await timeSlotCapacityService.bulkUpsertTimeSlotCapacities(restaurantId, capacityArray);
       }
 
-      const deletedCount = capacitiesToDelete.length;
       const savedCount = capacityArray.length;
       let message = 'Time slot capacities saved successfully';
-      if (deletedCount > 0 && savedCount > 0) {
-        message = `Saved ${savedCount} capacity setting${savedCount !== 1 ? 's' : ''} and removed ${deletedCount} default setting${deletedCount !== 1 ? 's' : ''}`;
-      } else if (deletedCount > 0) {
-        message = `Removed ${deletedCount} capacity setting${deletedCount !== 1 ? 's' : ''} (using defaults)`;
+      
+      // Build success message
+      if (successfulDeletions > 0 && savedCount > 0) {
+        message = `Saved ${savedCount} capacity setting${savedCount !== 1 ? 's' : ''} and removed ${successfulDeletions} default setting${successfulDeletions !== 1 ? 's' : ''}`;
+      } else if (successfulDeletions > 0) {
+        message = `Removed ${successfulDeletions} capacity setting${successfulDeletions !== 1 ? 's' : ''} (using defaults)`;
       } else if (savedCount > 0) {
         message = `Saved ${savedCount} capacity setting${savedCount !== 1 ? 's' : ''}`;
       } else {
         message = 'No changes to save';
       }
+
+      // Show warning if some deletions failed
+      if (failedDeletions.length > 0) {
+        const errorMessage = failedDeletions[0].error?.response?.data?.message || 'Some deletions failed';
+        showSnackbar(
+          `${message}. Warning: ${failedDeletions.length} deletion${failedDeletions.length !== 1 ? 's' : ''} failed: ${errorMessage}`,
+          'warning'
+        );
+      } else {
+        showSnackbar(message, 'success');
+      }
       
-      showSnackbar(message, 'success');
+      // Always refresh state to sync with database, even if there were errors
       fetchCapacities();
     } catch (error: any) {
       console.error('Error saving time slot capacities:', error);
+      
+      // Always refresh state on error to prevent stale IDs from causing retry loops
+      fetchCapacities();
+      
       showSnackbar(
         error.response?.data?.message || 'Failed to save time slot capacities',
         'error'
