@@ -190,6 +190,9 @@ const TimeSlotCapacityPage: React.FC = () => {
           
           // If this capacity exists in DB (has id), delete it
           // Otherwise, don't save it (it will use default)
+        // If this capacity exists in DB (has id), delete it
+        // Otherwise, don't save it (it will use default)
+        if (cap.maxCovers === 0 || cap.maxCovers < 1) {
           if (cap.id && cap.id > 0) {
             capacitiesToDelete.push(cap.id);
           }
@@ -224,6 +227,9 @@ const TimeSlotCapacityPage: React.FC = () => {
 
       const successfulDeletions = deletionResults.filter(r => r.success).length;
       const failedDeletions = deletionResults.filter(r => !r.success);
+      await Promise.all(
+        capacitiesToDelete.map(id => timeSlotCapacityService.deleteTimeSlotCapacity(id))
+      );
 
       // Save capacities with valid maxCovers (> 0)
       if (capacityArray.length > 0) {
@@ -238,6 +244,13 @@ const TimeSlotCapacityPage: React.FC = () => {
         message = `Saved ${savedCount} capacity setting${savedCount !== 1 ? 's' : ''} and removed ${successfulDeletions} default setting${successfulDeletions !== 1 ? 's' : ''}`;
       } else if (successfulDeletions > 0) {
         message = `Removed ${successfulDeletions} capacity setting${successfulDeletions !== 1 ? 's' : ''} (using defaults)`;
+      const deletedCount = capacitiesToDelete.length;
+      const savedCount = capacityArray.length;
+      let message = 'Time slot capacities saved successfully';
+      if (deletedCount > 0 && savedCount > 0) {
+        message = `Saved ${savedCount} capacity setting${savedCount !== 1 ? 's' : ''} and removed ${deletedCount} default setting${deletedCount !== 1 ? 's' : ''}`;
+      } else if (deletedCount > 0) {
+        message = `Removed ${deletedCount} capacity setting${deletedCount !== 1 ? 's' : ''} (using defaults)`;
       } else if (savedCount > 0) {
         message = `Saved ${savedCount} capacity setting${savedCount !== 1 ? 's' : ''}`;
       } else {
@@ -256,6 +269,8 @@ const TimeSlotCapacityPage: React.FC = () => {
       }
       
       // Always refresh state to sync with database, even if there were errors
+      
+      showSnackbar(message, 'success');
       fetchCapacities();
     } catch (error: any) {
       console.error('Error saving time slot capacities:', error);
