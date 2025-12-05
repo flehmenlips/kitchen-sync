@@ -11,7 +11,7 @@ import {
   debugContentBlocks
 } from '../controllers/contentBlockController';
 import { protect } from '../middleware/authMiddleware';
-const multer = require('multer');
+import multer from 'multer';
 
 const router = express.Router();
 

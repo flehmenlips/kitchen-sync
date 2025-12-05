@@ -11,7 +11,7 @@ import {
 import { getPublicMenusBySlug } from '../controllers/menuController';
 import { protect } from '../middleware/authMiddleware';
 import { setRestaurantContext, requireRestaurantContext } from '../middleware/restaurantContext';
-const multer = require('multer');
+import multer from 'multer';
 
 const router = express.Router();
 
