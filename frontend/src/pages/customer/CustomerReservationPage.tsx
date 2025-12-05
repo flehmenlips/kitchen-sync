@@ -141,6 +141,13 @@ const CustomerReservationPage: React.FC = () => {
 
   const steps = ['Select Date & Time', 'Confirmation'];
 
+  // Memoize prefill data for SignUpDialog to avoid calling useMemo in JSX
+  const signUpPrefillData = useMemo(() => ({
+    email: formData.customerEmail,
+    name: formData.customerName,
+    phone: formData.customerPhone
+  }), [formData.customerEmail, formData.customerName, formData.customerPhone]);
+
   // Note: Users can now fill out the form without authentication
   // They will be prompted to create an account when submitting
 
@@ -873,11 +880,7 @@ const CustomerReservationPage: React.FC = () => {
           setPendingReservationData(null);
         }}
         onSuccess={handleSignUpSuccess}
-        prefillData={useMemo(() => ({
-          email: formData.customerEmail,
-          name: formData.customerName,
-          phone: formData.customerPhone
-        }), [formData.customerEmail, formData.customerName, formData.customerPhone])}
+        prefillData={signUpPrefillData}
       />
     </Box>
   );
