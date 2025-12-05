@@ -101,15 +101,19 @@ export const SignUpDialog: React.FC<SignUpDialogProps> = ({
       errors.password = 'Password must be at least 8 characters';
     }
     
+    // Phone validation (optional but recommended)
+    if (formData.phone && !/^[\d\s\-\+\(\)]+$/.test(formData.phone)) {
+      errors.phone = 'Please enter a valid phone number';
+    }
+    
+    // Always set field errors before checking other validations
+    // This ensures users see all field-level errors even if there are other issues
+    setFieldErrors(errors);
+    
     // Confirm password validation
     if (formData.password !== confirmPassword) {
       setError('Passwords do not match');
       return false;
-    }
-    
-    // Phone validation (optional but recommended)
-    if (formData.phone && !/^[\d\s\-\+\(\)]+$/.test(formData.phone)) {
-      errors.phone = 'Please enter a valid phone number';
     }
     
     // Terms acceptance
@@ -118,7 +122,6 @@ export const SignUpDialog: React.FC<SignUpDialogProps> = ({
       return false;
     }
     
-    setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
