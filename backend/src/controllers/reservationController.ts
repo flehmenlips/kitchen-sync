@@ -890,21 +890,35 @@ export const getReservationStats = async (req: Request, res: Response): Promise<
             }
         }
         
-        // Date range filtering
+        // Date range filtering - properly handle date strings to include full days
         if (startDate || endDate) {
             const dateFilter: any = {};
             if (startDate) {
-                dateFilter.gte = new Date(startDate as string);
+                // Parse date string and set to start of day (00:00:00) in local timezone
+                const startDateStr = startDate as string;
+                const startDateObj = new Date(startDateStr + 'T00:00:00');
+                dateFilter.gte = startDateObj;
             }
             if (endDate) {
-                const endDateObj = new Date(endDate as string);
-                endDateObj.setDate(endDateObj.getDate() + 1);
-                dateFilter.lt = endDateObj;
+                // Parse date string and set to end of day (23:59:59.999) in local timezone
+                const endDateStr = endDate as string;
+                const endDateObj = new Date(endDateStr + 'T23:59:59.999');
+                dateFilter.lte = endDateObj; // Use lte instead of lt to include the full end date
             }
             if (Object.keys(dateFilter).length > 0) {
                 where.reservationDate = dateFilter;
             }
         }
+
+        // Debug logging
+        console.log('Reservation stats query params:', {
+            startDate,
+            endDate,
+            restaurantId,
+            groupBy,
+            userRestaurantIds: restaurantIds,
+            whereClause: JSON.stringify(where, null, 2)
+        });
 
         // Get all reservations for calculations
         const reservations = await prisma.reservation.findMany({
@@ -917,6 +931,8 @@ export const getReservationStats = async (req: Request, res: Response): Promise<
                 reservationTime: true
             }
         });
+
+        console.log(`Found ${reservations.length} reservations matching criteria`);
 
         // Calculate basic statistics
         const totalReservations = reservations.length;
