@@ -816,9 +816,15 @@ export const ReservationCalendar: React.FC = () => {
     return (
       <Box>
         {/* Day headers */}
-        <Grid container spacing={0.5} sx={{ mb: 1 }}>
+        <Box sx={{ display: 'flex', gap: 0.5, mb: 1 }}>
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-            <Grid item xs={12/7} key={day}>
+            <Box
+              key={day}
+              sx={{
+                flex: '1 1 0%',
+                minWidth: 0
+              }}
+            >
               <Paper
                 sx={{
                   p: 1,
@@ -830,13 +836,13 @@ export const ReservationCalendar: React.FC = () => {
               >
                 <Typography variant="caption">{day}</Typography>
               </Paper>
-            </Grid>
+            </Box>
           ))}
-        </Grid>
+        </Box>
 
         {/* Calendar grid */}
         {weeks.map((week, weekIndex) => (
-          <Grid container spacing={0.5} key={weekIndex} sx={{ mb: 0.5 }}>
+          <Box key={weekIndex} sx={{ display: 'flex', gap: 0.5, mb: 0.5 }}>
             {week.map((day, dayIndex) => {
               const dayReservations = getReservationsForDay(day);
               const isCurrentDay = isToday(day);
@@ -848,7 +854,13 @@ export const ReservationCalendar: React.FC = () => {
               const isClosed = dayHours?.closed || !dayHours;
 
               return (
-                <Grid item xs={12/7} key={dayIndex}>
+                <Box
+                  key={dayIndex}
+                  sx={{
+                    flex: '1 1 0%',
+                    minWidth: 0
+                  }}
+                >
                   <Card
                     sx={{
                       minHeight: 120,
@@ -952,10 +964,10 @@ export const ReservationCalendar: React.FC = () => {
                       )}
                     </CardContent>
                   </Card>
-                </Grid>
+                </Box>
               );
             })}
-          </Grid>
+          </Box>
         ))}
       </Box>
     );
@@ -1042,7 +1054,7 @@ export const ReservationCalendar: React.FC = () => {
 
         {/* Week View */}
         {view === 'week' && (
-        <Grid container spacing={1} sx={{ mt: 2 }}>
+        <Box sx={{ display: 'flex', gap: 1, mt: 2, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
             {viewDates.map((day, index) => {
             const dayReservations = getReservationsForDay(day);
             const isCurrentDay = isToday(day);
@@ -1068,7 +1080,14 @@ export const ReservationCalendar: React.FC = () => {
             }
             
             return (
-              <Grid item xs={12} sm={6} md={12/7} key={index}>
+              <Box
+                key={index}
+                sx={{
+                  flex: { xs: '1 1 100%', sm: '1 1 0%' },
+                  minWidth: { xs: '100%', sm: 0 },
+                  maxWidth: { xs: '100%', sm: 'none' }
+                }}
+              >
                 <Card
                   sx={{
                     height: '100%',
@@ -1158,10 +1177,10 @@ export const ReservationCalendar: React.FC = () => {
                     )}
                   </CardContent>
                 </Card>
-              </Grid>
+              </Box>
             );
           })}
-        </Grid>
+        </Box>
         )}
 
         {/* Month View */}

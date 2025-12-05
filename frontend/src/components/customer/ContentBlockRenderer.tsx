@@ -1504,12 +1504,27 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
                 </Typography>
               )}
               <Grid container spacing={featuresSettings.gridSpacing || 4}>
-                {features.map((feature: any, index: number) => (
+                {features.map((feature: any, index: number) => {
+                  // Calculate valid Grid breakpoint values
+                  // For columns that divide evenly into 12, use standard breakpoints
+                  // For others, use flexbox approach
+                  const getMdBreakpoint = () => {
+                    if (12 % gridColumns === 0) {
+                      return 12 / gridColumns;
+                    }
+                    // For non-standard column counts, use flexbox
+                    return 'auto';
+                  };
+                  
+                  const mdValue = getMdBreakpoint();
+                  
+                  return (
                   <Grid 
                     item 
                     xs={12} 
                     sm={gridColumns === 2 ? 6 : gridColumns === 4 ? 6 : 12}
-                    md={12 / gridColumns} 
+                    md={mdValue === 'auto' ? false : mdValue}
+                    sx={mdValue === 'auto' ? { flex: `1 1 ${100 / gridColumns}%`, minWidth: 0 } : undefined}
                     key={index}
                   >
                     <Card sx={getCardStyles()}>
@@ -1568,7 +1583,8 @@ const ContentBlockRenderer: React.FC<ContentBlockRendererProps> = ({ blocks }) =
                       </CardContent>
                     </Card>
                   </Grid>
-                ))}
+                  );
+                })}
               </Grid>
             </Container>
           </Box>
