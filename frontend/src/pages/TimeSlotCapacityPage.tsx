@@ -85,7 +85,6 @@ const TimeSlotCapacityPage: React.FC = () => {
     
     try {
       const settings = await reservationSettingsService.getReservationSettings(restaurantId);
-      setReservationSettings(settings);
       generateTimeSlotsByDay(settings);
     } catch (error) {
       console.error('Error fetching reservation settings:', error);
