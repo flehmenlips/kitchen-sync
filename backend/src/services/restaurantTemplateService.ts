@@ -1107,6 +1107,46 @@ export class RestaurantTemplateService {
       // Wrap all database operations in a transaction for atomicity
       // This ensures that if any operation fails, all changes are rolled back
       await prisma.$transaction(async (tx) => {
+        // 0. Ensure template exists in database (required for foreign key constraint)
+        // If template came from predefined array but doesn't exist in DB, upsert it
+        const dbTemplate = await tx.restaurantTemplate.findUnique({
+          where: { id: templateId }
+        });
+
+        if (!dbTemplate) {
+          // Template doesn't exist in database, upsert it from predefined template
+          await tx.restaurantTemplate.upsert({
+            where: { id: template.id },
+            create: {
+              id: template.id,
+              name: template.name,
+              category: template.category,
+              description: template.description,
+              previewUrl: template.previewUrl,
+              layoutConfig: template.layoutConfig as any,
+              defaultColors: template.defaultColors as any,
+              defaultTypography: template.defaultTypography as any,
+              features: template.features,
+              isPremium: template.isPremium,
+              isActive: template.isActive,
+              sortOrder: template.sortOrder
+            },
+            update: {
+              name: template.name,
+              category: template.category,
+              description: template.description,
+              previewUrl: template.previewUrl,
+              layoutConfig: template.layoutConfig as any,
+              defaultColors: template.defaultColors as any,
+              defaultTypography: template.defaultTypography as any,
+              features: template.features,
+              isPremium: template.isPremium,
+              isActive: template.isActive,
+              sortOrder: template.sortOrder
+            }
+          });
+        }
+
         // 1. Apply template to restaurant settings
         await tx.restaurantSettings.upsert({
           where: { restaurantId },
@@ -1167,6 +1207,7 @@ export class RestaurantTemplateService {
         }
 
         // 4. Create template application record
+        // Now safe because we've ensured the template exists in the database
         await tx.templateApplication.create({
           data: {
             restaurantId,
