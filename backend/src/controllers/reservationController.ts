@@ -896,29 +896,59 @@ export const getReservationStats = async (req: Request, res: Response): Promise<
             if (startDate) {
                 // Parse date string and set to start of day (00:00:00) in local timezone
                 const startDateStr = startDate as string;
-                const startDateObj = new Date(startDateStr + 'T00:00:00');
+                let startDateObj: Date;
+                
+                // Check if date string already contains a time component
+                if (startDateStr.includes('T')) {
+                    // Already has time component - parse as-is then reset to start of day
+                    const parsed = new Date(startDateStr);
+                    if (isNaN(parsed.getTime())) {
+                        res.status(400).json({ message: 'Invalid startDate format' });
+                        return;
+                    }
+                    startDateObj = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 0, 0, 0, 0);
+                } else {
+                    // Date-only string - append time component
+                    startDateObj = new Date(startDateStr + 'T00:00:00');
+                }
+                
+                if (isNaN(startDateObj.getTime())) {
+                    res.status(400).json({ message: 'Invalid startDate format' });
+                    return;
+                }
+                
                 dateFilter.gte = startDateObj;
             }
             if (endDate) {
                 // Parse date string and set to end of day (23:59:59.999) in local timezone
                 const endDateStr = endDate as string;
-                const endDateObj = new Date(endDateStr + 'T23:59:59.999');
+                let endDateObj: Date;
+                
+                // Check if date string already contains a time component
+                if (endDateStr.includes('T')) {
+                    // Already has time component - parse as-is then reset to end of day
+                    const parsed = new Date(endDateStr);
+                    if (isNaN(parsed.getTime())) {
+                        res.status(400).json({ message: 'Invalid endDate format' });
+                        return;
+                    }
+                    endDateObj = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 23, 59, 59, 999);
+                } else {
+                    // Date-only string - append time component
+                    endDateObj = new Date(endDateStr + 'T23:59:59.999');
+                }
+                
+                if (isNaN(endDateObj.getTime())) {
+                    res.status(400).json({ message: 'Invalid endDate format' });
+                    return;
+                }
+                
                 dateFilter.lte = endDateObj; // Use lte instead of lt to include the full end date
             }
             if (Object.keys(dateFilter).length > 0) {
                 where.reservationDate = dateFilter;
             }
         }
-
-        // Debug logging
-        console.log('Reservation stats query params:', {
-            startDate,
-            endDate,
-            restaurantId,
-            groupBy,
-            userRestaurantIds: restaurantIds,
-            whereClause: JSON.stringify(where, null, 2)
-        });
 
         // Get all reservations for calculations
         const reservations = await prisma.reservation.findMany({
@@ -931,8 +961,6 @@ export const getReservationStats = async (req: Request, res: Response): Promise<
                 reservationTime: true
             }
         });
-
-        console.log(`Found ${reservations.length} reservations matching criteria`);
 
         // Calculate basic statistics
         const totalReservations = reservations.length;
