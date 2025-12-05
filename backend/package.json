@@ -39,7 +39,7 @@
   "author": "",
   "license": "ISC",
   "engines": {
-    "node": ">=20.0.0 <24.0.0"
+    "node": ">=20.19.0 <24.0.0"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.40.1",
@@ -73,7 +73,7 @@
     "@types/uuid": "^10.0.0",
     "dotenv-cli": "^8.0.0",
     "nodemon": "^3.1.9",
-    "prisma": "^7.1.0",
+    "prisma": "^6.18.0",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
     "tsx": "^4.19.4"
