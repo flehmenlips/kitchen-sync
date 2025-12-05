@@ -195,7 +195,7 @@ export const createRestaurant = async (req: Request, res: Response): Promise<voi
       if (modelName === 'PrepColumn') {
         console.error(`[RESTAURANT CREATE ERROR] PrepColumn unique constraint violation on: ${field}`);
         res.status(400).json({ 
-          error: 'Unable to create default prep columns. You may already have prep columns with these names. The restaurant was created but some default columns could not be added.' 
+          error: 'Failed to create restaurant. Unable to create default prep columns due to a constraint violation. Please try again or contact support if the issue persists.' 
         });
         return;
       }
