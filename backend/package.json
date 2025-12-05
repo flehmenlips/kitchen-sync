@@ -1,6 +1,6 @@
 {
   "name": "backend",
-  "version": "3.0.0",
+  "version": "3.9.0",
   "private": true,
   "description": "",
   "main": "dist/server.js",
@@ -62,8 +62,8 @@
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.2",
-    "pg": "^8.16.3",
-    "stripe": "^18.1.1",
+    "pg": "^8.14.1",
+    "stripe": "^19.1.0",
     "typescript": "^5.8.3",
     "uuid": "^11.1.0"
   },
