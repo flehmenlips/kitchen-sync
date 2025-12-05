@@ -890,16 +890,60 @@ export const getReservationStats = async (req: Request, res: Response): Promise<
             }
         }
         
-        // Date range filtering
+        // Date range filtering - properly handle date strings to include full days
         if (startDate || endDate) {
             const dateFilter: any = {};
             if (startDate) {
-                dateFilter.gte = new Date(startDate as string);
+                // Parse date string and set to start of day (00:00:00) in local timezone
+                const startDateStr = startDate as string;
+                let startDateObj: Date;
+                
+                // Check if date string already contains a time component
+                if (startDateStr.includes('T')) {
+                    // Already has time component - parse as-is then reset to start of day
+                    const parsed = new Date(startDateStr);
+                    if (isNaN(parsed.getTime())) {
+                        res.status(400).json({ message: 'Invalid startDate format' });
+                        return;
+                    }
+                    startDateObj = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 0, 0, 0, 0);
+                } else {
+                    // Date-only string - append time component
+                    startDateObj = new Date(startDateStr + 'T00:00:00');
+                }
+                
+                if (isNaN(startDateObj.getTime())) {
+                    res.status(400).json({ message: 'Invalid startDate format' });
+                    return;
+                }
+                
+                dateFilter.gte = startDateObj;
             }
             if (endDate) {
-                const endDateObj = new Date(endDate as string);
-                endDateObj.setDate(endDateObj.getDate() + 1);
-                dateFilter.lt = endDateObj;
+                // Parse date string and set to end of day (23:59:59.999) in local timezone
+                const endDateStr = endDate as string;
+                let endDateObj: Date;
+                
+                // Check if date string already contains a time component
+                if (endDateStr.includes('T')) {
+                    // Already has time component - parse as-is then reset to end of day
+                    const parsed = new Date(endDateStr);
+                    if (isNaN(parsed.getTime())) {
+                        res.status(400).json({ message: 'Invalid endDate format' });
+                        return;
+                    }
+                    endDateObj = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 23, 59, 59, 999);
+                } else {
+                    // Date-only string - append time component
+                    endDateObj = new Date(endDateStr + 'T23:59:59.999');
+                }
+                
+                if (isNaN(endDateObj.getTime())) {
+                    res.status(400).json({ message: 'Invalid endDate format' });
+                    return;
+                }
+                
+                dateFilter.lte = endDateObj; // Use lte instead of lt to include the full end date
             }
             if (Object.keys(dateFilter).length > 0) {
                 where.reservationDate = dateFilter;
