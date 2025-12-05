@@ -24,7 +24,6 @@ import {
   Warning as WarningIcon,
   Delete as DeleteIcon,
   Refresh as RefreshIcon,
-  CloudUpload as CloudUploadIcon,
   CheckCircle as CheckCircleIcon,
   Info as InfoIcon
 } from '@mui/icons-material';
@@ -323,7 +322,7 @@ const WebsiteManagementDialog: React.FC<WebsiteManagementDialogProps> = ({
               <input
                 type="text"
                 value={confirmationText}
-                onChange={(e) => setConfirmationText(e.target.value)}
+                onChange={(e) => setConfirmationText(e.target.value.toUpperCase())}
                 placeholder={action === 'delete' ? 'DELETE WEBSITE' : 'RESET WEBSITE'}
                 style={{
                   width: '100%',
