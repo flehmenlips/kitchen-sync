@@ -1054,7 +1054,7 @@ export const ReservationCalendar: React.FC = () => {
 
         {/* Week View */}
         {view === 'week' && (
-        <Box sx={{ display: 'flex', gap: 1, mt: 2, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
+        <Box sx={{ display: 'flex', gap: 1, mt: 2, flexWrap: { xs: 'wrap', md: 'nowrap' } }}>
             {viewDates.map((day, index) => {
             const dayReservations = getReservationsForDay(day);
             const isCurrentDay = isToday(day);
@@ -1083,9 +1083,9 @@ export const ReservationCalendar: React.FC = () => {
               <Box
                 key={index}
                 sx={{
-                  flex: { xs: '1 1 100%', sm: '1 1 0%' },
-                  minWidth: { xs: '100%', sm: 0 },
-                  maxWidth: { xs: '100%', sm: 'none' }
+                  flex: { xs: '1 1 100%', sm: '1 1 50%', md: '1 1 0%' },
+                  minWidth: { xs: '100%', sm: 'calc(50% - 4px)', md: 0 },
+                  maxWidth: { xs: '100%', sm: 'calc(50% - 4px)', md: 'none' }
                 }}
               >
                 <Card
