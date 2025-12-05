@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -59,7 +59,7 @@ const CustomerReservationPage: React.FC = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
-  const { user, loading: authLoading } = useCustomerAuth();
+  const { user, loading: authLoading, refreshAuth } = useCustomerAuth();
   
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -442,7 +442,44 @@ const CustomerReservationPage: React.FC = () => {
   };
 
   const handleSignUpSuccess = async () => {
-    // After successful sign-up, submit the pending reservation
+    // After successful sign-up, refresh auth state to get the latest user data
+    refreshAuth();
+    
+    // Wait a moment for the auth context to update after login
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
+    // Get the updated user from the auth service directly to ensure we have latest state
+    const currentUser = customerAuthService.getCurrentUser();
+    
+    // Check if user is authenticated
+    if (!currentUser) {
+      enqueueSnackbar('Please sign in to complete your reservation', { variant: 'error' });
+      navigate(buildCustomerUrl('login'), { 
+        state: { from: '/reservations/new', message: 'Authentication required' }
+      });
+      setPendingReservationData(null);
+      return;
+    }
+
+    // Check email verification - newly registered users have emailVerified: false by default
+    // The backend will reject reservations from unverified users with a 403 error
+    if (currentUser.emailVerified !== true) {
+      enqueueSnackbar('Please verify your email address to confirm your reservation. Check your inbox for the verification email.', { 
+        variant: 'info',
+        autoHideDuration: 6000
+      });
+      navigate(buildCustomerUrl('verify-email-sent'), {
+        state: { 
+          from: '/reservations/new', 
+          message: 'Email verification required to complete your reservation',
+          pendingReservation: pendingReservationData
+        }
+      });
+      setPendingReservationData(null);
+      return;
+    }
+
+    // Email is verified, proceed with reservation submission
     if (pendingReservationData) {
       await submitReservation();
       setPendingReservationData(null);
@@ -836,11 +873,11 @@ const CustomerReservationPage: React.FC = () => {
           setPendingReservationData(null);
         }}
         onSuccess={handleSignUpSuccess}
-        prefillData={{
+        prefillData={useMemo(() => ({
           email: formData.customerEmail,
           name: formData.customerName,
           phone: formData.customerPhone
-        }}
+        }), [formData.customerEmail, formData.customerName, formData.customerPhone])}
       />
     </Box>
   );

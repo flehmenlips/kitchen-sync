@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -57,21 +57,24 @@ export const SignUpDialog: React.FC<SignUpDialogProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Partial<RegisterData>>({});
+  const prevOpenRef = useRef(false);
 
-  // Update form data when prefillData changes
+  // Update form data only when dialog opens (not on every prefillData change)
   useEffect(() => {
-    if (open && prefillData) {
+    // Only reset form when dialog transitions from closed to open
+    if (open && !prevOpenRef.current && prefillData) {
       setFormData({
-        email: prefillData.email || formData.email,
+        email: prefillData.email || '',
         password: '',
-        name: prefillData.name || formData.name,
-        phone: prefillData.phone || formData.phone
+        name: prefillData.name || '',
+        phone: prefillData.phone || ''
       });
       setConfirmPassword('');
       setError(null);
       setFieldErrors({});
       setAcceptTerms(false);
     }
+    prevOpenRef.current = open;
   }, [open, prefillData]);
 
   const validateForm = (): boolean => {
