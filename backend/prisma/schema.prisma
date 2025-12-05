@@ -530,8 +530,8 @@ model ReservationSettings {
 model TimeSlotCapacity {
   id           Int     @id @default(autoincrement())
   restaurantId Int     @map("restaurant_id")
-  dayOfWeek    Int // 0-6 (Sunday-Saturday)
-  timeSlot     String  @db.VarChar(10) // "18:00"
+  dayOfWeek    Int     @map("day_of_week") // 0-6 (Sunday-Saturday)
+  timeSlot     String  @map("time_slot") @db.VarChar(10) // "18:00"
   maxCovers    Int     @map("max_covers") // Maximum guests for this slot
   isActive     Boolean @default(true) @map("is_active")
 
