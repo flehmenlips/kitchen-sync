@@ -34,6 +34,12 @@ export const createRestaurant = async (req: Request, res: Response): Promise<voi
       return;
     }
 
+    // Ensure name is a string to prevent TypeError on toLowerCase()
+    if (typeof name !== 'string') {
+      res.status(400).json({ error: 'Restaurant name must be a string' });
+      return;
+    }
+
     // Generate base slug from name
     let baseSlug = name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
     
