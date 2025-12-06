@@ -191,7 +191,7 @@ const CustomerReservationPage: React.FC = () => {
         customerEmail: pending!.customerEmail || prev.customerEmail,
         customerPhone: pending!.customerPhone || prev.customerPhone,
         partySize: pending!.partySize?.toString() || prev.partySize,
-        reservationDate: pending!.reservationDate ? new Date(pending!.reservationDate) : prev.reservationDate,
+        reservationDate: pending!.reservationDate ? new Date(pending!.reservationDate + 'T00:00:00') : prev.reservationDate,
         reservationTime: pending!.reservationTime || prev.reservationTime,
         specialRequests: pending!.specialRequests || pending!.notes || prev.specialRequests
       }));
