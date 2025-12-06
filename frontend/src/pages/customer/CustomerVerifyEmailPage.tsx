@@ -24,10 +24,29 @@ export const CustomerVerifyEmailPage: React.FC = () => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [restaurantSlug, setRestaurantSlug] = useState<string | null>(null);
+  const [pendingReservation, setPendingReservation] = useState<any>(null);
   
-  // Preserve pending reservation from location state
-  const locationState = location.state as any;
-  const pendingReservation = locationState?.pendingReservation;
+  // Preserve pending reservation from sessionStorage (prioritized) or location state
+  // sessionStorage is prioritized because email link clicks cause external navigation
+  // that doesn't preserve React Router state, so location.state will always be null
+  useEffect(() => {
+    // First check sessionStorage (for email link navigation)
+    const stored = sessionStorage.getItem('pendingReservation');
+    if (stored) {
+      try {
+        setPendingReservation(JSON.parse(stored));
+        return;
+      } catch (e) {
+        console.error('Failed to parse pending reservation from sessionStorage:', e);
+      }
+    }
+    
+    // Fallback to location.state (for internal navigation)
+    const locationState = location.state as any;
+    if (locationState?.pendingReservation) {
+      setPendingReservation(locationState.pendingReservation);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     const token = searchParams.get('token');
