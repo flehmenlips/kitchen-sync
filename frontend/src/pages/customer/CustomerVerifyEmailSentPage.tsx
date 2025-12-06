@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Container,
   Box,
@@ -11,10 +11,21 @@ import {
   Email as EmailIcon,
   ArrowBack as ArrowBackIcon
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { buildCustomerUrl } from '../../utils/subdomain';
 
 export const CustomerVerifyEmailSentPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const locationState = location.state as any;
+  const pendingReservation = locationState?.pendingReservation;
+
+  // Store pendingReservation to sessionStorage so it survives external email link navigation
+  useEffect(() => {
+    if (pendingReservation) {
+      sessionStorage.setItem('pendingReservation', JSON.stringify(pendingReservation));
+    }
+  }, [pendingReservation]);
 
   return (
     <Container maxWidth="sm">
@@ -51,7 +62,9 @@ export const CustomerVerifyEmailSentPage: React.FC = () => {
           <Box sx={{ mt: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <Button
               variant="contained"
-              onClick={() => navigate('/customer/login')}
+              onClick={() => navigate(buildCustomerUrl('login'), {
+                state: pendingReservation ? { pendingReservation } : undefined
+              })}
             >
               Go to Sign In
             </Button>
@@ -59,7 +72,9 @@ export const CustomerVerifyEmailSentPage: React.FC = () => {
             <Button
               variant="text"
               startIcon={<ArrowBackIcon />}
-              onClick={() => navigate('/customer')}
+              onClick={() => navigate(buildCustomerUrl(''), {
+                state: pendingReservation ? { pendingReservation } : undefined
+              })}
             >
               Back to Home
             </Button>

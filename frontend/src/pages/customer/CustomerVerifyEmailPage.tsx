@@ -12,17 +12,41 @@ import {
   CheckCircle as CheckCircleIcon,
   Error as ErrorIcon
 } from '@mui/icons-material';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { customerAuthService } from '../../services/customerAuthService';
-import { buildRestaurantPageUrl } from '../../utils/subdomain';
+import { buildRestaurantPageUrl, buildCustomerUrl } from '../../utils/subdomain';
 
 export const CustomerVerifyEmailPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [restaurantSlug, setRestaurantSlug] = useState<string | null>(null);
+  const [pendingReservation, setPendingReservation] = useState<any>(null);
+  
+  // Preserve pending reservation from sessionStorage (prioritized) or location state
+  // sessionStorage is prioritized because email link clicks cause external navigation
+  // that doesn't preserve React Router state, so location.state will always be null
+  useEffect(() => {
+    // First check sessionStorage (for email link navigation)
+    const stored = sessionStorage.getItem('pendingReservation');
+    if (stored) {
+      try {
+        setPendingReservation(JSON.parse(stored));
+        return;
+      } catch (e) {
+        console.error('Failed to parse pending reservation from sessionStorage:', e);
+      }
+    }
+    
+    // Fallback to location.state (for internal navigation)
+    const locationState = location.state as any;
+    if (locationState?.pendingReservation) {
+      setPendingReservation(locationState.pendingReservation);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     const token = searchParams.get('token');
@@ -112,9 +136,17 @@ export const CustomerVerifyEmailPage: React.FC = () => {
                   if (restaurantSlug) {
                     // Use buildRestaurantPageUrl to create full URL with restaurant context
                     // This handles both subdomain navigation (production) and query params (dev)
-                    window.location.href = buildRestaurantPageUrl(restaurantSlug, 'login');
+                    // Preserve pending reservation in URL params or localStorage
+                    const url = buildRestaurantPageUrl(restaurantSlug, 'login');
+                    if (pendingReservation) {
+                      // Store in sessionStorage to preserve across navigation
+                      sessionStorage.setItem('pendingReservation', JSON.stringify(pendingReservation));
+                    }
+                    window.location.href = url;
                   } else {
-                    navigate('/customer/login');
+                    navigate(buildCustomerUrl('login'), {
+                      state: pendingReservation ? { pendingReservation } : undefined
+                    });
                   }
                 }}
                 sx={{ mt: 2 }}
