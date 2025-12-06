@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
@@ -68,6 +68,7 @@ const CustomerReservationPage: React.FC = () => {
   const [restaurantSettings, setRestaurantSettings] = useState<RestaurantSettings | null>(null);
   const [showSignUpDialog, setShowSignUpDialog] = useState(false);
   const [pendingReservationData, setPendingReservationData] = useState<ReservationFormData | null>(null);
+  const restorationCompletedRef = useRef(false);
   const [fieldErrors, setFieldErrors] = useState<{
     customerName?: string;
     customerEmail?: string;
@@ -154,6 +155,11 @@ const CustomerReservationPage: React.FC = () => {
 
   // Restore pending reservation data from location state (after email verification)
   useEffect(() => {
+    // Skip if restoration has already been completed
+    if (restorationCompletedRef.current) {
+      return;
+    }
+
     const locationState = location.state as any;
     let pending: (ReservationFormData & { restaurantSlug?: string }) | null = null;
     
@@ -175,6 +181,9 @@ const CustomerReservationPage: React.FC = () => {
     }
     
     if (pending) {
+      // Mark restoration as completed before any async operations
+      restorationCompletedRef.current = true;
+
       // Restore form data from pending reservation
       setFormData(prev => ({
         ...prev,
@@ -190,7 +199,7 @@ const CustomerReservationPage: React.FC = () => {
       // Set pending reservation data for later submission
       setPendingReservationData(pending);
 
-      // Show success message
+      // Show success message only if user is verified
       if (user && user.emailVerified) {
         enqueueSnackbar('Reservation details restored. Please confirm your reservation.', { 
           variant: 'info',
@@ -198,10 +207,13 @@ const CustomerReservationPage: React.FC = () => {
         });
       }
 
-      // Clear location state to prevent re-restoring on navigation
-      window.history.replaceState({}, document.title);
+      // Clear React Router's location state properly (not just browser history)
+      navigate(location.pathname + location.search, { 
+        replace: true, 
+        state: {} 
+      });
     }
-  }, [location.state, user, enqueueSnackbar]);
+  }, [location.state, location.pathname, location.search, user, enqueueSnackbar, navigate]);
 
   // Fetch customer profile to get phone number, name, and email
   useEffect(() => {
