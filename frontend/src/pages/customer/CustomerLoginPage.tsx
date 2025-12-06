@@ -10,8 +10,22 @@ export const CustomerLoginPage: React.FC = () => {
 
   const handleLoginSuccess = () => {
     const locationState = location.state as any;
-    const pendingReservation = locationState?.pendingReservation;
+    let pendingReservation = locationState?.pendingReservation;
     const from = locationState?.from;
+    
+    // Check sessionStorage as fallback (needed for window.location.href redirects)
+    // This preserves reservation data when CustomerVerifyEmailPage uses full page navigation
+    if (!pendingReservation) {
+      const stored = sessionStorage.getItem('pendingReservation');
+      if (stored) {
+        try {
+          pendingReservation = JSON.parse(stored);
+          // Don't remove from sessionStorage here - let CustomerReservationPage handle cleanup
+        } catch (e) {
+          console.error('Failed to parse pending reservation from sessionStorage:', e);
+        }
+      }
+    }
     
     // If there's a pending reservation, redirect to reservations page with it
     if (pendingReservation) {

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Container,
   Box,
@@ -19,6 +19,13 @@ export const CustomerVerifyEmailSentPage: React.FC = () => {
   const location = useLocation();
   const locationState = location.state as any;
   const pendingReservation = locationState?.pendingReservation;
+
+  // Store pendingReservation to sessionStorage so it survives external email link navigation
+  useEffect(() => {
+    if (pendingReservation) {
+      sessionStorage.setItem('pendingReservation', JSON.stringify(pendingReservation));
+    }
+  }, [pendingReservation]);
 
   return (
     <Container maxWidth="sm">
