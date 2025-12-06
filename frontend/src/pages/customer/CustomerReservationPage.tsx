@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   Paper,
@@ -58,6 +58,7 @@ const CustomerReservationPage: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
+  const location = useLocation();
   const { enqueueSnackbar } = useSnackbar();
   const { user, loading: authLoading, refreshAuth } = useCustomerAuth();
   
@@ -150,6 +151,57 @@ const CustomerReservationPage: React.FC = () => {
 
   // Note: Users can now fill out the form without authentication
   // They will be prompted to create an account when submitting
+
+  // Restore pending reservation data from location state (after email verification)
+  useEffect(() => {
+    const locationState = location.state as any;
+    let pending: (ReservationFormData & { restaurantSlug?: string }) | null = null;
+    
+    // Check location state first
+    if (locationState?.pendingReservation) {
+      pending = locationState.pendingReservation as ReservationFormData & { restaurantSlug?: string };
+    } 
+    // Also check sessionStorage (for restaurantSlug redirect case)
+    else {
+      const stored = sessionStorage.getItem('pendingReservation');
+      if (stored) {
+        try {
+          pending = JSON.parse(stored);
+          sessionStorage.removeItem('pendingReservation'); // Clean up after reading
+        } catch (e) {
+          console.error('Failed to parse pending reservation from sessionStorage:', e);
+        }
+      }
+    }
+    
+    if (pending) {
+      // Restore form data from pending reservation
+      setFormData(prev => ({
+        ...prev,
+        customerName: pending!.customerName || prev.customerName,
+        customerEmail: pending!.customerEmail || prev.customerEmail,
+        customerPhone: pending!.customerPhone || prev.customerPhone,
+        partySize: pending!.partySize?.toString() || prev.partySize,
+        reservationDate: pending!.reservationDate ? new Date(pending!.reservationDate) : prev.reservationDate,
+        reservationTime: pending!.reservationTime || prev.reservationTime,
+        specialRequests: pending!.specialRequests || pending!.notes || prev.specialRequests
+      }));
+
+      // Set pending reservation data for later submission
+      setPendingReservationData(pending);
+
+      // Show success message
+      if (user && user.emailVerified) {
+        enqueueSnackbar('Reservation details restored. Please confirm your reservation.', { 
+          variant: 'info',
+          autoHideDuration: 5000
+        });
+      }
+
+      // Clear location state to prevent re-restoring on navigation
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, user, enqueueSnackbar]);
 
   // Fetch customer profile to get phone number, name, and email
   useEffect(() => {
@@ -676,7 +728,7 @@ const CustomerReservationPage: React.FC = () => {
             </Grid>
 
             {/* Email field */}
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12}>
               <TextField
                 fullWidth
                 label="Email"
@@ -692,6 +744,11 @@ const CustomerReservationPage: React.FC = () => {
                 required
                 InputProps={{
                   startAdornment: <EmailIcon sx={{ mr: 1, color: 'action.active' }} />
+                }}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontSize: '0.95rem' // Slightly smaller font to fit more characters
+                  }
                 }}
               />
             </Grid>

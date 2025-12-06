@@ -12,17 +12,22 @@ import {
   CheckCircle as CheckCircleIcon,
   Error as ErrorIcon
 } from '@mui/icons-material';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { customerAuthService } from '../../services/customerAuthService';
-import { buildRestaurantPageUrl } from '../../utils/subdomain';
+import { buildRestaurantPageUrl, buildCustomerUrl } from '../../utils/subdomain';
 
 export const CustomerVerifyEmailPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [restaurantSlug, setRestaurantSlug] = useState<string | null>(null);
+  
+  // Preserve pending reservation from location state
+  const locationState = location.state as any;
+  const pendingReservation = locationState?.pendingReservation;
 
   useEffect(() => {
     const token = searchParams.get('token');
@@ -112,9 +117,17 @@ export const CustomerVerifyEmailPage: React.FC = () => {
                   if (restaurantSlug) {
                     // Use buildRestaurantPageUrl to create full URL with restaurant context
                     // This handles both subdomain navigation (production) and query params (dev)
-                    window.location.href = buildRestaurantPageUrl(restaurantSlug, 'login');
+                    // Preserve pending reservation in URL params or localStorage
+                    const url = buildRestaurantPageUrl(restaurantSlug, 'login');
+                    if (pendingReservation) {
+                      // Store in sessionStorage to preserve across navigation
+                      sessionStorage.setItem('pendingReservation', JSON.stringify(pendingReservation));
+                    }
+                    window.location.href = url;
                   } else {
-                    navigate('/customer/login');
+                    navigate(buildCustomerUrl('login'), {
+                      state: pendingReservation ? { pendingReservation } : undefined
+                    });
                   }
                 }}
                 sx={{ mt: 2 }}
