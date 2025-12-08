@@ -17,19 +17,97 @@ export interface TimeSlotAvailability {
   remaining: number | null;
 }
 
+export interface DailyCapacityResult {
+  date: Date;
+  currentCovers: number;
+  maxCoversPerDay: number | null;
+  available: boolean;
+  remaining: number | null;
+}
+
+/**
+ * Check daily capacity for a specific date
+ * @param restaurantId Restaurant ID
+ * @param date Reservation date
+ * @param partySize Number of guests to check (optional, for checking if booking would fit)
+ * @returns Daily capacity result
+ */
+export async function checkDailyCapacity(
+  restaurantId: number,
+  date: Date,
+  partySize?: number
+): Promise<DailyCapacityResult> {
+  // Get reservation settings
+  const settings = await prisma.reservationSettings.findUnique({
+    where: { restaurantId }
+  });
+
+  const maxCoversPerDay = settings?.maxCoversPerDay || null;
+
+  // If no daily limit set, return available
+  if (maxCoversPerDay === null) {
+    return {
+      date,
+      currentCovers: 0,
+      maxCoversPerDay: null,
+      available: true,
+      remaining: null
+    };
+  }
+
+  // Get all confirmed reservations for this date
+  const startOfDay = new Date(date);
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(date);
+  endOfDay.setHours(23, 59, 59, 999);
+
+  const reservations = await prisma.reservation.findMany({
+    where: {
+      restaurantId,
+      reservationDate: {
+        gte: startOfDay,
+        lte: endOfDay
+      },
+      status: 'CONFIRMED'
+    }
+  });
+
+  // Calculate total covers for the day (sum of all party sizes)
+  const currentCovers = reservations.reduce((sum, res) => sum + res.partySize, 0);
+  
+  // Calculate remaining capacity
+  const remaining = Math.max(0, maxCoversPerDay - currentCovers);
+  
+  // Check if this booking would fit (if partySize provided)
+  const available = partySize === undefined 
+    ? currentCovers < maxCoversPerDay 
+    : (currentCovers + partySize) <= maxCoversPerDay;
+
+  return {
+    date,
+    currentCovers,
+    maxCoversPerDay,
+    available,
+    remaining
+  };
+}
+
 /**
  * Check availability for a specific date, time slot, and party size
+ * Also checks daily capacity limit which overrides time slot capacity if exceeded
  * @param restaurantId Restaurant ID
  * @param date Reservation date
  * @param timeSlot Time slot (e.g., "18:00")
  * @param partySize Number of guests
+ * @param allowOverride Allow override for restaurant owners (default: false)
  * @returns Availability result with capacity information
  */
 export async function checkAvailability(
   restaurantId: number,
   date: Date,
   timeSlot: string,
-  partySize: number
+  partySize: number,
+  allowOverride: boolean = false
 ): Promise<AvailabilityResult> {
   const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
 
@@ -37,6 +115,21 @@ export async function checkAvailability(
   const settings = await prisma.reservationSettings.findUnique({
     where: { restaurantId }
   });
+
+  // First check daily capacity (this overrides time slot capacity if exceeded)
+  const dailyCapacity = await checkDailyCapacity(restaurantId, date, partySize);
+  
+  // If daily capacity is exceeded and override not allowed, return unavailable
+  if (!dailyCapacity.available && !allowOverride) {
+    return {
+      available: false,
+      currentBookings: dailyCapacity.currentCovers,
+      capacity: dailyCapacity.maxCoversPerDay,
+      remaining: dailyCapacity.remaining,
+      canOverbook: false,
+      overbooked: false
+    };
+  }
 
   // Get time slot capacity for this day/time
   const capacity = await prisma.timeSlotCapacity.findUnique({
@@ -80,15 +173,15 @@ export async function checkAvailability(
     maxCapacity = settings.maxCoversPerSlot;
   }
 
-  // If no capacity limit set, allow unlimited bookings
+  // If no capacity limit set, allow unlimited bookings (but still respect daily limit)
   if (maxCapacity === null) {
     return {
-      available: true,
+      available: dailyCapacity.available || allowOverride,
       currentBookings,
-      capacity: null,
-      remaining: null,
+      capacity: dailyCapacity.maxCoversPerDay, // Return daily capacity as the limiting factor
+      remaining: dailyCapacity.remaining,
       canOverbook: false,
-      overbooked: false
+      overbooked: !dailyCapacity.available && allowOverride
     };
   }
 
@@ -108,13 +201,19 @@ export async function checkAvailability(
   const canOverbook = allowOverbooking && (currentBookings + partySize) <= overbookingLimit;
   const overbooked = (currentBookings + partySize) > maxCapacity && (currentBookings + partySize) <= overbookingLimit;
 
+  // Daily capacity takes precedence - if daily limit would be exceeded, mark as unavailable
+  const dailyLimitExceeded = !dailyCapacity.available && !allowOverride;
+  const finalAvailable = (wouldFit || canOverbook) && !dailyLimitExceeded;
+
   return {
-    available: wouldFit || canOverbook,
+    available: finalAvailable || allowOverride,
     currentBookings,
-    capacity: maxCapacity,
-    remaining,
-    canOverbook,
-    overbooked
+    capacity: dailyCapacity.maxCoversPerDay ? Math.min(maxCapacity, dailyCapacity.maxCoversPerDay) : maxCapacity,
+    remaining: dailyCapacity.maxCoversPerDay 
+      ? Math.min(remaining, dailyCapacity.remaining || 0)
+      : remaining,
+    canOverbook: canOverbook && !dailyLimitExceeded,
+    overbooked: overbooked || (!dailyCapacity.available && allowOverride)
   };
 }
 

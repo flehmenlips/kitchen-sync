@@ -20,6 +20,7 @@ export interface ReservationSettings {
   timeSlotInterval: number;
   seatingIntervals?: string[];
   maxCoversPerSlot?: number;
+  maxCoversPerDay?: number;
   allowOverbooking: boolean;
   overbookingPercentage: number;
   cancellationPolicy?: string;
@@ -45,6 +46,7 @@ export interface ReservationSettingsData {
   timeSlotInterval?: number;
   seatingIntervals?: string[];
   maxCoversPerSlot?: number;
+  maxCoversPerDay?: number;
   allowOverbooking?: boolean;
   overbookingPercentage?: number;
   cancellationPolicy?: string;

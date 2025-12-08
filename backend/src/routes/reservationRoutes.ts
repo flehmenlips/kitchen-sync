@@ -6,6 +6,7 @@ import {
     updateReservation,
     deleteReservation,
     getAvailability,
+    getDailyCapacity,
     getReservationStats
 } from '../controllers/reservationController';
 import { protect } from '../middleware/authMiddleware';
@@ -24,6 +25,9 @@ router.route('/stats')
 
 router.route('/availability/:restaurantId')
     .get(getAvailability);
+
+router.route('/daily-capacity/:restaurantId')
+    .get(getDailyCapacity);
 
 router.route('/:id')
     .get(getReservationById)

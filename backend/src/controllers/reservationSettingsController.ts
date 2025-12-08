@@ -131,6 +131,7 @@ export const upsertReservationSettings = async (req: Request, res: Response): Pr
       timeSlotInterval,
       seatingIntervals,
       maxCoversPerSlot,
+      maxCoversPerDay,
       allowOverbooking,
       overbookingPercentage,
       cancellationPolicy,
@@ -223,6 +224,14 @@ export const upsertReservationSettings = async (req: Request, res: Response): Pr
     if (timeSlotInterval !== undefined) updateData.timeSlotInterval = timeSlotInterval;
     if (seatingIntervals !== undefined) updateData.seatingIntervals = seatingIntervals;
     if (maxCoversPerSlot !== undefined) updateData.maxCoversPerSlot = maxCoversPerSlot;
+    if (maxCoversPerDay !== undefined) {
+      const parsedMaxCoversPerDay = parseInt(maxCoversPerDay);
+      if (isNaN(parsedMaxCoversPerDay) || parsedMaxCoversPerDay < 1) {
+        res.status(400).json({ message: 'Max covers per day must be a valid number greater than 0' });
+        return;
+      }
+      updateData.maxCoversPerDay = parsedMaxCoversPerDay;
+    }
     if (allowOverbooking !== undefined) updateData.allowOverbooking = allowOverbooking;
     if (overbookingPercentage !== undefined) updateData.overbookingPercentage = overbookingPercentage;
     if (cancellationPolicy !== undefined) updateData.cancellationPolicy = cancellationPolicy;

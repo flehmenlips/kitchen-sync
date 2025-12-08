@@ -1,11 +1,14 @@
 import { Router, Request, Response } from 'express';
-import { customerReservationController } from '../controllers/customerReservationController';
+import { customerReservationController, getPublicDailyCapacity } from '../controllers/customerReservationController';
 import { authenticateCustomer } from '../middleware/authenticateCustomer';
 import { reservationLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 
-// All routes require customer authentication
+// Public route - get daily capacity (no auth required)
+router.get('/daily-capacity', getPublicDailyCapacity);
+
+// All routes below require customer authentication
 router.use(authenticateCustomer);
 
 // Create a new reservation (requires authentication + email verification + rate limiting)

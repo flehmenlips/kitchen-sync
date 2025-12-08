@@ -499,7 +499,8 @@ model ReservationSettings {
   seatingIntervals Json? @map("seating_intervals") @db.Json // ["17:00", "17:30", "18:00", ...]
 
   // Capacity Management
-  maxCoversPerSlot      Int?    @map("max_covers_per_slot") // Optional overall capacity limit
+  maxCoversPerSlot      Int?    @map("max_covers_per_slot") // Optional overall capacity limit per time slot
+  maxCoversPerDay       Int?    @map("max_covers_per_day") // Optional daily capacity limit (overrides time slot capacity if exceeded)
   allowOverbooking      Boolean @default(false) @map("allow_overbooking")
   overbookingPercentage Int     @default(10) @map("overbooking_percentage")
 

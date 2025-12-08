@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { CustomerAuthRequest } from '../middleware/authenticateCustomer';
 import { ReservationStatus } from '@prisma/client';
@@ -6,6 +6,108 @@ import { emailService } from '../services/emailService';
 import { format } from 'date-fns';
 
 const prisma = new PrismaClient();
+
+// @desc    Get daily capacity for date range (public, for date picker)
+// @route   GET /api/customer/reservations/daily-capacity
+// @access  Public
+export const getPublicDailyCapacity = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { startDate, endDate, restaurantSlug } = req.query;
+
+        // Default to next 90 days if no dates provided
+        const start = startDate ? new Date(startDate as string) : new Date();
+        const end = endDate ? new Date(endDate as string) : new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
+
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD format.' });
+            return;
+        }
+
+        // Get restaurant ID from slug (default to restaurant ID 1 for MVP)
+        let restaurantId = 1;
+        if (restaurantSlug) {
+            const restaurant = await prisma.restaurant.findUnique({
+                where: { slug: restaurantSlug as string },
+                select: { id: true }
+            });
+            if (restaurant) {
+                restaurantId = restaurant.id;
+            }
+        }
+
+        // Get reservation settings to check if maxCoversPerDay is set
+        const settings = await prisma.reservationSettings.findUnique({
+            where: { restaurantId }
+        });
+
+        if (!settings?.maxCoversPerDay) {
+            // No daily limit set, return all dates as available
+            res.status(200).json({
+                dailyCapacities: [],
+                message: 'No daily capacity limit configured'
+            });
+            return;
+        }
+
+        // Get all confirmed reservations in date range
+        const startOfRange = new Date(start);
+        startOfRange.setHours(0, 0, 0, 0);
+        const endOfRange = new Date(end);
+        endOfRange.setHours(23, 59, 59, 999);
+
+        const reservations = await prisma.reservation.findMany({
+            where: {
+                restaurantId,
+                reservationDate: {
+                    gte: startOfRange,
+                    lte: endOfRange
+                },
+                status: 'CONFIRMED'
+            },
+            select: {
+                reservationDate: true,
+                partySize: true
+            }
+        });
+
+        // Group reservations by date and calculate total covers per day
+        const coversByDate = new Map<string, number>();
+        reservations.forEach(res => {
+            const dateStr = res.reservationDate.toISOString().split('T')[0];
+            const current = coversByDate.get(dateStr) || 0;
+            coversByDate.set(dateStr, current + res.partySize);
+        });
+
+        // Build response with capacity info for each date
+        const dailyCapacities = [];
+        const currentDate = new Date(start);
+        while (currentDate <= end) {
+            const dateStr = currentDate.toISOString().split('T')[0];
+            const currentCovers = coversByDate.get(dateStr) || 0;
+            const available = currentCovers < settings.maxCoversPerDay!;
+            
+            dailyCapacities.push({
+                date: dateStr,
+                currentCovers,
+                maxCoversPerDay: settings.maxCoversPerDay,
+                available,
+                remaining: Math.max(0, settings.maxCoversPerDay! - currentCovers)
+            });
+
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+
+        res.status(200).json({
+            dailyCapacities
+        });
+    } catch (error: any) {
+        console.error('Error fetching public daily capacity:', error);
+        res.status(500).json({ 
+            message: 'Error fetching daily capacity',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
 
 // Helper function to generate confirmation number
 const generateConfirmationNumber = (id: number): string => {
@@ -126,6 +228,25 @@ export const createCustomerReservation = async (req: CustomerAuthRequest, res: R
         }
 
         const restaurantId = 1; // Single restaurant MVP
+        const reservationDateObj = new Date(reservationDate);
+        const partySizeNum = parseInt(partySize);
+
+        // Check daily capacity (customers cannot override)
+        const { checkDailyCapacity } = await import('../services/reservationCapacityService');
+        const dailyCapacity = await checkDailyCapacity(restaurantId, reservationDateObj, partySizeNum);
+        
+        if (!dailyCapacity.available) {
+            res.status(400).json({ 
+                message: `Sorry, this date is fully booked. Daily capacity limit of ${dailyCapacity.maxCoversPerDay} covers has been reached (current: ${dailyCapacity.currentCovers} covers).`,
+                dailyCapacity: {
+                    currentCovers: dailyCapacity.currentCovers,
+                    maxCoversPerDay: dailyCapacity.maxCoversPerDay,
+                    remaining: dailyCapacity.remaining
+                }
+            });
+            return;
+        }
+
         const newReservation = await prisma.reservation.create({
             data: {
                 customerName: customerName || customerProfile.user.name || 'Guest',

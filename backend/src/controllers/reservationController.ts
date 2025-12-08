@@ -3,7 +3,7 @@ import prisma from '../config/db';
 import { ReservationStatus } from '@prisma/client';
 import { emailService } from '../services/emailService';
 import { format, startOfWeek } from 'date-fns';
-import { checkAvailability, getTimeSlotAvailabilities, generateTimeSlots } from '../services/reservationCapacityService';
+import { checkAvailability, getTimeSlotAvailabilities, generateTimeSlots, checkDailyCapacity } from '../services/reservationCapacityService';
 
 // Helper function for safe integer parsing
 const safeParseInt = (val: unknown): number | undefined => {
@@ -415,6 +415,10 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
             restaurantId = userRestaurant.restaurantId;
         }
         
+        // Check if user is restaurant staff/owner (can override capacity limits)
+        const isRestaurantStaff = !!userRestaurant;
+        const allowOverride = isRestaurantStaff && req.body.overrideCapacity === true;
+
         // Check capacity before creating reservation
         let availability;
         try {
@@ -422,7 +426,8 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
                 restaurantId,
                 reservationDateObj,
                 reservationTime,
-                partySizeNum
+                partySizeNum,
+                allowOverride
             );
         } catch (error: any) {
             console.error('Error checking availability:', error);
@@ -438,24 +443,51 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
             };
         }
 
-        if (!availability.available) {
+        // Check daily capacity separately for warning
+        const dailyCapacity = await checkDailyCapacity(restaurantId, reservationDateObj, partySizeNum);
+        const exceedsDailyCapacity = !dailyCapacity.available && !allowOverride;
+
+        if (!availability.available && !allowOverride) {
             const capacityMsg = availability.capacity 
                 ? `Capacity limit of ${availability.capacity} reached. Current bookings: ${availability.currentBookings}`
                 : 'This time slot is not available';
-            res.status(400).json({ 
-                message: capacityMsg,
-                availability: {
-                    currentBookings: availability.currentBookings,
-                    capacity: availability.capacity,
-                    remaining: availability.remaining
-                }
-            });
+            
+            // Include daily capacity info if relevant
+            if (exceedsDailyCapacity && dailyCapacity.maxCoversPerDay) {
+                res.status(400).json({ 
+                    message: `Daily capacity limit of ${dailyCapacity.maxCoversPerDay} covers reached. Current: ${dailyCapacity.currentCovers} covers.`,
+                    availability: {
+                        currentBookings: availability.currentBookings,
+                        capacity: availability.capacity,
+                        remaining: availability.remaining,
+                        dailyCapacity: {
+                            currentCovers: dailyCapacity.currentCovers,
+                            maxCoversPerDay: dailyCapacity.maxCoversPerDay,
+                            remaining: dailyCapacity.remaining
+                        }
+                    }
+                });
+            } else {
+                res.status(400).json({ 
+                    message: capacityMsg,
+                    availability: {
+                        currentBookings: availability.currentBookings,
+                        capacity: availability.capacity,
+                        remaining: availability.remaining
+                    }
+                });
+            }
             return;
         }
 
-        // Warn if overbooking (but still allow it)
-        if (availability.overbooked) {
-            console.warn(`Overbooking reservation: ${partySizeNum} guests at ${reservationTime} on ${reservationDate}. Capacity: ${availability.capacity}, Current: ${availability.currentBookings}`);
+        // Store warning message if exceeding capacity (for response)
+        let capacityWarning: string | undefined;
+        if (availability.overbooked || exceedsDailyCapacity) {
+            capacityWarning = exceedsDailyCapacity && dailyCapacity.maxCoversPerDay
+                ? `WARNING: Exceeding daily capacity limit. Daily limit: ${dailyCapacity.maxCoversPerDay}, Current: ${dailyCapacity.currentCovers}, Adding: ${partySizeNum}`
+                : `WARNING: Overbooking reservation: ${partySizeNum} guests at ${reservationTime} on ${reservationDate}. Capacity: ${availability.capacity}, Current: ${availability.currentBookings}`;
+            
+            console.warn(capacityWarning);
         }
 
         // Prepare reservation data
@@ -555,7 +587,16 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
             }
         }
 
-        res.status(201).json(newReservation);
+        // Include warning in response if capacity was exceeded (override case)
+        if (capacityWarning) {
+            res.status(201).json({
+                ...newReservation,
+                warning: capacityWarning,
+                capacityExceeded: true
+            });
+        } else {
+            res.status(201).json(newReservation);
+        }
     } catch (error: any) {
         console.error('Error creating reservation:', error);
         console.error('Error details:', {
@@ -834,6 +875,121 @@ export const getAvailability = async (req: Request, res: Response): Promise<void
         });
         res.status(500).json({ 
             message: 'Error fetching availability',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
+
+// @desc    Get daily capacity for date range (for date picker)
+// @route   GET /api/reservations/daily-capacity/:restaurantId
+// @access  Private
+export const getDailyCapacity = async (req: Request, res: Response): Promise<void> => {
+    if (!req.user?.id) {
+        res.status(401).json({ message: 'Not authorized, user ID missing' });
+        return;
+    }
+
+    try {
+        const restaurantId = parseInt(req.params.restaurantId);
+        const { startDate, endDate } = req.query;
+
+        if (isNaN(restaurantId)) {
+            res.status(400).json({ message: 'Invalid restaurant ID' });
+            return;
+        }
+
+        // Verify user has access to this restaurant
+        const userRestaurant = await prisma.restaurantStaff.findFirst({
+            where: {
+                userId: req.user.id,
+                restaurantId: restaurantId,
+                isActive: true
+            }
+        });
+
+        if (!userRestaurant) {
+            res.status(403).json({ message: 'You do not have access to this restaurant' });
+            return;
+        }
+
+        // Default to next 90 days if no dates provided
+        const start = startDate ? new Date(startDate as string) : new Date();
+        const end = endDate ? new Date(endDate as string) : new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
+
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD format.' });
+            return;
+        }
+
+        // Get reservation settings to check if maxCoversPerDay is set
+        const settings = await prisma.reservationSettings.findUnique({
+            where: { restaurantId }
+        });
+
+        if (!settings?.maxCoversPerDay) {
+            // No daily limit set, return all dates as available
+            res.status(200).json({
+                dailyCapacities: [],
+                message: 'No daily capacity limit configured'
+            });
+            return;
+        }
+
+        // Get all confirmed reservations in date range
+        const startOfRange = new Date(start);
+        startOfRange.setHours(0, 0, 0, 0);
+        const endOfRange = new Date(end);
+        endOfRange.setHours(23, 59, 59, 999);
+
+        const reservations = await prisma.reservation.findMany({
+            where: {
+                restaurantId,
+                reservationDate: {
+                    gte: startOfRange,
+                    lte: endOfRange
+                },
+                status: 'CONFIRMED'
+            },
+            select: {
+                reservationDate: true,
+                partySize: true
+            }
+        });
+
+        // Group reservations by date and calculate total covers per day
+        const coversByDate = new Map<string, number>();
+        reservations.forEach(res => {
+            const dateStr = res.reservationDate.toISOString().split('T')[0];
+            const current = coversByDate.get(dateStr) || 0;
+            coversByDate.set(dateStr, current + res.partySize);
+        });
+
+        // Build response with capacity info for each date
+        const dailyCapacities = [];
+        const currentDate = new Date(start);
+        while (currentDate <= end) {
+            const dateStr = currentDate.toISOString().split('T')[0];
+            const currentCovers = coversByDate.get(dateStr) || 0;
+            const available = currentCovers < settings.maxCoversPerDay!;
+            
+            dailyCapacities.push({
+                date: dateStr,
+                currentCovers,
+                maxCoversPerDay: settings.maxCoversPerDay,
+                available,
+                remaining: Math.max(0, settings.maxCoversPerDay! - currentCovers)
+            });
+
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+
+        res.status(200).json({
+            dailyCapacities
+        });
+    } catch (error: any) {
+        console.error('Error fetching daily capacity:', error);
+        res.status(500).json({ 
+            message: 'Error fetching daily capacity',
             error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
