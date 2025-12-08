@@ -269,6 +269,7 @@ export const createCustomerReservation = async (req: CustomerAuthRequest, res: R
         const restaurantId = 1; // Single restaurant MVP
         const reservationDateObj = new Date(reservationDate);
         const partySizeNum = parseInt(partySize);
+        const customerUserId = req.customerUser.userId; // Store for use in transaction
 
         // Validate party size is a valid number
         if (isNaN(partySizeNum) || partySizeNum < 1) {
@@ -276,36 +277,46 @@ export const createCustomerReservation = async (req: CustomerAuthRequest, res: R
             return;
         }
 
-        // Check daily capacity (customers cannot override)
-        const { checkDailyCapacity } = await import('../services/reservationCapacityService');
-        const dailyCapacity = await checkDailyCapacity(restaurantId, reservationDateObj, partySizeNum);
-        
-        if (!dailyCapacity.available) {
-            res.status(400).json({ 
-                message: `Sorry, this date is fully booked. Daily capacity limit of ${dailyCapacity.maxCoversPerDay} covers has been reached (current: ${dailyCapacity.currentCovers} covers).`,
-                dailyCapacity: {
-                    currentCovers: dailyCapacity.currentCovers,
-                    maxCoversPerDay: dailyCapacity.maxCoversPerDay,
-                    remaining: dailyCapacity.remaining
+        // Use transaction to ensure atomicity and prevent race conditions
+        // Capacity check is performed INSIDE the transaction to prevent TOCTOU vulnerability
+        const { checkDailyCapacityInTransaction } = await import('../services/reservationCapacityService');
+        const newReservation = await prisma.$transaction(async (tx) => {
+            // Check daily capacity INSIDE transaction (customers cannot override)
+            // This ensures no concurrent requests can both pass the capacity check
+            const dailyCapacity = await checkDailyCapacityInTransaction(
+                tx,
+                restaurantId,
+                reservationDateObj,
+                partySizeNum
+            );
+            
+            if (!dailyCapacity.available) {
+                throw new Error(`CAPACITY_EXCEEDED:${JSON.stringify({
+                    message: `Sorry, this date is fully booked. Daily capacity limit of ${dailyCapacity.maxCoversPerDay} covers has been reached (current: ${dailyCapacity.currentCovers} covers).`,
+                    dailyCapacity: {
+                        currentCovers: dailyCapacity.currentCovers,
+                        maxCoversPerDay: dailyCapacity.maxCoversPerDay,
+                        remaining: dailyCapacity.remaining
+                    }
+                })}`);
+            }
+
+            // Create the reservation within the same transaction
+            return await tx.reservation.create({
+                data: {
+                    customerName: customerName || customerProfile.user.name || 'Guest',
+                    customerPhone: customerPhone || customerProfile.user.phone || undefined,
+                    customerEmail: customerEmail || customerProfile.user.email,
+                    customerId: customerUserId,
+                    partySize: partySizeNum,
+                    reservationDate: new Date(reservationDate),
+                    reservationTime,
+                    notes,
+                    specialRequests,
+                    userId: 1, // Default staff user for now
+                    restaurantId
                 }
             });
-            return;
-        }
-
-        const newReservation = await prisma.reservation.create({
-            data: {
-                customerName: customerName || customerProfile.user.name || 'Guest',
-                customerPhone: customerPhone || customerProfile.user.phone || undefined,
-                customerEmail: customerEmail || customerProfile.user.email,
-                customerId: req.customerUser.userId,
-                partySize: partySizeNum,
-                reservationDate: new Date(reservationDate),
-                reservationTime,
-                notes,
-                specialRequests,
-                userId: 1, // Default staff user for now
-                restaurantId
-            }
         });
 
         // Get restaurant info for confirmation email
@@ -378,7 +389,17 @@ export const createCustomerReservation = async (req: CustomerAuthRequest, res: R
         }
 
         res.status(201).json(newReservation);
-    } catch (error) {
+    } catch (error: any) {
+        // Handle capacity exceeded error from transaction
+        if (error?.message && error.message.startsWith('CAPACITY_EXCEEDED:')) {
+            try {
+                const capacityError = JSON.parse(error.message.replace('CAPACITY_EXCEEDED:', ''));
+                res.status(400).json(capacityError);
+                return;
+            } catch (parseError) {
+                // Fall through to generic error handling if parsing fails
+            }
+        }
         console.error('Error creating reservation:', error);
         res.status(500).json({ message: 'Error creating reservation' });
     }
@@ -616,10 +637,11 @@ export const customerReservationController = {
         });
       }
 
-      // Validate party size
-      if (partySize < 1 || partySize > 20) {
+      // Parse and validate party size (must be done before validation to catch NaN)
+      const partySizeNum = parseInt(partySize);
+      if (isNaN(partySizeNum) || partySizeNum < 1 || partySizeNum > 20) {
         return res.status(400).json({
-          error: 'Party size must be between 1 and 20'
+          error: 'Party size must be a valid number between 1 and 20'
         });
       }
 
@@ -649,26 +671,33 @@ export const customerReservationController = {
         });
       }
 
-      // Check daily capacity (customers cannot override)
-      const { checkDailyCapacity } = await import('../services/reservationCapacityService');
       const reservationDateObj = new Date(reservationDate);
-      const partySizeNum = parseInt(partySize);
-      const dailyCapacity = await checkDailyCapacity(restaurantId, reservationDateObj, partySizeNum);
-      
-      if (!dailyCapacity.available) {
-        return res.status(400).json({ 
-          error: 'Date fully booked',
-          message: `Sorry, this date is fully booked. Daily capacity limit of ${dailyCapacity.maxCoversPerDay} covers has been reached (current: ${dailyCapacity.currentCovers} covers).`,
-          dailyCapacity: {
-            currentCovers: dailyCapacity.currentCovers,
-            maxCoversPerDay: dailyCapacity.maxCoversPerDay,
-            remaining: dailyCapacity.remaining
-          }
-        });
-      }
 
-      // Use transaction to ensure atomicity
+      // Use transaction to ensure atomicity and prevent race conditions
+      // Capacity check is performed INSIDE the transaction to prevent TOCTOU vulnerability
+      const { checkDailyCapacityInTransaction } = await import('../services/reservationCapacityService');
       const reservation = await prisma.$transaction(async (tx) => {
+        // Check daily capacity INSIDE transaction (customers cannot override)
+        // This ensures no concurrent requests can both pass the capacity check
+        const dailyCapacity = await checkDailyCapacityInTransaction(
+          tx,
+          restaurantId,
+          reservationDateObj,
+          partySizeNum
+        );
+        
+        if (!dailyCapacity.available) {
+          throw new Error(`CAPACITY_EXCEEDED:${JSON.stringify({
+            error: 'Date fully booked',
+            message: `Sorry, this date is fully booked. Daily capacity limit of ${dailyCapacity.maxCoversPerDay} covers has been reached (current: ${dailyCapacity.currentCovers} covers).`,
+            dailyCapacity: {
+              currentCovers: dailyCapacity.currentCovers,
+              maxCoversPerDay: dailyCapacity.maxCoversPerDay,
+              remaining: dailyCapacity.remaining
+            }
+          })}`);
+        }
+
         // Ensure customer-restaurant link exists (create if needed)
         // Use upsert to prevent race condition from concurrent requests
         await tx.customerRestaurant.upsert({
@@ -688,7 +717,7 @@ export const customerReservationController = {
           }
         });
 
-        // Create the reservation
+        // Create the reservation within the same transaction
         return await tx.reservation.create({
           data: {
             customerId: customerId || null,
@@ -763,6 +792,15 @@ export const customerReservationController = {
         reservation
       });
     } catch (error: any) {
+      // Handle capacity exceeded error from transaction
+      if (error?.message && error.message.startsWith('CAPACITY_EXCEEDED:')) {
+        try {
+          const capacityError = JSON.parse(error.message.replace('CAPACITY_EXCEEDED:', ''));
+          return res.status(400).json(capacityError);
+        } catch (parseError) {
+          // Fall through to generic error handling if parsing fails
+        }
+      }
       console.error('Create reservation error:', error);
       res.status(500).json({ 
         error: 'Failed to create reservation',

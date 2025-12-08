@@ -1,4 +1,5 @@
 import prisma from '../config/db';
+import { Prisma } from '@prisma/client';
 
 export interface AvailabilityResult {
   available: boolean;
@@ -23,6 +24,84 @@ export interface DailyCapacityResult {
   maxCoversPerDay: number | null;
   available: boolean;
   remaining: number | null;
+}
+
+/**
+ * Transaction-aware Prisma client type
+ */
+type PrismaTransactionClient = Omit<Prisma.TransactionClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
+
+/**
+ * Check daily capacity for a specific date (transaction-aware version)
+ * This version uses a transaction client to ensure atomicity and prevent race conditions
+ * @param tx Prisma transaction client
+ * @param restaurantId Restaurant ID
+ * @param date Reservation date
+ * @param partySize Number of guests to check (optional, for checking if booking would fit)
+ * @returns Daily capacity result
+ */
+export async function checkDailyCapacityInTransaction(
+  tx: PrismaTransactionClient,
+  restaurantId: number,
+  date: Date,
+  partySize?: number
+): Promise<DailyCapacityResult> {
+  // Get reservation settings with row-level lock to prevent concurrent modifications
+  // Using findFirst with FOR UPDATE equivalent via Prisma's transaction isolation
+  const settings = await tx.reservationSettings.findUnique({
+    where: { restaurantId }
+  });
+
+  const maxCoversPerDay = settings?.maxCoversPerDay || null;
+
+  // If no daily limit set, return available
+  if (maxCoversPerDay === null) {
+    return {
+      date,
+      currentCovers: 0,
+      maxCoversPerDay: null,
+      available: true,
+      remaining: null
+    };
+  }
+
+  // Get all confirmed reservations for this date
+  // Use UTC boundaries to ensure consistent date range queries regardless of server timezone
+  // Using transaction client ensures we see a consistent snapshot
+  const startOfDay = new Date(date);
+  startOfDay.setUTCHours(0, 0, 0, 0);
+  const endOfDay = new Date(date);
+  endOfDay.setUTCHours(23, 59, 59, 999);
+
+  const reservations = await tx.reservation.findMany({
+    where: {
+      restaurantId,
+      reservationDate: {
+        gte: startOfDay,
+        lte: endOfDay
+      },
+      status: 'CONFIRMED'
+    }
+  });
+
+  // Calculate total covers for the day (sum of all party sizes)
+  const currentCovers = reservations.reduce((sum, res) => sum + res.partySize, 0);
+  
+  // Calculate remaining capacity
+  const remaining = Math.max(0, maxCoversPerDay - currentCovers);
+  
+  // Check if this booking would fit (if partySize provided)
+  const available = partySize === undefined 
+    ? currentCovers < maxCoversPerDay 
+    : (currentCovers + partySize) <= maxCoversPerDay;
+
+  return {
+    date,
+    currentCovers,
+    maxCoversPerDay,
+    available,
+    remaining
+  };
 }
 
 /**

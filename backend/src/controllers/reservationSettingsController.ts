@@ -228,7 +228,13 @@ export const upsertReservationSettings = async (req: Request, res: Response): Pr
       if (maxCoversPerSlot === null || maxCoversPerSlot === '' || maxCoversPerSlot === 0) {
         updateData.maxCoversPerSlot = null;
       } else {
-        updateData.maxCoversPerSlot = maxCoversPerSlot;
+        // Validate positive values
+        const parsedMaxCoversPerSlot = parseInt(maxCoversPerSlot);
+        if (isNaN(parsedMaxCoversPerSlot) || parsedMaxCoversPerSlot < 1) {
+          res.status(400).json({ message: 'Max covers per slot must be a valid number greater than 0' });
+          return;
+        }
+        updateData.maxCoversPerSlot = parsedMaxCoversPerSlot;
       }
     }
     if (maxCoversPerDay !== undefined) {
