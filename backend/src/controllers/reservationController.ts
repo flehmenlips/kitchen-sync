@@ -374,6 +374,7 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
 
         // Determine restaurant ID - use requested if provided and user has access, otherwise use user's primary restaurant
         let restaurantId: number;
+        let userRestaurant: { restaurantId: number } | null = null;
         
         if (requestedRestaurantId) {
             const requestedId = safeParseInt(requestedRestaurantId);
@@ -383,7 +384,7 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
             }
             
             // Verify user has access to requested restaurant
-            const hasAccess = await prisma.restaurantStaff.findFirst({
+            userRestaurant = await prisma.restaurantStaff.findFirst({
                 where: {
                     userId: req.user.id,
                     restaurantId: requestedId,
@@ -391,7 +392,7 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
                 }
             });
 
-            if (!hasAccess) {
+            if (!userRestaurant) {
                 res.status(403).json({ message: 'You do not have access to the requested restaurant' });
                 return;
             }
@@ -399,7 +400,7 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
             restaurantId = requestedId;
         } else {
             // Get user's primary restaurant
-            const userRestaurant = await prisma.restaurantStaff.findFirst({
+            userRestaurant = await prisma.restaurantStaff.findFirst({
                 where: { 
                     userId: req.user.id,
                     isActive: true
@@ -445,7 +446,10 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
 
         // Check daily capacity separately for warning
         const dailyCapacity = await checkDailyCapacity(restaurantId, reservationDateObj, partySizeNum);
-        const exceedsDailyCapacity = !dailyCapacity.available && !allowOverride;
+        // Track if daily capacity is exceeded (independent of override permission)
+        const dailyCapacityExceeded = !dailyCapacity.available;
+        // Track if daily capacity exceeds AND override is not allowed (for error responses)
+        const exceedsDailyCapacity = dailyCapacityExceeded && !allowOverride;
 
         if (!availability.available && !allowOverride) {
             const capacityMsg = availability.capacity 
@@ -482,8 +486,9 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
 
         // Store warning message if exceeding capacity (for response)
         let capacityWarning: string | undefined;
-        if (availability.overbooked || exceedsDailyCapacity) {
-            capacityWarning = exceedsDailyCapacity && dailyCapacity.maxCoversPerDay
+        if (availability.overbooked || dailyCapacityExceeded) {
+            // Prioritize daily capacity warning over generic overbooking warning
+            capacityWarning = dailyCapacityExceeded && dailyCapacity.maxCoversPerDay
                 ? `WARNING: Exceeding daily capacity limit. Daily limit: ${dailyCapacity.maxCoversPerDay}, Current: ${dailyCapacity.currentCovers}, Adding: ${partySizeNum}`
                 : `WARNING: Overbooking reservation: ${partySizeNum} guests at ${reservationTime} on ${reservationDate}. Capacity: ${availability.capacity}, Current: ${availability.currentBookings}`;
             

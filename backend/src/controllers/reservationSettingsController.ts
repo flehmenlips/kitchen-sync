@@ -223,14 +223,27 @@ export const upsertReservationSettings = async (req: Request, res: Response): Pr
     if (minAdvanceHours !== undefined) updateData.minAdvanceHours = minAdvanceHours;
     if (timeSlotInterval !== undefined) updateData.timeSlotInterval = timeSlotInterval;
     if (seatingIntervals !== undefined) updateData.seatingIntervals = seatingIntervals;
-    if (maxCoversPerSlot !== undefined) updateData.maxCoversPerSlot = maxCoversPerSlot;
-    if (maxCoversPerDay !== undefined) {
-      const parsedMaxCoversPerDay = parseInt(maxCoversPerDay);
-      if (isNaN(parsedMaxCoversPerDay) || parsedMaxCoversPerDay < 1) {
-        res.status(400).json({ message: 'Max covers per day must be a valid number greater than 0' });
-        return;
+    if (maxCoversPerSlot !== undefined) {
+      // Allow null, empty string, or 0 to clear the value
+      if (maxCoversPerSlot === null || maxCoversPerSlot === '' || maxCoversPerSlot === 0) {
+        updateData.maxCoversPerSlot = null;
+      } else {
+        updateData.maxCoversPerSlot = maxCoversPerSlot;
       }
-      updateData.maxCoversPerDay = parsedMaxCoversPerDay;
+    }
+    if (maxCoversPerDay !== undefined) {
+      // Allow null, empty string, or 0 to clear the value
+      if (maxCoversPerDay === null || maxCoversPerDay === '' || maxCoversPerDay === 0) {
+        updateData.maxCoversPerDay = null;
+      } else {
+        // Validate positive values
+        const parsedMaxCoversPerDay = parseInt(maxCoversPerDay);
+        if (isNaN(parsedMaxCoversPerDay) || parsedMaxCoversPerDay < 1) {
+          res.status(400).json({ message: 'Max covers per day must be a valid number greater than 0' });
+          return;
+        }
+        updateData.maxCoversPerDay = parsedMaxCoversPerDay;
+      }
     }
     if (allowOverbooking !== undefined) updateData.allowOverbooking = allowOverbooking;
     if (overbookingPercentage !== undefined) updateData.overbookingPercentage = overbookingPercentage;

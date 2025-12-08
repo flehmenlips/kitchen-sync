@@ -383,7 +383,7 @@ const ReservationSettingsPage: React.FC = () => {
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    maxCoversPerSlot: e.target.value ? parseInt(e.target.value) : undefined
+                    maxCoversPerSlot: e.target.value ? parseInt(e.target.value) : null
                   })
                 }
                 helperText="Leave empty for unlimited. Can be overridden by time slot capacity settings."
@@ -399,10 +399,10 @@ const ReservationSettingsPage: React.FC = () => {
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    maxCoversPerDay: e.target.value ? parseInt(e.target.value) : undefined
+                    maxCoversPerDay: e.target.value ? parseInt(e.target.value) : null
                   })
                 }
-                helperText="Daily capacity limit. Dates exceeding this limit will be unavailable in the reservation form. Overrides time slot capacity if exceeded."
+                helperText="Daily capacity limit. Dates exceeding this limit will be unavailable in the reservation form. Overrides time slot capacity if exceeded. Leave empty to disable."
               />
             </Grid>
 

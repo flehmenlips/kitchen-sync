@@ -231,6 +231,12 @@ export const createCustomerReservation = async (req: CustomerAuthRequest, res: R
         const reservationDateObj = new Date(reservationDate);
         const partySizeNum = parseInt(partySize);
 
+        // Validate party size is a valid number
+        if (isNaN(partySizeNum) || partySizeNum < 1) {
+            res.status(400).json({ message: 'Party size must be a valid number greater than 0' });
+            return;
+        }
+
         // Check daily capacity (customers cannot override)
         const { checkDailyCapacity } = await import('../services/reservationCapacityService');
         const dailyCapacity = await checkDailyCapacity(restaurantId, reservationDateObj, partySizeNum);
@@ -253,7 +259,7 @@ export const createCustomerReservation = async (req: CustomerAuthRequest, res: R
                 customerPhone: customerPhone || customerProfile.user.phone || undefined,
                 customerEmail: customerEmail || customerProfile.user.email,
                 customerId: req.customerUser.userId,
-                partySize,
+                partySize: partySizeNum,
                 reservationDate: new Date(reservationDate),
                 reservationTime,
                 notes,
