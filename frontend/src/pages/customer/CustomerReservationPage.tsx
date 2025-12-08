@@ -714,7 +714,7 @@ const CustomerReservationPage: React.FC = () => {
 
             {/* Contact Information Section */}
             <Grid item xs={12} sx={{ mt: 3 }}>
-              <Typography variant="subtitle1" sx={{ mt: 3, mb: 2, fontWeight: 600 }}>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
                 Your Contact Information
               </Typography>
             </Grid>
