@@ -231,6 +231,21 @@ export const SignUpDialog: React.FC<SignUpDialogProps> = ({
                 </InputAdornment>
               ),
             }}
+            sx={{
+              '& .MuiInputBase-input': {
+                fontSize: '1rem',
+                padding: '14px 14px 14px 0',
+                minWidth: 0, // Allow input to shrink if needed
+              },
+              '& .MuiInputBase-root': {
+                minHeight: '56px', // Ensure adequate height
+              }
+            }}
+            inputProps={{
+              style: {
+                minWidth: '200px', // Ensure minimum width for email visibility
+              }
+            }}
           />
 
           <TextField
