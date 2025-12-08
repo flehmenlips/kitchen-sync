@@ -21,10 +21,22 @@ export const getPublicDailyCapacity = async (req: Request, res: Response): Promi
             return new Date(dateStr + 'T00:00:00.000Z');
         };
 
+        // Helper function to get today's date in UTC (at 00:00:00 UTC)
+        // This ensures consistency with parseUTCDate when no date is provided
+        const getTodayUTC = (): Date => {
+            const now = new Date();
+            const year = now.getUTCFullYear();
+            const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(now.getUTCDate()).padStart(2, '0');
+            return parseUTCDate(`${year}-${month}-${day}`);
+        };
+
         // Default to next 90 days if no dates provided
-        const start = startDate ? parseUTCDate(startDate as string) : new Date();
+        // Use UTC consistently to avoid timezone boundary issues
+        const start = startDate ? parseUTCDate(startDate as string) : getTodayUTC();
         const end = endDate ? parseUTCDate(endDate as string) : (() => {
-            const futureDate = new Date();
+            const todayUTC = getTodayUTC();
+            const futureDate = new Date(todayUTC);
             futureDate.setUTCDate(futureDate.getUTCDate() + 90);
             return futureDate;
         })();
