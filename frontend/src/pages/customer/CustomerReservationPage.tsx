@@ -44,6 +44,22 @@ import { customerAuthService } from '../../services/customerAuthService';
 import { Link } from '@mui/material';
 import { SignUpDialog } from '../../components/customer/SignUpDialog';
 
+// Helper function to format date as YYYY-MM-DD using UTC date components
+// This ensures consistent date formatting with the backend regardless of user timezone
+// Converts local date to UTC date string representing the same calendar date
+const formatDateUTC = (date: Date): string => {
+  // Extract local date components and create UTC date string
+  // This preserves the calendar date regardless of timezone
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const day = date.getDate();
+  // Format as UTC date string (YYYY-MM-DD)
+  const yearStr = String(year);
+  const monthStr = String(month + 1).padStart(2, '0');
+  const dayStr = String(day).padStart(2, '0');
+  return `${yearStr}-${monthStr}-${dayStr}`;
+};
+
 interface FormData {
   customerName: string;
   customerPhone: string;
@@ -380,9 +396,11 @@ const CustomerReservationPage: React.FC = () => {
       try {
         const startDate = new Date();
         const endDate = addDays(startDate, 90);
+        const partySizeNum = formData.partySize ? parseInt(formData.partySize) : undefined;
         const response = await customerReservationService.getDailyCapacity({
-          startDate: format(startDate, 'yyyy-MM-dd'),
-          endDate: format(endDate, 'yyyy-MM-dd')
+          startDate: formatDateUTC(startDate),
+          endDate: formatDateUTC(endDate),
+          partySize: partySizeNum
         });
 
         // Convert to Map for quick lookup
@@ -402,7 +420,7 @@ const CustomerReservationPage: React.FC = () => {
     };
 
     fetchDailyCapacity();
-  }, [restaurantSettings?.reservationSettings?.maxCoversPerDay]);
+  }, [restaurantSettings?.reservationSettings?.maxCoversPerDay, formData.partySize]);
 
   // Check if a date should be disabled (restaurant is closed or daily capacity exceeded)
   const shouldDisableDate = (date: Date): boolean => {
@@ -422,7 +440,7 @@ const CustomerReservationPage: React.FC = () => {
 
     // Check daily capacity
     if (restaurantSettings?.reservationSettings?.maxCoversPerDay) {
-      const dateStr = format(date, 'yyyy-MM-dd');
+      const dateStr = formatDateUTC(date);
       const capacity = dailyCapacities.get(dateStr);
       if (capacity && !capacity.available) {
         return true; // Disable if daily capacity exceeded
@@ -495,7 +513,7 @@ const CustomerReservationPage: React.FC = () => {
       const data: ReservationFormData & { 
         restaurantSlug?: string;
       } = {
-        reservationDate: format(formData.reservationDate!, 'yyyy-MM-dd'),
+        reservationDate: formatDateUTC(formData.reservationDate!),
         reservationTime: formData.reservationTime,
         partySize: parseInt(formData.partySize),
         notes: formData.specialRequests || undefined,
@@ -517,7 +535,7 @@ const CustomerReservationPage: React.FC = () => {
       const reservationData: ReservationFormData & { 
         restaurantSlug?: string;
       } = {
-        reservationDate: format(formData.reservationDate!, 'yyyy-MM-dd'),
+        reservationDate: formatDateUTC(formData.reservationDate!),
         reservationTime: formData.reservationTime,
         partySize: parseInt(formData.partySize),
         notes: formData.specialRequests || undefined,
@@ -551,7 +569,7 @@ const CustomerReservationPage: React.FC = () => {
       const data: ReservationFormData & { 
         restaurantSlug?: string;
       } = {
-        reservationDate: format(formData.reservationDate!, 'yyyy-MM-dd'),
+        reservationDate: formatDateUTC(formData.reservationDate!),
         reservationTime: formData.reservationTime,
         partySize: parseInt(formData.partySize),
         notes: formData.specialRequests || undefined,
@@ -697,7 +715,7 @@ const CustomerReservationPage: React.FC = () => {
                       required: true,
                       helperText: formData.reservationDate 
                         ? (() => {
-                            const dateStr = format(formData.reservationDate, 'yyyy-MM-dd');
+                            const dateStr = formatDateUTC(formData.reservationDate);
                             const capacity = dailyCapacities.get(dateStr);
                             if (capacity && !capacity.available) {
                               return `This date is fully booked (${capacity.currentCovers}/${capacity.maxCoversPerDay} covers)`;

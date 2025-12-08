@@ -926,6 +926,14 @@ export const getDailyCapacity = async (req: Request, res: Response): Promise<voi
             return;
         }
 
+        // Parse party size if provided
+        const { partySize } = req.query;
+        const partySizeNum = partySize ? parseInt(partySize as string) : undefined;
+        if (partySize && (isNaN(partySizeNum!) || partySizeNum! < 1)) {
+            res.status(400).json({ message: 'Invalid party size. Must be a positive number.' });
+            return;
+        }
+
         // Get reservation settings to check if maxCoversPerDay is set
         const settings = await prisma.reservationSettings.findUnique({
             where: { restaurantId }
@@ -975,14 +983,20 @@ export const getDailyCapacity = async (req: Request, res: Response): Promise<voi
         while (currentDate <= end) {
             const dateStr = currentDate.toISOString().split('T')[0];
             const currentCovers = coversByDate.get(dateStr) || 0;
-            const available = currentCovers < settings.maxCoversPerDay!;
+            const remaining = Math.max(0, settings.maxCoversPerDay! - currentCovers);
+            
+            // If party size is provided, check if that specific party size would fit
+            // Otherwise, check if there's any remaining capacity (at least 1 cover)
+            const available = partySizeNum !== undefined
+                ? (currentCovers + partySizeNum) <= settings.maxCoversPerDay!
+                : remaining > 0;
             
             dailyCapacities.push({
                 date: dateStr,
                 currentCovers,
                 maxCoversPerDay: settings.maxCoversPerDay,
                 available,
-                remaining: Math.max(0, settings.maxCoversPerDay! - currentCovers)
+                remaining
             });
 
             currentDate.setDate(currentDate.getDate() + 1);

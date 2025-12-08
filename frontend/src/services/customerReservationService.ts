@@ -70,6 +70,7 @@ export const customerReservationService = {
     startDate?: string;
     endDate?: string;
     restaurantSlug?: string;
+    partySize?: number;
   }): Promise<{
     dailyCapacities: Array<{
       date: string;

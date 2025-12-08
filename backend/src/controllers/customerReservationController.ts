@@ -12,14 +12,32 @@ const prisma = new PrismaClient();
 // @access  Public
 export const getPublicDailyCapacity = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { startDate, endDate, restaurantSlug } = req.query;
+        const { startDate, endDate, restaurantSlug, partySize } = req.query;
+
+        // Helper function to parse YYYY-MM-DD string as UTC date
+        // This ensures consistent date parsing regardless of server timezone
+        const parseUTCDate = (dateStr: string): Date => {
+            // Parse as UTC to avoid timezone shifts
+            return new Date(dateStr + 'T00:00:00.000Z');
+        };
 
         // Default to next 90 days if no dates provided
-        const start = startDate ? new Date(startDate as string) : new Date();
-        const end = endDate ? new Date(endDate as string) : new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
+        const start = startDate ? parseUTCDate(startDate as string) : new Date();
+        const end = endDate ? parseUTCDate(endDate as string) : (() => {
+            const futureDate = new Date();
+            futureDate.setUTCDate(futureDate.getUTCDate() + 90);
+            return futureDate;
+        })();
 
         if (isNaN(start.getTime()) || isNaN(end.getTime())) {
             res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD format.' });
+            return;
+        }
+
+        // Parse party size if provided
+        const partySizeNum = partySize ? parseInt(partySize as string) : undefined;
+        if (partySize && (isNaN(partySizeNum!) || partySizeNum! < 1)) {
+            res.status(400).json({ message: 'Invalid party size. Must be a positive number.' });
             return;
         }
 
@@ -50,10 +68,11 @@ export const getPublicDailyCapacity = async (req: Request, res: Response): Promi
         }
 
         // Get all confirmed reservations in date range
+        // Use UTC boundaries to ensure consistent date range queries
         const startOfRange = new Date(start);
-        startOfRange.setHours(0, 0, 0, 0);
+        startOfRange.setUTCHours(0, 0, 0, 0);
         const endOfRange = new Date(end);
-        endOfRange.setHours(23, 59, 59, 999);
+        endOfRange.setUTCHours(23, 59, 59, 999);
 
         const reservations = await prisma.reservation.findMany({
             where: {
@@ -70,31 +89,51 @@ export const getPublicDailyCapacity = async (req: Request, res: Response): Promi
             }
         });
 
+        // Helper function to format date as YYYY-MM-DD using UTC date components
+        // This ensures consistent date formatting regardless of server timezone
+        // Database dates are stored as UTC timestamps, so we use UTC components
+        const formatDateString = (date: Date): string => {
+            const year = date.getUTCFullYear();
+            const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(date.getUTCDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
         // Group reservations by date and calculate total covers per day
+        // Use local date components to match frontend formatting
         const coversByDate = new Map<string, number>();
         reservations.forEach(res => {
-            const dateStr = res.reservationDate.toISOString().split('T')[0];
+            const dateStr = formatDateString(res.reservationDate);
             const current = coversByDate.get(dateStr) || 0;
             coversByDate.set(dateStr, current + res.partySize);
         });
 
         // Build response with capacity info for each date
+        // Use UTC date components to ensure consistent date boundaries
+        const startUTC = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
+        const endUTC = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()));
         const dailyCapacities = [];
-        const currentDate = new Date(start);
-        while (currentDate <= end) {
-            const dateStr = currentDate.toISOString().split('T')[0];
+        const currentDate = new Date(startUTC);
+        while (currentDate <= endUTC) {
+            const dateStr = formatDateString(currentDate);
             const currentCovers = coversByDate.get(dateStr) || 0;
-            const available = currentCovers < settings.maxCoversPerDay!;
+            const remaining = Math.max(0, settings.maxCoversPerDay! - currentCovers);
+            
+            // If party size is provided, check if that specific party size would fit
+            // Otherwise, check if there's any remaining capacity (at least 1 cover)
+            const available = partySizeNum !== undefined
+                ? (currentCovers + partySizeNum) <= settings.maxCoversPerDay!
+                : remaining > 0;
             
             dailyCapacities.push({
                 date: dateStr,
                 currentCovers,
                 maxCoversPerDay: settings.maxCoversPerDay,
                 available,
-                remaining: Math.max(0, settings.maxCoversPerDay! - currentCovers)
+                remaining
             });
 
-            currentDate.setDate(currentDate.getDate() + 1);
+            currentDate.setUTCDate(currentDate.getUTCDate() + 1);
         }
 
         res.status(200).json({
