@@ -207,13 +207,34 @@ export const CustomerRegisterForm: React.FC<CustomerRegisterFormProps> = ({ onSu
           margin="normal"
           required
           autoComplete="email"
-          sx={mobileResponsiveStyles.textField(isMobile)}
+          sx={(() => {
+            const mobileTextFieldStyles = mobileResponsiveStyles.textField(isMobile);
+            const mobileInputStyles = mobileTextFieldStyles['& .MuiInputBase-input'];
+            return {
+              ...mobileTextFieldStyles,
+              '& .MuiInputBase-input': {
+                ...mobileInputStyles,
+                // Preserve mobile fontSize to prevent iOS zoom, but use 1rem as fallback
+                fontSize: isMobile ? mobileInputStyles.fontSize : '1rem',
+                padding: '14px 14px 14px 0',
+                minWidth: 0,
+              },
+              '& .MuiInputBase-root': {
+                minHeight: '56px',
+              }
+            };
+          })()}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
                 <EmailIcon color="action" />
               </InputAdornment>
             ),
+          }}
+          inputProps={{
+            style: {
+              minWidth: '200px',
+            }
           }}
         />
 

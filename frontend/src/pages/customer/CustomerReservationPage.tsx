@@ -759,7 +759,17 @@ const CustomerReservationPage: React.FC = () => {
                 }}
                 sx={{
                   '& .MuiInputBase-input': {
-                    fontSize: '0.95rem' // Slightly smaller font to fit more characters
+                    fontSize: '1rem', // Standard readable font size
+                    padding: '14px 14px 14px 0',
+                    minWidth: 0,
+                  },
+                  '& .MuiInputBase-root': {
+                    minHeight: '56px',
+                  }
+                }}
+                inputProps={{
+                  style: {
+                    minWidth: '200px',
                   }
                 }}
               />
