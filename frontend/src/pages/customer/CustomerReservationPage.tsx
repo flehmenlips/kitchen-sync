@@ -713,14 +713,14 @@ const CustomerReservationPage: React.FC = () => {
             )}
 
             {/* Contact Information Section */}
-            <Grid item xs={12}>
-              <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, fontWeight: 600 }}>
+            <Grid item xs={12} sx={{ mt: 3 }}>
+              <Typography variant="subtitle1" sx={{ mt: 3, mb: 2, fontWeight: 600 }}>
                 Your Contact Information
               </Typography>
             </Grid>
 
             {/* Name field */}
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} md={6} sx={{ mt: 1 }}>
               <TextField
                 fullWidth
                 label="Name"
@@ -733,6 +733,7 @@ const CustomerReservationPage: React.FC = () => {
                 helperText={fieldErrors.customerName}
                 autoComplete="name"
                 required
+                margin="normal"
                 InputProps={{
                   startAdornment: <PersonIcon sx={{ mr: 1, color: 'action.active' }} />
                 }}
@@ -740,7 +741,7 @@ const CustomerReservationPage: React.FC = () => {
             </Grid>
 
             {/* Email field */}
-            <Grid item xs={12}>
+            <Grid item xs={12} sx={{ mt: 1 }}>
               <TextField
                 fullWidth
                 label="Email"
@@ -754,6 +755,7 @@ const CustomerReservationPage: React.FC = () => {
                 helperText={fieldErrors.customerEmail}
                 autoComplete="email"
                 required
+                margin="normal"
                 InputProps={{
                   startAdornment: <EmailIcon sx={{ mr: 1, color: 'action.active' }} />
                 }}
@@ -776,7 +778,7 @@ const CustomerReservationPage: React.FC = () => {
             </Grid>
 
             {/* Phone number field */}
-            <Grid item xs={12}>
+            <Grid item xs={12} sx={{ mt: 1 }}>
               <TextField
                 fullWidth
                 label="Phone Number"
@@ -795,6 +797,7 @@ const CustomerReservationPage: React.FC = () => {
                 autoComplete="tel"
                 placeholder="(555) 123-4567"
                 required
+                margin="normal"
                 InputProps={{
                   startAdornment: <PhoneIcon sx={{ mr: 1, color: 'action.active' }} />
                 }}
@@ -807,16 +810,17 @@ const CustomerReservationPage: React.FC = () => {
             </Grid>
 
             {/* Special requests field */}
-            <Grid item xs={12}>
+            <Grid item xs={12} sx={{ mt: 1 }}>
               <TextField
                 fullWidth
                 label="Special Requests (Optional)"
                 value={formData.specialRequests}
                 onChange={(e) => setFormData({ ...formData, specialRequests: e.target.value })}
                 multiline
-                rows={3}
+                rows={4}
                 placeholder="Dietary restrictions, special occasions, seating preferences..."
                 autoComplete="off"
+                margin="normal"
                 InputProps={{
                   startAdornment: <NotesIcon sx={{ mr: 1, color: 'action.active', alignSelf: 'flex-start', mt: 1 }} />
                 }}
