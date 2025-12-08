@@ -462,16 +462,29 @@ const CustomerReservationPage: React.FC = () => {
 
   // Check if form is ready for submission
   const isFormValid = (): boolean => {
-    return !!(
-      formData.reservationDate &&
-      formData.reservationTime &&
-      formData.customerName?.trim() &&
-      formData.customerEmail?.trim() &&
-      formData.customerPhone?.trim() &&
-      !fieldErrors.customerName &&
-      !fieldErrors.customerEmail &&
-      !fieldErrors.customerPhone
-    );
+    // Check basic required fields
+    if (!formData.reservationDate ||
+        !formData.reservationTime ||
+        !formData.customerName?.trim() ||
+        !formData.customerEmail?.trim() ||
+        !formData.customerPhone?.trim() ||
+        fieldErrors.customerName ||
+        fieldErrors.customerEmail ||
+        fieldErrors.customerPhone) {
+      return false;
+    }
+
+    // Check if selected date is available according to daily capacity
+    if (formData.reservationDate && restaurantSettings?.reservationSettings?.maxCoversPerDay) {
+      const dateStr = formatDateUTC(formData.reservationDate);
+      const capacity = dailyCapacities.get(dateStr);
+      // If capacity data exists for this date and it's not available, disable submission
+      if (capacity && !capacity.available) {
+        return false;
+      }
+    }
+
+    return true;
   };
 
   const handleNext = () => {
