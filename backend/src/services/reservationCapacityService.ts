@@ -300,6 +300,7 @@ export async function checkAvailability(
 
 /**
  * Get availability for all time slots on a given date
+ * Also checks daily capacity limit which overrides time slot capacity if exceeded
  * @param restaurantId Restaurant ID
  * @param date Date to check
  * @param timeSlots Array of time slots to check
@@ -316,6 +317,9 @@ export async function getTimeSlotAvailabilities(
     }
 
     const dayOfWeek = date.getDay();
+
+    // First check daily capacity (this overrides time slot capacity if exceeded)
+    const dailyCapacity = await checkDailyCapacity(restaurantId, date);
 
     // Get all time slot capacities for this day
     const capacities = await prisma.timeSlotCapacity.findMany({
@@ -380,16 +384,54 @@ export async function getTimeSlotAvailabilities(
 
     // Calculate availability for each time slot
     return timeSlots.map(timeSlot => {
-      const capacity = capacityMap.get(timeSlot) || settings?.maxCoversPerSlot || null;
+      const slotCapacity = capacityMap.get(timeSlot) || settings?.maxCoversPerSlot || null;
       const currentBookings = bookingsBySlot.get(timeSlot) || 0;
-      const remaining = capacity !== null ? Math.max(0, capacity - currentBookings) : null;
+      
+      // Calculate remaining capacity for this time slot
+      const slotRemaining = slotCapacity !== null ? Math.max(0, slotCapacity - currentBookings) : null;
 
+      // If daily capacity limit is set and exceeded, mark slot as unavailable
+      if (dailyCapacity.maxCoversPerDay !== null && !dailyCapacity.available) {
+        return {
+          timeSlot,
+          available: false,
+          currentBookings,
+          capacity: dailyCapacity.maxCoversPerDay, // Show daily capacity as the limiting factor
+          remaining: dailyCapacity.remaining // Show daily remaining capacity
+        };
+      }
+
+      // If daily capacity limit is set but not exceeded, consider both slot and daily capacity
+      if (dailyCapacity.maxCoversPerDay !== null && dailyCapacity.available) {
+        // Calculate remaining considering both slot bookings and daily total
+        // The effective remaining is the minimum of slot remaining and daily remaining
+        // because daily capacity is shared across all slots
+        const dailyRemaining = dailyCapacity.remaining || 0;
+        const effectiveRemaining = slotCapacity !== null
+          ? Math.min(slotRemaining || 0, dailyRemaining)
+          : dailyRemaining;
+
+        // Slot is available if both slot and daily capacity have room
+        const slotAvailable = slotCapacity === null || (slotRemaining !== null && slotRemaining > 0);
+        const dailyAvailable = dailyRemaining > 0;
+        const isAvailable = slotAvailable && dailyAvailable;
+
+        return {
+          timeSlot,
+          available: isAvailable,
+          currentBookings,
+          capacity: slotCapacity, // Show slot capacity (the limiting factor may be daily, but capacity is slot-specific)
+          remaining: isAvailable ? effectiveRemaining : 0
+        };
+      }
+
+      // No daily capacity limit - use only time slot capacity
       return {
         timeSlot,
-        available: capacity === null || (remaining !== null && remaining > 0),
+        available: slotCapacity === null || (slotRemaining !== null && slotRemaining > 0),
         currentBookings,
-        capacity,
-        remaining
+        capacity: slotCapacity,
+        remaining: slotRemaining
       };
     });
   } catch (error) {
