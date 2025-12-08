@@ -649,6 +649,24 @@ export const customerReservationController = {
         });
       }
 
+      // Check daily capacity (customers cannot override)
+      const { checkDailyCapacity } = await import('../services/reservationCapacityService');
+      const reservationDateObj = new Date(reservationDate);
+      const partySizeNum = parseInt(partySize);
+      const dailyCapacity = await checkDailyCapacity(restaurantId, reservationDateObj, partySizeNum);
+      
+      if (!dailyCapacity.available) {
+        return res.status(400).json({ 
+          error: 'Date fully booked',
+          message: `Sorry, this date is fully booked. Daily capacity limit of ${dailyCapacity.maxCoversPerDay} covers has been reached (current: ${dailyCapacity.currentCovers} covers).`,
+          dailyCapacity: {
+            currentCovers: dailyCapacity.currentCovers,
+            maxCoversPerDay: dailyCapacity.maxCoversPerDay,
+            remaining: dailyCapacity.remaining
+          }
+        });
+      }
+
       // Use transaction to ensure atomicity
       const reservation = await prisma.$transaction(async (tx) => {
         // Ensure customer-restaurant link exists (create if needed)

@@ -56,10 +56,11 @@ export async function checkDailyCapacity(
   }
 
   // Get all confirmed reservations for this date
+  // Use UTC boundaries to ensure consistent date range queries regardless of server timezone
   const startOfDay = new Date(date);
-  startOfDay.setHours(0, 0, 0, 0);
+  startOfDay.setUTCHours(0, 0, 0, 0);
   const endOfDay = new Date(date);
-  endOfDay.setHours(23, 59, 59, 999);
+  endOfDay.setUTCHours(23, 59, 59, 999);
 
   const reservations = await prisma.reservation.findMany({
     where: {
@@ -143,10 +144,11 @@ export async function checkAvailability(
   });
 
   // Get all confirmed reservations for this date/time slot
+  // Use UTC boundaries to ensure consistent date range queries regardless of server timezone
   const startOfDay = new Date(date);
-  startOfDay.setHours(0, 0, 0, 0);
+  startOfDay.setUTCHours(0, 0, 0, 0);
   const endOfDay = new Date(date);
-  endOfDay.setHours(23, 59, 59, 999);
+  endOfDay.setUTCHours(23, 59, 59, 999);
 
   const reservations = await prisma.reservation.findMany({
     where: {
@@ -265,10 +267,11 @@ export async function getTimeSlotAvailabilities(
     });
 
     // Get all reservations for this date
+    // Use UTC boundaries to ensure consistent date range queries regardless of server timezone
     const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
+    startOfDay.setUTCHours(0, 0, 0, 0);
     const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
+    endOfDay.setUTCHours(23, 59, 59, 999);
 
     const reservations = await prisma.reservation.findMany({
       where: {
