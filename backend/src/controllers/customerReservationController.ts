@@ -1022,8 +1022,19 @@ export const customerReservationController = {
       // Build update data
       const updateData: any = {};
       
+      let parsedReservationDate: Date | undefined;
       if (reservationDate) {
-        updateData.reservationDate = new Date(reservationDate);
+        // Validate date format and parse correctly to avoid timezone issues
+        // Parse YYYY-MM-DD format as UTC midnight to ensure consistent date storage
+        const dateValidation = validateAndParseUTCDate(reservationDate);
+        if (!dateValidation.valid) {
+          return res.status(400).json({
+            error: 'Invalid date format',
+            message: dateValidation.error || 'Invalid date format. Use YYYY-MM-DD format.'
+          });
+        }
+        parsedReservationDate = dateValidation.date!;
+        updateData.reservationDate = parsedReservationDate;
       }
       if (reservationTime) {
         updateData.reservationTime = reservationTime;
@@ -1040,11 +1051,27 @@ export const customerReservationController = {
 
       // Validate new date/time if provided
       if (reservationDate || reservationTime) {
-        const newDate = reservationDate || existingReservation.reservationDate;
-        const newTime = reservationTime || existingReservation.reservationTime;
-        const newDateTime = new Date(`${newDate}T${newTime}`);
+        // Use parsed date if new date was provided, otherwise use existing reservation date
+        const dateToUse = parsedReservationDate || existingReservation.reservationDate;
+        const timeToUse = reservationTime || existingReservation.reservationTime;
         
-        if (newDateTime < new Date()) {
+        // Create a date object for comparison using UTC components
+        // Reservation dates are stored as UTC midnight, so extract UTC components
+        const dateToUseUTC = dateToUse instanceof Date ? dateToUse : new Date(dateToUse);
+        const [hours, minutes] = timeToUse.split(':').map(Number);
+        
+        // Create a UTC date-time for comparison
+        const newDateTime = new Date(Date.UTC(
+          dateToUseUTC.getUTCFullYear(),
+          dateToUseUTC.getUTCMonth(),
+          dateToUseUTC.getUTCDate(),
+          hours,
+          minutes
+        ));
+        
+        // Compare with current UTC time
+        const nowUTC = new Date();
+        if (newDateTime < nowUTC) {
           return res.status(400).json({
             error: 'Cannot update reservation to a past date/time'
           });
