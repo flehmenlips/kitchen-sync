@@ -4,6 +4,7 @@ import { ReservationStatus } from '@prisma/client';
 import { emailService } from '../services/emailService';
 import { format, startOfWeek } from 'date-fns';
 import { checkAvailability, getTimeSlotAvailabilities, generateTimeSlots, checkDailyCapacity, checkAvailabilityInTransaction, checkDailyCapacityInTransaction } from '../services/reservationCapacityService';
+import { validateAndParseUTCDate } from '../utils/dateValidation';
 
 // Helper function for safe integer parsing
 const safeParseInt = (val: unknown): number | undefined => {
@@ -100,25 +101,18 @@ export const getReservations = async (req: Request, res: Response): Promise<void
         // Parse dates as UTC midnight to match how reservations are stored
         if (date) {
             // Backward compatibility: single date parameter
-            const dateMatch = (date as string).match(/^(\d{4})-(\d{2})-(\d{2})$/);
-            if (!dateMatch) {
+            const dateValidation = validateAndParseUTCDate(date as string);
+            if (!dateValidation.valid) {
                 res.status(400).json({ 
-                    message: 'Invalid date format. Use YYYY-MM-DD format.',
+                    message: dateValidation.error || 'Invalid date format. Use YYYY-MM-DD format.',
                     error: 'Invalid date parameter format'
                 });
                 return;
             }
-            const [, year, month, day] = dateMatch;
-            const startDateObj = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
-            const endDateObj = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day) + 1));
-            
-            if (isNaN(startDateObj.getTime()) || isNaN(endDateObj.getTime())) {
-                res.status(400).json({ 
-                    message: 'Invalid date value.',
-                    error: 'Invalid date parameter value'
-                });
-                return;
-            }
+            const startDateObj = dateValidation.date!;
+            // Include the entire date by setting end to start of next day
+            const endDateObj = new Date(startDateObj);
+            endDateObj.setUTCDate(endDateObj.getUTCDate() + 1);
             
             where.reservationDate = {
                 gte: startDateObj,
@@ -128,44 +122,28 @@ export const getReservations = async (req: Request, res: Response): Promise<void
             // New date range filtering
             const dateFilter: any = {};
             if (startDate) {
-                const startMatch = (startDate as string).match(/^(\d{4})-(\d{2})-(\d{2})$/);
-                if (!startMatch) {
+                const startValidation = validateAndParseUTCDate(startDate as string);
+                if (!startValidation.valid) {
                     res.status(400).json({ 
-                        message: 'Invalid startDate format. Use YYYY-MM-DD format.',
+                        message: startValidation.error || 'Invalid startDate format. Use YYYY-MM-DD format.',
                         error: 'Invalid startDate parameter format'
                     });
                     return;
                 }
-                const [, year, month, day] = startMatch;
-                const parsedStartDate = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
-                if (isNaN(parsedStartDate.getTime())) {
-                    res.status(400).json({ 
-                        message: 'Invalid startDate value.',
-                        error: 'Invalid startDate parameter value'
-                    });
-                    return;
-                }
-                dateFilter.gte = parsedStartDate;
+                dateFilter.gte = startValidation.date!;
             }
             if (endDate) {
-                const endMatch = (endDate as string).match(/^(\d{4})-(\d{2})-(\d{2})$/);
-                if (!endMatch) {
+                const endValidation = validateAndParseUTCDate(endDate as string);
+                if (!endValidation.valid) {
                     res.status(400).json({ 
-                        message: 'Invalid endDate format. Use YYYY-MM-DD format.',
+                        message: endValidation.error || 'Invalid endDate format. Use YYYY-MM-DD format.',
                         error: 'Invalid endDate parameter format'
                     });
                     return;
                 }
-                const [, year, month, day] = endMatch;
                 // Include the entire end date by setting to start of next day
-                const endDateObj = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day) + 1));
-                if (isNaN(endDateObj.getTime())) {
-                    res.status(400).json({ 
-                        message: 'Invalid endDate value.',
-                        error: 'Invalid endDate parameter value'
-                    });
-                    return;
-                }
+                const endDateObj = new Date(endValidation.date!);
+                endDateObj.setUTCDate(endDateObj.getUTCDate() + 1);
                 dateFilter.lt = endDateObj;
             }
             // If date range parameters were provided, at least one must be valid
@@ -432,17 +410,12 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
 
         // Validate date format and parse correctly to avoid timezone issues
         // Parse YYYY-MM-DD format as UTC midnight to ensure consistent date storage
-        const dateMatch = reservationDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-        if (!dateMatch) {
-            res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD format.' });
+        const dateValidation = validateAndParseUTCDate(reservationDate);
+        if (!dateValidation.valid) {
+            res.status(400).json({ message: dateValidation.error || 'Invalid date format. Use YYYY-MM-DD format.' });
             return;
         }
-        const [, year, month, day] = dateMatch;
-        const reservationDateObj = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
-        if (isNaN(reservationDateObj.getTime())) {
-            res.status(400).json({ message: 'Invalid date value.' });
-            return;
-        }
+        const reservationDateObj = dateValidation.date!;
 
         // Validate time format (HH:MM)
         const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
@@ -815,18 +788,12 @@ export const updateReservation = async (req: Request, res: Response): Promise<vo
         if (reservationDate) {
             // Validate date format and parse correctly to avoid timezone issues
             // Parse YYYY-MM-DD format as UTC midnight to ensure consistent date storage
-            const dateMatch = (reservationDate as string).match(/^(\d{4})-(\d{2})-(\d{2})$/);
-            if (!dateMatch) {
-                res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD format.' });
+            const dateValidation = validateAndParseUTCDate(reservationDate as string);
+            if (!dateValidation.valid) {
+                res.status(400).json({ message: dateValidation.error || 'Invalid date format. Use YYYY-MM-DD format.' });
                 return;
             }
-            const [, year, month, day] = dateMatch;
-            const parsedDate = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
-            if (isNaN(parsedDate.getTime())) {
-                res.status(400).json({ message: 'Invalid date value.' });
-                return;
-            }
-            updateData.reservationDate = parsedDate;
+            updateData.reservationDate = dateValidation.date!;
         }
         if (reservationTime) updateData.reservationTime = reservationTime;
         if (status) updateData.status = status;
@@ -936,17 +903,12 @@ export const getAvailability = async (req: Request, res: Response): Promise<void
 
         // Validate date format and parse correctly to avoid timezone issues
         // Parse YYYY-MM-DD format as UTC midnight to ensure consistent date comparison
-        const dateMatch = (date as string).match(/^(\d{4})-(\d{2})-(\d{2})$/);
-        if (!dateMatch) {
-            res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD format.' });
+        const dateValidation = validateAndParseUTCDate(date as string);
+        if (!dateValidation.valid) {
+            res.status(400).json({ message: dateValidation.error || 'Invalid date format. Use YYYY-MM-DD format.' });
             return;
         }
-        const [, year, month, day] = dateMatch;
-        const targetDate = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
-        if (isNaN(targetDate.getTime())) {
-            res.status(400).json({ message: 'Invalid date value.' });
-            return;
-        }
+        const targetDate = dateValidation.date!;
 
         const requestedPartySize = partySize ? parseInt(partySize as string) : 1;
         if (isNaN(requestedPartySize) || requestedPartySize < 1) {

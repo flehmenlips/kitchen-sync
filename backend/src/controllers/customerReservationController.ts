@@ -4,6 +4,7 @@ import { CustomerAuthRequest } from '../middleware/authenticateCustomer';
 import { ReservationStatus } from '@prisma/client';
 import { emailService } from '../services/emailService';
 import { format } from 'date-fns';
+import { validateAndParseUTCDate } from '../utils/dateValidation';
 
 const prisma = new PrismaClient();
 
@@ -287,17 +288,12 @@ export const createCustomerReservation = async (req: CustomerAuthRequest, res: R
         
         // Validate date format and parse correctly to avoid timezone issues
         // Parse YYYY-MM-DD format as UTC midnight to ensure consistent date storage
-        const dateMatch = reservationDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-        if (!dateMatch) {
-            res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD format.' });
+        const dateValidation = validateAndParseUTCDate(reservationDate);
+        if (!dateValidation.valid) {
+            res.status(400).json({ message: dateValidation.error || 'Invalid date format. Use YYYY-MM-DD format.' });
             return;
         }
-        const [, year, month, day] = dateMatch;
-        const reservationDateObj = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
-        if (isNaN(reservationDateObj.getTime())) {
-            res.status(400).json({ message: 'Invalid date value.' });
-            return;
-        }
+        const reservationDateObj = dateValidation.date!;
 
         // Validate time format (HH:MM)
         const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
@@ -793,21 +789,14 @@ export const customerReservationController = {
 
       // Validate date format and parse correctly to avoid timezone issues
       // Parse YYYY-MM-DD format as UTC midnight to ensure consistent date storage
-      const dateMatch = reservationDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-      if (!dateMatch) {
+      const dateValidation = validateAndParseUTCDate(reservationDate);
+      if (!dateValidation.valid) {
         return res.status(400).json({
           error: 'Invalid date format',
-          message: 'Invalid date format. Use YYYY-MM-DD format.'
+          message: dateValidation.error || 'Invalid date format. Use YYYY-MM-DD format.'
         });
       }
-      const [, year, month, day] = dateMatch;
-      const reservationDateObj = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
-      if (isNaN(reservationDateObj.getTime())) {
-        return res.status(400).json({
-          error: 'Invalid date',
-          message: 'Invalid date value.'
-        });
-      }
+      const reservationDateObj = dateValidation.date!;
 
       // Validate time format (HH:MM)
       const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
