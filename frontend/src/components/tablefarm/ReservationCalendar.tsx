@@ -309,10 +309,12 @@ export const ReservationCalendar: React.FC = () => {
           resDate.getUTCMonth(),
           resDate.getUTCDate()
         ));
+        // The 'date' parameter is a local calendar date from date-fns functions
+        // Extract LOCAL date components and convert to UTC midnight for comparison
         const compareDateUTC = new Date(Date.UTC(
-          date.getUTCFullYear(),
-          date.getUTCMonth(),
-          date.getUTCDate()
+          date.getFullYear(),
+          date.getMonth(),
+          date.getDate()
         ));
         return resDateUTC.getTime() === compareDateUTC.getTime() && res.status !== ReservationStatus.CANCELLED;
       } catch (error) {
