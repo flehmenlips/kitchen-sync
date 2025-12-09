@@ -603,7 +603,16 @@ export const customerReservationController = {
       // First try to get restaurant from slug
       const restaurantSlug = req.body.restaurantSlug || req.query.slug || req.params.slug;
       console.log('[createReservation] restaurantSlug from request:', restaurantSlug);
-      console.log('[createReservation] req.body:', JSON.stringify(req.body, null, 2));
+      // Log sanitized request body (exclude PII: customerPhone, notes, specialRequests, customerEmail, customerName)
+      const sanitizedBody = {
+        restaurantSlug: req.body.restaurantSlug,
+        restaurantId: req.body.restaurantId,
+        reservationDate: req.body.reservationDate,
+        reservationTime: req.body.reservationTime,
+        partySize: req.body.partySize,
+        // Explicitly exclude sensitive fields: customerPhone, notes, specialRequests, customerEmail, customerName
+      };
+      console.log('[createReservation] req.body (sanitized):', JSON.stringify(sanitizedBody, null, 2));
       
       if (restaurantSlug) {
         // Try exact match first
