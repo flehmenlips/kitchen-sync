@@ -756,16 +756,16 @@ const CustomerReservationPage: React.FC = () => {
                   value={formData.partySize}
                   onChange={(e) => {
                     const newPartySize = e.target.value;
-                    // Clear selected date and time when party size changes
-                    // This prevents showing stale availability data while capacity is being refetched
-                    if (formData.reservationDate || formData.reservationTime) {
+                    // Clear only the time when party size changes (keep the date)
+                    // This prevents showing stale time slot availability while capacity is being refetched
+                    // The date can remain since daily capacity is checked separately and will be refetched
+                    if (formData.reservationTime) {
                       setFormData({ 
                         ...formData, 
                         partySize: newPartySize,
-                        reservationDate: null,
-                        reservationTime: ''
+                        reservationTime: '' // Only clear time, keep date
                       });
-                      enqueueSnackbar('Please reselect your date and time for the new party size', { 
+                      enqueueSnackbar('Please reselect your time for the new party size', { 
                         variant: 'info',
                         autoHideDuration: 4000
                       });
