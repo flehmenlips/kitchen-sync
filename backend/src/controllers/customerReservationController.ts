@@ -1055,23 +1055,25 @@ export const customerReservationController = {
         const dateToUse = parsedReservationDate || existingReservation.reservationDate;
         const timeToUse = reservationTime || existingReservation.reservationTime;
         
-        // Create a date object for comparison using UTC components
-        // Reservation dates are stored as UTC midnight, so extract UTC components
+        // Reservation dates are stored as UTC midnight, so extract UTC date components
+        // But reservation times are in local time, so we need to create a local date-time
         const dateToUseUTC = dateToUse instanceof Date ? dateToUse : new Date(dateToUse);
         const [hours, minutes] = timeToUse.split(':').map(Number);
         
-        // Create a UTC date-time for comparison
-        const newDateTime = new Date(Date.UTC(
+        // Create a local date-time for comparison
+        // Extract UTC date components and create a local date with those components
+        // Then set the local time to the reservation time (which is in local time)
+        const newDateTime = new Date(
           dateToUseUTC.getUTCFullYear(),
           dateToUseUTC.getUTCMonth(),
           dateToUseUTC.getUTCDate(),
           hours,
           minutes
-        ));
+        );
         
-        // Compare with current UTC time
-        const nowUTC = new Date();
-        if (newDateTime < nowUTC) {
+        // Compare with current local time (consistent with create reservation validation)
+        const now = new Date();
+        if (newDateTime < now) {
           return res.status(400).json({
             error: 'Cannot update reservation to a past date/time'
           });
