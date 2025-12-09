@@ -1197,59 +1197,42 @@ export const getReservationStats = async (req: Request, res: Response): Promise<
         }
         
         // Date range filtering - properly handle date strings to include full days
+        // Parse dates as UTC midnight to match how reservations are stored
         if (startDate || endDate) {
             const dateFilter: any = {};
             if (startDate) {
-                // Parse date string and set to start of day (00:00:00) in local timezone
+                // Parse YYYY-MM-DD format as UTC midnight to match reservation storage
                 const startDateStr = startDate as string;
-                let startDateObj: Date;
-                
-                // Check if date string already contains a time component
-                if (startDateStr.includes('T')) {
-                    // Already has time component - parse as-is then reset to start of day
-                    const parsed = new Date(startDateStr);
-                    if (isNaN(parsed.getTime())) {
-                        res.status(400).json({ message: 'Invalid startDate format' });
-                        return;
-                    }
-                    startDateObj = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 0, 0, 0, 0);
-                } else {
-                    // Date-only string - append time component
-                    startDateObj = new Date(startDateStr + 'T00:00:00');
-                }
-                
-                if (isNaN(startDateObj.getTime())) {
-                    res.status(400).json({ message: 'Invalid startDate format' });
+                // Extract just the date part if it includes time
+                const dateOnly = startDateStr.split('T')[0];
+                const dateValidation = validateAndParseUTCDate(dateOnly);
+                if (!dateValidation.valid) {
+                    res.status(400).json({ 
+                        message: dateValidation.error || 'Invalid startDate format. Use YYYY-MM-DD format.',
+                        error: 'Invalid startDate parameter format'
+                    });
                     return;
                 }
-                
-                dateFilter.gte = startDateObj;
+                // Use UTC midnight for start of day
+                dateFilter.gte = dateValidation.date!;
             }
             if (endDate) {
-                // Parse date string and set to end of day (23:59:59.999) in local timezone
+                // Parse YYYY-MM-DD format as UTC midnight, then set to end of day
                 const endDateStr = endDate as string;
-                let endDateObj: Date;
-                
-                // Check if date string already contains a time component
-                if (endDateStr.includes('T')) {
-                    // Already has time component - parse as-is then reset to end of day
-                    const parsed = new Date(endDateStr);
-                    if (isNaN(parsed.getTime())) {
-                        res.status(400).json({ message: 'Invalid endDate format' });
-                        return;
-                    }
-                    endDateObj = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 23, 59, 59, 999);
-                } else {
-                    // Date-only string - append time component
-                    endDateObj = new Date(endDateStr + 'T23:59:59.999');
-                }
-                
-                if (isNaN(endDateObj.getTime())) {
-                    res.status(400).json({ message: 'Invalid endDate format' });
+                // Extract just the date part if it includes time
+                const dateOnly = endDateStr.split('T')[0];
+                const dateValidation = validateAndParseUTCDate(dateOnly);
+                if (!dateValidation.valid) {
+                    res.status(400).json({ 
+                        message: dateValidation.error || 'Invalid endDate format. Use YYYY-MM-DD format.',
+                        error: 'Invalid endDate parameter format'
+                    });
                     return;
                 }
-                
-                dateFilter.lte = endDateObj; // Use lte instead of lt to include the full end date
+                // Include the entire end date by setting to start of next day (exclusive)
+                const endDateObj = new Date(dateValidation.date!);
+                endDateObj.setUTCDate(endDateObj.getUTCDate() + 1);
+                dateFilter.lt = endDateObj; // Use lt (less than) to exclude the next day
             }
             if (Object.keys(dateFilter).length > 0) {
                 where.reservationDate = dateFilter;
@@ -1301,22 +1284,37 @@ export const getReservationStats = async (req: Request, res: Response): Promise<
             .slice(0, 10); // Top 10 peak hours
 
         // Group by date if requested
+        // Use UTC date components to ensure consistent grouping regardless of server timezone
         let byDate: Array<{ date: string; count: number; totalGuests: number }> = [];
         
         if (groupBy && ['day', 'week', 'month'].includes(groupBy as string)) {
             const dateGroups: Record<string, { count: number; totalGuests: number }> = {};
             
             reservations.forEach(r => {
-                const date = new Date(r.reservationDate);
+                // Reservation dates are stored as UTC midnight, so extract UTC components
+                const resDate = new Date(r.reservationDate);
                 let key: string;
                 
                 if (groupBy === 'day') {
-                    key = format(date, 'yyyy-MM-dd');
+                    // Format using UTC date components
+                    const year = resDate.getUTCFullYear();
+                    const month = String(resDate.getUTCMonth() + 1).padStart(2, '0');
+                    const day = String(resDate.getUTCDate()).padStart(2, '0');
+                    key = `${year}-${month}-${day}`;
                 } else if (groupBy === 'week') {
-                    const weekStart = startOfWeek(date, { weekStartsOn: 1 });
+                    // Create a local date with UTC components for week calculation
+                    const localDate = new Date(
+                        resDate.getUTCFullYear(),
+                        resDate.getUTCMonth(),
+                        resDate.getUTCDate()
+                    );
+                    const weekStart = startOfWeek(localDate, { weekStartsOn: 1 });
                     key = format(weekStart, 'yyyy-MM-dd');
                 } else { // month
-                    key = format(date, 'yyyy-MM');
+                    // Format using UTC date components
+                    const year = resDate.getUTCFullYear();
+                    const month = String(resDate.getUTCMonth() + 1).padStart(2, '0');
+                    key = `${year}-${month}`;
                 }
                 
                 if (!dateGroups[key]) {
