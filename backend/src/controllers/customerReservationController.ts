@@ -602,28 +602,80 @@ export const customerReservationController = {
       
       // First try to get restaurant from slug
       const restaurantSlug = req.body.restaurantSlug || req.query.slug || req.params.slug;
+      console.log('[createReservation] restaurantSlug from request:', restaurantSlug);
+      // Log sanitized request body (exclude PII: customerPhone, notes, specialRequests, customerEmail, customerName)
+      const sanitizedBody = {
+        restaurantSlug: req.body.restaurantSlug,
+        restaurantId: req.body.restaurantId,
+        reservationDate: req.body.reservationDate,
+        reservationTime: req.body.reservationTime,
+        partySize: req.body.partySize,
+        // Explicitly exclude sensitive fields: customerPhone, notes, specialRequests, customerEmail, customerName
+      };
+      console.log('[createReservation] req.body (sanitized):', JSON.stringify(sanitizedBody, null, 2));
+      
       if (restaurantSlug) {
-        const restaurant = await prisma.restaurant.findUnique({
+        // Try exact match first
+        let restaurant = await prisma.restaurant.findUnique({
           where: { slug: restaurantSlug },
           select: { id: true }
         });
+        
+        // If not found, try case-insensitive search and handle hyphen variations
+        if (!restaurant) {
+          console.log('[createReservation] Exact slug match failed, trying case-insensitive search');
+          const allRestaurants = await prisma.restaurant.findMany({
+            where: { isActive: true },
+            select: { id: true, slug: true }
+          });
+          
+          // Try case-insensitive match
+          const normalizedSlug = restaurantSlug.toLowerCase().trim();
+          const matchedRestaurant = allRestaurants.find(r => 
+            r.slug.toLowerCase() === normalizedSlug ||
+            r.slug.toLowerCase().replace(/-/g, '') === normalizedSlug.replace(/-/g, '') ||
+            r.slug.toLowerCase().replace(/_/g, '-') === normalizedSlug.replace(/_/g, '-')
+          );
+          
+          if (matchedRestaurant) {
+            restaurant = { id: matchedRestaurant.id };
+            console.log('[createReservation] Found restaurant with normalized slug match:', restaurantSlug, '->', matchedRestaurant.slug, '-> restaurantId:', matchedRestaurant.id);
+          }
+        }
+        
         if (restaurant) {
           restaurantId = restaurant.id;
+          console.log('[createReservation] Found restaurant by slug:', restaurantSlug, '-> restaurantId:', restaurantId);
+        } else {
+          console.error('[createReservation] Restaurant not found for slug:', restaurantSlug);
+          // Log available slugs for debugging
+          const availableSlugs = await prisma.restaurant.findMany({
+            where: { isActive: true },
+            select: { slug: true },
+            take: 10
+          });
+          console.error('[createReservation] Available restaurant slugs:', availableSlugs.map(r => r.slug));
         }
       }
       
       // Fall back to restaurantId from body (but never default to 1 - that's dangerous)
       if (!restaurantId) {
         restaurantId = req.body.restaurantId;
+        if (restaurantId) {
+          console.log('[createReservation] Using restaurantId from body:', restaurantId);
+        }
       }
       
       // Fix Bug B: Ensure restaurantId is set - fail if not provided (never default to 1)
       if (!restaurantId) {
+        console.error('[createReservation] No restaurantId found - restaurantSlug:', restaurantSlug, 'body.restaurantId:', req.body.restaurantId);
         return res.status(400).json({
           error: 'Restaurant ID or slug is required',
           message: 'Please provide a restaurant slug or restaurant ID'
         });
       }
+      
+      console.log('[createReservation] Final restaurantId:', restaurantId);
 
       // Get authenticated customer
       // Fix Bug A: Remove non-null assertion and add defensive check
@@ -796,7 +848,8 @@ export const customerReservationController = {
         });
 
         // Create the reservation within the same transaction
-        return await tx.reservation.create({
+        console.log('[createReservation] Creating reservation with restaurantId:', restaurantId);
+        const newReservation = await tx.reservation.create({
           data: {
             customerId: customerId || null,
             customerName,
@@ -815,6 +868,8 @@ export const customerReservationController = {
             restaurant: true
           }
         });
+        console.log('[createReservation] Reservation created successfully:', newReservation.id, 'restaurantId:', newReservation.restaurantId);
+        return newReservation;
       });
 
       // Get restaurant info for confirmation email

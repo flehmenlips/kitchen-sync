@@ -67,16 +67,21 @@ export const getReservations = async (req: Request, res: Response): Promise<void
             select: { restaurantId: true }
         });
 
+        console.log('[getReservations] User ID:', req.user.id);
+        console.log('[getReservations] User has access to restaurants:', userRestaurants.map(r => r.restaurantId));
+
         // Pagination setup (check early for empty response)
         const paginationEnabled = page !== undefined || limit !== undefined;
         
         // If user has no restaurant associations, they shouldn't see any reservations
         if (userRestaurants.length === 0) {
+            console.log('[getReservations] User has no restaurant associations - returning empty result');
             res.status(200).json(paginationEnabled ? { data: [], pagination: { page: 1, limit: 50, total: 0, totalPages: 0, hasNext: false, hasPrev: false, totalCovers: 0 } } : []);
             return;
         }
 
         const restaurantIds = userRestaurants.map(r => r.restaurantId);
+        console.log('[getReservations] Filtering reservations by restaurantIds:', restaurantIds);
         
         // Build where clause with restaurant filtering
         const where: any = {
@@ -239,6 +244,12 @@ export const getReservations = async (req: Request, res: Response): Promise<void
                 }
             }
         });
+        
+        console.log('[getReservations] Found', reservations.length, 'reservations');
+        if (reservations.length > 0) {
+            const restaurantIdsInResults = [...new Set(reservations.map(r => r.restaurantId))];
+            console.log('[getReservations] Restaurant IDs in results:', restaurantIdsInResults);
+        }
 
         // Return paginated response if pagination is enabled
         if (paginationEnabled) {
