@@ -732,11 +732,15 @@ const ReservationManagementPage: React.FC = () => {
     <Card key={reservation.id} sx={mobileResponsiveStyles.card(isMobile)}>
       <CardContent>
         <Stack spacing={2}>
-          {/* Header with customer name and time */}
+          {/* Header with customer name, date and time */}
           <Box display="flex" justifyContent="space-between" alignItems="flex-start">
             <Box>
               <Typography variant="h6" component="div" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
                 {reservation.customerName}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
+                <CalendarIcon fontSize="small" sx={{ mr: 0.5 }} />
+                {format(parseISO(reservation.reservationDate), 'MMM d, yyyy')}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
                 <TimeIcon fontSize="small" sx={{ mr: 0.5 }} />
@@ -1078,6 +1082,7 @@ const ReservationManagementPage: React.FC = () => {
         <Table sx={mobileResponsiveStyles.table.root}>
           <TableHead>
             <TableRow>
+              <TableCell>Date</TableCell>
               <TableCell>Time</TableCell>
               <TableCell>Customer</TableCell>
               <TableCell>Contact</TableCell>
@@ -1090,19 +1095,25 @@ const ReservationManagementPage: React.FC = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} align="center">
+                <TableCell colSpan={8} align="center">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : reservations.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} align="center">
+                <TableCell colSpan={8} align="center">
                   No reservations found
                 </TableCell>
               </TableRow>
             ) :
               reservations.map((reservation) => (
                 <TableRow key={reservation.id}>
+                  <TableCell>
+                    <Box display="flex" alignItems="center">
+                      <CalendarIcon fontSize="small" sx={{ mr: 1 }} />
+                      {format(parseISO(reservation.reservationDate), 'MMM d, yyyy')}
+                    </Box>
+                  </TableCell>
                   <TableCell>
                     <Box display="flex" alignItems="center">
                       <TimeIcon fontSize="small" sx={{ mr: 1 }} />

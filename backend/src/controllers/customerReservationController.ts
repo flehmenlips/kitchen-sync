@@ -284,7 +284,32 @@ export const createCustomerReservation = async (req: CustomerAuthRequest, res: R
         }
 
         const restaurantId = 1; // Single restaurant MVP
+        
+        // Validate date format
         const reservationDateObj = new Date(reservationDate);
+        if (isNaN(reservationDateObj.getTime())) {
+            res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD format.' });
+            return;
+        }
+
+        // Validate time format (HH:MM)
+        const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+        if (!timeRegex.test(reservationTime)) {
+            res.status(400).json({ message: 'Invalid time format. Use HH:MM format (e.g., 18:00).' });
+            return;
+        }
+
+        // Validate date is not in the past
+        const reservationDateTime = new Date(`${reservationDate}T${reservationTime}`);
+        if (isNaN(reservationDateTime.getTime())) {
+            res.status(400).json({ message: 'Invalid date and time combination' });
+            return;
+        }
+        if (reservationDateTime < new Date()) {
+            res.status(400).json({ message: 'Cannot create reservations in the past' });
+            return;
+        }
+
         const partySizeNum = parseInt(partySize);
         const customerUserId = req.customerUser.userId; // Store for use in transaction
 
@@ -333,7 +358,7 @@ export const createCustomerReservation = async (req: CustomerAuthRequest, res: R
                     customerEmail: customerEmail || customerProfile.user.email,
                     customerId: customerUserId,
                     partySize: partySizeNum,
-                    reservationDate: new Date(reservationDate),
+                    reservationDate: reservationDateObj,
                     reservationTime,
                     notes,
                     specialRequests,
@@ -393,14 +418,14 @@ export const createCustomerReservation = async (req: CustomerAuthRequest, res: R
         const emailToUse = customerEmail || customerProfile.user.email;
         if (emailToUse) {
             try {
-                const formattedDate = format(new Date(reservationDate), 'EEEE, MMMM d, yyyy');
+                const formattedDate = format(reservationDateObj, 'EEEE, MMMM d, yyyy');
                 await emailService.sendReservationConfirmation(
                     emailToUse,
                     customerName || customerProfile.user.name || 'Guest',
                     {
                         date: formattedDate,
                         time: reservationTime,
-                        partySize,
+                        partySize: partySizeNum,
                         specialRequests: notes || specialRequests,
                         confirmationNumber: generateConfirmationNumber(newReservation.id)
                     },
@@ -687,15 +712,37 @@ export const customerReservationController = {
         }
       }
 
+      // Validate date format
+      const reservationDateObj = new Date(reservationDate);
+      if (isNaN(reservationDateObj.getTime())) {
+        return res.status(400).json({
+          error: 'Invalid date format',
+          message: 'Invalid date format. Use YYYY-MM-DD format.'
+        });
+      }
+
+      // Validate time format (HH:MM)
+      const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+      if (!timeRegex.test(reservationTime)) {
+        return res.status(400).json({
+          error: 'Invalid time format',
+          message: 'Invalid time format. Use HH:MM format (e.g., 18:00).'
+        });
+      }
+
       // Validate date is not in the past
       const reservationDateTime = new Date(`${reservationDate}T${reservationTime}`);
+      if (isNaN(reservationDateTime.getTime())) {
+        return res.status(400).json({
+          error: 'Invalid date/time combination',
+          message: 'Invalid date and time combination'
+        });
+      }
       if (reservationDateTime < new Date()) {
         return res.status(400).json({
           error: 'Cannot create reservations in the past'
         });
       }
-
-      const reservationDateObj = new Date(reservationDate);
 
       // Use transaction to ensure atomicity and prevent race conditions
       // Capacity check is performed INSIDE the transaction to prevent TOCTOU vulnerability
