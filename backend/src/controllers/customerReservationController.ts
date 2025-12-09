@@ -606,15 +606,46 @@ export const customerReservationController = {
       console.log('[createReservation] req.body:', JSON.stringify(req.body, null, 2));
       
       if (restaurantSlug) {
-        const restaurant = await prisma.restaurant.findUnique({
+        // Try exact match first
+        let restaurant = await prisma.restaurant.findUnique({
           where: { slug: restaurantSlug },
           select: { id: true }
         });
+        
+        // If not found, try case-insensitive search and handle hyphen variations
+        if (!restaurant) {
+          console.log('[createReservation] Exact slug match failed, trying case-insensitive search');
+          const allRestaurants = await prisma.restaurant.findMany({
+            where: { isActive: true },
+            select: { id: true, slug: true }
+          });
+          
+          // Try case-insensitive match
+          const normalizedSlug = restaurantSlug.toLowerCase().trim();
+          const matchedRestaurant = allRestaurants.find(r => 
+            r.slug.toLowerCase() === normalizedSlug ||
+            r.slug.toLowerCase().replace(/-/g, '') === normalizedSlug.replace(/-/g, '') ||
+            r.slug.toLowerCase().replace(/_/g, '-') === normalizedSlug.replace(/_/g, '-')
+          );
+          
+          if (matchedRestaurant) {
+            restaurant = { id: matchedRestaurant.id };
+            console.log('[createReservation] Found restaurant with normalized slug match:', restaurantSlug, '->', matchedRestaurant.slug, '-> restaurantId:', matchedRestaurant.id);
+          }
+        }
+        
         if (restaurant) {
           restaurantId = restaurant.id;
           console.log('[createReservation] Found restaurant by slug:', restaurantSlug, '-> restaurantId:', restaurantId);
         } else {
           console.error('[createReservation] Restaurant not found for slug:', restaurantSlug);
+          // Log available slugs for debugging
+          const availableSlugs = await prisma.restaurant.findMany({
+            where: { isActive: true },
+            select: { slug: true },
+            take: 10
+          });
+          console.error('[createReservation] Available restaurant slugs:', availableSlugs.map(r => r.slug));
         }
       }
       
