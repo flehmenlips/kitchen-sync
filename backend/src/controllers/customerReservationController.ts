@@ -291,24 +291,31 @@ export const createCustomerReservation = async (req: CustomerAuthRequest, res: R
 
         // Use transaction to ensure atomicity and prevent race conditions
         // Capacity check is performed INSIDE the transaction to prevent TOCTOU vulnerability
-        const { checkDailyCapacityInTransaction } = await import('../services/reservationCapacityService');
+        const { checkAvailabilityInTransaction } = await import('../services/reservationCapacityService');
         const newReservation = await prisma.$transaction(async (tx) => {
-            // Check daily capacity INSIDE transaction (customers cannot override)
+            // Check availability INSIDE transaction (checks both time slot capacity and daily capacity)
+            // Customers cannot override capacity limits
             // This ensures no concurrent requests can both pass the capacity check
-            const dailyCapacity = await checkDailyCapacityInTransaction(
+            const availability = await checkAvailabilityInTransaction(
                 tx,
                 restaurantId,
                 reservationDateObj,
-                partySizeNum
+                reservationTime,
+                partySizeNum,
+                false // allowOverride = false for customers
             );
             
-            if (!dailyCapacity.available) {
+            if (!availability.available) {
+                const capacityMsg = availability.capacity 
+                    ? `Capacity limit of ${availability.capacity} reached. Current bookings: ${availability.currentBookings}`
+                    : 'This time slot is not available';
+                
                 throw new Error(`CAPACITY_EXCEEDED:${JSON.stringify({
-                    message: `Sorry, this date is fully booked. Daily capacity limit of ${dailyCapacity.maxCoversPerDay} covers has been reached (current: ${dailyCapacity.currentCovers} covers).`,
-                    dailyCapacity: {
-                        currentCovers: dailyCapacity.currentCovers,
-                        maxCoversPerDay: dailyCapacity.maxCoversPerDay,
-                        remaining: dailyCapacity.remaining
+                    message: capacityMsg,
+                    availability: {
+                        currentBookings: availability.currentBookings,
+                        capacity: availability.capacity,
+                        remaining: availability.remaining
                     }
                 })}`);
             }
@@ -687,25 +694,32 @@ export const customerReservationController = {
 
       // Use transaction to ensure atomicity and prevent race conditions
       // Capacity check is performed INSIDE the transaction to prevent TOCTOU vulnerability
-      const { checkDailyCapacityInTransaction } = await import('../services/reservationCapacityService');
+      const { checkAvailabilityInTransaction } = await import('../services/reservationCapacityService');
       const reservation = await prisma.$transaction(async (tx) => {
-        // Check daily capacity INSIDE transaction (customers cannot override)
+        // Check availability INSIDE transaction (checks both time slot capacity and daily capacity)
+        // Customers cannot override capacity limits
         // This ensures no concurrent requests can both pass the capacity check
-        const dailyCapacity = await checkDailyCapacityInTransaction(
+        const availability = await checkAvailabilityInTransaction(
           tx,
           restaurantId,
           reservationDateObj,
-          partySizeNum
+          reservationTime,
+          partySizeNum,
+          false // allowOverride = false for customers
         );
         
-        if (!dailyCapacity.available) {
+        if (!availability.available) {
+          const capacityMsg = availability.capacity 
+            ? `Capacity limit of ${availability.capacity} reached. Current bookings: ${availability.currentBookings}`
+            : 'This time slot is not available';
+          
           throw new Error(`CAPACITY_EXCEEDED:${JSON.stringify({
-            error: 'Date fully booked',
-            message: `Sorry, this date is fully booked. Daily capacity limit of ${dailyCapacity.maxCoversPerDay} covers has been reached (current: ${dailyCapacity.currentCovers} covers).`,
-            dailyCapacity: {
-              currentCovers: dailyCapacity.currentCovers,
-              maxCoversPerDay: dailyCapacity.maxCoversPerDay,
-              remaining: dailyCapacity.remaining
+            error: 'Capacity exceeded',
+            message: capacityMsg,
+            availability: {
+              currentBookings: availability.currentBookings,
+              capacity: availability.capacity,
+              remaining: availability.remaining
             }
           })}`);
         }

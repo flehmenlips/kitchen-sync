@@ -397,9 +397,11 @@ const CustomerReservationPage: React.FC = () => {
         const startDate = new Date();
         const endDate = addDays(startDate, 90);
         const partySizeNum = formData.partySize ? parseInt(formData.partySize) : undefined;
+        const restaurantSlug = getCurrentRestaurantSlug();
         const response = await customerReservationService.getDailyCapacity({
           startDate: formatDateUTC(startDate),
           endDate: formatDateUTC(endDate),
+          restaurantSlug: restaurantSlug || undefined,
           partySize: partySizeNum
         });
 
