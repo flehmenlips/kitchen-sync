@@ -285,10 +285,17 @@ export const createCustomerReservation = async (req: CustomerAuthRequest, res: R
 
         const restaurantId = 1; // Single restaurant MVP
         
-        // Validate date format
-        const reservationDateObj = new Date(reservationDate);
-        if (isNaN(reservationDateObj.getTime())) {
+        // Validate date format and parse correctly to avoid timezone issues
+        // Parse YYYY-MM-DD format as UTC midnight to ensure consistent date storage
+        const dateMatch = reservationDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!dateMatch) {
             res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD format.' });
+            return;
+        }
+        const [, year, month, day] = dateMatch;
+        const reservationDateObj = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
+        if (isNaN(reservationDateObj.getTime())) {
+            res.status(400).json({ message: 'Invalid date value.' });
             return;
         }
 

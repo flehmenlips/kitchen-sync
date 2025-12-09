@@ -97,26 +97,38 @@ export const getReservations = async (req: Request, res: Response): Promise<void
         }
         
         // Date filtering - support both date (backward compatible) and date range
+        // Parse dates as UTC midnight to match how reservations are stored
         if (date) {
             // Backward compatibility: single date parameter
-            const startDateObj = new Date(date as string);
-            const endDateObj = new Date(date as string);
-            endDateObj.setDate(endDateObj.getDate() + 1);
-            
-            where.reservationDate = {
-                gte: startDateObj,
-                lt: endDateObj
-            };
+            const dateMatch = (date as string).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (dateMatch) {
+                const [, year, month, day] = dateMatch;
+                const startDateObj = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
+                const endDateObj = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day) + 1));
+                
+                where.reservationDate = {
+                    gte: startDateObj,
+                    lt: endDateObj
+                };
+            }
         } else if (startDate || endDate) {
             // New date range filtering
             const dateFilter: any = {};
             if (startDate) {
-                dateFilter.gte = new Date(startDate as string);
+                const startMatch = (startDate as string).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                if (startMatch) {
+                    const [, year, month, day] = startMatch;
+                    dateFilter.gte = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
+                }
             }
             if (endDate) {
-                const endDateObj = new Date(endDate as string);
-                endDateObj.setDate(endDateObj.getDate() + 1); // Include the entire end date
-                dateFilter.lt = endDateObj;
+                const endMatch = (endDate as string).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                if (endMatch) {
+                    const [, year, month, day] = endMatch;
+                    // Include the entire end date by setting to start of next day
+                    const endDateObj = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day) + 1));
+                    dateFilter.lt = endDateObj;
+                }
             }
             if (Object.keys(dateFilter).length > 0) {
                 where.reservationDate = dateFilter;
@@ -378,10 +390,17 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
             return;
         }
 
-        // Validate date format
-        const reservationDateObj = new Date(reservationDate);
-        if (isNaN(reservationDateObj.getTime())) {
+        // Validate date format and parse correctly to avoid timezone issues
+        // Parse YYYY-MM-DD format as UTC midnight to ensure consistent date storage
+        const dateMatch = reservationDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!dateMatch) {
             res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD format.' });
+            return;
+        }
+        const [, year, month, day] = dateMatch;
+        const reservationDateObj = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
+        if (isNaN(reservationDateObj.getTime())) {
+            res.status(400).json({ message: 'Invalid date value.' });
             return;
         }
 
@@ -608,7 +627,16 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
         // Send confirmation email if customer email is provided
         if (customerEmail && customerEmail.trim()) {
             try {
-                const formattedDate = format(new Date(reservationDate), 'EEEE, MMMM d, yyyy');
+                // Format date using UTC components to ensure correct date display
+                // Reservation dates are stored as UTC midnight, so we extract UTC components
+                const resDate = new Date(reservationDateObj);
+                // Create a local date with UTC components to display correctly
+                const displayDate = new Date(
+                    resDate.getUTCFullYear(),
+                    resDate.getUTCMonth(),
+                    resDate.getUTCDate()
+                );
+                const formattedDate = format(displayDate, 'EEEE, MMMM d, yyyy');
                 await emailService.sendReservationConfirmation(
                     customerEmail.trim(),
                     customerName.trim(),
@@ -738,7 +766,22 @@ export const updateReservation = async (req: Request, res: Response): Promise<vo
                 updateData.partySize = partySizeNum;
             }
         }
-        if (reservationDate) updateData.reservationDate = new Date(reservationDate);
+        if (reservationDate) {
+            // Validate date format and parse correctly to avoid timezone issues
+            // Parse YYYY-MM-DD format as UTC midnight to ensure consistent date storage
+            const dateMatch = (reservationDate as string).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (!dateMatch) {
+                res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD format.' });
+                return;
+            }
+            const [, year, month, day] = dateMatch;
+            const parsedDate = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
+            if (isNaN(parsedDate.getTime())) {
+                res.status(400).json({ message: 'Invalid date value.' });
+                return;
+            }
+            updateData.reservationDate = parsedDate;
+        }
         if (reservationTime) updateData.reservationTime = reservationTime;
         if (status) updateData.status = status;
         if (notes !== undefined) updateData.notes = notes;
@@ -845,10 +888,17 @@ export const getAvailability = async (req: Request, res: Response): Promise<void
             return;
         }
 
-        // Validate date format
-        const targetDate = new Date(date as string);
-        if (isNaN(targetDate.getTime())) {
+        // Validate date format and parse correctly to avoid timezone issues
+        // Parse YYYY-MM-DD format as UTC midnight to ensure consistent date comparison
+        const dateMatch = (date as string).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!dateMatch) {
             res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD format.' });
+            return;
+        }
+        const [, year, month, day] = dateMatch;
+        const targetDate = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
+        if (isNaN(targetDate.getTime())) {
+            res.status(400).json({ message: 'Invalid date value.' });
             return;
         }
 
