@@ -53,16 +53,21 @@ export const getPublicDailyCapacity = async (req: Request, res: Response): Promi
             return;
         }
 
-        // Get restaurant ID from slug (default to restaurant ID 1 for MVP)
-        let restaurantId = 1;
+        // Get restaurant ID from slug
+        let restaurantId: number;
         if (restaurantSlug) {
             const restaurant = await prisma.restaurant.findUnique({
                 where: { slug: restaurantSlug as string },
                 select: { id: true }
             });
-            if (restaurant) {
-                restaurantId = restaurant.id;
+            if (!restaurant) {
+                res.status(404).json({ message: `Restaurant with slug "${restaurantSlug}" not found` });
+                return;
             }
+            restaurantId = restaurant.id;
+        } else {
+            // Default to restaurant ID 1 for MVP when no slug provided
+            restaurantId = 1;
         }
 
         // Get reservation settings to check if maxCoversPerDay is set

@@ -91,6 +91,7 @@ const CustomerReservationPage: React.FC = () => {
     customerPhone?: string;
   }>({});
   const [dailyCapacities, setDailyCapacities] = useState<Map<string, { available: boolean; currentCovers: number; maxCoversPerDay: number }>>(new Map());
+  const [loadingCapacity, setLoadingCapacity] = useState(false);
   
   const [formData, setFormData] = useState<FormData>({
     customerName: user?.name || '',
@@ -390,9 +391,11 @@ const CustomerReservationPage: React.FC = () => {
   useEffect(() => {
     const fetchDailyCapacity = async () => {
       if (!restaurantSettings?.reservationSettings?.maxCoversPerDay) {
-        return; // No daily limit configured
+        setDailyCapacities(new Map()); // Clear capacity data if no limit configured
+        return;
       }
 
+      setLoadingCapacity(true);
       try {
         const startDate = new Date();
         const endDate = addDays(startDate, 90);
@@ -418,6 +421,8 @@ const CustomerReservationPage: React.FC = () => {
       } catch (error) {
         console.error('Error fetching daily capacity:', error);
         // Don't block reservation form if this fails
+      } finally {
+        setLoadingCapacity(false);
       }
     };
 
@@ -749,7 +754,25 @@ const CustomerReservationPage: React.FC = () => {
                 <InputLabel>Party Size</InputLabel>
                 <Select
                   value={formData.partySize}
-                  onChange={(e) => setFormData({ ...formData, partySize: e.target.value })}
+                  onChange={(e) => {
+                    const newPartySize = e.target.value;
+                    // Clear selected date and time when party size changes
+                    // This prevents showing stale availability data while capacity is being refetched
+                    if (formData.reservationDate || formData.reservationTime) {
+                      setFormData({ 
+                        ...formData, 
+                        partySize: newPartySize,
+                        reservationDate: null,
+                        reservationTime: ''
+                      });
+                      enqueueSnackbar('Please reselect your date and time for the new party size', { 
+                        variant: 'info',
+                        autoHideDuration: 4000
+                      });
+                    } else {
+                      setFormData({ ...formData, partySize: newPartySize });
+                    }
+                  }}
                   startAdornment={<PeopleIcon sx={{ mr: 1, color: 'action.active' }} />}
                 >
                   {partySizeOptions.map((size) => (
@@ -765,9 +788,24 @@ const CustomerReservationPage: React.FC = () => {
               <Typography variant="subtitle1" gutterBottom sx={{ mt: 2, mb: 1 }}>
                 Available Times
               </Typography>
-              {!formData.reservationDate ? (
+              {loadingCapacity && restaurantSettings?.reservationSettings?.maxCoversPerDay ? (
+                <Alert severity="info" sx={{ mt: 1 }}>
+                  Checking availability for {formData.partySize} {formData.partySize === '1' ? 'guest' : 'guests'}...
+                </Alert>
+              ) : !formData.reservationDate ? (
                 <Alert severity="info" sx={{ mt: 1 }}>
                   Please select a date to see available times
+                </Alert>
+              ) : shouldDisableDate(formData.reservationDate) ? (
+                <Alert severity="warning" sx={{ mt: 1 }}>
+                  {(() => {
+                    const dateStr = formData.reservationDate ? formatDateUTC(formData.reservationDate) : '';
+                    const capacity = dailyCapacities.get(dateStr);
+                    if (capacity && !capacity.available) {
+                      return `This date is fully booked for ${formData.partySize} ${formData.partySize === '1' ? 'guest' : 'guests'} (${capacity.currentCovers}/${capacity.maxCoversPerDay} covers). Please select a different date.`;
+                    }
+                    return 'The restaurant is closed on this day. Please select a different date.';
+                  })()}
                 </Alert>
               ) : timeSlots.length === 0 ? (
                 <Alert severity="warning" sx={{ mt: 1 }}>
