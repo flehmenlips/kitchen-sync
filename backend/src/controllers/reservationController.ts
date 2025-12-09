@@ -4,6 +4,7 @@ import { ReservationStatus } from '@prisma/client';
 import { emailService } from '../services/emailService';
 import { format, startOfWeek } from 'date-fns';
 import { checkAvailability, getTimeSlotAvailabilities, generateTimeSlots, checkDailyCapacity, checkAvailabilityInTransaction, checkDailyCapacityInTransaction } from '../services/reservationCapacityService';
+import { validateAndParseUTCDate } from '../utils/dateValidation';
 
 // Helper function for safe integer parsing
 const safeParseInt = (val: unknown): number | undefined => {
@@ -97,11 +98,21 @@ export const getReservations = async (req: Request, res: Response): Promise<void
         }
         
         // Date filtering - support both date (backward compatible) and date range
+        // Parse dates as UTC midnight to match how reservations are stored
         if (date) {
             // Backward compatibility: single date parameter
-            const startDateObj = new Date(date as string);
-            const endDateObj = new Date(date as string);
-            endDateObj.setDate(endDateObj.getDate() + 1);
+            const dateValidation = validateAndParseUTCDate(date as string);
+            if (!dateValidation.valid) {
+                res.status(400).json({ 
+                    message: dateValidation.error || 'Invalid date format. Use YYYY-MM-DD format.',
+                    error: 'Invalid date parameter format'
+                });
+                return;
+            }
+            const startDateObj = dateValidation.date!;
+            // Include the entire date by setting end to start of next day
+            const endDateObj = new Date(startDateObj);
+            endDateObj.setUTCDate(endDateObj.getUTCDate() + 1);
             
             where.reservationDate = {
                 gte: startDateObj,
@@ -111,13 +122,32 @@ export const getReservations = async (req: Request, res: Response): Promise<void
             // New date range filtering
             const dateFilter: any = {};
             if (startDate) {
-                dateFilter.gte = new Date(startDate as string);
+                const startValidation = validateAndParseUTCDate(startDate as string);
+                if (!startValidation.valid) {
+                    res.status(400).json({ 
+                        message: startValidation.error || 'Invalid startDate format. Use YYYY-MM-DD format.',
+                        error: 'Invalid startDate parameter format'
+                    });
+                    return;
+                }
+                dateFilter.gte = startValidation.date!;
             }
             if (endDate) {
-                const endDateObj = new Date(endDate as string);
-                endDateObj.setDate(endDateObj.getDate() + 1); // Include the entire end date
+                const endValidation = validateAndParseUTCDate(endDate as string);
+                if (!endValidation.valid) {
+                    res.status(400).json({ 
+                        message: endValidation.error || 'Invalid endDate format. Use YYYY-MM-DD format.',
+                        error: 'Invalid endDate parameter format'
+                    });
+                    return;
+                }
+                // Include the entire end date by setting to start of next day
+                const endDateObj = new Date(endValidation.date!);
+                endDateObj.setUTCDate(endDateObj.getUTCDate() + 1);
                 dateFilter.lt = endDateObj;
             }
+            // If date range parameters were provided, at least one must be valid
+            // (This check is now redundant since we validate above, but kept for clarity)
             if (Object.keys(dateFilter).length > 0) {
                 where.reservationDate = dateFilter;
             }
@@ -251,11 +281,17 @@ export const getReservations = async (req: Request, res: Response): Promise<void
             console.log('[getReservations] Restaurant IDs in results:', restaurantIdsInResults);
         }
 
+        // Add confirmation numbers to reservations
+        const reservationsWithConfirmation = reservations.map(res => ({
+            ...res,
+            confirmationNumber: generateConfirmationNumber(res.id)
+        }));
+
         // Return paginated response if pagination is enabled
         if (paginationEnabled) {
             const totalPages = Math.ceil(totalCount / limitNum);
             res.status(200).json({
-                data: reservations,
+                data: reservationsWithConfirmation,
                 pagination: {
                     page: pageNum,
                     limit: limitNum,
@@ -268,7 +304,7 @@ export const getReservations = async (req: Request, res: Response): Promise<void
             });
         } else {
             // Backward compatible: return array directly
-            res.status(200).json(reservations);
+            res.status(200).json(reservationsWithConfirmation);
         }
     } catch (error) {
         console.error('Error fetching reservations:', error);
@@ -372,12 +408,14 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
             return;
         }
 
-        // Validate date format
-        const reservationDateObj = new Date(reservationDate);
-        if (isNaN(reservationDateObj.getTime())) {
-            res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD format.' });
+        // Validate date format and parse correctly to avoid timezone issues
+        // Parse YYYY-MM-DD format as UTC midnight to ensure consistent date storage
+        const dateValidation = validateAndParseUTCDate(reservationDate);
+        if (!dateValidation.valid) {
+            res.status(400).json({ message: dateValidation.error || 'Invalid date format. Use YYYY-MM-DD format.' });
             return;
         }
+        const reservationDateObj = dateValidation.date!;
 
         // Validate time format (HH:MM)
         const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
@@ -602,7 +640,16 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
         // Send confirmation email if customer email is provided
         if (customerEmail && customerEmail.trim()) {
             try {
-                const formattedDate = format(new Date(reservationDate), 'EEEE, MMMM d, yyyy');
+                // Format date using UTC components to ensure correct date display
+                // Reservation dates are stored as UTC midnight, so we extract UTC components
+                const resDate = new Date(reservationDateObj);
+                // Create a local date with UTC components to display correctly
+                const displayDate = new Date(
+                    resDate.getUTCFullYear(),
+                    resDate.getUTCMonth(),
+                    resDate.getUTCDate()
+                );
+                const formattedDate = format(displayDate, 'EEEE, MMMM d, yyyy');
                 await emailService.sendReservationConfirmation(
                     customerEmail.trim(),
                     customerName.trim(),
@@ -621,15 +668,21 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
             }
         }
 
+        // Add confirmation number to response
+        const reservationWithConfirmation = {
+            ...newReservation,
+            confirmationNumber: generateConfirmationNumber(newReservation.id)
+        };
+
         // Include warning in response if capacity was exceeded (override case)
         if (capacityWarning) {
             res.status(201).json({
-                ...newReservation,
+                ...reservationWithConfirmation,
                 warning: capacityWarning,
                 capacityExceeded: true
             });
         } else {
-            res.status(201).json(newReservation);
+            res.status(201).json(reservationWithConfirmation);
         }
     } catch (error: any) {
         console.error('Error creating reservation:', error);
@@ -732,7 +785,16 @@ export const updateReservation = async (req: Request, res: Response): Promise<vo
                 updateData.partySize = partySizeNum;
             }
         }
-        if (reservationDate) updateData.reservationDate = new Date(reservationDate);
+        if (reservationDate) {
+            // Validate date format and parse correctly to avoid timezone issues
+            // Parse YYYY-MM-DD format as UTC midnight to ensure consistent date storage
+            const dateValidation = validateAndParseUTCDate(reservationDate as string);
+            if (!dateValidation.valid) {
+                res.status(400).json({ message: dateValidation.error || 'Invalid date format. Use YYYY-MM-DD format.' });
+                return;
+            }
+            updateData.reservationDate = dateValidation.date!;
+        }
         if (reservationTime) updateData.reservationTime = reservationTime;
         if (status) updateData.status = status;
         if (notes !== undefined) updateData.notes = notes;
@@ -839,12 +901,14 @@ export const getAvailability = async (req: Request, res: Response): Promise<void
             return;
         }
 
-        // Validate date format
-        const targetDate = new Date(date as string);
-        if (isNaN(targetDate.getTime())) {
-            res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD format.' });
+        // Validate date format and parse correctly to avoid timezone issues
+        // Parse YYYY-MM-DD format as UTC midnight to ensure consistent date comparison
+        const dateValidation = validateAndParseUTCDate(date as string);
+        if (!dateValidation.valid) {
+            res.status(400).json({ message: dateValidation.error || 'Invalid date format. Use YYYY-MM-DD format.' });
             return;
         }
+        const targetDate = dateValidation.date!;
 
         const requestedPartySize = partySize ? parseInt(partySize as string) : 1;
         if (isNaN(requestedPartySize) || requestedPartySize < 1) {

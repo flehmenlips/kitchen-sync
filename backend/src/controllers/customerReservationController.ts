@@ -4,6 +4,7 @@ import { CustomerAuthRequest } from '../middleware/authenticateCustomer';
 import { ReservationStatus } from '@prisma/client';
 import { emailService } from '../services/emailService';
 import { format } from 'date-fns';
+import { validateAndParseUTCDate } from '../utils/dateValidation';
 
 const prisma = new PrismaClient();
 
@@ -285,12 +286,14 @@ export const createCustomerReservation = async (req: CustomerAuthRequest, res: R
 
         const restaurantId = 1; // Single restaurant MVP
         
-        // Validate date format
-        const reservationDateObj = new Date(reservationDate);
-        if (isNaN(reservationDateObj.getTime())) {
-            res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD format.' });
+        // Validate date format and parse correctly to avoid timezone issues
+        // Parse YYYY-MM-DD format as UTC midnight to ensure consistent date storage
+        const dateValidation = validateAndParseUTCDate(reservationDate);
+        if (!dateValidation.valid) {
+            res.status(400).json({ message: dateValidation.error || 'Invalid date format. Use YYYY-MM-DD format.' });
             return;
         }
+        const reservationDateObj = dateValidation.date!;
 
         // Validate time format (HH:MM)
         const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
@@ -418,7 +421,16 @@ export const createCustomerReservation = async (req: CustomerAuthRequest, res: R
         const emailToUse = customerEmail || customerProfile.user.email;
         if (emailToUse) {
             try {
-                const formattedDate = format(reservationDateObj, 'EEEE, MMMM d, yyyy');
+                // Format date using UTC components to ensure correct date display
+                // Extract UTC components to avoid timezone issues
+                const resDate = new Date(reservationDateObj);
+                // Create a local date with UTC components to display correctly
+                const displayDate = new Date(
+                    resDate.getUTCFullYear(),
+                    resDate.getUTCMonth(),
+                    resDate.getUTCDate()
+                );
+                const formattedDate = format(displayDate, 'EEEE, MMMM d, yyyy');
                 await emailService.sendReservationConfirmation(
                     emailToUse,
                     customerName || customerProfile.user.name || 'Guest',
@@ -437,7 +449,13 @@ export const createCustomerReservation = async (req: CustomerAuthRequest, res: R
             }
         }
 
-        res.status(201).json(newReservation);
+        // Add confirmation number to response
+        const reservationWithConfirmation = {
+            ...newReservation,
+            confirmationNumber: generateConfirmationNumber(newReservation.id)
+        };
+
+        res.status(201).json(reservationWithConfirmation);
     } catch (error: any) {
         // Handle capacity exceeded error from transaction
         if (error?.message && error.message.startsWith('CAPACITY_EXCEEDED:')) {
@@ -539,7 +557,12 @@ export const customerReservationController = {
       });
 
       console.log('Found reservations:', reservations.length);
-      res.json(reservations);
+      // Add confirmation numbers to reservations
+      const reservationsWithConfirmation = reservations.map(res => ({
+        ...res,
+        confirmationNumber: generateConfirmationNumber(res.id)
+      }));
+      res.json(reservationsWithConfirmation);
     } catch (error) {
       console.error('Get reservations error:', error);
       res.status(500).json({ error: 'Failed to fetch reservations' });
@@ -764,14 +787,16 @@ export const customerReservationController = {
         }
       }
 
-      // Validate date format
-      const reservationDateObj = new Date(reservationDate);
-      if (isNaN(reservationDateObj.getTime())) {
+      // Validate date format and parse correctly to avoid timezone issues
+      // Parse YYYY-MM-DD format as UTC midnight to ensure consistent date storage
+      const dateValidation = validateAndParseUTCDate(reservationDate);
+      if (!dateValidation.valid) {
         return res.status(400).json({
           error: 'Invalid date format',
-          message: 'Invalid date format. Use YYYY-MM-DD format.'
+          message: dateValidation.error || 'Invalid date format. Use YYYY-MM-DD format.'
         });
       }
+      const reservationDateObj = dateValidation.date!;
 
       // Validate time format (HH:MM)
       const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
@@ -856,7 +881,7 @@ export const customerReservationController = {
             customerEmail,
             customerPhone,
             restaurantId,
-            reservationDate: new Date(reservationDate),
+            reservationDate: reservationDateObj, // Use properly parsed UTC date
             reservationTime,
             partySize: parseInt(partySize),
             status: 'CONFIRMED',
@@ -902,7 +927,16 @@ export const customerReservationController = {
 
       // Send confirmation email
       try {
-        const formattedDate = format(reservation.reservationDate, 'EEEE, MMMM d, yyyy');
+        // Format date using UTC components to ensure correct date display
+        // Reservation dates are stored as UTC midnight, so we extract UTC components
+        const resDate = new Date(reservation.reservationDate);
+        // Create a local date with UTC components to display correctly
+        const displayDate = new Date(
+          resDate.getUTCFullYear(),
+          resDate.getUTCMonth(),
+          resDate.getUTCDate()
+        );
+        const formattedDate = format(displayDate, 'EEEE, MMMM d, yyyy');
         await emailService.sendReservationConfirmation(
           customer.email,
           customerName,
@@ -920,9 +954,15 @@ export const customerReservationController = {
         // Don't fail the reservation creation if email fails
       }
 
+      // Add confirmation number to response
+      const reservationWithConfirmation = {
+        ...reservation,
+        confirmationNumber: generateConfirmationNumber(reservation.id)
+      };
+
       res.status(201).json({
         message: 'Reservation created successfully',
-        reservation
+        reservation: reservationWithConfirmation
       });
     } catch (error: any) {
       // Handle capacity exceeded error from transaction
@@ -982,8 +1022,19 @@ export const customerReservationController = {
       // Build update data
       const updateData: any = {};
       
+      let parsedReservationDate: Date | undefined;
       if (reservationDate) {
-        updateData.reservationDate = new Date(reservationDate);
+        // Validate date format and parse correctly to avoid timezone issues
+        // Parse YYYY-MM-DD format as UTC midnight to ensure consistent date storage
+        const dateValidation = validateAndParseUTCDate(reservationDate);
+        if (!dateValidation.valid) {
+          return res.status(400).json({
+            error: 'Invalid date format',
+            message: dateValidation.error || 'Invalid date format. Use YYYY-MM-DD format.'
+          });
+        }
+        parsedReservationDate = dateValidation.date!;
+        updateData.reservationDate = parsedReservationDate;
       }
       if (reservationTime) {
         updateData.reservationTime = reservationTime;
@@ -1000,11 +1051,29 @@ export const customerReservationController = {
 
       // Validate new date/time if provided
       if (reservationDate || reservationTime) {
-        const newDate = reservationDate || existingReservation.reservationDate;
-        const newTime = reservationTime || existingReservation.reservationTime;
-        const newDateTime = new Date(`${newDate}T${newTime}`);
+        // Use parsed date if new date was provided, otherwise use existing reservation date
+        const dateToUse = parsedReservationDate || existingReservation.reservationDate;
+        const timeToUse = reservationTime || existingReservation.reservationTime;
         
-        if (newDateTime < new Date()) {
+        // Reservation dates are stored as UTC midnight, so extract UTC date components
+        // But reservation times are in local time, so we need to create a local date-time
+        const dateToUseUTC = dateToUse instanceof Date ? dateToUse : new Date(dateToUse);
+        const [hours, minutes] = timeToUse.split(':').map(Number);
+        
+        // Create a local date-time for comparison
+        // Extract UTC date components and create a local date with those components
+        // Then set the local time to the reservation time (which is in local time)
+        const newDateTime = new Date(
+          dateToUseUTC.getUTCFullYear(),
+          dateToUseUTC.getUTCMonth(),
+          dateToUseUTC.getUTCDate(),
+          hours,
+          minutes
+        );
+        
+        // Compare with current local time (consistent with create reservation validation)
+        const now = new Date();
+        if (newDateTime < now) {
           return res.status(400).json({
             error: 'Cannot update reservation to a past date/time'
           });

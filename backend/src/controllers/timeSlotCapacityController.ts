@@ -116,7 +116,8 @@ export const getAvailability = async (req: Request, res: Response): Promise<void
     }
 
     const targetDate = new Date(date as string);
-    const dayOfWeek = targetDate.getDay(); // 0 = Sunday, 6 = Saturday
+    // Use UTC day since dates are stored as UTC midnight
+    const dayOfWeek = targetDate.getUTCDay(); // 0 = Sunday, 6 = Saturday
 
     // Get capacity for this day/time slot
     const capacity = await prisma.timeSlotCapacity.findUnique({
