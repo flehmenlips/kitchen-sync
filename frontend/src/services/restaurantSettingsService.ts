@@ -100,6 +100,7 @@ export interface RestaurantSettings {
   reservationSettings?: {
     minPartySize?: number;
     maxPartySize?: number;
+    maxCoversPerDay?: number;
   };
   
   // Restaurant info (included in response)

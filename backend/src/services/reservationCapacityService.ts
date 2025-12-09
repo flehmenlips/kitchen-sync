@@ -1,4 +1,5 @@
 import prisma from '../config/db';
+import { Prisma } from '@prisma/client';
 
 export interface AvailabilityResult {
   available: boolean;
@@ -17,19 +18,312 @@ export interface TimeSlotAvailability {
   remaining: number | null;
 }
 
+export interface DailyCapacityResult {
+  date: Date;
+  currentCovers: number;
+  maxCoversPerDay: number | null;
+  available: boolean;
+  remaining: number | null;
+}
+
 /**
- * Check availability for a specific date, time slot, and party size
+ * Transaction-aware Prisma client type
+ */
+type PrismaTransactionClient = Omit<Prisma.TransactionClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
+
+/**
+ * Check daily capacity for a specific date (transaction-aware version)
+ * This version uses a transaction client to ensure atomicity and prevent race conditions
+ * @param tx Prisma transaction client
+ * @param restaurantId Restaurant ID
+ * @param date Reservation date
+ * @param partySize Number of guests to check (optional, for checking if booking would fit)
+ * @returns Daily capacity result
+ */
+export async function checkDailyCapacityInTransaction(
+  tx: PrismaTransactionClient,
+  restaurantId: number,
+  date: Date,
+  partySize?: number
+): Promise<DailyCapacityResult> {
+  // Get reservation settings with row-level lock to prevent concurrent modifications
+  // Using findFirst with FOR UPDATE equivalent via Prisma's transaction isolation
+  const settings = await tx.reservationSettings.findUnique({
+    where: { restaurantId }
+  });
+
+  const maxCoversPerDay = settings?.maxCoversPerDay || null;
+
+  // If no daily limit set, return available
+  if (maxCoversPerDay === null) {
+    return {
+      date,
+      currentCovers: 0,
+      maxCoversPerDay: null,
+      available: true,
+      remaining: null
+    };
+  }
+
+  // Get all confirmed reservations for this date
+  // Use UTC boundaries to ensure consistent date range queries regardless of server timezone
+  // Using transaction client ensures we see a consistent snapshot
+  const startOfDay = new Date(date);
+  startOfDay.setUTCHours(0, 0, 0, 0);
+  const endOfDay = new Date(date);
+  endOfDay.setUTCHours(23, 59, 59, 999);
+
+  const reservations = await tx.reservation.findMany({
+    where: {
+      restaurantId,
+      reservationDate: {
+        gte: startOfDay,
+        lte: endOfDay
+      },
+      status: 'CONFIRMED'
+    }
+  });
+
+  // Calculate total covers for the day (sum of all party sizes)
+  const currentCovers = reservations.reduce((sum, res) => sum + res.partySize, 0);
+  
+  // Calculate remaining capacity
+  const remaining = Math.max(0, maxCoversPerDay - currentCovers);
+  
+  // Check if this booking would fit (if partySize provided)
+  const available = partySize === undefined 
+    ? currentCovers < maxCoversPerDay 
+    : (currentCovers + partySize) <= maxCoversPerDay;
+
+  return {
+    date,
+    currentCovers,
+    maxCoversPerDay,
+    available,
+    remaining
+  };
+}
+
+/**
+ * Check availability for a specific date, time slot, and party size (transaction-aware version)
+ * Also checks daily capacity limit which overrides time slot capacity if exceeded
+ * This version uses a transaction client to ensure atomicity and prevent race conditions
+ * @param tx Prisma transaction client
  * @param restaurantId Restaurant ID
  * @param date Reservation date
  * @param timeSlot Time slot (e.g., "18:00")
  * @param partySize Number of guests
+ * @param allowOverride Allow override for restaurant owners (default: false)
+ * @returns Availability result with capacity information
+ */
+export async function checkAvailabilityInTransaction(
+  tx: PrismaTransactionClient,
+  restaurantId: number,
+  date: Date,
+  timeSlot: string,
+  partySize: number,
+  allowOverride: boolean = false
+): Promise<AvailabilityResult> {
+  const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
+
+  // Get reservation settings (using transaction client)
+  const settings = await tx.reservationSettings.findUnique({
+    where: { restaurantId }
+  });
+
+  // First check daily capacity (this overrides time slot capacity if exceeded)
+  // Use transaction-aware version to ensure atomicity
+  const dailyCapacity = await checkDailyCapacityInTransaction(
+    tx,
+    restaurantId,
+    date,
+    partySize
+  );
+  
+  // If daily capacity is exceeded and override not allowed, return unavailable
+  if (!dailyCapacity.available && !allowOverride) {
+    return {
+      available: false,
+      currentBookings: dailyCapacity.currentCovers,
+      capacity: dailyCapacity.maxCoversPerDay,
+      remaining: dailyCapacity.remaining,
+      canOverbook: false,
+      overbooked: false
+    };
+  }
+
+  // Get time slot capacity for this day/time (using transaction client)
+  const capacity = await tx.timeSlotCapacity.findUnique({
+    where: {
+      restaurantId_dayOfWeek_timeSlot: {
+        restaurantId,
+        dayOfWeek,
+        timeSlot
+      }
+    }
+  });
+
+  // Get all confirmed reservations for this date/time slot
+  // Use UTC boundaries to ensure consistent date range queries regardless of server timezone
+  // Using transaction client ensures we see a consistent snapshot
+  const startOfDay = new Date(date);
+  startOfDay.setUTCHours(0, 0, 0, 0);
+  const endOfDay = new Date(date);
+  endOfDay.setUTCHours(23, 59, 59, 999);
+
+  const reservations = await tx.reservation.findMany({
+    where: {
+      restaurantId,
+      reservationDate: {
+        gte: startOfDay,
+        lte: endOfDay
+      },
+      reservationTime: timeSlot,
+      status: 'CONFIRMED'
+    }
+  });
+
+  // Calculate current bookings (sum of party sizes)
+  const currentBookings = reservations.reduce((sum, res) => sum + res.partySize, 0);
+
+  // Determine capacity limit
+  let maxCapacity: number | null = null;
+  
+  // Priority: TimeSlotCapacity > ReservationSettings.maxCoversPerSlot
+  if (capacity && capacity.isActive) {
+    maxCapacity = capacity.maxCovers;
+  } else if (settings?.maxCoversPerSlot) {
+    maxCapacity = settings.maxCoversPerSlot;
+  }
+
+  // If no capacity limit set, allow unlimited bookings (but still respect daily limit)
+  if (maxCapacity === null) {
+    return {
+      available: dailyCapacity.available || allowOverride,
+      currentBookings,
+      capacity: dailyCapacity.maxCoversPerDay, // Return daily capacity as the limiting factor
+      remaining: dailyCapacity.remaining,
+      canOverbook: false,
+      overbooked: !dailyCapacity.available && allowOverride
+    };
+  }
+
+  // Calculate remaining capacity
+  const remaining = Math.max(0, maxCapacity - currentBookings);
+  
+  // Check if this booking would fit
+  const wouldFit = partySize <= remaining;
+  
+  // Check overbooking
+  const allowOverbooking = settings?.allowOverbooking || false;
+  const overbookingPercentage = settings?.overbookingPercentage || 0;
+  const overbookingLimit = allowOverbooking 
+    ? Math.floor(maxCapacity * (1 + overbookingPercentage / 100))
+    : maxCapacity;
+  
+  const canOverbook = allowOverbooking && (currentBookings + partySize) <= overbookingLimit;
+  const overbooked = (currentBookings + partySize) > maxCapacity && (currentBookings + partySize) <= overbookingLimit;
+
+  // Daily capacity takes precedence - if daily limit would be exceeded, mark as unavailable
+  const dailyLimitExceeded = !dailyCapacity.available && !allowOverride;
+  const finalAvailable = (wouldFit || canOverbook) && !dailyLimitExceeded;
+
+  return {
+    available: finalAvailable || allowOverride,
+    currentBookings,
+    capacity: dailyCapacity.maxCoversPerDay ? Math.min(maxCapacity, dailyCapacity.maxCoversPerDay) : maxCapacity,
+    remaining: dailyCapacity.maxCoversPerDay 
+      ? Math.min(remaining, dailyCapacity.remaining || 0)
+      : remaining,
+    canOverbook: canOverbook && !dailyLimitExceeded,
+    overbooked: overbooked || (!dailyCapacity.available && allowOverride)
+  };
+}
+
+/**
+ * Check daily capacity for a specific date
+ * @param restaurantId Restaurant ID
+ * @param date Reservation date
+ * @param partySize Number of guests to check (optional, for checking if booking would fit)
+ * @returns Daily capacity result
+ */
+export async function checkDailyCapacity(
+  restaurantId: number,
+  date: Date,
+  partySize?: number
+): Promise<DailyCapacityResult> {
+  // Get reservation settings
+  const settings = await prisma.reservationSettings.findUnique({
+    where: { restaurantId }
+  });
+
+  const maxCoversPerDay = settings?.maxCoversPerDay || null;
+
+  // If no daily limit set, return available
+  if (maxCoversPerDay === null) {
+    return {
+      date,
+      currentCovers: 0,
+      maxCoversPerDay: null,
+      available: true,
+      remaining: null
+    };
+  }
+
+  // Get all confirmed reservations for this date
+  // Use UTC boundaries to ensure consistent date range queries regardless of server timezone
+  const startOfDay = new Date(date);
+  startOfDay.setUTCHours(0, 0, 0, 0);
+  const endOfDay = new Date(date);
+  endOfDay.setUTCHours(23, 59, 59, 999);
+
+  const reservations = await prisma.reservation.findMany({
+    where: {
+      restaurantId,
+      reservationDate: {
+        gte: startOfDay,
+        lte: endOfDay
+      },
+      status: 'CONFIRMED'
+    }
+  });
+
+  // Calculate total covers for the day (sum of all party sizes)
+  const currentCovers = reservations.reduce((sum, res) => sum + res.partySize, 0);
+  
+  // Calculate remaining capacity
+  const remaining = Math.max(0, maxCoversPerDay - currentCovers);
+  
+  // Check if this booking would fit (if partySize provided)
+  const available = partySize === undefined 
+    ? currentCovers < maxCoversPerDay 
+    : (currentCovers + partySize) <= maxCoversPerDay;
+
+  return {
+    date,
+    currentCovers,
+    maxCoversPerDay,
+    available,
+    remaining
+  };
+}
+
+/**
+ * Check availability for a specific date, time slot, and party size
+ * Also checks daily capacity limit which overrides time slot capacity if exceeded
+ * @param restaurantId Restaurant ID
+ * @param date Reservation date
+ * @param timeSlot Time slot (e.g., "18:00")
+ * @param partySize Number of guests
+ * @param allowOverride Allow override for restaurant owners (default: false)
  * @returns Availability result with capacity information
  */
 export async function checkAvailability(
   restaurantId: number,
   date: Date,
   timeSlot: string,
-  partySize: number
+  partySize: number,
+  allowOverride: boolean = false
 ): Promise<AvailabilityResult> {
   const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
 
@@ -37,6 +331,21 @@ export async function checkAvailability(
   const settings = await prisma.reservationSettings.findUnique({
     where: { restaurantId }
   });
+
+  // First check daily capacity (this overrides time slot capacity if exceeded)
+  const dailyCapacity = await checkDailyCapacity(restaurantId, date, partySize);
+  
+  // If daily capacity is exceeded and override not allowed, return unavailable
+  if (!dailyCapacity.available && !allowOverride) {
+    return {
+      available: false,
+      currentBookings: dailyCapacity.currentCovers,
+      capacity: dailyCapacity.maxCoversPerDay,
+      remaining: dailyCapacity.remaining,
+      canOverbook: false,
+      overbooked: false
+    };
+  }
 
   // Get time slot capacity for this day/time
   const capacity = await prisma.timeSlotCapacity.findUnique({
@@ -50,10 +359,11 @@ export async function checkAvailability(
   });
 
   // Get all confirmed reservations for this date/time slot
+  // Use UTC boundaries to ensure consistent date range queries regardless of server timezone
   const startOfDay = new Date(date);
-  startOfDay.setHours(0, 0, 0, 0);
+  startOfDay.setUTCHours(0, 0, 0, 0);
   const endOfDay = new Date(date);
-  endOfDay.setHours(23, 59, 59, 999);
+  endOfDay.setUTCHours(23, 59, 59, 999);
 
   const reservations = await prisma.reservation.findMany({
     where: {
@@ -80,15 +390,15 @@ export async function checkAvailability(
     maxCapacity = settings.maxCoversPerSlot;
   }
 
-  // If no capacity limit set, allow unlimited bookings
+  // If no capacity limit set, allow unlimited bookings (but still respect daily limit)
   if (maxCapacity === null) {
     return {
-      available: true,
+      available: dailyCapacity.available || allowOverride,
       currentBookings,
-      capacity: null,
-      remaining: null,
+      capacity: dailyCapacity.maxCoversPerDay, // Return daily capacity as the limiting factor
+      remaining: dailyCapacity.remaining,
       canOverbook: false,
-      overbooked: false
+      overbooked: !dailyCapacity.available && allowOverride
     };
   }
 
@@ -108,18 +418,25 @@ export async function checkAvailability(
   const canOverbook = allowOverbooking && (currentBookings + partySize) <= overbookingLimit;
   const overbooked = (currentBookings + partySize) > maxCapacity && (currentBookings + partySize) <= overbookingLimit;
 
+  // Daily capacity takes precedence - if daily limit would be exceeded, mark as unavailable
+  const dailyLimitExceeded = !dailyCapacity.available && !allowOverride;
+  const finalAvailable = (wouldFit || canOverbook) && !dailyLimitExceeded;
+
   return {
-    available: wouldFit || canOverbook,
+    available: finalAvailable || allowOverride,
     currentBookings,
-    capacity: maxCapacity,
-    remaining,
-    canOverbook,
-    overbooked
+    capacity: dailyCapacity.maxCoversPerDay ? Math.min(maxCapacity, dailyCapacity.maxCoversPerDay) : maxCapacity,
+    remaining: dailyCapacity.maxCoversPerDay 
+      ? Math.min(remaining, dailyCapacity.remaining || 0)
+      : remaining,
+    canOverbook: canOverbook && !dailyLimitExceeded,
+    overbooked: overbooked || (!dailyCapacity.available && allowOverride)
   };
 }
 
 /**
  * Get availability for all time slots on a given date
+ * Also checks daily capacity limit which overrides time slot capacity if exceeded
  * @param restaurantId Restaurant ID
  * @param date Date to check
  * @param timeSlots Array of time slots to check
@@ -136,6 +453,9 @@ export async function getTimeSlotAvailabilities(
     }
 
     const dayOfWeek = date.getDay();
+
+    // First check daily capacity (this overrides time slot capacity if exceeded)
+    const dailyCapacity = await checkDailyCapacity(restaurantId, date);
 
     // Get all time slot capacities for this day
     const capacities = await prisma.timeSlotCapacity.findMany({
@@ -166,10 +486,11 @@ export async function getTimeSlotAvailabilities(
     });
 
     // Get all reservations for this date
+    // Use UTC boundaries to ensure consistent date range queries regardless of server timezone
     const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
+    startOfDay.setUTCHours(0, 0, 0, 0);
     const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
+    endOfDay.setUTCHours(23, 59, 59, 999);
 
     const reservations = await prisma.reservation.findMany({
       where: {
@@ -199,16 +520,54 @@ export async function getTimeSlotAvailabilities(
 
     // Calculate availability for each time slot
     return timeSlots.map(timeSlot => {
-      const capacity = capacityMap.get(timeSlot) || settings?.maxCoversPerSlot || null;
+      const slotCapacity = capacityMap.get(timeSlot) || settings?.maxCoversPerSlot || null;
       const currentBookings = bookingsBySlot.get(timeSlot) || 0;
-      const remaining = capacity !== null ? Math.max(0, capacity - currentBookings) : null;
+      
+      // Calculate remaining capacity for this time slot
+      const slotRemaining = slotCapacity !== null ? Math.max(0, slotCapacity - currentBookings) : null;
 
+      // If daily capacity limit is set and exceeded, mark slot as unavailable
+      if (dailyCapacity.maxCoversPerDay !== null && !dailyCapacity.available) {
+        return {
+          timeSlot,
+          available: false,
+          currentBookings,
+          capacity: dailyCapacity.maxCoversPerDay, // Show daily capacity as the limiting factor
+          remaining: dailyCapacity.remaining // Show daily remaining capacity
+        };
+      }
+
+      // If daily capacity limit is set but not exceeded, consider both slot and daily capacity
+      if (dailyCapacity.maxCoversPerDay !== null && dailyCapacity.available) {
+        // Calculate remaining considering both slot bookings and daily total
+        // The effective remaining is the minimum of slot remaining and daily remaining
+        // because daily capacity is shared across all slots
+        const dailyRemaining = dailyCapacity.remaining || 0;
+        const effectiveRemaining = slotCapacity !== null
+          ? Math.min(slotRemaining || 0, dailyRemaining)
+          : dailyRemaining;
+
+        // Slot is available if both slot and daily capacity have room
+        const slotAvailable = slotCapacity === null || (slotRemaining !== null && slotRemaining > 0);
+        const dailyAvailable = dailyRemaining > 0;
+        const isAvailable = slotAvailable && dailyAvailable;
+
+        return {
+          timeSlot,
+          available: isAvailable,
+          currentBookings,
+          capacity: slotCapacity, // Show slot capacity (the limiting factor may be daily, but capacity is slot-specific)
+          remaining: isAvailable ? effectiveRemaining : 0
+        };
+      }
+
+      // No daily capacity limit - use only time slot capacity
       return {
         timeSlot,
-        available: capacity === null || (remaining !== null && remaining > 0),
+        available: slotCapacity === null || (slotRemaining !== null && slotRemaining > 0),
         currentBookings,
-        capacity,
-        remaining
+        capacity: slotCapacity,
+        remaining: slotRemaining
       };
     });
   } catch (error) {

@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { CustomerAuthRequest } from '../middleware/authenticateCustomer';
 import { ReservationStatus } from '@prisma/client';
@@ -6,6 +6,164 @@ import { emailService } from '../services/emailService';
 import { format } from 'date-fns';
 
 const prisma = new PrismaClient();
+
+// @desc    Get daily capacity for date range (public, for date picker)
+// @route   GET /api/customer/reservations/daily-capacity
+// @access  Public
+export const getPublicDailyCapacity = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { startDate, endDate, restaurantSlug, partySize } = req.query;
+
+        // Helper function to parse YYYY-MM-DD string as UTC date
+        // This ensures consistent date parsing regardless of server timezone
+        const parseUTCDate = (dateStr: string): Date => {
+            // Parse as UTC to avoid timezone shifts
+            return new Date(dateStr + 'T00:00:00.000Z');
+        };
+
+        // Helper function to get today's date in UTC (at 00:00:00 UTC)
+        // This ensures consistency with parseUTCDate when no date is provided
+        const getTodayUTC = (): Date => {
+            const now = new Date();
+            const year = now.getUTCFullYear();
+            const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(now.getUTCDate()).padStart(2, '0');
+            return parseUTCDate(`${year}-${month}-${day}`);
+        };
+
+        // Default to next 90 days if no dates provided
+        // Use UTC consistently to avoid timezone boundary issues
+        const start = startDate ? parseUTCDate(startDate as string) : getTodayUTC();
+        const end = endDate ? parseUTCDate(endDate as string) : (() => {
+            const todayUTC = getTodayUTC();
+            const futureDate = new Date(todayUTC);
+            futureDate.setUTCDate(futureDate.getUTCDate() + 90);
+            return futureDate;
+        })();
+
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD format.' });
+            return;
+        }
+
+        // Parse party size if provided
+        const partySizeNum = partySize ? parseInt(partySize as string) : undefined;
+        if (partySize && (isNaN(partySizeNum!) || partySizeNum! < 1)) {
+            res.status(400).json({ message: 'Invalid party size. Must be a positive number.' });
+            return;
+        }
+
+        // Get restaurant ID from slug
+        let restaurantId: number;
+        if (restaurantSlug) {
+            const restaurant = await prisma.restaurant.findUnique({
+                where: { slug: restaurantSlug as string },
+                select: { id: true }
+            });
+            if (!restaurant) {
+                res.status(404).json({ message: `Restaurant with slug "${restaurantSlug}" not found` });
+                return;
+            }
+            restaurantId = restaurant.id;
+        } else {
+            // Default to restaurant ID 1 for MVP when no slug provided
+            restaurantId = 1;
+        }
+
+        // Get reservation settings to check if maxCoversPerDay is set
+        const settings = await prisma.reservationSettings.findUnique({
+            where: { restaurantId }
+        });
+
+        if (!settings?.maxCoversPerDay) {
+            // No daily limit set, return all dates as available
+            res.status(200).json({
+                dailyCapacities: [],
+                message: 'No daily capacity limit configured'
+            });
+            return;
+        }
+
+        // Get all confirmed reservations in date range
+        // Use UTC boundaries to ensure consistent date range queries
+        const startOfRange = new Date(start);
+        startOfRange.setUTCHours(0, 0, 0, 0);
+        const endOfRange = new Date(end);
+        endOfRange.setUTCHours(23, 59, 59, 999);
+
+        const reservations = await prisma.reservation.findMany({
+            where: {
+                restaurantId,
+                reservationDate: {
+                    gte: startOfRange,
+                    lte: endOfRange
+                },
+                status: 'CONFIRMED'
+            },
+            select: {
+                reservationDate: true,
+                partySize: true
+            }
+        });
+
+        // Helper function to format date as YYYY-MM-DD using UTC date components
+        // This ensures consistent date formatting regardless of server timezone
+        // Database dates are stored as UTC timestamps, so we use UTC components
+        const formatDateString = (date: Date): string => {
+            const year = date.getUTCFullYear();
+            const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(date.getUTCDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        // Group reservations by date and calculate total covers per day
+        // Use local date components to match frontend formatting
+        const coversByDate = new Map<string, number>();
+        reservations.forEach(res => {
+            const dateStr = formatDateString(res.reservationDate);
+            const current = coversByDate.get(dateStr) || 0;
+            coversByDate.set(dateStr, current + res.partySize);
+        });
+
+        // Build response with capacity info for each date
+        // Use UTC date components to ensure consistent date boundaries
+        const startUTC = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
+        const endUTC = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()));
+        const dailyCapacities = [];
+        const currentDate = new Date(startUTC);
+        while (currentDate <= endUTC) {
+            const dateStr = formatDateString(currentDate);
+            const currentCovers = coversByDate.get(dateStr) || 0;
+            const remaining = Math.max(0, settings.maxCoversPerDay! - currentCovers);
+            
+            // If party size is provided, check if that specific party size would fit
+            // Otherwise, check if there's any remaining capacity (at least 1 cover)
+            const available = partySizeNum !== undefined
+                ? (currentCovers + partySizeNum) <= settings.maxCoversPerDay!
+                : remaining > 0;
+            
+            dailyCapacities.push({
+                date: dateStr,
+                currentCovers,
+                maxCoversPerDay: settings.maxCoversPerDay,
+                available,
+                remaining
+            });
+
+            currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+        }
+
+        res.status(200).json({
+            dailyCapacities
+        });
+    } catch (error: any) {
+        console.error('Error fetching public daily capacity:', error);
+        res.status(500).json({ 
+            message: 'Error fetching daily capacity',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
 
 // Helper function to generate confirmation number
 const generateConfirmationNumber = (id: number): string => {
@@ -126,20 +284,63 @@ export const createCustomerReservation = async (req: CustomerAuthRequest, res: R
         }
 
         const restaurantId = 1; // Single restaurant MVP
-        const newReservation = await prisma.reservation.create({
-            data: {
-                customerName: customerName || customerProfile.user.name || 'Guest',
-                customerPhone: customerPhone || customerProfile.user.phone || undefined,
-                customerEmail: customerEmail || customerProfile.user.email,
-                customerId: req.customerUser.userId,
-                partySize,
-                reservationDate: new Date(reservationDate),
+        const reservationDateObj = new Date(reservationDate);
+        const partySizeNum = parseInt(partySize);
+        const customerUserId = req.customerUser.userId; // Store for use in transaction
+
+        // Validate party size is a valid number
+        if (isNaN(partySizeNum) || partySizeNum < 1) {
+            res.status(400).json({ message: 'Party size must be a valid number greater than 0' });
+            return;
+        }
+
+        // Use transaction to ensure atomicity and prevent race conditions
+        // Capacity check is performed INSIDE the transaction to prevent TOCTOU vulnerability
+        const { checkAvailabilityInTransaction } = await import('../services/reservationCapacityService');
+        const newReservation = await prisma.$transaction(async (tx) => {
+            // Check availability INSIDE transaction (checks both time slot capacity and daily capacity)
+            // Customers cannot override capacity limits
+            // This ensures no concurrent requests can both pass the capacity check
+            const availability = await checkAvailabilityInTransaction(
+                tx,
+                restaurantId,
+                reservationDateObj,
                 reservationTime,
-                notes,
-                specialRequests,
-                userId: 1, // Default staff user for now
-                restaurantId
+                partySizeNum,
+                false // allowOverride = false for customers
+            );
+            
+            if (!availability.available) {
+                const capacityMsg = availability.capacity 
+                    ? `Capacity limit of ${availability.capacity} reached. Current bookings: ${availability.currentBookings}`
+                    : 'This time slot is not available';
+                
+                throw new Error(`CAPACITY_EXCEEDED:${JSON.stringify({
+                    message: capacityMsg,
+                    availability: {
+                        currentBookings: availability.currentBookings,
+                        capacity: availability.capacity,
+                        remaining: availability.remaining
+                    }
+                })}`);
             }
+
+            // Create the reservation within the same transaction
+            return await tx.reservation.create({
+                data: {
+                    customerName: customerName || customerProfile.user.name || 'Guest',
+                    customerPhone: customerPhone || customerProfile.user.phone || undefined,
+                    customerEmail: customerEmail || customerProfile.user.email,
+                    customerId: customerUserId,
+                    partySize: partySizeNum,
+                    reservationDate: new Date(reservationDate),
+                    reservationTime,
+                    notes,
+                    specialRequests,
+                    userId: 1, // Default staff user for now
+                    restaurantId
+                }
+            });
         });
 
         // Get restaurant info for confirmation email
@@ -212,7 +413,17 @@ export const createCustomerReservation = async (req: CustomerAuthRequest, res: R
         }
 
         res.status(201).json(newReservation);
-    } catch (error) {
+    } catch (error: any) {
+        // Handle capacity exceeded error from transaction
+        if (error?.message && error.message.startsWith('CAPACITY_EXCEEDED:')) {
+            try {
+                const capacityError = JSON.parse(error.message.replace('CAPACITY_EXCEEDED:', ''));
+                res.status(400).json(capacityError);
+                return;
+            } catch (parseError) {
+                // Fall through to generic error handling if parsing fails
+            }
+        }
         console.error('Error creating reservation:', error);
         res.status(500).json({ message: 'Error creating reservation' });
     }
@@ -450,10 +661,11 @@ export const customerReservationController = {
         });
       }
 
-      // Validate party size
-      if (partySize < 1 || partySize > 20) {
+      // Parse and validate party size (must be done before validation to catch NaN)
+      const partySizeNum = parseInt(partySize);
+      if (isNaN(partySizeNum) || partySizeNum < 1 || partySizeNum > 20) {
         return res.status(400).json({
-          error: 'Party size must be between 1 and 20'
+          error: 'Party size must be a valid number between 1 and 20'
         });
       }
 
@@ -483,8 +695,40 @@ export const customerReservationController = {
         });
       }
 
-      // Use transaction to ensure atomicity
+      const reservationDateObj = new Date(reservationDate);
+
+      // Use transaction to ensure atomicity and prevent race conditions
+      // Capacity check is performed INSIDE the transaction to prevent TOCTOU vulnerability
+      const { checkAvailabilityInTransaction } = await import('../services/reservationCapacityService');
       const reservation = await prisma.$transaction(async (tx) => {
+        // Check availability INSIDE transaction (checks both time slot capacity and daily capacity)
+        // Customers cannot override capacity limits
+        // This ensures no concurrent requests can both pass the capacity check
+        const availability = await checkAvailabilityInTransaction(
+          tx,
+          restaurantId,
+          reservationDateObj,
+          reservationTime,
+          partySizeNum,
+          false // allowOverride = false for customers
+        );
+        
+        if (!availability.available) {
+          const capacityMsg = availability.capacity 
+            ? `Capacity limit of ${availability.capacity} reached. Current bookings: ${availability.currentBookings}`
+            : 'This time slot is not available';
+          
+          throw new Error(`CAPACITY_EXCEEDED:${JSON.stringify({
+            error: 'Capacity exceeded',
+            message: capacityMsg,
+            availability: {
+              currentBookings: availability.currentBookings,
+              capacity: availability.capacity,
+              remaining: availability.remaining
+            }
+          })}`);
+        }
+
         // Ensure customer-restaurant link exists (create if needed)
         // Use upsert to prevent race condition from concurrent requests
         await tx.customerRestaurant.upsert({
@@ -504,7 +748,7 @@ export const customerReservationController = {
           }
         });
 
-        // Create the reservation
+        // Create the reservation within the same transaction
         return await tx.reservation.create({
           data: {
             customerId: customerId || null,
@@ -579,6 +823,15 @@ export const customerReservationController = {
         reservation
       });
     } catch (error: any) {
+      // Handle capacity exceeded error from transaction
+      if (error?.message && error.message.startsWith('CAPACITY_EXCEEDED:')) {
+        try {
+          const capacityError = JSON.parse(error.message.replace('CAPACITY_EXCEEDED:', ''));
+          return res.status(400).json(capacityError);
+        } catch (parseError) {
+          // Fall through to generic error handling if parsing fails
+        }
+      }
       console.error('Create reservation error:', error);
       res.status(500).json({ 
         error: 'Failed to create reservation',

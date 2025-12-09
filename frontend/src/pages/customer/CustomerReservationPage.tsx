@@ -44,6 +44,22 @@ import { customerAuthService } from '../../services/customerAuthService';
 import { Link } from '@mui/material';
 import { SignUpDialog } from '../../components/customer/SignUpDialog';
 
+// Helper function to format date as YYYY-MM-DD using UTC date components
+// This ensures consistent date formatting with the backend regardless of user timezone
+// Converts local date to UTC date string representing the same calendar date
+const formatDateUTC = (date: Date): string => {
+  // Extract local date components and create UTC date string
+  // This preserves the calendar date regardless of timezone
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const day = date.getDate();
+  // Format as UTC date string (YYYY-MM-DD)
+  const yearStr = String(year);
+  const monthStr = String(month + 1).padStart(2, '0');
+  const dayStr = String(day).padStart(2, '0');
+  return `${yearStr}-${monthStr}-${dayStr}`;
+};
+
 interface FormData {
   customerName: string;
   customerPhone: string;
@@ -74,6 +90,8 @@ const CustomerReservationPage: React.FC = () => {
     customerEmail?: string;
     customerPhone?: string;
   }>({});
+  const [dailyCapacities, setDailyCapacities] = useState<Map<string, { available: boolean; currentCovers: number; maxCoversPerDay: number }>>(new Map());
+  const [loadingCapacity, setLoadingCapacity] = useState(false);
   
   const [formData, setFormData] = useState<FormData>({
     customerName: user?.name || '',
@@ -369,20 +387,74 @@ const CustomerReservationPage: React.FC = () => {
   // Get time slots for the selected date
   const timeSlots = generateTimeSlots(formData.reservationDate);
 
-  // Check if a date should be disabled (restaurant is closed)
+  // Fetch daily capacity data
+  useEffect(() => {
+    const fetchDailyCapacity = async () => {
+      if (!restaurantSettings?.reservationSettings?.maxCoversPerDay) {
+        setDailyCapacities(new Map()); // Clear capacity data if no limit configured
+        return;
+      }
+
+      setLoadingCapacity(true);
+      try {
+        const startDate = new Date();
+        const endDate = addDays(startDate, 90);
+        const partySizeNum = formData.partySize ? parseInt(formData.partySize) : undefined;
+        const restaurantSlug = getCurrentRestaurantSlug();
+        const response = await customerReservationService.getDailyCapacity({
+          startDate: formatDateUTC(startDate),
+          endDate: formatDateUTC(endDate),
+          restaurantSlug: restaurantSlug || undefined,
+          partySize: partySizeNum
+        });
+
+        // Convert to Map for quick lookup
+        const capacityMap = new Map();
+        response.dailyCapacities.forEach((cap: any) => {
+          capacityMap.set(cap.date, {
+            available: cap.available,
+            currentCovers: cap.currentCovers,
+            maxCoversPerDay: cap.maxCoversPerDay
+          });
+        });
+        setDailyCapacities(capacityMap);
+      } catch (error) {
+        console.error('Error fetching daily capacity:', error);
+        // Don't block reservation form if this fails
+      } finally {
+        setLoadingCapacity(false);
+      }
+    };
+
+    fetchDailyCapacity();
+  }, [restaurantSettings?.reservationSettings?.maxCoversPerDay, formData.partySize]);
+
+  // Check if a date should be disabled (restaurant is closed or daily capacity exceeded)
   const shouldDisableDate = (date: Date): boolean => {
-    if (!restaurantSettings?.openingHours || typeof restaurantSettings.openingHours !== 'object') {
-      return false; // Don't disable if we don't have operating hours
+    // Check if restaurant is closed
+    if (restaurantSettings?.openingHours && typeof restaurantSettings.openingHours === 'object') {
+      const dayOfWeek = date.getDay();
+      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const dayName = dayNames[dayOfWeek];
+      const operatingHours = restaurantSettings.openingHours;
+      const dayHours = operatingHours[dayName];
+
+      // Disable if day is closed or no hours configured
+      if (!dayHours || dayHours.closed || !dayHours.open || !dayHours.close) {
+        return true;
+      }
     }
 
-    const dayOfWeek = date.getDay();
-    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const dayName = dayNames[dayOfWeek];
-    const operatingHours = restaurantSettings.openingHours;
-    const dayHours = operatingHours[dayName];
+    // Check daily capacity
+    if (restaurantSettings?.reservationSettings?.maxCoversPerDay) {
+      const dateStr = formatDateUTC(date);
+      const capacity = dailyCapacities.get(dateStr);
+      if (capacity && !capacity.available) {
+        return true; // Disable if daily capacity exceeded
+      }
+    }
 
-    // Disable if day is closed or no hours configured
-    return !dayHours || dayHours.closed || !dayHours.open || !dayHours.close;
+    return false;
   };
 
   // Get party size range from reservation settings
@@ -395,6 +467,33 @@ const CustomerReservationPage: React.FC = () => {
     partySizeOptions.push(size);
   }
 
+  // Check if form is ready for submission
+  const isFormValid = (): boolean => {
+    // Check basic required fields
+    if (!formData.reservationDate ||
+        !formData.reservationTime ||
+        !formData.customerName?.trim() ||
+        !formData.customerEmail?.trim() ||
+        !formData.customerPhone?.trim() ||
+        fieldErrors.customerName ||
+        fieldErrors.customerEmail ||
+        fieldErrors.customerPhone) {
+      return false;
+    }
+
+    // Check if selected date is available according to daily capacity
+    if (formData.reservationDate && restaurantSettings?.reservationSettings?.maxCoversPerDay) {
+      const dateStr = formatDateUTC(formData.reservationDate);
+      const capacity = dailyCapacities.get(dateStr);
+      // If capacity data exists for this date and it's not available, disable submission
+      if (capacity && !capacity.available) {
+        return false;
+      }
+    }
+
+    return true;
+  };
+
   const handleNext = () => {
     // Validate reservation details first
     if (activeStep === 0 && (!formData.reservationDate || !formData.reservationTime)) {
@@ -404,7 +503,7 @@ const CustomerReservationPage: React.FC = () => {
 
     // Validate contact information
     if (!validateForm()) {
-      enqueueSnackbar('Please fill in all required fields', { variant: 'error' });
+      enqueueSnackbar('Please fill in all required fields correctly', { variant: 'error' });
       return;
     }
     
@@ -434,7 +533,7 @@ const CustomerReservationPage: React.FC = () => {
       const data: ReservationFormData & { 
         restaurantSlug?: string;
       } = {
-        reservationDate: format(formData.reservationDate!, 'yyyy-MM-dd'),
+        reservationDate: formatDateUTC(formData.reservationDate!),
         reservationTime: formData.reservationTime,
         partySize: parseInt(formData.partySize),
         notes: formData.specialRequests || undefined,
@@ -456,7 +555,7 @@ const CustomerReservationPage: React.FC = () => {
       const reservationData: ReservationFormData & { 
         restaurantSlug?: string;
       } = {
-        reservationDate: format(formData.reservationDate!, 'yyyy-MM-dd'),
+        reservationDate: formatDateUTC(formData.reservationDate!),
         reservationTime: formData.reservationTime,
         partySize: parseInt(formData.partySize),
         notes: formData.specialRequests || undefined,
@@ -490,7 +589,7 @@ const CustomerReservationPage: React.FC = () => {
       const data: ReservationFormData & { 
         restaurantSlug?: string;
       } = {
-        reservationDate: format(formData.reservationDate!, 'yyyy-MM-dd'),
+        reservationDate: formatDateUTC(formData.reservationDate!),
         reservationTime: formData.reservationTime,
         partySize: parseInt(formData.partySize),
         notes: formData.specialRequests || undefined,
@@ -633,7 +732,17 @@ const CustomerReservationPage: React.FC = () => {
                   slotProps={{
                     textField: {
                       fullWidth: true,
-                      required: true
+                      required: true,
+                      helperText: formData.reservationDate 
+                        ? (() => {
+                            const dateStr = formatDateUTC(formData.reservationDate);
+                            const capacity = dailyCapacities.get(dateStr);
+                            if (capacity && !capacity.available) {
+                              return `This date is fully booked (${capacity.currentCovers}/${capacity.maxCoversPerDay} covers)`;
+                            }
+                            return `Reservations can be made up to 90 days in advance`;
+                          })()
+                        : 'Select a date up to 90 days in advance'
                     }
                   }}
                 />
@@ -645,7 +754,25 @@ const CustomerReservationPage: React.FC = () => {
                 <InputLabel>Party Size</InputLabel>
                 <Select
                   value={formData.partySize}
-                  onChange={(e) => setFormData({ ...formData, partySize: e.target.value })}
+                  onChange={(e) => {
+                    const newPartySize = e.target.value;
+                    // Clear selected date and time when party size changes
+                    // This prevents showing stale availability data while capacity is being refetched
+                    if (formData.reservationDate || formData.reservationTime) {
+                      setFormData({ 
+                        ...formData, 
+                        partySize: newPartySize,
+                        reservationDate: null,
+                        reservationTime: ''
+                      });
+                      enqueueSnackbar('Please reselect your date and time for the new party size', { 
+                        variant: 'info',
+                        autoHideDuration: 4000
+                      });
+                    } else {
+                      setFormData({ ...formData, partySize: newPartySize });
+                    }
+                  }}
                   startAdornment={<PeopleIcon sx={{ mr: 1, color: 'action.active' }} />}
                 >
                   {partySizeOptions.map((size) => (
@@ -658,31 +785,57 @@ const CustomerReservationPage: React.FC = () => {
             </Grid>
 
             <Grid item xs={12}>
-              <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
+              <Typography variant="subtitle1" gutterBottom sx={{ mt: 2, mb: 1 }}>
                 Available Times
               </Typography>
-              {!formData.reservationDate ? (
+              {loadingCapacity && restaurantSettings?.reservationSettings?.maxCoversPerDay ? (
+                <Alert severity="info" sx={{ mt: 1 }}>
+                  Checking availability for {formData.partySize} {formData.partySize === '1' ? 'guest' : 'guests'}...
+                </Alert>
+              ) : !formData.reservationDate ? (
                 <Alert severity="info" sx={{ mt: 1 }}>
                   Please select a date to see available times
+                </Alert>
+              ) : shouldDisableDate(formData.reservationDate) ? (
+                <Alert severity="warning" sx={{ mt: 1 }}>
+                  {(() => {
+                    const dateStr = formData.reservationDate ? formatDateUTC(formData.reservationDate) : '';
+                    const capacity = dailyCapacities.get(dateStr);
+                    if (capacity && !capacity.available) {
+                      return `This date is fully booked for ${formData.partySize} ${formData.partySize === '1' ? 'guest' : 'guests'} (${capacity.currentCovers}/${capacity.maxCoversPerDay} covers). Please select a different date.`;
+                    }
+                    return 'The restaurant is closed on this day. Please select a different date.';
+                  })()}
                 </Alert>
               ) : timeSlots.length === 0 ? (
                 <Alert severity="warning" sx={{ mt: 1 }}>
                   The restaurant is closed on this day. Please select a different date.
                 </Alert>
               ) : (
-                <Grid container spacing={1}>
-                  {timeSlots.map((time) => (
-                    <Grid item key={time}>
-                      <Button
-                        variant={formData.reservationTime === time ? 'contained' : 'outlined'}
-                        onClick={() => setFormData({ ...formData, reservationTime: time })}
-                        sx={{ minWidth: 80 }}
-                      >
-                        {time}
-                      </Button>
-                    </Grid>
-                  ))}
-                </Grid>
+                <>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                    Select your preferred time ({timeSlots.length} {timeSlots.length === 1 ? 'slot' : 'slots'} available)
+                  </Typography>
+                  <Grid container spacing={1.5}>
+                    {timeSlots.map((time) => (
+                      <Grid item key={time} xs={6} sm={4} md={3} lg={2}>
+                        <Button
+                          variant={formData.reservationTime === time ? 'contained' : 'outlined'}
+                          onClick={() => setFormData({ ...formData, reservationTime: time })}
+                          fullWidth
+                          sx={{ 
+                            minWidth: { xs: '100%', sm: 80 },
+                            py: 1,
+                            fontSize: { xs: '0.875rem', sm: '1rem' },
+                            fontWeight: formData.reservationTime === time ? 600 : 400
+                          }}
+                        >
+                          {time}
+                        </Button>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </>
               )}
             </Grid>
 
@@ -729,6 +882,11 @@ const CustomerReservationPage: React.FC = () => {
                   setFormData({ ...formData, customerName: e.target.value });
                   setFieldErrors({ ...fieldErrors, customerName: undefined });
                 }}
+                onBlur={() => {
+                  if (!formData.customerName || !formData.customerName.trim()) {
+                    setFieldErrors({ ...fieldErrors, customerName: 'Name is required' });
+                  }
+                }}
                 error={!!fieldErrors.customerName}
                 helperText={fieldErrors.customerName}
                 autoComplete="name"
@@ -750,6 +908,12 @@ const CustomerReservationPage: React.FC = () => {
                 onChange={(e) => {
                   setFormData({ ...formData, customerEmail: e.target.value });
                   setFieldErrors({ ...fieldErrors, customerEmail: undefined });
+                }}
+                onBlur={() => {
+                  const emailError = validateEmail(formData.customerEmail);
+                  if (emailError) {
+                    setFieldErrors({ ...fieldErrors, customerEmail: emailError });
+                  }
                 }}
                 error={!!fieldErrors.customerEmail}
                 helperText={fieldErrors.customerEmail}
@@ -790,6 +954,12 @@ const CustomerReservationPage: React.FC = () => {
                   if (!value.includes('@')) {
                     setFormData({ ...formData, customerPhone: value });
                     setFieldErrors({ ...fieldErrors, customerPhone: undefined });
+                  }
+                }}
+                onBlur={() => {
+                  const phoneError = validatePhone(formData.customerPhone);
+                  if (phoneError) {
+                    setFieldErrors({ ...fieldErrors, customerPhone: phoneError });
                   }
                 }}
                 error={!!fieldErrors.customerPhone}
@@ -994,7 +1164,9 @@ const CustomerReservationPage: React.FC = () => {
             <Button
               variant="contained"
               onClick={handleNext}
-              disabled={loading || !formData.reservationDate || !formData.reservationTime || !formData.customerName || !formData.customerEmail || !formData.customerPhone}
+              disabled={loading || !isFormValid()}
+              size="large"
+              sx={{ minWidth: 160 }}
             >
               {loading ? 'Processing...' : 'Confirm Reservation'}
             </Button>

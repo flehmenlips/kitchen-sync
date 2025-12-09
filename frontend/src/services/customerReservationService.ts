@@ -63,5 +63,24 @@ export const customerReservationService = {
   async cancelReservation(id: number): Promise<{ message: string; reservation: Reservation }> {
     const response = await customerApi.put(`/customer/reservations/${id}/cancel`);
     return response.data;
+  },
+
+  // Get daily capacity for date range (public endpoint)
+  async getDailyCapacity(params?: {
+    startDate?: string;
+    endDate?: string;
+    restaurantSlug?: string;
+    partySize?: number;
+  }): Promise<{
+    dailyCapacities: Array<{
+      date: string;
+      currentCovers: number;
+      maxCoversPerDay: number;
+      available: boolean;
+      remaining: number;
+    }>;
+  }> {
+    const response = await customerApi.get('/customer/reservations/daily-capacity', { params });
+    return response.data;
   }
 }; 
