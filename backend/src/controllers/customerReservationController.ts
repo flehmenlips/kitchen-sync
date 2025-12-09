@@ -453,7 +453,13 @@ export const createCustomerReservation = async (req: CustomerAuthRequest, res: R
             }
         }
 
-        res.status(201).json(newReservation);
+        // Add confirmation number to response
+        const reservationWithConfirmation = {
+            ...newReservation,
+            confirmationNumber: generateConfirmationNumber(newReservation.id)
+        };
+
+        res.status(201).json(reservationWithConfirmation);
     } catch (error: any) {
         // Handle capacity exceeded error from transaction
         if (error?.message && error.message.startsWith('CAPACITY_EXCEEDED:')) {

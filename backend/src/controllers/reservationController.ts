@@ -101,35 +101,75 @@ export const getReservations = async (req: Request, res: Response): Promise<void
         if (date) {
             // Backward compatibility: single date parameter
             const dateMatch = (date as string).match(/^(\d{4})-(\d{2})-(\d{2})$/);
-            if (dateMatch) {
-                const [, year, month, day] = dateMatch;
-                const startDateObj = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
-                const endDateObj = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day) + 1));
-                
-                where.reservationDate = {
-                    gte: startDateObj,
-                    lt: endDateObj
-                };
+            if (!dateMatch) {
+                res.status(400).json({ 
+                    message: 'Invalid date format. Use YYYY-MM-DD format.',
+                    error: 'Invalid date parameter format'
+                });
+                return;
             }
+            const [, year, month, day] = dateMatch;
+            const startDateObj = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
+            const endDateObj = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day) + 1));
+            
+            if (isNaN(startDateObj.getTime()) || isNaN(endDateObj.getTime())) {
+                res.status(400).json({ 
+                    message: 'Invalid date value.',
+                    error: 'Invalid date parameter value'
+                });
+                return;
+            }
+            
+            where.reservationDate = {
+                gte: startDateObj,
+                lt: endDateObj
+            };
         } else if (startDate || endDate) {
             // New date range filtering
             const dateFilter: any = {};
             if (startDate) {
                 const startMatch = (startDate as string).match(/^(\d{4})-(\d{2})-(\d{2})$/);
-                if (startMatch) {
-                    const [, year, month, day] = startMatch;
-                    dateFilter.gte = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
+                if (!startMatch) {
+                    res.status(400).json({ 
+                        message: 'Invalid startDate format. Use YYYY-MM-DD format.',
+                        error: 'Invalid startDate parameter format'
+                    });
+                    return;
                 }
+                const [, year, month, day] = startMatch;
+                const parsedStartDate = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
+                if (isNaN(parsedStartDate.getTime())) {
+                    res.status(400).json({ 
+                        message: 'Invalid startDate value.',
+                        error: 'Invalid startDate parameter value'
+                    });
+                    return;
+                }
+                dateFilter.gte = parsedStartDate;
             }
             if (endDate) {
                 const endMatch = (endDate as string).match(/^(\d{4})-(\d{2})-(\d{2})$/);
-                if (endMatch) {
-                    const [, year, month, day] = endMatch;
-                    // Include the entire end date by setting to start of next day
-                    const endDateObj = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day) + 1));
-                    dateFilter.lt = endDateObj;
+                if (!endMatch) {
+                    res.status(400).json({ 
+                        message: 'Invalid endDate format. Use YYYY-MM-DD format.',
+                        error: 'Invalid endDate parameter format'
+                    });
+                    return;
                 }
+                const [, year, month, day] = endMatch;
+                // Include the entire end date by setting to start of next day
+                const endDateObj = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day) + 1));
+                if (isNaN(endDateObj.getTime())) {
+                    res.status(400).json({ 
+                        message: 'Invalid endDate value.',
+                        error: 'Invalid endDate parameter value'
+                    });
+                    return;
+                }
+                dateFilter.lt = endDateObj;
             }
+            // If date range parameters were provided, at least one must be valid
+            // (This check is now redundant since we validate above, but kept for clarity)
             if (Object.keys(dateFilter).length > 0) {
                 where.reservationDate = dateFilter;
             }
@@ -655,15 +695,21 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
             }
         }
 
+        // Add confirmation number to response
+        const reservationWithConfirmation = {
+            ...newReservation,
+            confirmationNumber: generateConfirmationNumber(newReservation.id)
+        };
+
         // Include warning in response if capacity was exceeded (override case)
         if (capacityWarning) {
             res.status(201).json({
-                ...newReservation,
+                ...reservationWithConfirmation,
                 warning: capacityWarning,
                 capacityExceeded: true
             });
         } else {
-            res.status(201).json(newReservation);
+            res.status(201).json(reservationWithConfirmation);
         }
     } catch (error: any) {
         console.error('Error creating reservation:', error);
