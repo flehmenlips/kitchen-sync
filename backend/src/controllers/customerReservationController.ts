@@ -301,6 +301,10 @@ export const createCustomerReservation = async (req: CustomerAuthRequest, res: R
 
         // Validate date is not in the past
         const reservationDateTime = new Date(`${reservationDate}T${reservationTime}`);
+        if (isNaN(reservationDateTime.getTime())) {
+            res.status(400).json({ message: 'Invalid date and time combination' });
+            return;
+        }
         if (reservationDateTime < new Date()) {
             res.status(400).json({ message: 'Cannot create reservations in the past' });
             return;
