@@ -251,11 +251,17 @@ export const getReservations = async (req: Request, res: Response): Promise<void
             console.log('[getReservations] Restaurant IDs in results:', restaurantIdsInResults);
         }
 
+        // Add confirmation numbers to reservations
+        const reservationsWithConfirmation = reservations.map(res => ({
+            ...res,
+            confirmationNumber: generateConfirmationNumber(res.id)
+        }));
+
         // Return paginated response if pagination is enabled
         if (paginationEnabled) {
             const totalPages = Math.ceil(totalCount / limitNum);
             res.status(200).json({
-                data: reservations,
+                data: reservationsWithConfirmation,
                 pagination: {
                     page: pageNum,
                     limit: limitNum,
@@ -268,7 +274,7 @@ export const getReservations = async (req: Request, res: Response): Promise<void
             });
         } else {
             // Backward compatible: return array directly
-            res.status(200).json(reservations);
+            res.status(200).json(reservationsWithConfirmation);
         }
     } catch (error) {
         console.error('Error fetching reservations:', error);

@@ -15,6 +15,7 @@ export interface Reservation {
   specialRequests?: string;
   createdAt: string;
   updatedAt: string;
+  confirmationNumber?: string;
   orders?: Array<{
     id: number;
     orderNumber: string;

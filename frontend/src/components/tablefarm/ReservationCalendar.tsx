@@ -302,7 +302,19 @@ export const ReservationCalendar: React.FC = () => {
           console.warn('Invalid reservation date:', res.reservationDate, res.id);
           return false;
         }
-        return isSameDay(resDate, date) && res.status !== ReservationStatus.CANCELLED;
+        // Compare dates using UTC date components to avoid timezone issues
+        // Reservation dates are stored as UTC midnight, so we compare UTC dates
+        const resDateUTC = new Date(Date.UTC(
+          resDate.getUTCFullYear(),
+          resDate.getUTCMonth(),
+          resDate.getUTCDate()
+        ));
+        const compareDateUTC = new Date(Date.UTC(
+          date.getUTCFullYear(),
+          date.getUTCMonth(),
+          date.getUTCDate()
+        ));
+        return resDateUTC.getTime() === compareDateUTC.getTime() && res.status !== ReservationStatus.CANCELLED;
       } catch (error) {
         console.warn('Error parsing reservation date:', res.reservationDate, res.id, error);
         return false;
@@ -1490,12 +1502,33 @@ export const ReservationCalendar: React.FC = () => {
                   sx={{ mb: 1 }}
                 />
               </Box>
+              {viewReservation.confirmationNumber && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Confirmation Number
+                  </Typography>
+                  <Typography variant="h6" fontWeight="bold">
+                    {viewReservation.confirmationNumber}
+                  </Typography>
+                </Box>
+              )}
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6}>
                   <Box display="flex" alignItems="center" mb={1}>
                     <EventIcon sx={{ mr: 1, color: 'text.secondary' }} />
                     <Typography>
-                      {format(new Date(viewReservation.reservationDate), 'EEEE, MMMM d, yyyy')}
+                      {(() => {
+                        // Format date using UTC components to ensure correct date display
+                        // Reservation dates are stored as UTC midnight, so we extract UTC components
+                        const resDate = new Date(viewReservation.reservationDate);
+                        // Create a local date with UTC components to display correctly
+                        const displayDate = new Date(
+                          resDate.getUTCFullYear(),
+                          resDate.getUTCMonth(),
+                          resDate.getUTCDate()
+                        );
+                        return format(displayDate, 'EEEE, MMMM d, yyyy');
+                      })()}
                     </Typography>
                   </Box>
                   <Box display="flex" alignItems="center" mb={1}>

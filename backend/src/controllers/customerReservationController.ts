@@ -539,7 +539,12 @@ export const customerReservationController = {
       });
 
       console.log('Found reservations:', reservations.length);
-      res.json(reservations);
+      // Add confirmation numbers to reservations
+      const reservationsWithConfirmation = reservations.map(res => ({
+        ...res,
+        confirmationNumber: generateConfirmationNumber(res.id)
+      }));
+      res.json(reservationsWithConfirmation);
     } catch (error) {
       console.error('Get reservations error:', error);
       res.status(500).json({ error: 'Failed to fetch reservations' });
@@ -764,12 +769,21 @@ export const customerReservationController = {
         }
       }
 
-      // Validate date format
-      const reservationDateObj = new Date(reservationDate);
-      if (isNaN(reservationDateObj.getTime())) {
+      // Validate date format and parse correctly to avoid timezone issues
+      // Parse YYYY-MM-DD format as UTC midnight to ensure consistent date storage
+      const dateMatch = reservationDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!dateMatch) {
         return res.status(400).json({
           error: 'Invalid date format',
           message: 'Invalid date format. Use YYYY-MM-DD format.'
+        });
+      }
+      const [, year, month, day] = dateMatch;
+      const reservationDateObj = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
+      if (isNaN(reservationDateObj.getTime())) {
+        return res.status(400).json({
+          error: 'Invalid date',
+          message: 'Invalid date value.'
         });
       }
 
@@ -856,7 +870,7 @@ export const customerReservationController = {
             customerEmail,
             customerPhone,
             restaurantId,
-            reservationDate: new Date(reservationDate),
+            reservationDate: reservationDateObj, // Use properly parsed UTC date
             reservationTime,
             partySize: parseInt(partySize),
             status: 'CONFIRMED',
@@ -920,9 +934,15 @@ export const customerReservationController = {
         // Don't fail the reservation creation if email fails
       }
 
+      // Add confirmation number to response
+      const reservationWithConfirmation = {
+        ...reservation,
+        confirmationNumber: generateConfirmationNumber(reservation.id)
+      };
+
       res.status(201).json({
         message: 'Reservation created successfully',
-        reservation
+        reservation: reservationWithConfirmation
       });
     } catch (error: any) {
       // Handle capacity exceeded error from transaction
