@@ -124,7 +124,8 @@ export async function checkAvailabilityInTransaction(
   partySize: number,
   allowOverride: boolean = false
 ): Promise<AvailabilityResult> {
-  const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
+  // Use UTC day since dates are stored as UTC midnight
+  const dayOfWeek = date.getUTCDay(); // 0 = Sunday, 6 = Saturday
 
   // Get reservation settings (using transaction client)
   const settings = await tx.reservationSettings.findUnique({
@@ -325,7 +326,8 @@ export async function checkAvailability(
   partySize: number,
   allowOverride: boolean = false
 ): Promise<AvailabilityResult> {
-  const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
+  // Use UTC day since dates are stored as UTC midnight
+  const dayOfWeek = date.getUTCDay(); // 0 = Sunday, 6 = Saturday
 
   // Get reservation settings
   const settings = await prisma.reservationSettings.findUnique({
@@ -452,7 +454,8 @@ export async function getTimeSlotAvailabilities(
       return [];
     }
 
-    const dayOfWeek = date.getDay();
+    // Use UTC day since dates are stored as UTC midnight
+    const dayOfWeek = date.getUTCDay();
 
     // First check daily capacity (this overrides time slot capacity if exceeded)
     const dailyCapacity = await checkDailyCapacity(restaurantId, date);
@@ -603,7 +606,8 @@ export async function generateTimeSlots(
       return generateDefaultTimeSlots();
     }
 
-    const dayOfWeek = date.getDay();
+    // Use UTC day since dates are stored as UTC midnight
+    const dayOfWeek = date.getUTCDay();
     const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const dayName = dayNames[dayOfWeek];
 
