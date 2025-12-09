@@ -418,7 +418,16 @@ export const createCustomerReservation = async (req: CustomerAuthRequest, res: R
         const emailToUse = customerEmail || customerProfile.user.email;
         if (emailToUse) {
             try {
-                const formattedDate = format(reservationDateObj, 'EEEE, MMMM d, yyyy');
+                // Format date using UTC components to ensure correct date display
+                // Extract UTC components to avoid timezone issues
+                const resDate = new Date(reservationDateObj);
+                // Create a local date with UTC components to display correctly
+                const displayDate = new Date(
+                    resDate.getUTCFullYear(),
+                    resDate.getUTCMonth(),
+                    resDate.getUTCDate()
+                );
+                const formattedDate = format(displayDate, 'EEEE, MMMM d, yyyy');
                 await emailService.sendReservationConfirmation(
                     emailToUse,
                     customerName || customerProfile.user.name || 'Guest',
@@ -916,7 +925,16 @@ export const customerReservationController = {
 
       // Send confirmation email
       try {
-        const formattedDate = format(reservation.reservationDate, 'EEEE, MMMM d, yyyy');
+        // Format date using UTC components to ensure correct date display
+        // Reservation dates are stored as UTC midnight, so we extract UTC components
+        const resDate = new Date(reservation.reservationDate);
+        // Create a local date with UTC components to display correctly
+        const displayDate = new Date(
+          resDate.getUTCFullYear(),
+          resDate.getUTCMonth(),
+          resDate.getUTCDate()
+        );
+        const formattedDate = format(displayDate, 'EEEE, MMMM d, yyyy');
         await emailService.sendReservationConfirmation(
           customer.email,
           customerName,
