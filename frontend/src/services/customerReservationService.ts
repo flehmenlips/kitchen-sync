@@ -9,6 +9,8 @@ export interface ReservationFormData {
   customerPhone?: string;
   customerName?: string;
   customerEmail?: string;
+  restaurantSlug?: string;
+  restaurantId?: number;
 }
 
 export interface Reservation {
