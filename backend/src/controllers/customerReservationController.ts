@@ -284,7 +284,28 @@ export const createCustomerReservation = async (req: CustomerAuthRequest, res: R
         }
 
         const restaurantId = 1; // Single restaurant MVP
+        
+        // Validate date format
         const reservationDateObj = new Date(reservationDate);
+        if (isNaN(reservationDateObj.getTime())) {
+            res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD format.' });
+            return;
+        }
+
+        // Validate time format (HH:MM)
+        const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+        if (!timeRegex.test(reservationTime)) {
+            res.status(400).json({ message: 'Invalid time format. Use HH:MM format (e.g., 18:00).' });
+            return;
+        }
+
+        // Validate date is not in the past
+        const reservationDateTime = new Date(`${reservationDate}T${reservationTime}`);
+        if (reservationDateTime < new Date()) {
+            res.status(400).json({ message: 'Cannot create reservations in the past' });
+            return;
+        }
+
         const partySizeNum = parseInt(partySize);
         const customerUserId = req.customerUser.userId; // Store for use in transaction
 
@@ -333,7 +354,7 @@ export const createCustomerReservation = async (req: CustomerAuthRequest, res: R
                     customerEmail: customerEmail || customerProfile.user.email,
                     customerId: customerUserId,
                     partySize: partySizeNum,
-                    reservationDate: new Date(reservationDate),
+                    reservationDate: reservationDateObj,
                     reservationTime,
                     notes,
                     specialRequests,
@@ -393,14 +414,14 @@ export const createCustomerReservation = async (req: CustomerAuthRequest, res: R
         const emailToUse = customerEmail || customerProfile.user.email;
         if (emailToUse) {
             try {
-                const formattedDate = format(new Date(reservationDate), 'EEEE, MMMM d, yyyy');
+                const formattedDate = format(reservationDateObj, 'EEEE, MMMM d, yyyy');
                 await emailService.sendReservationConfirmation(
                     emailToUse,
                     customerName || customerProfile.user.name || 'Guest',
                     {
                         date: formattedDate,
                         time: reservationTime,
-                        partySize,
+                        partySize: partySizeNum,
                         specialRequests: notes || specialRequests,
                         confirmationNumber: generateConfirmationNumber(newReservation.id)
                     },
