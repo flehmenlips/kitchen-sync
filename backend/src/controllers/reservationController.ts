@@ -434,28 +434,16 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
             newReservation = await prisma.$transaction(async (tx) => {
                 // Check availability INSIDE transaction (using transaction-aware function)
                 // This ensures no concurrent requests can both pass the capacity check
-                try {
-                    availability = await checkAvailabilityInTransaction(
-                        tx,
-                        restaurantId,
-                        reservationDateObj,
-                        reservationTime,
-                        partySizeNum,
-                        allowOverride
-                    );
-                } catch (error: any) {
-                    console.error('Error checking availability in transaction:', error);
-                    // If availability check fails, log but continue (might be a settings issue)
-                    // We'll still try to create the reservation
-                    availability = {
-                        available: true,
-                        currentBookings: 0,
-                        capacity: null,
-                        remaining: null,
-                        canOverbook: false,
-                        overbooked: false
-                    };
-                }
+                // If this throws an error (database timeout, network issue, etc.), we MUST fail
+                // the transaction to prevent overbooking. Capacity validation is critical.
+                availability = await checkAvailabilityInTransaction(
+                    tx,
+                    restaurantId,
+                    reservationDateObj,
+                    reservationTime,
+                    partySizeNum,
+                    allowOverride
+                );
 
                 // Check daily capacity INSIDE transaction (using transaction-aware function)
                 dailyCapacity = await checkDailyCapacityInTransaction(
