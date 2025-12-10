@@ -357,7 +357,14 @@ export const ReservationDashboard: React.FC = () => {
                         {filteredStats.totalReservations}
                       </Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                        {format(new Date(dateRange.startDate), 'MMM d')} - {format(new Date(dateRange.endDate), 'MMM d, yyyy')}
+                        {(() => {
+                          // Parse dates correctly to avoid timezone issues
+                          const [startYear, startMonth, startDay] = dateRange.startDate.split('-').map(Number);
+                          const [endYear, endMonth, endDay] = dateRange.endDate.split('-').map(Number);
+                          const startDisplayDate = new Date(startYear, startMonth - 1, startDay);
+                          const endDisplayDate = new Date(endYear, endMonth - 1, endDay);
+                          return `${format(startDisplayDate, 'MMM d')} - ${format(endDisplayDate, 'MMM d, yyyy')}`;
+                        })()}
                       </Typography>
                     </Box>
                     <EventIcon sx={{ fontSize: 40, color: theme.palette.primary.main }} />
@@ -492,7 +499,7 @@ export const ReservationDashboard: React.FC = () => {
                 Reservations by Date
               </Typography>
               <Grid container spacing={2} sx={{ mt: 1 }}>
-                {filteredStats.byDate.map((dateStat, index) => {
+                {filteredStats.byDate.slice(0, 10).map((dateStat, index) => {
                   // Format date using UTC components to ensure correct date display
                   // The date string from backend is in YYYY-MM-DD format (UTC date)
                   const [year, month, day] = dateStat.date.split('-').map(Number);
