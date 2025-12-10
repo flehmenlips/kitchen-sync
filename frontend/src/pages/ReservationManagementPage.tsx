@@ -101,12 +101,21 @@ const ReservationFormDialog: React.FC<ReservationFormDialogProps> = ({
 
   useEffect(() => {
     if (reservation) {
+      // Format date using UTC components to ensure correct date display in form
+      // Reservation dates are stored as UTC midnight, so we extract UTC components
+      const resDate = new Date(reservation.reservationDate);
+      const displayDate = new Date(
+        resDate.getUTCFullYear(),
+        resDate.getUTCMonth(),
+        resDate.getUTCDate()
+      );
+      
       setFormData({
         customerName: reservation.customerName,
         customerEmail: reservation.customerEmail || '',
         customerPhone: reservation.customerPhone || '',
         partySize: reservation.partySize,
-        reservationDate: format(parseISO(reservation.reservationDate), 'yyyy-MM-dd'),
+        reservationDate: format(displayDate, 'yyyy-MM-dd'),
         reservationTime: reservation.reservationTime,
         status: reservation.status,
         notes: reservation.notes || '',
@@ -740,7 +749,18 @@ const ReservationManagementPage: React.FC = () => {
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
                 <CalendarIcon fontSize="small" sx={{ mr: 0.5 }} />
-                {format(parseISO(reservation.reservationDate), 'MMM d, yyyy')}
+                {(() => {
+                  // Format date using UTC components to ensure correct date display
+                  // Reservation dates are stored as UTC midnight, so we extract UTC components
+                  const resDate = new Date(reservation.reservationDate);
+                  // Create a local date with UTC components to display correctly
+                  const displayDate = new Date(
+                    resDate.getUTCFullYear(),
+                    resDate.getUTCMonth(),
+                    resDate.getUTCDate()
+                  );
+                  return format(displayDate, 'MMM d, yyyy');
+                })()}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
                 <TimeIcon fontSize="small" sx={{ mr: 0.5 }} />
@@ -1111,7 +1131,18 @@ const ReservationManagementPage: React.FC = () => {
                   <TableCell>
                     <Box display="flex" alignItems="center">
                       <CalendarIcon fontSize="small" sx={{ mr: 1 }} />
-                      {format(parseISO(reservation.reservationDate), 'MMM d, yyyy')}
+                      {(() => {
+                        // Format date using UTC components to ensure correct date display
+                        // Reservation dates are stored as UTC midnight, so we extract UTC components
+                        const resDate = new Date(reservation.reservationDate);
+                        // Create a local date with UTC components to display correctly
+                        const displayDate = new Date(
+                          resDate.getUTCFullYear(),
+                          resDate.getUTCMonth(),
+                          resDate.getUTCDate()
+                        );
+                        return format(displayDate, 'MMM d, yyyy');
+                      })()}
                     </Box>
                   </TableCell>
                   <TableCell>
