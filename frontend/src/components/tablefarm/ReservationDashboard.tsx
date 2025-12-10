@@ -18,8 +18,7 @@ import {
   Chip,
   IconButton,
   Tooltip,
-  Stack,
-  Divider
+  Stack
 } from '@mui/material';
 import {
   Event as EventIcon,
@@ -125,6 +124,21 @@ export const ReservationDashboard: React.FC = () => {
     applyDatePreset('last30');
   };
 
+  /**
+   * Escapes a CSV field value according to RFC 4180:
+   * - Fields containing commas, quotes, or newlines must be wrapped in double quotes
+   * - Embedded double quotes must be escaped by doubling them ("")
+   */
+  const escapeCsvField = (field: string | number): string => {
+    const str = String(field);
+    // Check if field contains comma, quote, or newline
+    if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+      // Escape embedded quotes by doubling them, then wrap in quotes
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
   const handleExport = () => {
     if (!stats) return;
 
@@ -145,7 +159,7 @@ export const ReservationDashboard: React.FC = () => {
       ...stats.byDate.map(d => [d.date, d.count.toString(), d.totalGuests.toString()])
     ];
 
-    const csvContent = csvRows.map(row => row.join(',')).join('\n');
+    const csvContent = csvRows.map(row => row.map(escapeCsvField).join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -187,11 +201,50 @@ export const ReservationDashboard: React.FC = () => {
   const getFilteredStats = (): ReservationStats | null => {
     if (!stats) return null;
 
-    // Note: Status filtering would need backend support for proper filtering
-    // For now, we'll filter client-side on the byDate data
-    // The summary cards show all statuses regardless of filter
+    // If no status filter is applied, return stats as-is
+    if (statusFilter === 'all') {
+      return stats;
+    }
+
+    // Filter summary stats based on selected status
+    // Note: byDate and peakHours cannot be filtered by status without backend support
+    // since they don't contain status breakdown information
+    const filteredByStatus = stats.byStatus[statusFilter] || 0;
     
-    return stats;
+    // Calculate filtered totals - when filtering by a specific status,
+    // only show data for that status
+    const filteredTotalReservations = filteredByStatus;
+    
+    // Set status-specific counts based on the filter
+    const filteredConfirmed = statusFilter === ReservationStatus.CONFIRMED ? filteredByStatus : 0;
+    const filteredCancelled = statusFilter === ReservationStatus.CANCELLED ? filteredByStatus : 0;
+    
+    // Update byStatus to only show the filtered status
+    const filteredByStatusRecord: Record<string, number> = {};
+    if (filteredByStatus > 0) {
+      filteredByStatusRecord[statusFilter] = filteredByStatus;
+    }
+    
+    return {
+      ...stats,
+      totalReservations: filteredTotalReservations,
+      confirmed: filteredConfirmed,
+      cancelled: filteredCancelled,
+      pending: 0, // PENDING status doesn't exist in ReservationStatus enum
+      byStatus: filteredByStatusRecord,
+      // Note: byDate and peakHours remain unfiltered as they don't contain status info
+      // To properly filter these, backend support would be needed to include status breakdown
+      byDate: stats.byDate, // Cannot filter without status breakdown per date
+      peakHours: stats.peakHours, // Cannot filter without status breakdown per hour
+      // Average party size and total guests cannot be accurately calculated without
+      // fetching individual reservations filtered by status, so we use proportional estimates
+      averagePartySize: filteredTotalReservations > 0 && stats.totalReservations > 0
+        ? stats.averagePartySize 
+        : 0,
+      totalGuests: filteredTotalReservations > 0 && stats.totalReservations > 0
+        ? Math.round((filteredTotalReservations / stats.totalReservations) * stats.totalGuests)
+        : 0
+    };
   };
 
   const filteredStats = getFilteredStats();
