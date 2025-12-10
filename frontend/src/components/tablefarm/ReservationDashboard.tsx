@@ -140,23 +140,25 @@ export const ReservationDashboard: React.FC = () => {
   };
 
   const handleExport = () => {
-    if (!stats) return;
+    const exportStats = getFilteredStats();
+    if (!exportStats) return;
 
     const csvRows = [
       ['Metric', 'Value'],
-      ['Total Reservations', stats.totalReservations.toString()],
-      ['Confirmed', stats.confirmed.toString()],
-      ['Cancelled', stats.cancelled.toString()],
-      ['Total Guests', stats.totalGuests.toString()],
-      ['Average Party Size', stats.averagePartySize.toFixed(2)],
+      ['Total Reservations', exportStats.totalReservations.toString()],
+      ['Confirmed', exportStats.confirmed.toString()],
+      ['Cancelled', exportStats.cancelled.toString()],
+      ['Total Guests', exportStats.totalGuests.toString()],
+      ['Average Party Size', exportStats.averagePartySize.toFixed(2)],
       [''],
       ['Date Range', `${dateRange.startDate} to ${dateRange.endDate}`],
+      ...(statusFilter !== 'all' ? [['Status Filter', statusFilter]] : []),
       [''],
       ['Peak Hours', 'Count'],
-      ...stats.peakHours.map(ph => [ph.hour, ph.count.toString()]),
+      ...exportStats.peakHours.map(ph => [ph.hour, ph.count.toString()]),
       [''],
       ['Date', 'Reservations', 'Guests'],
-      ...stats.byDate.map(d => [d.date, d.count.toString(), d.totalGuests.toString()])
+      ...exportStats.byDate.map(d => [d.date, d.count.toString(), d.totalGuests.toString()])
     ];
 
     const csvContent = csvRows.map(row => row.map(escapeCsvField).join(',')).join('\n');
@@ -164,7 +166,8 @@ export const ReservationDashboard: React.FC = () => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `reservation-analytics-${dateRange.startDate}-${dateRange.endDate}.csv`;
+    const statusSuffix = statusFilter !== 'all' ? `-${statusFilter}` : '';
+    a.download = `reservation-analytics-${dateRange.startDate}-${dateRange.endDate}${statusSuffix}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
