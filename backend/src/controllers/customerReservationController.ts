@@ -310,12 +310,22 @@ export const createCustomerReservation = async (req: CustomerAuthRequest, res: R
         }
         
         // Fall back to restaurantId from body only if no slug was provided
-        if (!restaurantId && req.body.restaurantId) {
+        // CRITICAL FIX: Use explicit conditional checks instead of truthy checks to handle 0 values correctly
+        if (restaurantId === undefined && req.body.restaurantId !== undefined && req.body.restaurantId !== null) {
             restaurantId = parseInt(req.body.restaurantId);
+            // Validate that the parsed value is a valid number
+            if (isNaN(restaurantId)) {
+                res.status(400).json({ 
+                    error: 'Invalid restaurant ID',
+                    message: 'The provided restaurant ID is not a valid number'
+                });
+                return;
+            }
         }
         
         // Fail if no restaurantId found
-        if (!restaurantId) {
+        // CRITICAL FIX: Check for undefined separately from NaN to provide appropriate error messages
+        if (restaurantId === undefined) {
             res.status(400).json({ 
                 message: 'Restaurant ID or slug is required',
                 error: 'Please provide a restaurant slug or restaurant ID'
