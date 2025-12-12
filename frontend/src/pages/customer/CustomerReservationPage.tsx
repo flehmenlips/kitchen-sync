@@ -895,6 +895,15 @@ const CustomerReservationPage: React.FC = () => {
                 InputProps={{
                   startAdornment: <PersonIcon sx={{ mr: 1, color: 'action.active' }} />
                 }}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    minWidth: 0, // Allow flex item to shrink properly
+                    width: '100%', // Ensure input fills container
+                  },
+                  '& .MuiInputBase-root': {
+                    width: '100%', // Ensure root fills container
+                  }
+                }}
               />
             </Grid>
 
@@ -927,14 +936,12 @@ const CustomerReservationPage: React.FC = () => {
                   '& .MuiInputBase-input': {
                     fontSize: '1rem', // Standard readable font size
                     padding: '14px 14px 14px 0',
+                    minWidth: 0, // Allow flex item to shrink properly
+                    width: '100%', // Ensure input fills container
                   },
                   '& .MuiInputBase-root': {
                     minHeight: '56px',
-                  }
-                }}
-                inputProps={{
-                  style: {
-                    minWidth: '200px', // Ensure minimum width for email visibility
+                    width: '100%', // Ensure root fills container
                   }
                 }}
               />
