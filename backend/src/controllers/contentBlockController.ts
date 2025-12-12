@@ -32,9 +32,10 @@ export const BLOCK_TYPES = {
 export const getContentBlocks = async (req: Request, res: Response) => {
   try {
     const { page = 'home', restaurantSlug } = req.query;
-    let restaurantId = 1; // Default fallback
+    let restaurantId: number | undefined;
 
-    // If restaurantSlug is provided, look up the restaurant ID
+    // CRITICAL FIX: Require restaurantSlug - never default to restaurant ID 1
+    // This prevents data leakage between restaurants
     if (restaurantSlug) {
       const restaurant = await prisma.restaurant.findUnique({
         where: { slug: restaurantSlug as string },
@@ -43,7 +44,16 @@ export const getContentBlocks = async (req: Request, res: Response) => {
       
       if (restaurant) {
         restaurantId = restaurant.id;
+      } else {
+        res.status(404).json({ error: 'Restaurant not found for slug: ' + restaurantSlug });
+        return;
       }
+    } else {
+      res.status(400).json({ 
+        error: 'Restaurant slug required',
+        message: 'Please provide a restaurantSlug query parameter'
+      });
+      return;
     }
 
     const blocks = await prisma.contentBlock.findMany({
@@ -67,7 +77,17 @@ export const getContentBlocks = async (req: Request, res: Response) => {
 // Get all content blocks for admin (including inactive)
 export const getAllContentBlocks = async (req: Request, res: Response) => {
   try {
-    const restaurantId = 1;
+    // CRITICAL FIX: Require restaurantId from request context or params
+    // Never hardcode restaurant ID - this causes data leakage
+    const restaurantId = req.restaurantId || parseInt(req.query.restaurantId as string) || parseInt(req.params.restaurantId);
+    
+    if (!restaurantId || isNaN(restaurantId)) {
+      res.status(400).json({ 
+        error: 'Restaurant ID required',
+        message: 'Please provide a restaurantId parameter or ensure restaurant context is set'
+      });
+      return;
+    }
 
     const blocks = await prisma.contentBlock.findMany({
       where: { restaurantId },
@@ -114,7 +134,17 @@ export const getAllContentBlocks = async (req: Request, res: Response) => {
 // Create a new content block
 export const createContentBlock = async (req: Request, res: Response) => {
   try {
-    const restaurantId = 1;
+    // CRITICAL FIX: Require restaurantId from request body or context
+    // Never hardcode restaurant ID - this causes data leakage
+    const restaurantId = req.body.restaurantId || req.restaurantId || parseInt(req.query.restaurantId as string) || parseInt(req.params.restaurantId);
+    
+    if (!restaurantId || isNaN(restaurantId)) {
+      res.status(400).json({ 
+        error: 'Restaurant ID required',
+        message: 'Please provide a restaurantId in the request body or ensure restaurant context is set'
+      });
+      return;
+    }
     let blockData = {
       ...req.body,
       restaurantId,

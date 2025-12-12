@@ -160,9 +160,9 @@ class RestaurantSettingsService {
       const response = await apiService.get<RestaurantSettings>(`/restaurant/public/settings?restaurantId=${restaurantId}`);
       return response.data;
     } else {
-      // Default to restaurant ID 1 for backward compatibility
-      const response = await apiService.get<RestaurantSettings>('/restaurant/public/settings');
-      return response.data;
+      // CRITICAL FIX: Never default to restaurant ID 1 - fail if no slug or ID provided
+      // This prevents data leakage between restaurants
+      throw new Error('Restaurant slug or ID is required. Unable to determine restaurant from subdomain.');
     }
   }
 }

@@ -626,10 +626,15 @@ export const websiteBuilderService = {
   // Get restaurant settings
   async getRestaurantSettings(restaurantId?: number) {
     try {
+      // CRITICAL FIX: Require restaurantId - never default to 1
+      if (!restaurantId) {
+        throw new Error('restaurantId is required for getRestaurantSettings');
+      }
+      
       // First try to find settings for the specific restaurant
       // Using selective fields to avoid database schema issues
       let settings = await prisma.restaurantSettings.findUnique({
-        where: { restaurantId: restaurantId || 1 },
+        where: { restaurantId },
         select: {
           id: true,
           restaurantId: true,
@@ -737,9 +742,13 @@ export const websiteBuilderService = {
       console.error('Error getting restaurant settings:', error);
       // Return empty settings object to allow the rest of getWebsiteBuilderData to continue
       // This prevents the entire function from failing when restaurant settings have schema issues
+      // CRITICAL FIX: Use provided restaurantId or throw error
+      if (!restaurantId) {
+        throw new Error('restaurantId is required');
+      }
       return {
         id: 0,
-        restaurantId: restaurantId || 1,
+        restaurantId,
         createdAt: new Date(),
         updatedAt: new Date(),
         templateId: null,
@@ -895,8 +904,13 @@ export const websiteBuilderService = {
           : settings.navigationItems;
       }
       
+      // CRITICAL FIX: Require restaurantId - never default to 1
+      if (!restaurantId) {
+        throw new Error('restaurantId is required for updateSettings');
+      }
+      
       console.log('Updating restaurant settings with filtered data:', {
-        restaurantId: restaurantId || 1,
+        restaurantId,
         fieldCount: Object.keys(filteredSettings).length,
         fields: Object.keys(filteredSettings),
         sampleData: Object.keys(filteredSettings).slice(0, 3).reduce((acc, key) => {
@@ -906,10 +920,10 @@ export const websiteBuilderService = {
       });
       
       const result = await prisma.restaurantSettings.upsert({
-        where: { restaurantId: restaurantId || 1 },
+        where: { restaurantId },
         update: filteredSettings,
         create: {
-          restaurantId: restaurantId || 1,
+          restaurantId,
           ...filteredSettings
         }
       });
@@ -925,7 +939,7 @@ export const websiteBuilderService = {
         error: error,
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined,
-        restaurantId: restaurantId || 1,
+        restaurantId: restaurantId || 'NOT PROVIDED',
         attemptedFields: 'Error occurred before filteredSettings was created'
       });
       throw error; // Now that we're filtering fields properly, let real errors bubble up

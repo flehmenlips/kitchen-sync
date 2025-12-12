@@ -274,8 +274,9 @@ export const getPublicRestaurantSettings = async (req: Request, res: Response): 
         return;
       }
     } else {
-      // Fall back to restaurantId for backward compatibility
-      let restaurantId = 1;
+      // CRITICAL FIX: Never default to restaurant ID 1 - require explicit restaurantId or slug
+      // This prevents data leakage between restaurants
+      let restaurantId: number | undefined;
       
       if (req.params.restaurantId) {
         restaurantId = parseInt(req.params.restaurantId, 10);
@@ -289,6 +290,15 @@ export const getPublicRestaurantSettings = async (req: Request, res: Response): 
           res.status(400).json({ error: 'Invalid restaurant ID' });
           return;
         }
+      }
+      
+      // If no restaurantId provided, fail with error instead of defaulting
+      if (!restaurantId) {
+        res.status(400).json({ 
+          error: 'Restaurant identifier required',
+          message: 'Please provide a restaurant slug or restaurant ID'
+        });
+        return;
       }
       
       restaurant = await prisma.restaurant.findUnique({

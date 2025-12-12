@@ -284,7 +284,35 @@ export const createCustomerReservation = async (req: CustomerAuthRequest, res: R
             return;
         }
 
-        const restaurantId = 1; // Single restaurant MVP
+        // CRITICAL FIX: Get restaurantId from request body or slug - never default to 1
+        // This prevents data leakage between restaurants
+        let restaurantId: number | undefined;
+        
+        // First try to get restaurant from slug
+        const restaurantSlug = req.body.restaurantSlug || req.query.slug || req.params.slug;
+        if (restaurantSlug) {
+            const restaurant = await prisma.restaurant.findUnique({
+                where: { slug: restaurantSlug },
+                select: { id: true }
+            });
+            if (restaurant) {
+                restaurantId = restaurant.id;
+            }
+        }
+        
+        // Fall back to restaurantId from body
+        if (!restaurantId && req.body.restaurantId) {
+            restaurantId = parseInt(req.body.restaurantId);
+        }
+        
+        // Fail if no restaurantId found
+        if (!restaurantId) {
+            res.status(400).json({ 
+                message: 'Restaurant ID or slug is required',
+                error: 'Please provide a restaurant slug or restaurant ID'
+            });
+            return;
+        }
         
         // Validate date format and parse correctly to avoid timezone issues
         // Parse YYYY-MM-DD format as UTC midnight to ensure consistent date storage
