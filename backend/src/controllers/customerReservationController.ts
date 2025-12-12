@@ -295,12 +295,21 @@ export const createCustomerReservation = async (req: CustomerAuthRequest, res: R
                 where: { slug: restaurantSlug },
                 select: { id: true }
             });
+            
             if (restaurant) {
                 restaurantId = restaurant.id;
+            } else {
+                // CRITICAL FIX: If slug is provided but restaurant not found, return 404 immediately
+                // This prevents silently falling through to use a different restaurantId from body
+                res.status(404).json({ 
+                    error: 'Restaurant not found',
+                    message: `Restaurant not found for slug: ${restaurantSlug}`
+                });
+                return;
             }
         }
         
-        // Fall back to restaurantId from body
+        // Fall back to restaurantId from body only if no slug was provided
         if (!restaurantId && req.body.restaurantId) {
             restaurantId = parseInt(req.body.restaurantId);
         }
