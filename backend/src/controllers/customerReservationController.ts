@@ -313,11 +313,11 @@ export const createCustomerReservation = async (req: CustomerAuthRequest, res: R
         // CRITICAL FIX: Use explicit conditional checks instead of truthy checks to handle 0 values correctly
         if (restaurantId === undefined && req.body.restaurantId !== undefined && req.body.restaurantId !== null) {
             restaurantId = parseInt(req.body.restaurantId);
-            // Validate that the parsed value is a valid number
-            if (isNaN(restaurantId)) {
+            // Validate that the parsed value is a valid number and positive
+            if (isNaN(restaurantId) || restaurantId < 1) {
                 res.status(400).json({ 
                     error: 'Invalid restaurant ID',
-                    message: 'The provided restaurant ID is not a valid number'
+                    message: 'The provided restaurant ID must be a valid positive number'
                 });
                 return;
             }
