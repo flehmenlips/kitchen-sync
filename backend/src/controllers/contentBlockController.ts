@@ -136,9 +136,33 @@ export const createContentBlock = async (req: Request, res: Response) => {
   try {
     // CRITICAL FIX: Require restaurantId from request body or context
     // Never hardcode restaurant ID - this causes data leakage
-    const restaurantId = req.body.restaurantId || req.restaurantId || parseInt(req.query.restaurantId as string) || parseInt(req.params.restaurantId);
+    // CRITICAL FIX: Parse req.body.restaurantId to handle string "0" case correctly
+    // Without parseInt(), string "0" passes validation because it's truthy and isNaN("0") is false
+    // CRITICAL FIX: Use explicit conditional checks instead of || to handle 0 values correctly
+    // Chained || operators skip 0 values because 0 is falsy, breaking explicit restaurantId precedence
+    let restaurantId: number | undefined;
     
-    if (!restaurantId || isNaN(restaurantId)) {
+    // Check request body first (explicit value takes precedence)
+    if (req.body.restaurantId !== undefined && req.body.restaurantId !== null) {
+      restaurantId = parseInt(req.body.restaurantId);
+    }
+    
+    // Fall back to request context if body didn't provide restaurantId
+    if (restaurantId === undefined && req.restaurantId) {
+      restaurantId = req.restaurantId;
+    }
+    
+    // Fall back to query parameter if still undefined
+    if (restaurantId === undefined && req.query.restaurantId) {
+      restaurantId = parseInt(req.query.restaurantId as string);
+    }
+    
+    // Fall back to route parameter if still undefined
+    if (restaurantId === undefined && req.params.restaurantId) {
+      restaurantId = parseInt(req.params.restaurantId);
+    }
+    
+    if (restaurantId === undefined || isNaN(restaurantId)) {
       res.status(400).json({ 
         error: 'Restaurant ID required',
         message: 'Please provide a restaurantId in the request body or ensure restaurant context is set'
