@@ -165,7 +165,9 @@ export const createContentBlock = async (req: Request, res: Response) => {
     }
     
     // Fall back to request context if body didn't provide restaurantId
-    if (restaurantId === undefined && req.restaurantId) {
+    // CRITICAL FIX: Use explicit undefined/null check to handle 0 values correctly
+    // Truthy check (req.restaurantId) rejects 0 because 0 is falsy
+    if (restaurantId === undefined && req.restaurantId !== undefined && req.restaurantId !== null) {
       restaurantId = req.restaurantId;
     }
     
