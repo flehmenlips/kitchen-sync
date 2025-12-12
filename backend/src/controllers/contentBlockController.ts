@@ -79,9 +79,26 @@ export const getAllContentBlocks = async (req: Request, res: Response) => {
   try {
     // CRITICAL FIX: Require restaurantId from request context or params
     // Never hardcode restaurant ID - this causes data leakage
-    const restaurantId = req.restaurantId || parseInt(req.query.restaurantId as string) || parseInt(req.params.restaurantId);
+    // CRITICAL FIX: Use explicit conditional checks instead of || to handle 0 values correctly
+    // Chained || operators skip 0 values because 0 is falsy, breaking explicit restaurantId precedence
+    let restaurantId: number | undefined;
     
-    if (!restaurantId || isNaN(restaurantId)) {
+    // Check request context first (from middleware)
+    if (req.restaurantId !== undefined && req.restaurantId !== null) {
+      restaurantId = req.restaurantId;
+    }
+    
+    // Fall back to query parameter if context didn't provide restaurantId
+    if (restaurantId === undefined && req.query.restaurantId) {
+      restaurantId = parseInt(req.query.restaurantId as string);
+    }
+    
+    // Fall back to route parameter if still undefined
+    if (restaurantId === undefined && req.params.restaurantId) {
+      restaurantId = parseInt(req.params.restaurantId);
+    }
+    
+    if (restaurantId === undefined || isNaN(restaurantId)) {
       res.status(400).json({ 
         error: 'Restaurant ID required',
         message: 'Please provide a restaurantId parameter or ensure restaurant context is set'
