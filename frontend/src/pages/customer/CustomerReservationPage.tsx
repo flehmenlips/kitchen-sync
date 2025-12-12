@@ -875,7 +875,6 @@ const CustomerReservationPage: React.FC = () => {
             {/* Name field */}
             <Grid item xs={12} md={6} sx={{ mt: 1 }}>
               <TextField
-                fullWidth
                 label="Name"
                 value={formData.customerName}
                 onChange={(e) => {
@@ -896,9 +895,7 @@ const CustomerReservationPage: React.FC = () => {
                   startAdornment: <PersonIcon sx={{ mr: 1, color: 'action.active' }} />
                 }}
                 sx={{
-                  '& .MuiInputBase-input': {
-                    width: { xs: '100%', sm: '400px' },
-                  }
+                  width: { xs: '100%', sm: '400px' },
                 }}
               />
             </Grid>
@@ -906,7 +903,6 @@ const CustomerReservationPage: React.FC = () => {
             {/* Email field */}
             <Grid item xs={12} sx={{ mt: 1 }}>
               <TextField
-                fullWidth
                 label="Email"
                 type="email"
                 value={formData.customerEmail}
@@ -929,11 +925,11 @@ const CustomerReservationPage: React.FC = () => {
                   startAdornment: <EmailIcon sx={{ mr: 1, color: 'action.active' }} />
                 }}
                 sx={{
+                  width: { xs: '100%', sm: '400px' },
                   '& .MuiInputBase-input': {
                     fontSize: '1rem', // Standard readable font size
                     padding: '14px 14px 14px 0',
                     minWidth: { xs: 0, sm: '200px' },
-                    width: { xs: '100%', sm: '400px' },
                   },
                   '& .MuiInputBase-root': {
                     minHeight: '56px',
@@ -983,7 +979,6 @@ const CustomerReservationPage: React.FC = () => {
             {/* Special requests field */}
             <Grid item xs={12} sx={{ mt: 1 }}>
               <TextField
-                fullWidth
                 label="Special Requests (Optional)"
                 value={formData.specialRequests}
                 onChange={(e) => setFormData({ ...formData, specialRequests: e.target.value })}
@@ -996,9 +991,7 @@ const CustomerReservationPage: React.FC = () => {
                   startAdornment: <NotesIcon sx={{ mr: 1, color: 'action.active', alignSelf: 'flex-start', mt: 1 }} />
                 }}
                 sx={{
-                  '& .MuiInputBase-root': {
-                    width: { xs: '100%', sm: '600px' },
-                  }
+                  width: { xs: '100%', sm: '600px' },
                 }}
               />
             </Grid>
