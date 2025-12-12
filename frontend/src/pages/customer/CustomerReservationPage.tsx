@@ -897,7 +897,7 @@ const CustomerReservationPage: React.FC = () => {
                 }}
                 sx={{
                   '& .MuiInputBase-input': {
-                    width: '400px',
+                    width: { xs: '100%', sm: '400px' },
                   }
                 }}
               />
@@ -932,16 +932,11 @@ const CustomerReservationPage: React.FC = () => {
                   '& .MuiInputBase-input': {
                     fontSize: '1rem', // Standard readable font size
                     padding: '14px 14px 14px 0',
-                    minWidth: 0,
-                    width: '400px',
+                    minWidth: { xs: 0, sm: '200px' },
+                    width: { xs: '100%', sm: '400px' },
                   },
                   '& .MuiInputBase-root': {
                     minHeight: '56px',
-                  }
-                }}
-                inputProps={{
-                  style: {
-                    minWidth: '200px',
                   }
                 }}
               />
@@ -1002,7 +997,7 @@ const CustomerReservationPage: React.FC = () => {
                 }}
                 sx={{
                   '& .MuiInputBase-root': {
-                    width: '600px',
+                    width: { xs: '100%', sm: '600px' },
                   }
                 }}
               />
