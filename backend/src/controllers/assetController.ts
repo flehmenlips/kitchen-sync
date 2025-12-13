@@ -229,6 +229,7 @@ export const getAssets = asyncHandler(async (req: Request, res: Response) => {
         mimeType: true,
         altText: true,
         isPrimary: true,
+        cloudinaryPublicId: true, // Include cloudinaryPublicId in fallback query
         createdAt: true,
         updatedAt: true
       };
