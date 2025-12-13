@@ -39,18 +39,100 @@ export const getAssetThumbnailUrl = (
         // f_auto: automatic format optimization
         const thumbnailTransform = `w_${size},h_${size},c_fill,q_auto,f_auto`;
         
-        // Simplified approach: Check if path starts with transformation parameters
-        // Cloudinary transformations typically start with patterns like w_, h_, c_, etc.
-        // and contain underscores and commas, but no file extensions
+        // Check if path starts with transformation parameters
+        // Cloudinary transformations use specific keys (w, h, c, q, f, etc.)
+        // Folder names like "seabreeze_farm" contain underscores but are NOT transformations
         const pathParts = pathAfterUpload.split('/');
         const firstPart = pathParts[0];
         
-        // Simple check: if first part looks like transformations (contains underscore and no file extension)
-        // Transformation patterns: w_200, h_300, w_200,h_200,c_fill, etc.
+        // Valid Cloudinary transformation keys (commonly used in URLs)
+        // Only include keys that are commonly used in transformation URLs and unlikely to conflict with folder names
+        // Common keys: w (width), h (height), c (crop), q (quality), f (format), g (gravity)
+        // Excluded overly broad single-letter keys (t, d, b, o, l, u, a) that could match folder names like "t_test", "o_old", "u_uploads", "a_archive"
+        // Excluded ALL double-letter keys (fl, ar, br, bo, co, du, eo, so) that could match folder names like "fl_flags", "ar_architecture", "co_recipes"
+        // Single-letter keys are safer because they're so short and commonly used in transformations that they're unlikely to be folder name prefixes
+        const validTransformationKeys = [
+          // Most common transformation keys (core thumbnail parameters)
+          'w', 'h', 'c', 'q', 'f', 'g',
+          // Less common but safe (unlikely to be folder names)
+          'x', 'y', 'r', 'e'
+        ];
+        
+        // Helper function to validate transformation value based on key
+        const isValidTransformationValue = (key: string, value: string): boolean => {
+          const lowerValue = value.toLowerCase();
+          
+          // Numeric keys: w, h, x, y, r (width, height, x-coord, y-coord, radius)
+          // Accept numbers including negative and decimal values
+          const numericKeys = ['w', 'h', 'x', 'y', 'r'];
+          if (numericKeys.includes(key)) {
+            return /^-?\d+(\.\d+)?$/.test(value);
+          }
+          
+          // Crop mode (c): accepts specific crop keywords
+          if (key === 'c') {
+            const cropKeywords = ['fill', 'fit', 'limit', 'scale', 'thumb', 'pad', 'crop', 'lfill', 'lpad', 'imagga'];
+            return cropKeywords.includes(lowerValue);
+          }
+          
+          // Quality (q): accepts numbers or 'auto'
+          if (key === 'q') {
+            return /^-?\d+(\.\d+)?$/.test(value) || lowerValue === 'auto';
+          }
+          
+          // Format (f): accepts format identifiers
+          if (key === 'f') {
+            const formatKeywords = ['auto', 'webp', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'bmp', 'tiff', 'pdf', 'ico', 'heic', 'heif'];
+            return formatKeywords.includes(lowerValue);
+          }
+          
+          // Gravity (g): accepts direction and face detection keywords
+          if (key === 'g') {
+            const gravityKeywords = ['north', 'south', 'east', 'west', 'center', 'north_east', 'north_west', 'south_east', 'south_west', 'face', 'faces', 'body'];
+            return gravityKeywords.includes(lowerValue);
+          }
+          
+          // Effect (e): accepts numeric values or effect keywords
+          if (key === 'e') {
+            // Check if it's numeric first
+            if (/^-?\d+(\.\d+)?$/.test(value)) {
+              return true;
+            }
+            // Common effect keywords
+            const effectKeywords = ['blur', 'sharpen', 'grayscale', 'sepia', 'oil_paint', 'cartoonify', 'outline', 'blackwhite', 'negate', 'vignette', 'pixelate'];
+            return effectKeywords.includes(lowerValue);
+          }
+          
+          return false;
+        };
+        
+        // Check if first part contains valid transformation keys AND values
+        // Split by comma to handle multiple parameters (e.g., "w_200,h_200,c_fill")
+        // Use .every() to ensure ALL parameters are valid transformations, not just one
+        // This prevents false positives like "w_200,seabreeze_farm" from being treated as transformations
+        const params = firstPart.split(',');
+        const hasValidTransformationKeys = params.length > 0 && params.every(param => {
+          // Each parameter should be in format: key_value
+          const underscoreIndex = param.indexOf('_');
+          if (underscoreIndex === -1) return false;
+          
+          const key = param.substring(0, underscoreIndex).toLowerCase();
+          const value = param.substring(underscoreIndex + 1);
+          
+          // Must have valid key AND valid value
+          return validTransformationKeys.includes(key) && isValidTransformationValue(key, value);
+        });
+        
+        // Only consider it a transformation if:
+        // - Contains valid transformation keys (not just any underscore)
+        // - Contains only valid characters (letters, numbers, underscores, commas, colons, hyphens)
+        //   This prevents invalid formats like "w_200@special" from being treated as transformations
+        // - No file extension (transformations don't have extensions)
+        // - Has path parts after it (the actual public_id)
         const looksLikeTransformations = 
-          firstPart.includes('_') && 
-          !firstPart.includes('.') && 
+          hasValidTransformationKeys &&
           /^[a-z0-9_,:\-]+$/i.test(firstPart) &&
+          !firstPart.includes('.') && 
           pathParts.length > 1;
         
         if (looksLikeTransformations) {
