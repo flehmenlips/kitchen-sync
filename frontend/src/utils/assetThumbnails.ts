@@ -310,10 +310,13 @@ export const getAssetThumbnailUrl = (
 
   // If we have a Cloudinary public ID but not a full URL, construct thumbnail URL
   if (cloudinaryPublicId && !fileUrl.includes('res.cloudinary.com')) {
-    // Extract cloud name from environment or use default
-    // Note: This assumes the public ID format includes the cloud name
-    // If not, we'd need to get it from config
-    const cloudName = process.env.REACT_APP_CLOUDINARY_CLOUD_NAME || 'dhaacekdd';
+    // Extract cloud name from environment variable
+    // If not set, return undefined to prevent constructing URLs with wrong cloud name
+    const cloudName = process.env.REACT_APP_CLOUDINARY_CLOUD_NAME;
+    if (!cloudName) {
+      console.warn('REACT_APP_CLOUDINARY_CLOUD_NAME not set, cannot construct Cloudinary thumbnail URL');
+      return undefined;
+    }
     return `https://res.cloudinary.com/${cloudName}/image/upload/w_${size},h_${size},c_fill,q_auto,f_auto/${cloudinaryPublicId}`;
   }
 
