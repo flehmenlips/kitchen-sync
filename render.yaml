@@ -27,6 +27,9 @@ services:
         generateValue: true
       - key: FRONTEND_URL
         value: https://kitchensync.restaurant
+      # Frontend build-time environment variables (Vite requires these at build time)
+      - key: VITE_CLOUDINARY_CLOUD_NAME
+        value: dhaacekdd
       # Add other env vars as needed
 
   # Frontend (Static Site) - Optional, since backend serves it
@@ -45,6 +48,8 @@ services:
     envVars:
       - key: VITE_API_BASE_URL
         value: https://api.kitchensync.restaurant/api
+      - key: VITE_CLOUDINARY_CLOUD_NAME
+        value: dhaacekdd
 
 databases:
   - name: kitchen-sync-db
