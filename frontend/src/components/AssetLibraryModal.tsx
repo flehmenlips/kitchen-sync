@@ -65,6 +65,7 @@ import {
 import { assetApi } from '../services/assetApi';
 import { api } from '../services/api';
 import { useRestaurant } from '../context/RestaurantContext';
+import { getAssetThumbnailSmall } from '../utils/assetThumbnails';
 
 interface Asset {
   id: string;
@@ -938,9 +939,16 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
                       <CardMedia
                         component="img"
                         height="120"
-                        image={asset.fileUrl}
+                        image={getAssetThumbnailSmall(asset.fileUrl, asset.cloudinaryPublicId) || asset.fileUrl}
                         alt={asset.altText}
                         sx={{ objectFit: 'cover' }}
+                        onError={(e) => {
+                          // Fallback to original URL if thumbnail fails
+                          const target = e.target as HTMLImageElement;
+                          if (target.src !== asset.fileUrl) {
+                            target.src = asset.fileUrl;
+                          }
+                        }}
                       />
                     ) : (
                       <Box

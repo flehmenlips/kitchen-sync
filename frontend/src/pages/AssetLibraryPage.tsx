@@ -66,6 +66,7 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, v
 import { CSS } from '@dnd-kit/utilities';
 import { useRestaurant } from '../context/RestaurantContext';
 import { assetApi } from '../services/assetApi';
+import { getAssetThumbnailMedium } from '../utils/assetThumbnails';
 
 // Asset interface
 interface Asset {
@@ -939,9 +940,16 @@ export const AssetLibraryPage: React.FC = () => {
                             <CardMedia
                               component="img"
                               height="200"
-                              image={asset.fileUrl}
+                              image={getAssetThumbnailMedium(asset.fileUrl, asset.cloudinaryPublicId) || asset.fileUrl}
                               alt={asset.altText || asset.fileName}
                               sx={{ objectFit: 'cover' }}
+                              onError={(e) => {
+                                // Fallback to original URL if thumbnail fails
+                                const target = e.target as HTMLImageElement;
+                                if (target.src !== asset.fileUrl) {
+                                  target.src = asset.fileUrl;
+                                }
+                              }}
                             />
                           ) : (
                             <Box
