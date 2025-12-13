@@ -1110,7 +1110,7 @@ const CustomerReservationPage: React.FC = () => {
             <Box sx={{ mb: 2 }}>
               <img 
                 src={restaurantSettings.logoUrl} 
-                alt={restaurantSettings.restaurant?.name || 'Restaurant Logo'}
+                alt={restaurantSettings.websiteName || restaurantSettings.restaurant?.name || 'Restaurant Logo'}
                 style={{ 
                   maxHeight: isMobile ? '60px' : '80px', 
                   maxWidth: '100%',
@@ -1128,7 +1128,7 @@ const CustomerReservationPage: React.FC = () => {
               color: restaurantSettings.primaryColor || 'primary.main'
             }}
           >
-            {restaurantSettings.restaurant?.name || 'Restaurant'}
+            {restaurantSettings.websiteName || restaurantSettings.restaurant?.name || 'Restaurant'}
           </Typography>
           {restaurantSettings.tagline && (
             <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 1 }}>

@@ -479,7 +479,11 @@ export const websiteBuilderService = {
       return {
         settings: settings ? {
           // Basic Info (site-wide configuration only)
-          websiteName: settings.websiteName || restaurantInfo?.name || undefined,
+          // CRITICAL FIX: Only fall back to restaurantInfo.name if websiteName is null/undefined
+          // This allows websiteName to be set independently of the account signup name
+          websiteName: (settings.websiteName !== null && settings.websiteName !== undefined && settings.websiteName !== '') 
+            ? settings.websiteName 
+            : (restaurantInfo?.name || undefined),
           tagline: settings.tagline || undefined,
           
           // Branding (keep - site-wide configuration)

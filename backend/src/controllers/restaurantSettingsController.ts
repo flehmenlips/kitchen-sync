@@ -107,7 +107,11 @@ export const getRestaurantSettings = async (req: Request, res: Response) => {
       ...settings,
       openingHours: parseOpeningHours(settings.openingHours),
       restaurant: {
-        name: settings.websiteName || restaurant?.name || 'Restaurant',
+        // CRITICAL FIX: Only fall back to restaurant.name if websiteName is null/undefined
+        // This allows websiteName to be set independently of the account signup name
+        name: (settings.websiteName !== null && settings.websiteName !== undefined && settings.websiteName !== '') 
+          ? settings.websiteName 
+          : (restaurant?.name || 'Restaurant'),
         slug: restaurant?.slug || 'restaurant',
         description: settings.tagline || 'Fresh, local ingredients meet culinary excellence',
         menus
@@ -162,7 +166,11 @@ export const updateRestaurantSettings = async (req: Request, res: Response) => {
       ...settings,
       openingHours: parseOpeningHours(settings.openingHours),
       restaurant: {
-        name: settings.websiteName || restaurant?.name || 'Restaurant',
+        // CRITICAL FIX: Only fall back to restaurant.name if websiteName is null/undefined
+        // This allows websiteName to be set independently of the account signup name
+        name: (settings.websiteName !== null && settings.websiteName !== undefined && settings.websiteName !== '') 
+          ? settings.websiteName 
+          : (restaurant?.name || 'Restaurant'),
         slug: restaurant?.slug || 'restaurant',
         description: settings.tagline || 'Fresh, local ingredients meet culinary excellence',
         menus
@@ -440,7 +448,11 @@ export const getPublicRestaurantSettings = async (req: Request, res: Response): 
       } : undefined,
       restaurant: {
         id: restaurant.id,
-        name: settings.websiteName || restaurant.name || 'Restaurant',
+        // CRITICAL FIX: Only fall back to restaurant.name if websiteName is null/undefined
+        // This allows websiteName to be set independently of the account signup name
+        name: (settings.websiteName !== null && settings.websiteName !== undefined && settings.websiteName !== '') 
+          ? settings.websiteName 
+          : (restaurant.name || 'Restaurant'),
         slug: restaurant.slug || 'restaurant',
         description: settings.tagline || 'Fresh, local ingredients meet culinary excellence'
       }
