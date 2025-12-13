@@ -946,7 +946,21 @@ export const AssetLibraryPage: React.FC = () => {
                               onError={(e) => {
                                 // Fallback to original URL if thumbnail fails
                                 const target = e.target as HTMLImageElement;
-                                if (target.src !== asset.fileUrl) {
+                                // Check if we've already tried the fallback (prevent infinite loop)
+                                const hasTriedFallback = target.dataset.fallbackAttempted === 'true';
+                                if (hasTriedFallback) return;
+                                
+                                // Normalize both URLs to absolute URLs for comparison
+                                try {
+                                  const currentSrc = new URL(target.src).href;
+                                  const fallbackUrl = new URL(asset.fileUrl, window.location.origin).href;
+                                  if (currentSrc !== fallbackUrl) {
+                                    target.dataset.fallbackAttempted = 'true';
+                                    target.src = asset.fileUrl;
+                                  }
+                                } catch (error) {
+                                  // If URL parsing fails, still try fallback once
+                                  target.dataset.fallbackAttempted = 'true';
                                   target.src = asset.fileUrl;
                                 }
                               }}
