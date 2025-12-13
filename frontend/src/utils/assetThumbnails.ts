@@ -20,8 +20,9 @@ export const getAssetThumbnailUrl = (
   // If it's a Cloudinary URL, transform it to a thumbnail
   if (fileUrl.includes('res.cloudinary.com')) {
     try {
-      // Cloudinary URL format: https://res.cloudinary.com/{cloud_name}/{resource_type}/upload/{transformations}/{public_id}.{format}
-      // We need to insert or replace transformations
+      // Cloudinary URL format: 
+      // https://res.cloudinary.com/{cloud_name}/{resource_type}/upload/{transformations}/{public_id}.{format}
+      // or: https://res.cloudinary.com/{cloud_name}/{resource_type}/upload/{public_id}.{format}
       
       // Split by /upload/ to get the base URL and the path after upload
       const parts = fileUrl.split('/upload/');
@@ -36,17 +37,24 @@ export const getAssetThumbnailUrl = (
         const thumbnailTransform = `w_${size},h_${size},c_fill,q_auto,f_auto`;
         
         // Check if there are existing transformations in the path
-        // Transformations are typically before the filename and separated by /
-        // Pattern: {transformations}/{public_id}.{format} or just {public_id}.{format}
+        // Transformations come right after /upload/ and before the public_id
+        // They typically contain parameters like w_, h_, c_, etc.
         const pathParts = pathAfterUpload.split('/');
         
-        // If the first part looks like transformations (contains underscores, commas, or common transform params)
-        // Otherwise, it's likely the public_id directly
-        const hasTransformations = pathParts[0].includes('_') && 
-          (pathParts[0].includes('w_') || pathParts[0].includes('h_') || pathParts[0].includes('c_'));
+        // Check if first part looks like transformations (contains transformation parameters)
+        // Common patterns: w_100, h_100, c_fill, q_auto, f_auto, etc.
+        const firstPart = pathParts[0];
+        const looksLikeTransformations = 
+          firstPart.includes('w_') || 
+          firstPart.includes('h_') || 
+          firstPart.includes('c_') || 
+          firstPart.includes('q_') || 
+          firstPart.includes('f_') ||
+          (firstPart.includes('_') && firstPart.includes(','));
         
-        if (hasTransformations && pathParts.length > 1) {
+        if (looksLikeTransformations && pathParts.length > 1) {
           // Replace existing transformations with thumbnail transformations
+          // Reconstruct the path with the public_id and any subfolders
           const publicIdAndFormat = pathParts.slice(1).join('/');
           return `${baseUrl}/upload/${thumbnailTransform}/${publicIdAndFormat}`;
         } else {
@@ -55,7 +63,7 @@ export const getAssetThumbnailUrl = (
         }
       }
     } catch (error) {
-      console.warn('Error transforming Cloudinary URL:', error);
+      console.warn('Error transforming Cloudinary URL:', error, fileUrl);
     }
     
     // If we can't parse the URL, return original
