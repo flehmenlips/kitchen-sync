@@ -20,15 +20,22 @@ export const getAssetThumbnailUrl = (
     return undefined;
   }
 
+  // Ensure fileUrl is a string (handle edge cases)
+  const urlString = String(fileUrl).trim();
+  if (!urlString) {
+    console.debug('[Thumbnail] Empty fileUrl after trimming');
+    return undefined;
+  }
+
   // If it's a Cloudinary URL, transform it to a thumbnail
-  if (fileUrl.includes('res.cloudinary.com')) {
+  if (urlString.includes('res.cloudinary.com')) {
     try {
       // Cloudinary URL format: 
       // https://res.cloudinary.com/{cloud_name}/{resource_type}/upload/{transformations}/{public_id}.{format}
       // or: https://res.cloudinary.com/{cloud_name}/{resource_type}/upload/{public_id}.{format}
       
       // Split by /upload/ to get the base URL and the path after upload
-      const parts = fileUrl.split('/upload/');
+      const parts = urlString.split('/upload/');
       if (parts.length === 2) {
         const baseUrl = parts[0];
         const pathAfterUpload = parts[1];
@@ -140,35 +147,36 @@ export const getAssetThumbnailUrl = (
           // Reconstruct the path with the public_id and any subfolders
           const publicIdAndFormat = pathParts.slice(1).join('/');
           const thumbnailUrl = `${baseUrl}/upload/${thumbnailTransform}/${publicIdAndFormat}`;
-          console.debug('[Thumbnail] Replaced transformations:', { original: fileUrl, thumbnail: thumbnailUrl });
+          console.debug('[Thumbnail] Replaced transformations:', { original: urlString, thumbnail: thumbnailUrl });
           return thumbnailUrl;
         } else {
           // No existing transformations, insert thumbnail transformations
           const thumbnailUrl = `${baseUrl}/upload/${thumbnailTransform}/${pathAfterUpload}`;
-          console.debug('[Thumbnail] Added transformations:', { original: fileUrl, thumbnail: thumbnailUrl });
+          console.debug('[Thumbnail] Added transformations:', { original: urlString, thumbnail: thumbnailUrl });
           return thumbnailUrl;
         }
       }
     } catch (error) {
-      console.warn('[Thumbnail] Error transforming Cloudinary URL:', error, fileUrl);
+      console.warn('[Thumbnail] Error transforming Cloudinary URL:', error, urlString);
     }
     
     // If we can't parse the URL, return original
-    console.debug('[Thumbnail] Returning original URL (not Cloudinary or parse failed):', fileUrl);
-    return fileUrl;
+    console.debug('[Thumbnail] Returning original URL (not Cloudinary or parse failed):', urlString);
+    return urlString;
   }
 
   // If we have a Cloudinary public ID but not a full URL, construct thumbnail URL
-  if (cloudinaryPublicId && !fileUrl.includes('res.cloudinary.com')) {
+  if (cloudinaryPublicId && !urlString.includes('res.cloudinary.com')) {
     // Extract cloud name from environment variable (Vite uses import.meta.env.VITE_ prefix)
     // If not set, return undefined to prevent constructing URLs with wrong cloud name
     const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
     if (!cloudName) {
       console.warn('[Thumbnail] VITE_CLOUDINARY_CLOUD_NAME not set, cannot construct Cloudinary thumbnail URL', {
         cloudinaryPublicId,
-        fileUrl
+        fileUrl: urlString
       });
-      return undefined;
+      // Return original URL as fallback instead of undefined
+      return urlString;
     }
     const thumbnailUrl = `https://res.cloudinary.com/${cloudName}/image/upload/w_${size},h_${size},c_fill,q_auto,f_auto/${cloudinaryPublicId}`;
     console.debug('[Thumbnail] Constructed from public ID:', { cloudinaryPublicId, thumbnailUrl });
@@ -176,7 +184,7 @@ export const getAssetThumbnailUrl = (
   }
 
   // Return original URL if not Cloudinary or can't transform
-  return fileUrl;
+  return urlString;
 };
 
 /**
