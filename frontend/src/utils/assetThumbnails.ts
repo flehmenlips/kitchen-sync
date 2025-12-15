@@ -125,14 +125,14 @@ export const getAssetThumbnailUrl = (
         
         // Only consider it a transformation if:
         // - Contains valid transformation keys (not just any underscore)
-        // - Contains only valid characters (letters, numbers, underscores, commas, colons, hyphens)
+        // - Contains only valid characters (letters, numbers, underscores, commas, colons, hyphens, dots for decimals)
         //   This prevents invalid formats like "w_200@special" from being treated as transformations
-        // - No file extension (transformations don't have extensions)
+        //   Dots are allowed for decimal values in numeric transformations (e.g., r_10.5, x_100.5)
+        // - No file extension (transformations don't have extensions - but dots in decimal values are OK)
         // - Has path parts after it (the actual public_id)
         const looksLikeTransformations = 
           hasValidTransformationKeys &&
-          /^[a-z0-9_,:\-]+$/i.test(firstPart) &&
-          !firstPart.includes('.') && 
+          /^[a-z0-9_,:\-\.]+$/i.test(firstPart) &&
           pathParts.length > 1;
         
         if (looksLikeTransformations) {
