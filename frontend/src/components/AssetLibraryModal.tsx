@@ -939,8 +939,18 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
                       <CardMedia
                         component="img"
                         height="120"
-                        image={getAssetThumbnailSmall(asset.fileUrl, asset.cloudinaryPublicId) || asset.fileUrl}
-                        alt={asset.altText}
+                        image={(() => {
+                          // Get thumbnail URL, ensuring we always have a valid URL
+                          const thumbnailUrl = getAssetThumbnailSmall(asset.fileUrl, asset.cloudinaryPublicId);
+                          const finalUrl = thumbnailUrl || asset.fileUrl;
+                          // Ensure we have a valid URL string
+                          if (!finalUrl) {
+                            console.warn('[AssetLibrary] No valid URL for asset:', asset.id, asset.fileName);
+                            return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5ObyBJbWFnZTwvdGV4dD48L3N2Zz4=';
+                          }
+                          return finalUrl;
+                        })()}
+                        alt={asset.altText || asset.fileName}
                         sx={{ objectFit: 'cover' }}
                         onError={(e) => {
                           // Fallback to original URL if thumbnail fails
@@ -952,15 +962,22 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
                           // Normalize both URLs to absolute URLs for comparison
                           try {
                             const currentSrc = new URL(target.src).href;
-                            const fallbackUrl = new URL(asset.fileUrl, window.location.origin).href;
-                            if (currentSrc !== fallbackUrl) {
+                            const fallbackUrl = asset.fileUrl ? new URL(asset.fileUrl, window.location.origin).href : null;
+                            if (fallbackUrl && currentSrc !== fallbackUrl) {
                               target.dataset.fallbackAttempted = 'true';
                               target.src = asset.fileUrl;
+                            } else {
+                              // If no valid fallback URL, mark as attempted to prevent infinite loop
+                              target.dataset.fallbackAttempted = 'true';
                             }
                           } catch (error) {
-                            // If URL parsing fails, still try fallback once
-                            target.dataset.fallbackAttempted = 'true';
-                            target.src = asset.fileUrl;
+                            // If URL parsing fails, still try fallback once if we have a fileUrl
+                            if (asset.fileUrl) {
+                              target.dataset.fallbackAttempted = 'true';
+                              target.src = asset.fileUrl;
+                            } else {
+                              target.dataset.fallbackAttempted = 'true';
+                            }
                           }
                         }}
                       />
