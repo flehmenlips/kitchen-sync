@@ -1,4 +1,4 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 
 /**
  * Rate Limiting Middleware
@@ -79,9 +79,8 @@ export const reservationLimiter = rateLimit({
     if (req.customerUser?.userId) {
       return `reservation:customer:${req.customerUser.userId}`;
     }
-    // Use req.ip directly - express-rate-limit provides this by default
-    // req.ip is already normalized (handles proxies via trust proxy settings)
-    return `reservation:ip:${req.ip || req.connection?.remoteAddress || 'unknown'}`;
+    // Use ipKeyGenerator helper for IPv6 compatibility
+    return `reservation:ip:${ipKeyGenerator(req)}`;
   },
   skipSuccessfulRequests: false, // Count successful reservations
   skipFailedRequests: true, // Don't count failed attempts
