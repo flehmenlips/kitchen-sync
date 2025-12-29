@@ -80,7 +80,7 @@ export const reservationLimiter = rateLimit({
       return `reservation:customer:${req.customerUser.userId}`;
     }
     // Use ipKeyGenerator helper for IPv6 compatibility
-    return `reservation:ip:${ipKeyGenerator(req)}`;
+    return `reservation:ip:${ipKeyGenerator(req.ip)}`;
   },
   skipSuccessfulRequests: false, // Count successful reservations
   skipFailedRequests: true, // Don't count failed attempts
