@@ -97,48 +97,58 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
             }
         });
 
-        if (user && (await bcrypt.compare(password, user.password))) {
-            // Ensure user has a role, use default if not set
-            const userRole = user.role || 'USER';
-            
-            // If the user doesn't have a role in the database, update it
-            if (!user.role) {
-                await prisma.user.update({
-                    where: { id: user.id },
-                    data: { role: 'USER' }
-                });
-                console.log(`Updated user ${user.id} with default role USER`);
-            }
-            
-            const token = jwt.sign(
-                { 
-                    userId: user.id,
-                    email: user.email,
-                    role: userRole 
-                },
-                process.env.JWT_SECRET || 'your-secret-key',
-                { expiresIn: '30d' }
-            );
-            
-            res.status(200).json({
-                id: user.id,
-                name: user.name,
-                email: user.email,
-                role: userRole,
-                token: token,
-                createdAt: user.createdAt ? user.createdAt.toISOString() : new Date().toISOString(),
-                updatedAt: user.updatedAt ? user.updatedAt.toISOString() : new Date().toISOString(),
-                phone: user.phone || undefined,
-                isCustomer: user.isCustomer || false,
-                // Optional fields that may not exist in User model
-                company: undefined,
-                position: undefined,
-                address: undefined,
-                bio: undefined
-            });
-        } else {
+        // Check if user exists
+        if (!user) {
             res.status(401).json({ message: 'Invalid email or password' });
+            return;
         }
+
+        // Check if user has a password set (should not be null/undefined)
+        if (!user.password) {
+            console.error(`User ${user.id} (${user.email}) has no password set`);
+            res.status(401).json({ message: 'Invalid email or password' });
+            return;
+        }
+
+        // Compare passwords
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        
+        if (!isPasswordValid) {
+            res.status(401).json({ message: 'Invalid email or password' });
+            return;
+        }
+
+        // Ensure user has a role, use default if not set
+        const userRole = user.role || 'USER';
+        
+        // If the user doesn't have a role in the database, update it
+        if (!user.role) {
+            await prisma.user.update({
+                where: { id: user.id },
+                data: { role: 'USER' }
+            });
+            console.log(`Updated user ${user.id} with default role USER`);
+        }
+        
+        // Use generateToken utility for consistency and proper JWT_SECRET handling
+        const token = generateToken(user.id, userRole);
+        
+        res.status(200).json({
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: userRole,
+            token: token,
+            createdAt: user.createdAt ? user.createdAt.toISOString() : new Date().toISOString(),
+            updatedAt: user.updatedAt ? user.updatedAt.toISOString() : new Date().toISOString(),
+            phone: user.phone || undefined,
+            isCustomer: user.isCustomer || false,
+            // Optional fields that may not exist in User model
+            company: undefined,
+            position: undefined,
+            address: undefined,
+            bio: undefined
+        });
     } catch (error) {
         console.error('Login Error:', error);
         console.error('Login Error Details:', {
