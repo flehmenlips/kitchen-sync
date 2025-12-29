@@ -43,12 +43,20 @@ apiService.interceptors.request.use(
     (config) => {
         let token = null;
         try {
+            // First try to get token from kitchenSyncUserInfo (preferred)
             const storedUserInfo = localStorage.getItem('kitchenSyncUserInfo');
             if (storedUserInfo) {
-                token = JSON.parse(storedUserInfo).token;
+                const parsed = JSON.parse(storedUserInfo);
+                token = parsed.token;
+            }
+            // Fallback to 'token' key for backward compatibility
+            if (!token) {
+                token = localStorage.getItem('token');
             }
         } catch (error) {
             console.error("Error reading token from localStorage:", error);
+            // Fallback to 'token' key if parsing fails
+            token = localStorage.getItem('token');
         }
 
         if (token) {
@@ -521,11 +529,8 @@ export const register = async (userData: UserCredentials): Promise<AuthResponse>
 export const login = async (credentials: UserCredentials): Promise<AuthResponse> => {
     try {
         const response = await apiService.post('/users/login', credentials);
-        const { token } = response.data;
-        // Store the token
-        localStorage.setItem('token', token);
-        // Update default headers
-        apiService.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        // Don't store token here - AuthContext handles storage in kitchenSyncUserInfo
+        // The interceptor will pick it up from there
         return response.data;
     } catch (error) {
         console.error('Error during login:', error);
