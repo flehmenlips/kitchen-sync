@@ -4,7 +4,7 @@ import { SubscriptionPlan } from '@prisma/client';
 // Initialize Stripe with your secret key (only if available)
 const stripeKey = process.env.STRIPE_SECRET_KEY;
 const stripe = stripeKey ? new Stripe(stripeKey, {
-  apiVersion: '2025-10-29.clover',
+  apiVersion: '2025-12-15.clover',
 }) : null;
 
 // Price IDs for each plan (you'll need to create these in Stripe)
