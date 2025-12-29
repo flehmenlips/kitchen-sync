@@ -4,7 +4,6 @@ import bcrypt from 'bcrypt';
 import generateToken from '../utils/generateToken';
 // Import Prisma namespace from default path
 import { Prisma, User } from '@prisma/client';
-import jwt from 'jsonwebtoken';
 import { setupUserDefaults } from '../utils/setupUserDefaults';
 
 // @desc    Register a new user
@@ -130,17 +129,8 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
             console.log(`Updated user ${user.id} with default role USER`);
         }
         
-        // Generate JWT token with fallback for JWT_SECRET
-        // Using inline jwt.sign instead of generateToken to ensure fallback works
-        const token = jwt.sign(
-            { 
-                userId: user.id,
-                email: user.email,
-                role: userRole 
-            },
-            process.env.JWT_SECRET || 'your-secret-key',
-            { expiresIn: '30d' }
-        );
+        // Use generateToken utility for consistency with registration and auth middleware
+        const token = generateToken(user.id, userRole);
         
         res.status(200).json({
             id: user.id,
