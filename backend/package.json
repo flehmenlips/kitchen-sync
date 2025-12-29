@@ -43,6 +43,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
+    "@prisma/adapter-pg": "^7.2.0",
     "@prisma/client": "^7.1.0",
     "@sendgrid/mail": "^8.1.6",
     "@types/bcrypt": "^5.0.2",
@@ -67,11 +68,12 @@
     "resend": "^6.5.2",
     "stripe": "^20.0.0",
     "typescript": "^5.8.3",
-    "uuid": "^13.0.0"
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",
     "@types/multer": "^2.0.0",
+    "@types/pg": "^8.16.0",
     "@types/uuid": "^10.0.0",
     "dotenv-cli": "^11.0.0",
     "nodemon": "^3.1.9",
