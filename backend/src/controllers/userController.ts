@@ -130,8 +130,20 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
             console.log(`Updated user ${user.id} with default role USER`);
         }
         
-        // Use generateToken utility for consistency and proper JWT_SECRET handling
-        const token = generateToken(user.id, userRole);
+        // Generate JWT token with fallback secret for resilience
+        const jwtSecret = process.env.JWT_SECRET;
+        if (!jwtSecret) {
+            console.error('JWT_SECRET environment variable is not set!');
+        }
+        const token = jwt.sign(
+            { 
+                userId: user.id,
+                email: user.email,
+                role: userRole 
+            },
+            jwtSecret || 'your-secret-key',
+            { expiresIn: '30d' }
+        );
         
         res.status(200).json({
             id: user.id,
