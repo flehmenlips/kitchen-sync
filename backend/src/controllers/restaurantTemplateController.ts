@@ -135,7 +135,7 @@ export const restaurantTemplateController = {
       
       const restaurant = await prisma.restaurant.findUnique({
         where: { id: restaurantId },
-        include: { plan: true }
+        include: { subscription: true }
       });
 
       if (!restaurant) {
@@ -146,7 +146,8 @@ export const restaurantTemplateController = {
       const allTemplates = await restaurantTemplateService.getActiveTemplates();
       
       // Filter premium templates based on plan
-      const isPremiumPlan = restaurant.plan && ['PROFESSIONAL', 'ENTERPRISE'].includes(restaurant.plan.name);
+      const plan = restaurant.subscription?.plan || 'TRIAL';
+      const isPremiumPlan = ['PROFESSIONAL', 'ENTERPRISE'].includes(plan);
       const availableTemplates = allTemplates.filter(template => 
         !template.isPremium || isPremiumPlan
       );
@@ -169,7 +170,7 @@ export const restaurantTemplateController = {
         availableCount: availableTemplates.length,
         totalCount: allTemplates.length,
         isPremiumPlan,
-        planName: restaurant.plan?.name || 'FREE'
+        planName: plan
       });
     } catch (error) {
       console.error('Error getting template recommendations:', error);
