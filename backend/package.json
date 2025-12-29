@@ -39,7 +39,7 @@
   "author": "",
   "license": "ISC",
   "engines": {
-    "node": ">=20.19.0 <24.0.0"
+    "node": ">=20.19.0 <23.0.0"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
