@@ -4,7 +4,6 @@ import bcrypt from 'bcrypt';
 import generateToken from '../utils/generateToken';
 // Import Prisma namespace from default path
 import { Prisma, User } from '@prisma/client';
-import jwt from 'jsonwebtoken';
 import { setupUserDefaults } from '../utils/setupUserDefaults';
 
 // @desc    Register a new user
@@ -144,6 +143,8 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
             jwtSecret || 'your-secret-key',
             { expiresIn: '30d' }
         );
+        // Use generateToken utility for consistency with registration and auth middleware
+        const token = generateToken(user.id, userRole);
         
         res.status(200).json({
             id: user.id,
