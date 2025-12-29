@@ -1,8 +1,7 @@
 import { Request, Response } from 'express';
-import { PrismaClient, OnboardingStatus, Prisma } from '@prisma/client';
+import { OnboardingStatus, Prisma } from '@prisma/client';
 import { PlatformAuthRequest } from '../../middleware/platformAuth';
-
-const prisma = new PrismaClient();
+import prisma from '../../config/db';
 
 // Get all restaurants with filters
 export const getRestaurants = async (req: PlatformAuthRequest, res: Response): Promise<void> => {

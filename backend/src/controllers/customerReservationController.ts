@@ -1,12 +1,10 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { CustomerAuthRequest } from '../middleware/authenticateCustomer';
 import { ReservationStatus } from '@prisma/client';
 import { emailService } from '../services/emailService';
 import { format } from 'date-fns';
 import { validateAndParseUTCDate } from '../utils/dateValidation';
-
-const prisma = new PrismaClient();
+import prisma from '../config/db';
 
 // @desc    Get daily capacity for date range (public, for date picker)
 // @route   GET /api/customer/reservations/daily-capacity

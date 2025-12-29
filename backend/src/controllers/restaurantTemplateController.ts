@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { restaurantTemplateService } from '../services/restaurantTemplateService';
+import prisma from '../config/db';
 
 export const restaurantTemplateController = {
   // Get all active restaurant templates
@@ -76,8 +77,6 @@ export const restaurantTemplateController = {
       }
 
       // Get restaurant info for preview URL
-      const { PrismaClient } = require('@prisma/client');
-      const prisma = new PrismaClient();
       
       const restaurant = await prisma.restaurant.findUnique({
         where: { id: restaurantId },
@@ -133,8 +132,6 @@ export const restaurantTemplateController = {
       }
 
       // Get restaurant info to make intelligent recommendations
-      const { PrismaClient } = require('@prisma/client');
-      const prisma = new PrismaClient();
       
       const restaurant = await prisma.restaurant.findUnique({
         where: { id: restaurantId },

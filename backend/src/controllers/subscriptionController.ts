@@ -1,8 +1,6 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { stripeService } from '../services/stripeService';
-
-const prisma = new PrismaClient();
+import prisma from '../config/db';
 
 // Get current subscription
 export const getSubscription = async (req: Request, res: Response): Promise<void> => {

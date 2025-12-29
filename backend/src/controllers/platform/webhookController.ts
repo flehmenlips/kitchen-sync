@@ -1,9 +1,8 @@
 import { Request, Response } from 'express';
-import { PrismaClient, SubscriptionPlan } from '@prisma/client';
+import { SubscriptionPlan } from '@prisma/client';
 import { stripeService } from '../../services/stripeService';
 import Stripe from 'stripe';
-
-const prisma = new PrismaClient();
+import prisma from '../../config/db';
 
 export const handleStripeWebhook = async (req: Request, res: Response): Promise<void> => {
   const sig = req.headers['stripe-signature'] as string;

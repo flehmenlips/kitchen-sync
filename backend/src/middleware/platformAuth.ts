@@ -1,11 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../config/db';
 
 dotenv.config();
-
-const prisma = new PrismaClient();
 const PLATFORM_JWT_SECRET = process.env.PLATFORM_JWT_SECRET || process.env.JWT_SECRET || 'platform-secret-key';
 
 export interface PlatformAuthRequest extends Request {

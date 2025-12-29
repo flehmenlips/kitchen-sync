@@ -1,9 +1,7 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { emailService } from '../services/emailService';
-
-const prisma = new PrismaClient();
+import prisma from '../config/db';
 
 // @desc    Get all customers with filters and pagination
 // @route   GET /api/admin/customers

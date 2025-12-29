@@ -1,9 +1,8 @@
 import { Response } from 'express';
-import { PrismaClient, SubscriptionPlan, SubscriptionStatus } from '@prisma/client';
+import { SubscriptionPlan, SubscriptionStatus } from '@prisma/client';
 import { PlatformAuthRequest } from '../../middleware/platformAuth';
 import { stripeService } from '../../services/stripeService';
-
-const prisma = new PrismaClient();
+import prisma from '../../config/db';
 
 // Get all subscriptions with filters
 export const getSubscriptions = async (req: PlatformAuthRequest, res: Response): Promise<void> => {

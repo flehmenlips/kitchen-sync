@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
-import { PrismaClient } from '@prisma/client';
 import { 
   generateAccessToken, 
   generateRefreshToken, 
@@ -12,8 +11,7 @@ import {
 } from '../utils/tokenUtils';
 import { emailService } from '../services/emailService';
 import { CustomerAuthRequest } from '../middleware/authenticateCustomer';
-
-const prisma = new PrismaClient();
+import prisma from '../config/db';
 
 export const customerAuthController = {
   // Customer registration

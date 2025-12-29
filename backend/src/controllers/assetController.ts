@@ -11,12 +11,10 @@
  */
 
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { asyncHandler } from '../utils/asyncHandler';
 import { uploadImage, deleteImage, listRestaurantAssets, validateAssetOwnership, migrateRestaurantAssets } from '../services/cloudinaryService';
 import { uploadToLocal, deleteFromLocal, listLocalAssets } from '../services/localStorageService';
-
-const prisma = new PrismaClient();
+import prisma from '../config/db';
 
 // Storage mode configuration
 const STORAGE_MODE = process.env.ASSET_STORAGE_MODE || 'cloudinary';

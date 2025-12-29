@@ -1,8 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken } from '../utils/tokenUtils';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../config/db';
 
 // Use a different interface name to avoid conflicts with the global Express Request extension
 export interface CustomerAuthRequest extends Request {

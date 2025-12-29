@@ -2,9 +2,7 @@ import { Response } from 'express';
 import { PlatformAuthRequest } from '../../middleware/platformAuth';
 import stripe from '../../config/stripe';
 import { stripeConfig } from '../../config/stripe';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../../config/db';
 
 // Create checkout session for subscription upgrade
 export const createCheckoutSession = async (req: PlatformAuthRequest, res: Response): Promise<void> => {

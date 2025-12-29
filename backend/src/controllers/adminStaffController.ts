@@ -1,10 +1,9 @@
 import { Request, Response } from 'express';
-import { PrismaClient, UserRole } from '@prisma/client';
+import { UserRole } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { emailService } from '../services/emailService';
 import { getRestaurantFilter } from '../middleware/restaurantContext';
-
-const prisma = new PrismaClient();
+import prisma from '../config/db';
 
 // @desc    Get all staff users for the current restaurant
 // @route   GET /api/admin/staff

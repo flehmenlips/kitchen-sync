@@ -1,8 +1,6 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { v2 as cloudinary } from 'cloudinary';
-
-const prisma = new PrismaClient();
+import prisma from '../config/db';
 
 // Configure Cloudinary
 cloudinary.config({
