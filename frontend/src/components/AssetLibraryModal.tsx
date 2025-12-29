@@ -941,7 +941,8 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
                         height="120"
                         image={(() => {
                           // Get thumbnail URL, ensuring we always have a valid URL
-                          const thumbnailUrl = getAssetThumbnailSmall(asset.fileUrl, asset.cloudinaryPublicId);
+                          const cloudinaryPublicId = asset.cloudinaryPublicId;
+                          const thumbnailUrl = getAssetThumbnailSmall(asset.fileUrl, cloudinaryPublicId);
                           const finalUrl = thumbnailUrl || asset.fileUrl;
                           // Ensure we have a valid URL string
                           if (!finalUrl) {

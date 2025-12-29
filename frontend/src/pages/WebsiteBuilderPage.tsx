@@ -3213,7 +3213,7 @@ const WebsiteBuilderPage: React.FC = () => {
       <AssetLibraryModal
         open={assetPickerOpen}
         onClose={() => setAssetPickerOpen(false)}
-        onAssetSelect={handleAssetSelect}
+        onSelect={handleAssetSelect}
       />
 
       {/* Website Management Dialog */}
