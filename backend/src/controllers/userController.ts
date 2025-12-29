@@ -126,8 +126,8 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
                 email: user.email,
                 role: userRole,
                 token: token,
-                createdAt: user.createdAt.toISOString(),
-                updatedAt: user.updatedAt.toISOString(),
+                createdAt: user.createdAt ? user.createdAt.toISOString() : new Date().toISOString(),
+                updatedAt: user.updatedAt ? user.updatedAt.toISOString() : new Date().toISOString(),
                 phone: user.phone || undefined,
                 isCustomer: user.isCustomer || false,
                 // Optional fields that may not exist in User model
@@ -141,7 +141,14 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
         }
     } catch (error) {
         console.error('Login Error:', error);
-        res.status(500).json({ message: 'Server error during login' });
+        console.error('Login Error Details:', {
+            message: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined
+        });
+        res.status(500).json({ 
+            message: 'Server error during login',
+            error: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : String(error)) : undefined
+        });
     }
 };
 
