@@ -15,14 +15,7 @@ export const getAssetThumbnailUrl = (
   cloudinaryPublicId?: string | null,
   size: number = 200
 ): string | undefined => {
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'assetThumbnails.ts:13',message:'getAssetThumbnailUrl entry',data:{fileUrl:fileUrl?.substring(0,100),cloudinaryPublicId,size,hasFileUrl:!!fileUrl,envVar:import.meta.env.VITE_CLOUDINARY_CLOUD_NAME},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,C,D'})}).catch(()=>{});
-  // #endregion
-  
   if (!fileUrl) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'assetThumbnails.ts:20',message:'No fileUrl provided',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     console.debug('[Thumbnail] No fileUrl provided');
     return undefined;
   }
@@ -30,18 +23,12 @@ export const getAssetThumbnailUrl = (
   // Ensure fileUrl is a string (handle edge cases)
   const urlString = String(fileUrl).trim();
   if (!urlString) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'assetThumbnails.ts:27',message:'Empty fileUrl after trimming',data:{originalFileUrl:fileUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     console.debug('[Thumbnail] Empty fileUrl after trimming');
     return undefined;
   }
 
   // If it's a Cloudinary URL, transform it to a thumbnail
   if (urlString.includes('res.cloudinary.com')) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'assetThumbnails.ts:31',message:'Cloudinary URL detected',data:{urlString:urlString.substring(0,150),size},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,E'})}).catch(()=>{});
-    // #endregion
     try {
       // Cloudinary URL format: 
       // https://res.cloudinary.com/{cloud_name}/{resource_type}/upload/{transformations}/{public_id}.{format}
@@ -160,48 +147,30 @@ export const getAssetThumbnailUrl = (
           // Reconstruct the path with the public_id and any subfolders
           const publicIdAndFormat = pathParts.slice(1).join('/');
           const thumbnailUrl = `${baseUrl}/upload/${thumbnailTransform}/${publicIdAndFormat}`;
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'assetThumbnails.ts:145',message:'Replaced transformations',data:{original:urlString.substring(0,150),thumbnail:thumbnailUrl.substring(0,150)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,E'})}).catch(()=>{});
-          // #endregion
           console.debug('[Thumbnail] Replaced transformations:', { original: urlString, thumbnail: thumbnailUrl });
           return thumbnailUrl;
         } else {
           // No existing transformations, insert thumbnail transformations
           const thumbnailUrl = `${baseUrl}/upload/${thumbnailTransform}/${pathAfterUpload}`;
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'assetThumbnails.ts:152',message:'Added transformations',data:{original:urlString.substring(0,150),thumbnail:thumbnailUrl.substring(0,150)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,E'})}).catch(()=>{});
-          // #endregion
           console.debug('[Thumbnail] Added transformations:', { original: urlString, thumbnail: thumbnailUrl });
           return thumbnailUrl;
         }
       }
     } catch (error) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'assetThumbnails.ts:159',message:'Error transforming Cloudinary URL',data:{error:String(error),urlString:urlString.substring(0,150)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-      // #endregion
       console.warn('[Thumbnail] Error transforming Cloudinary URL:', error, urlString);
     }
     
     // If we can't parse the URL, return original
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'assetThumbnails.ts:165',message:'Returning original URL (parse failed)',data:{urlString:urlString.substring(0,150)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,E'})}).catch(()=>{});
-    // #endregion
     console.debug('[Thumbnail] Returning original URL (not Cloudinary or parse failed):', urlString);
     return urlString;
   }
 
   // If we have a Cloudinary public ID but not a full URL, construct thumbnail URL
   if (cloudinaryPublicId && !urlString.includes('res.cloudinary.com')) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'assetThumbnails.ts:169',message:'Constructing from public ID',data:{cloudinaryPublicId,urlString:urlString.substring(0,100)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B,D'})}).catch(()=>{});
-    // #endregion
     // Extract cloud name from environment variable (Vite uses import.meta.env.VITE_ prefix)
     // If not set, return undefined to prevent constructing URLs with wrong cloud name
     const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
     if (!cloudName) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'assetThumbnails.ts:173',message:'VITE_CLOUDINARY_CLOUD_NAME not set',data:{cloudinaryPublicId,urlString:urlString.substring(0,100)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
       console.warn('[Thumbnail] VITE_CLOUDINARY_CLOUD_NAME not set, cannot construct Cloudinary thumbnail URL', {
         cloudinaryPublicId,
         fileUrl: urlString
@@ -210,17 +179,11 @@ export const getAssetThumbnailUrl = (
       return urlString;
     }
     const thumbnailUrl = `https://res.cloudinary.com/${cloudName}/image/upload/w_${size},h_${size},c_fill,q_auto,f_auto/${cloudinaryPublicId}`;
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'assetThumbnails.ts:181',message:'Constructed thumbnail from public ID',data:{cloudinaryPublicId,thumbnailUrl:thumbnailUrl.substring(0,150)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,D'})}).catch(()=>{});
-    // #endregion
     console.debug('[Thumbnail] Constructed from public ID:', { cloudinaryPublicId, thumbnailUrl });
     return thumbnailUrl;
   }
 
   // Return original URL if not Cloudinary or can't transform
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'assetThumbnails.ts:186',message:'Returning original URL (not Cloudinary)',data:{urlString:urlString.substring(0,150),hasCloudinaryPublicId:!!cloudinaryPublicId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-  // #endregion
   return urlString;
 };
 

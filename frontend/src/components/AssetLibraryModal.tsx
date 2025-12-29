@@ -202,10 +202,6 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
         allowedTypes.includes(asset.assetType.toLowerCase())
       );
       
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AssetLibraryModal.tsx:205',message:'Assets fetched and filtered',data:{totalAssets:assetResponse.assets.length,filteredCount:filteredAssets.length,allowedTypes,sampleAsset:filteredAssets[0]?{id:filteredAssets[0].id,fileName:filteredAssets[0].fileName,fileUrl:filteredAssets[0].fileUrl?.substring(0,100),cloudinaryPublicId:filteredAssets[0].cloudinaryPublicId}:null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,C'})}).catch(()=>{});
-      // #endregion
-      
       setAssets(filteredAssets);
       
       if (filteredAssets.length === 0 && !searchTerm) {
@@ -252,9 +248,6 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
 
   // Load data when dialog opens
   useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AssetLibraryModal.tsx:250',message:'Modal open state changed',data:{open,hasCurrentRestaurant:!!currentRestaurant,restaurantId:currentRestaurant?.id,allowedTypes,title},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     if (open && currentRestaurant) {
       fetchAssets();
       fetchFolders();
@@ -951,14 +944,8 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
                           const cloudinaryPublicId = asset.cloudinaryPublicId;
                           const thumbnailUrl = getAssetThumbnailSmall(asset.fileUrl, cloudinaryPublicId);
                           const finalUrl = thumbnailUrl || asset.fileUrl;
-                          // #region agent log
-                          fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AssetLibraryModal.tsx:944',message:'Image URL generation',data:{assetId:asset.id,fileName:asset.fileName,fileUrl:asset.fileUrl?.substring(0,100),cloudinaryPublicId,thumbnailUrl:thumbnailUrl?.substring(0,100),finalUrl:finalUrl?.substring(0,100),hasFinalUrl:!!finalUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,C'})}).catch(()=>{});
-                          // #endregion
                           // Ensure we have a valid URL string
                           if (!finalUrl) {
-                            // #region agent log
-                            fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AssetLibraryModal.tsx:947',message:'No valid URL for asset',data:{assetId:asset.id,fileName:asset.fileName},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-                            // #endregion
                             console.warn('[AssetLibrary] No valid URL for asset:', asset.id, asset.fileName);
                             return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5ObyBJbWFnZTwvdGV4dD48L3N2Zz4=';
                           }
@@ -967,9 +954,6 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
                         alt={asset.altText || asset.fileName}
                         sx={{ objectFit: 'cover' }}
                         onError={(e) => {
-                          // #region agent log
-                          fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AssetLibraryModal.tsx:955',message:'Image load error',data:{assetId:asset.id,fileName:asset.fileName,currentSrc:(e.target as HTMLImageElement).src.substring(0,150),fileUrl:asset.fileUrl?.substring(0,100)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-                          // #endregion
                           // Fallback to original URL if thumbnail fails
                           const target = e.target as HTMLImageElement;
                           // Check if we've already tried the fallback (prevent infinite loop)
@@ -996,11 +980,6 @@ const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
                               target.dataset.fallbackAttempted = 'true';
                             }
                           }
-                        }}
-                        onLoad={(e) => {
-                          // #region agent log
-                          fetch('http://127.0.0.1:7242/ingest/ff149c4b-a3fe-4d61-90af-9a16d2e3cd27',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AssetLibraryModal.tsx:onLoad',message:'Image loaded successfully',data:{assetId:asset.id,fileName:asset.fileName,src:(e.target as HTMLImageElement).src.substring(0,150)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-                          // #endregion
                         }}
                       />
                     ) : (
