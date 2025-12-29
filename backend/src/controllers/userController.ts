@@ -89,7 +89,11 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
                 email: true,
                 name: true,
                 password: true,
-                role: true
+                role: true,
+                createdAt: true,
+                updatedAt: true,
+                phone: true,
+                isCustomer: true
             }
         });
 
@@ -122,6 +126,15 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
                 email: user.email,
                 role: userRole,
                 token: token,
+                createdAt: user.createdAt.toISOString(),
+                updatedAt: user.updatedAt.toISOString(),
+                phone: user.phone || undefined,
+                isCustomer: user.isCustomer || false,
+                // Optional fields that may not exist in User model
+                company: undefined,
+                position: undefined,
+                address: undefined,
+                bio: undefined
             });
         } else {
             res.status(401).json({ message: 'Invalid email or password' });
