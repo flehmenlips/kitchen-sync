@@ -6,8 +6,14 @@ import prisma from '../../config/db';
 
 dotenv.config();
 
-// Separate JWT secret for platform admins
-const PLATFORM_JWT_SECRET = process.env.PLATFORM_JWT_SECRET || process.env.JWT_SECRET || 'platform-secret-key';
+// Get platform JWT secret from environment variables - must be configured
+const getPlatformJwtSecret = (): string => {
+  const secret = process.env.PLATFORM_JWT_SECRET || process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('PLATFORM_JWT_SECRET or JWT_SECRET environment variable must be configured');
+  }
+  return secret;
+};
 const PLATFORM_JWT_EXPIRES_IN = '24h';
 
 interface PlatformAuthRequest extends Request {
@@ -69,7 +75,7 @@ export const platformLogin = async (req: Request, res: Response): Promise<void> 
         role: admin.role,
         type: 'platform',
       },
-      PLATFORM_JWT_SECRET,
+      getPlatformJwtSecret(),
       { expiresIn: PLATFORM_JWT_EXPIRES_IN }
     );
 

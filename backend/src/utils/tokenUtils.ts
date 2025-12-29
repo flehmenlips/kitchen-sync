@@ -1,8 +1,18 @@
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || JWT_SECRET;
+// Get JWT secret from environment variables - must be configured
+const getJwtSecret = (): string => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET environment variable is not configured');
+  }
+  return secret;
+};
+
+const getRefreshTokenSecret = (): string => {
+  return process.env.REFRESH_TOKEN_SECRET || getJwtSecret();
+};
 
 interface TokenPayload {
   userId: number;
@@ -20,23 +30,23 @@ export function generateSecureToken(length: number = 32): string {
 }
 
 export function generateAccessToken(payload: TokenPayload): string {
-  return jwt.sign(payload, JWT_SECRET, {
+  return jwt.sign(payload, getJwtSecret(), {
     expiresIn: '1h' // Access token expires in 1 hour
   });
 }
 
 export function generateRefreshToken(payload: RefreshTokenPayload): string {
-  return jwt.sign(payload, REFRESH_TOKEN_SECRET, {
+  return jwt.sign(payload, getRefreshTokenSecret(), {
     expiresIn: '30d' // Refresh token expires in 30 days
   });
 }
 
 export function verifyAccessToken(token: string): TokenPayload {
-  return jwt.verify(token, JWT_SECRET) as TokenPayload;
+  return jwt.verify(token, getJwtSecret()) as TokenPayload;
 }
 
 export function verifyRefreshToken(token: string): RefreshTokenPayload {
-  return jwt.verify(token, REFRESH_TOKEN_SECRET) as RefreshTokenPayload;
+  return jwt.verify(token, getRefreshTokenSecret()) as RefreshTokenPayload;
 }
 
 export function generateEmailVerificationToken(): string {
