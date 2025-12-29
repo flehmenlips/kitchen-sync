@@ -521,7 +521,7 @@ export const register = async (userData: UserCredentials): Promise<AuthResponse>
 export const login = async (credentials: UserCredentials): Promise<AuthResponse> => {
     try {
         const response = await apiService.post('/users/login', credentials);
-        const { token, user } = response.data;
+        const { token } = response.data;
         // Store the token
         localStorage.setItem('token', token);
         // Update default headers
