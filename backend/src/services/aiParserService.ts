@@ -207,11 +207,16 @@ export async function scaleRecipeWithAI(
   }
 
   const { scaleMultiplier, targetYieldQuantity, targetYieldUnit } = options;
-  if (!scaleMultiplier && !targetYieldQuantity) {
-    throw new Error('Provide a scaleMultiplier or a targetYieldQuantity to scale the recipe.');
+  const hasValidMultiplier =
+    typeof scaleMultiplier === 'number' && Number.isFinite(scaleMultiplier) && scaleMultiplier > 0;
+  const hasValidTargetYield =
+    typeof targetYieldQuantity === 'number' && Number.isFinite(targetYieldQuantity) && targetYieldQuantity > 0;
+
+  if (!hasValidMultiplier && !hasValidTargetYield) {
+    throw new Error('Provide a positive scaleMultiplier or a positive targetYieldQuantity to scale the recipe.');
   }
 
-  const directive = scaleMultiplier
+  const directive = hasValidMultiplier
     ? `Scale all ingredient quantities by ${scaleMultiplier}x.`
     : `Adjust the recipe to yield ${targetYieldQuantity}${targetYieldUnit ? ' ' + targetYieldUnit : ''}.`;
 

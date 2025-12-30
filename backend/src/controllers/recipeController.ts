@@ -59,6 +59,15 @@ const safeParseInt = (val: unknown): number | undefined => {
   return undefined;
 };
 
+// Minimal HTML escaping to prevent XSS when injecting AI text into markup
+const escapeHtml = (value: string): string =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
 // Helper function for safe float parsing
 const safeParseFloat = (val: unknown): number | undefined => {
   if (typeof val === 'number') return !isNaN(val) ? val : undefined;
@@ -1204,7 +1213,7 @@ export const generateRecipe = async (req: Request, res: Response): Promise<void>
         const { rawText, parsed } = await generateRecipeFromPrompt(prompt);
 
         const formattedInstructions = parsed.instructions
-            .map((instruction: string) => `<li>${instruction}</li>`)
+            .map((instruction: string) => `<li>${escapeHtml(instruction)}</li>`)
             .join('\n');
 
         const formattedIngredients = parsed.ingredients.map((ing: any) => {
@@ -1258,6 +1267,18 @@ export const scaleRecipeAI = async (req: Request, res: Response): Promise<void> 
 
         if (!parsedRecipe && !recipeText) {
             res.status(400).json({ message: 'Provide parsedRecipe or recipeText to scale.' });
+            return;
+        }
+
+        const numericScaleMultiplier = scaleMultiplier !== undefined ? Number(scaleMultiplier) : undefined;
+        if (numericScaleMultiplier !== undefined && (!Number.isFinite(numericScaleMultiplier) || numericScaleMultiplier <= 0)) {
+            res.status(400).json({ message: 'scaleMultiplier must be a positive number.' });
+            return;
+        }
+
+        const numericTargetYield = targetYieldQuantity !== undefined ? Number(targetYieldQuantity) : undefined;
+        if (numericTargetYield !== undefined && (!Number.isFinite(numericTargetYield) || numericTargetYield <= 0)) {
+            res.status(400).json({ message: 'targetYieldQuantity must be a positive number.' });
             return;
         }
 
@@ -1358,13 +1379,13 @@ export const scaleRecipeAI = async (req: Request, res: Response): Promise<void> 
         }
 
         const scaled = await scaleRecipeWithAI(baseParsed, {
-            scaleMultiplier: typeof scaleMultiplier === 'number' ? scaleMultiplier : undefined,
-            targetYieldQuantity: typeof targetYieldQuantity === 'number' ? targetYieldQuantity : undefined,
+            scaleMultiplier: numericScaleMultiplier,
+            targetYieldQuantity: numericTargetYield,
             targetYieldUnit: typeof targetYieldUnit === 'string' ? targetYieldUnit : undefined
         });
 
         const formattedInstructions = scaled.instructions
-            .map((instruction: string) => `<li>${instruction}</li>`)
+            .map((instruction: string) => `<li>${escapeHtml(instruction)}</li>`)
             .join('\n');
 
         const formattedIngredients = scaled.ingredients.map((ing: any) => {

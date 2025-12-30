@@ -561,8 +561,9 @@ const RecipeImportPage: React.FC = () => {
             setError('Parse or generate a recipe first before scaling.');
             return;
         }
-        if (!scaleMultiplier || Number.isNaN(scaleMultiplier)) {
-            setError('Enter a valid scale multiplier (e.g., 2 for 2x).');
+        const multiplier = Number(scaleMultiplier);
+        if (!Number.isFinite(multiplier) || multiplier <= 0) {
+            setError('Enter a positive scale multiplier (e.g., 2 for 2x).');
             return;
         }
         setIsProcessing(true);
@@ -570,7 +571,7 @@ const RecipeImportPage: React.FC = () => {
         try {
             const result = await scaleRecipeAI({
                 parsedRecipe,
-                scaleMultiplier: Number(scaleMultiplier)
+                scaleMultiplier: multiplier
             });
             if (result?.preview) {
                 // Use preview to keep instructions as HTML string and ingredient shape consistent
