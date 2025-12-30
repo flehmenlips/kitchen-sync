@@ -1,5 +1,7 @@
+// Load environment variables FIRST, before any other imports
+import 'dotenv/config';
+
 import express from 'express';
-import dotenv from 'dotenv';
 import cors from 'cors';
 import path from 'path'; // Add path module
 import recipeRoutes from './routes/recipeRoutes';
@@ -37,10 +39,13 @@ import { Request, Response, NextFunction } from 'express';
 import { protect } from './middleware/authMiddleware';
 import { setRestaurantContext } from './middleware/restaurantContext';
 
-// Load environment variables
-dotenv.config(); // Loads variables from .env file in the current directory (backend/)
-
 const app = express();
+
+// Enable trust proxy for production (Render runs behind a proxy)
+// This is required for express-rate-limit to work correctly
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
 
 // Middleware
 const allowedOrigins = [
