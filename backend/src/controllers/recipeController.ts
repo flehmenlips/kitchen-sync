@@ -1334,8 +1334,10 @@ export const scaleRecipeAI = async (req: Request, res: Response): Promise<void> 
                 };
             }
 
-            const quantity = Number(ingredient.quantity);
-            const safeQuantity = Number.isFinite(quantity) ? quantity : 1;
+            const quantityValue = typeof ingredient.quantity === 'number'
+                ? ingredient.quantity
+                : Number(ingredient.quantity);
+            const safeQuantity = Number.isFinite(quantityValue) && quantityValue > 0 ? quantityValue : 1;
             const unit = typeof ingredient.unit === 'string' && ingredient.unit.trim() ? ingredient.unit.trim() : 'piece';
             // Treat empty name as missing so we can fall back to any raw text
             const nameSource =
