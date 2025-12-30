@@ -1293,6 +1293,11 @@ export const scaleRecipeAI = async (req: Request, res: Response): Promise<void> 
             return;
         }
 
+        if (numericScaleMultiplier === undefined && numericTargetYield === undefined) {
+            res.status(400).json({ message: 'Provide scaleMultiplier or targetYieldQuantity to scale the recipe.' });
+            return;
+        }
+
         const normalizeInstructions = (instructions: unknown): string[] => {
             if (Array.isArray(instructions)) {
                 return instructions
@@ -1352,6 +1357,15 @@ export const scaleRecipeAI = async (req: Request, res: Response): Promise<void> 
             };
         };
 
+        const toFiniteNumber = (val: unknown): number | undefined => {
+            if (typeof val === 'number' && Number.isFinite(val)) return val;
+            if (typeof val === 'string' && val.trim() !== '') {
+                const num = Number(val);
+                return Number.isFinite(num) ? num : undefined;
+            }
+            return undefined;
+        };
+
         const normalizeParsedRecipe = (recipe: any): AIParsedRecipe => {
             const instructions = normalizeInstructions(recipe?.instructions);
             if (!instructions.length) {
@@ -1374,10 +1388,10 @@ export const scaleRecipeAI = async (req: Request, res: Response): Promise<void> 
                 notes: typeof recipe?.notes === 'string' ? recipe.notes : undefined,
                 ingredients: normalizedIngredients,
                 instructions,
-                yieldQuantity: Number.isFinite(Number(recipe?.yieldQuantity)) ? Number(recipe.yieldQuantity) : undefined,
+                yieldQuantity: toFiniteNumber(recipe?.yieldQuantity),
                 yieldUnit: typeof recipe?.yieldUnit === 'string' ? recipe.yieldUnit : undefined,
-                prepTimeMinutes: Number.isFinite(Number(recipe?.prepTimeMinutes)) ? Number(recipe.prepTimeMinutes) : undefined,
-                cookTimeMinutes: Number.isFinite(Number(recipe?.cookTimeMinutes)) ? Number(recipe.cookTimeMinutes) : undefined
+                prepTimeMinutes: toFiniteNumber(recipe?.prepTimeMinutes),
+                cookTimeMinutes: toFiniteNumber(recipe?.cookTimeMinutes)
             };
         };
 
