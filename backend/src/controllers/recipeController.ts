@@ -75,8 +75,8 @@ const decodeHtml = (value: string): string =>
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
-    .replace(/&#(\d+);/g, (_, num) => String.fromCharCode(Number(num)))
-    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, num) => String.fromCodePoint(Number(num)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
     .replace(/&amp;/g, '&');
 
 // Helper function for safe float parsing
@@ -1325,6 +1325,44 @@ export const scaleRecipeAI = async (req: Request, res: Response): Promise<void> 
 
         const normalizeIngredient = (ingredient: any): AIParsedIngredient | null => {
             if (!ingredient) return null;
+
+            const rawText = typeof ingredient.raw === 'string' ? ingredient.raw.trim() : '';
+
+            const parseQuantityToken = (token: string): number | undefined => {
+                const trimmed = token.trim();
+                const mixedMatch = trimmed.match(/^(\d+)\s+(\d+)\/(\d+)$/); // e.g. 1 1/2
+                if (mixedMatch) {
+                    const whole = Number(mixedMatch[1]);
+                    const num = Number(mixedMatch[2]);
+                    const den = Number(mixedMatch[3]);
+                    if (Number.isFinite(whole) && Number.isFinite(num) && Number.isFinite(den) && den !== 0) {
+                        return whole + num / den;
+                    }
+                }
+
+                const fractionMatch = trimmed.match(/^(\d+)\/(\d+)$/); // e.g. 1/2
+                if (fractionMatch) {
+                    const num = Number(fractionMatch[1]);
+                    const den = Number(fractionMatch[2]);
+                    if (Number.isFinite(num) && Number.isFinite(den) && den !== 0) {
+                        return num / den;
+                    }
+                }
+
+                const numeric = Number(trimmed.replace(',', '.'));
+                return Number.isFinite(numeric) ? numeric : undefined;
+            };
+
+            const parseFromRaw = (raw: string) => {
+                const match = raw.match(/^\s*([\d.,\/\s]+)\s+([^\s]+)\s+(.*)$/);
+                if (!match) return null;
+                const qty = parseQuantityToken(match[1]);
+                const unitFromRaw = match[2]?.trim();
+                const nameFromRaw = match[3]?.trim();
+                if (!nameFromRaw) return null;
+                return { qty, unitFromRaw, nameFromRaw };
+            };
+
             if (typeof ingredient === 'string') {
                 return {
                     quantity: 1,
@@ -1334,18 +1372,33 @@ export const scaleRecipeAI = async (req: Request, res: Response): Promise<void> 
                 };
             }
 
-            const quantityValue = typeof ingredient.quantity === 'number'
+            let quantityValue = typeof ingredient.quantity === 'number'
                 ? ingredient.quantity
                 : Number(ingredient.quantity);
-            const safeQuantity = Number.isFinite(quantityValue) && quantityValue > 0 ? quantityValue : 1;
-            const unit = typeof ingredient.unit === 'string' && ingredient.unit.trim() ? ingredient.unit.trim() : 'piece';
-            // Treat empty name as missing so we can fall back to any raw text
-            const nameSource =
-                (typeof ingredient.name === 'string' && ingredient.name.trim())
-                    ? ingredient.name
-                    : (typeof ingredient.raw === 'string' ? ingredient.raw : '');
-            const name = nameSource.trim();
+
+            let unit = typeof ingredient.unit === 'string' && ingredient.unit.trim() ? ingredient.unit.trim() : undefined;
+
+            let name = typeof ingredient.name === 'string' ? ingredient.name.trim() : '';
+
+            if (!name && rawText) {
+                const parsed = parseFromRaw(rawText);
+                if (parsed) {
+                    name = parsed.nameFromRaw;
+                    if (!Number.isFinite(quantityValue) || quantityValue <= 0) {
+                        quantityValue = parsed.qty;
+                    }
+                    if (!unit && parsed.unitFromRaw) {
+                        unit = parsed.unitFromRaw;
+                    }
+                } else {
+                    name = rawText;
+                }
+            }
+
             if (!name) return null;
+
+            const safeQuantity = Number.isFinite(quantityValue) && quantityValue > 0 ? quantityValue : 1;
+            const safeUnit = unit || 'piece';
 
             const notes = typeof ingredient.notes === 'string' && ingredient.notes.trim()
                 ? ingredient.notes.trim()
@@ -1353,7 +1406,7 @@ export const scaleRecipeAI = async (req: Request, res: Response): Promise<void> 
 
             return {
                 quantity: safeQuantity,
-                unit,
+                unit: safeUnit,
                 name,
                 notes
             };
