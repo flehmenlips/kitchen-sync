@@ -68,6 +68,17 @@ const escapeHtml = (value: string): string =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
+// Decode basic HTML entities so we don't double-escape already-sanitized text
+const decodeHtml = (value: string): string =>
+  value
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/&#(\d+);/g, (_, num) => String.fromCharCode(Number(num)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+
 // Helper function for safe float parsing
 const safeParseFloat = (val: unknown): number | undefined => {
   if (typeof val === 'number') return !isNaN(val) ? val : undefined;
@@ -1285,13 +1296,13 @@ export const scaleRecipeAI = async (req: Request, res: Response): Promise<void> 
         const normalizeInstructions = (instructions: unknown): string[] => {
             if (Array.isArray(instructions)) {
                 return instructions
-                    .map((step) => (typeof step === 'string' ? step.trim() : ''))
+                    .map((step) => (typeof step === 'string' ? decodeHtml(step.trim()) : ''))
                     .filter((step) => step.length > 0);
             }
 
             if (typeof instructions === 'string') {
                 const htmlListMatches = Array.from(instructions.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi))
-                    .map((m) => m[1]?.replace(/<\/?[^>]+>/g, '').trim())
+                    .map((m) => decodeHtml(m[1]?.replace(/<\/?[^>]+>/g, '').trim() || ''))
                     .filter((step) => step && step.length > 0);
 
                 if (htmlListMatches.length > 0) {
@@ -1300,7 +1311,7 @@ export const scaleRecipeAI = async (req: Request, res: Response): Promise<void> 
 
                 return instructions
                     .split(/\n+/)
-                    .map((step) => step.replace(/^\d+[\).\s-]*/, '').trim())
+                    .map((step) => decodeHtml(step.replace(/^\d+[\).\s-]*/, '').trim()))
                     .filter((step) => step.length > 0);
             }
 
