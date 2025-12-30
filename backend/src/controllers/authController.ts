@@ -3,8 +3,14 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/db';
 
-// Get JWT secret from environment variables
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+// Get JWT secret from environment variables - must be configured
+const getJwtSecret = (): string => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET environment variable is not configured');
+  }
+  return secret;
+};
 
 export const register = async (req: Request, res: Response) => {
     try {
@@ -33,7 +39,7 @@ export const register = async (req: Request, res: Response) => {
         // Create token
         const token = jwt.sign(
             { id: user.id, email: user.email, role: user.role },
-            JWT_SECRET,
+            getJwtSecret(),
             { expiresIn: '24h' }
         );
 
@@ -70,7 +76,7 @@ export const login = async (req: Request, res: Response) => {
         // Create token
         const token = jwt.sign(
             { id: user.id, email: user.email, role: user.role },
-            JWT_SECRET,
+            getJwtSecret(),
             { expiresIn: '24h' }
         );
 
