@@ -21,7 +21,7 @@ if (connectionString) {
     console.log(`   Database host: ${url.hostname}`);
     console.log(`   Database port: ${url.port || '5432 (default)'}`);
     console.log(`   Database name: ${url.pathname.slice(1) || '(not specified in URL)'}`);
-    console.log(`   Database user: ${url.username || '(not set)'}`);
+    console.log(`   Database user: ${url.username ? '(set)' : '(not set)'}`);
     console.log(`   SSL mode: ${url.searchParams.get('sslmode') || 'not specified'}`);
   } catch (e) {
     console.log('   ⚠️  Could not parse DATABASE_URL - may be malformed');
