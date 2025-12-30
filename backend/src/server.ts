@@ -221,6 +221,17 @@ const PORT = process.env.PORT || 3001;
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
-  console.log('🎯 FINAL FIX v6 - Frontend API URLs corrected to point to api.kitchensync.restaurant');
+  console.log('========================================');
+  console.log('🚀 SERVER STARTUP');
+  console.log('========================================');
+  console.log(`   Mode: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`   Port: ${PORT}`);
+  console.log('');
+  console.log('📋 Environment Variables Check:');
+  console.log(`   DATABASE_URL: ${process.env.DATABASE_URL ? 'SET ✓' : 'NOT SET ✗'}`);
+  console.log(`   JWT_SECRET: ${process.env.JWT_SECRET ? 'SET ✓' : 'NOT SET ✗'}`);
+  console.log(`   NODE_ENV: ${process.env.NODE_ENV || 'not set'}`);
+  console.log(`   CLOUDINARY_CLOUD_NAME: ${process.env.CLOUDINARY_CLOUD_NAME ? 'SET ✓' : 'NOT SET ✗'}`);
+  console.log('========================================');
+  console.log('🎯 Database connection fix v7 - Added connection test and env var logging');
 }); 
