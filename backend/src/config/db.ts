@@ -34,7 +34,13 @@ if (connectionString) {
 }
 console.log('========================================');
 
-const pool = new Pool({ connectionString });
+// Build pool config; enable SSL in production (Render requires TLS)
+const poolConfig: pg.PoolConfig = {
+  connectionString,
+  ...(isProduction ? { ssl: { rejectUnauthorized: false } } : {}),
+};
+
+const pool = new Pool(poolConfig);
 const adapter = new PrismaPg(pool);
 
 // Initialize Prisma Client with adapter
