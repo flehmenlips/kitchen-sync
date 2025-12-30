@@ -4,7 +4,13 @@ import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import prisma from '../config/db';
-import { parseRecipeWithAI } from '../services/aiParserService';
+import {
+    parseRecipeWithAI,
+    generateRecipeFromPrompt,
+    scaleRecipeWithAI,
+    ParsedRecipe as AIParsedRecipe,
+    ParsedIngredient as AIParsedIngredient
+} from '../services/aiParserService';
 import cloudinaryService from '../services/cloudinaryService';
 import { getRestaurantFilter } from '../middleware/restaurantContext';
 
@@ -52,6 +58,26 @@ const safeParseInt = (val: unknown): number | undefined => {
   }
   return undefined;
 };
+
+// Minimal HTML escaping to prevent XSS when injecting AI text into markup
+const escapeHtml = (value: string): string =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+// Decode basic HTML entities so we don't double-escape already-sanitized text
+const decodeHtml = (value: string): string =>
+  value
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#(\d+);/g, (_, num) => String.fromCodePoint(Number(num)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&amp;/g, '&');
 
 // Helper function for safe float parsing
 const safeParseFloat = (val: unknown): number | undefined => {
@@ -1175,6 +1201,312 @@ export const parseRecipe = async (req: Request, res: Response): Promise<void> =>
     } catch (error) {
         console.error('Error parsing recipe:', error);
         const safeMessage = error instanceof Error ? error.message : 'Error parsing recipe';
+        res.status(500).json({ message: safeMessage });
+    }
+};
+
+// @desc    Generate a recipe from a freeform prompt using AI
+// @route   POST /api/recipes/generate
+// @access  Private
+export const generateRecipe = async (req: Request, res: Response): Promise<void> => {
+    if (!req.user?.id) {
+        res.status(401).json({ message: 'Not authorized, user ID missing' });
+        return;
+    }
+
+    try {
+        const { prompt } = req.body;
+        if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
+            res.status(400).json({ message: 'Prompt is required' });
+            return;
+        }
+
+        const { rawText, parsed } = await generateRecipeFromPrompt(prompt);
+
+        const formattedInstructions = parsed.instructions
+            .map((instruction: string) => `<li>${escapeHtml(instruction)}</li>`)
+            .join('\n');
+
+        const formattedIngredients = parsed.ingredients.map((ing: any) => {
+            let rawTextIng = `${ing.quantity} ${ing.unit} ${ing.name}`;
+            if (ing.notes) {
+                rawTextIng += ` (${ing.notes})`;
+            }
+            return {
+                type: "ingredient",
+                quantity: ing.quantity,
+                unit: ing.unit,
+                unitId: "",
+                name: ing.name,
+                raw: rawTextIng,
+                notes: ing.notes
+            };
+        });
+
+        res.status(200).json({
+            rawText,
+            parsedRecipe: parsed,
+            preview: {
+                name: parsed.name,
+                description: parsed.description + (parsed.notes ? `\n\n${parsed.notes}` : ''),
+                instructions: formattedInstructions ? `<ol>${formattedInstructions}</ol>` : "",
+                ingredients: formattedIngredients,
+                yieldQuantity: parsed.yieldQuantity,
+                yieldUnit: parsed.yieldUnit,
+                prepTimeMinutes: parsed.prepTimeMinutes,
+                cookTimeMinutes: parsed.cookTimeMinutes
+            }
+        });
+    } catch (error) {
+        console.error('Error generating recipe with AI:', error);
+        const safeMessage = error instanceof Error ? error.message : 'Error generating recipe';
+        res.status(500).json({ message: safeMessage });
+    }
+};
+
+// @desc    Scale a recipe via AI (multiplier or target yield)
+// @route   POST /api/recipes/scale
+// @access  Private
+export const scaleRecipeAI = async (req: Request, res: Response): Promise<void> => {
+    if (!req.user?.id) {
+        res.status(401).json({ message: 'Not authorized, user ID missing' });
+        return;
+    }
+
+    try {
+        const { parsedRecipe, recipeText, scaleMultiplier, targetYieldQuantity, targetYieldUnit } = req.body;
+
+        if (!parsedRecipe && !recipeText) {
+            res.status(400).json({ message: 'Provide parsedRecipe or recipeText to scale.' });
+            return;
+        }
+
+        const numericScaleMultiplier = scaleMultiplier !== undefined ? Number(scaleMultiplier) : undefined;
+        if (numericScaleMultiplier !== undefined && (!Number.isFinite(numericScaleMultiplier) || numericScaleMultiplier <= 0)) {
+            res.status(400).json({ message: 'scaleMultiplier must be a positive number.' });
+            return;
+        }
+
+        const numericTargetYield = targetYieldQuantity !== undefined ? Number(targetYieldQuantity) : undefined;
+        if (numericTargetYield !== undefined && (!Number.isFinite(numericTargetYield) || numericTargetYield <= 0)) {
+            res.status(400).json({ message: 'targetYieldQuantity must be a positive number.' });
+            return;
+        }
+
+        if (numericScaleMultiplier === undefined && numericTargetYield === undefined) {
+            res.status(400).json({ message: 'Provide scaleMultiplier or targetYieldQuantity to scale the recipe.' });
+            return;
+        }
+
+        const normalizeInstructions = (instructions: unknown): string[] => {
+            if (Array.isArray(instructions)) {
+                return instructions
+                    .map((step) => (typeof step === 'string' ? decodeHtml(step.trim()) : ''))
+                    .filter((step) => step.length > 0);
+            }
+
+            if (typeof instructions === 'string') {
+                const htmlListMatches = Array.from(instructions.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi))
+                    .map((m) => decodeHtml(m[1]?.replace(/<\/?[^>]+>/g, '').trim() || ''))
+                    .filter((step) => step && step.length > 0);
+
+                if (htmlListMatches.length > 0) {
+                    return htmlListMatches;
+                }
+
+                return instructions
+                    .split(/\n+/)
+                    .map((step) => decodeHtml(step.replace(/^\d+[\).\s-]*/, '').trim()))
+                    .filter((step) => step.length > 0);
+            }
+
+            return [];
+        };
+
+        const normalizeIngredient = (ingredient: any): AIParsedIngredient | null => {
+            if (!ingredient) return null;
+
+            const rawText = typeof ingredient.raw === 'string' ? ingredient.raw.trim() : '';
+
+            const parseQuantityToken = (token: string): number | undefined => {
+                const trimmed = token.trim();
+                const mixedMatch = trimmed.match(/^(\d+)\s+(\d+)\/(\d+)$/); // e.g. 1 1/2
+                if (mixedMatch) {
+                    const whole = Number(mixedMatch[1]);
+                    const num = Number(mixedMatch[2]);
+                    const den = Number(mixedMatch[3]);
+                    if (Number.isFinite(whole) && Number.isFinite(num) && Number.isFinite(den) && den !== 0) {
+                        return whole + num / den;
+                    }
+                }
+
+                const fractionMatch = trimmed.match(/^(\d+)\/(\d+)$/); // e.g. 1/2
+                if (fractionMatch) {
+                    const num = Number(fractionMatch[1]);
+                    const den = Number(fractionMatch[2]);
+                    if (Number.isFinite(num) && Number.isFinite(den) && den !== 0) {
+                        return num / den;
+                    }
+                }
+
+                const numeric = Number(trimmed.replace(',', '.'));
+                return Number.isFinite(numeric) ? numeric : undefined;
+            };
+
+            const parseFromRaw = (raw: string) => {
+                const match = raw.match(/^\s*([\d.,\/\s]+)\s+([^\s]+)\s+(.*)$/);
+                if (!match) return null;
+                const qty = parseQuantityToken(match[1]);
+                const unitFromRaw = match[2]?.trim();
+                const nameFromRaw = match[3]?.trim();
+                if (!nameFromRaw) return null;
+                return { qty, unitFromRaw, nameFromRaw };
+            };
+
+            if (typeof ingredient === 'string') {
+                return {
+                    quantity: 1,
+                    unit: 'piece',
+                    name: ingredient.trim(),
+                    notes: undefined
+                };
+            }
+
+            let quantityValue: number | undefined;
+            if (typeof ingredient.quantity === 'number') {
+                quantityValue = ingredient.quantity;
+            } else if (typeof ingredient.quantity === 'string') {
+                // Handle fraction-like strings (e.g., "1/2") before falling back to Number()
+                quantityValue = parseQuantityToken(ingredient.quantity) ?? Number(ingredient.quantity);
+            }
+
+            let unit = typeof ingredient.unit === 'string' && ingredient.unit.trim() ? ingredient.unit.trim() : undefined;
+
+            let name = typeof ingredient.name === 'string' ? ingredient.name.trim() : '';
+
+            const hasPositiveQuantity = (val: unknown): val is number =>
+                typeof val === 'number' && Number.isFinite(val) && val > 0;
+
+            if (!name && rawText) {
+                const parsed = parseFromRaw(rawText);
+                if (parsed) {
+                    name = parsed.nameFromRaw;
+                    if (!hasPositiveQuantity(quantityValue)) {
+                        quantityValue = parsed.qty;
+                    }
+                    if (!unit && parsed.unitFromRaw) {
+                        unit = parsed.unitFromRaw;
+                    }
+                } else {
+                    name = rawText;
+                }
+            }
+
+            if (!name) return null;
+
+            const safeQuantity = hasPositiveQuantity(quantityValue) ? quantityValue : 1;
+            const safeUnit = unit || 'piece';
+
+            const notes = typeof ingredient.notes === 'string' && ingredient.notes.trim()
+                ? ingredient.notes.trim()
+                : undefined;
+
+            return {
+                quantity: safeQuantity,
+                unit: safeUnit,
+                name,
+                notes
+            };
+        };
+
+        const toFiniteNumber = (val: unknown): number | undefined => {
+            if (typeof val === 'number' && Number.isFinite(val)) return val;
+            if (typeof val === 'string' && val.trim() !== '') {
+                const num = Number(val);
+                return Number.isFinite(num) ? num : undefined;
+            }
+            return undefined;
+        };
+
+        const normalizeParsedRecipe = (recipe: any): AIParsedRecipe => {
+            const instructions = normalizeInstructions(recipe?.instructions);
+            if (!instructions.length) {
+                throw new Error('Invalid recipe: instructions are missing or malformed.');
+            }
+
+            const normalizedIngredients = Array.isArray(recipe?.ingredients)
+                ? recipe.ingredients
+                    .map(normalizeIngredient)
+                    .filter((ing: AIParsedIngredient | null): ing is AIParsedIngredient => Boolean(ing))
+                : [];
+
+            if (!normalizedIngredients.length) {
+                throw new Error('Invalid recipe: ingredients are missing or malformed.');
+            }
+
+            return {
+                name: typeof recipe?.name === 'string' ? recipe.name : 'Untitled Recipe',
+                description: typeof recipe?.description === 'string' ? recipe.description : '',
+                notes: typeof recipe?.notes === 'string' ? recipe.notes : undefined,
+                ingredients: normalizedIngredients,
+                instructions,
+                yieldQuantity: toFiniteNumber(recipe?.yieldQuantity),
+                yieldUnit: typeof recipe?.yieldUnit === 'string' ? recipe.yieldUnit : undefined,
+                prepTimeMinutes: toFiniteNumber(recipe?.prepTimeMinutes),
+                cookTimeMinutes: toFiniteNumber(recipe?.cookTimeMinutes)
+            };
+        };
+
+        let baseParsed: AIParsedRecipe;
+        if (parsedRecipe) {
+            baseParsed = normalizeParsedRecipe(parsedRecipe);
+        } else {
+            // Parse raw text with AI first
+            baseParsed = await parseRecipeWithAI(recipeText as string);
+        }
+
+        const scaled = await scaleRecipeWithAI(baseParsed, {
+            scaleMultiplier: numericScaleMultiplier,
+            targetYieldQuantity: numericTargetYield,
+            targetYieldUnit: typeof targetYieldUnit === 'string' ? targetYieldUnit : undefined
+        });
+
+        const formattedInstructions = scaled.instructions
+            .map((instruction: string) => `<li>${escapeHtml(instruction)}</li>`)
+            .join('\n');
+
+        const formattedIngredients = scaled.ingredients.map((ing: any) => {
+            let rawTextIng = `${ing.quantity} ${ing.unit} ${ing.name}`;
+            if (ing.notes) {
+                rawTextIng += ` (${ing.notes})`;
+            }
+            return {
+                type: "ingredient",
+                quantity: ing.quantity,
+                unit: ing.unit,
+                unitId: "",
+                name: ing.name,
+                raw: rawTextIng,
+                notes: ing.notes
+            };
+        });
+
+        res.status(200).json({
+            parsedRecipe: scaled,
+            preview: {
+                name: scaled.name,
+                description: scaled.description + (scaled.notes ? `\n\n${scaled.notes}` : ''),
+                instructions: formattedInstructions ? `<ol>${formattedInstructions}</ol>` : "",
+                ingredients: formattedIngredients,
+                yieldQuantity: scaled.yieldQuantity,
+                yieldUnit: scaled.yieldUnit,
+                prepTimeMinutes: scaled.prepTimeMinutes,
+                cookTimeMinutes: scaled.cookTimeMinutes
+            }
+        });
+    } catch (error) {
+        console.error('Error scaling recipe with AI:', error);
+        const safeMessage = error instanceof Error ? error.message : 'Error scaling recipe';
         res.status(500).json({ message: safeMessage });
     }
 };
