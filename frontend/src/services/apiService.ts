@@ -1,8 +1,6 @@
 import axios from 'axios';
 import { RecipeFormData } from '../components/forms/RecipeForm';
 import { UserProfile, UserCredentials, AuthResponse } from '../types/user';
-import { Recipe as RecipeType, RecipeApiData } from '../types/recipe';
-import { API_URL } from '../config';
 
 // Determine API URL based on environment
 const getApiUrl = () => {
@@ -619,6 +617,11 @@ export const parseRecipe = async (recipeText: string, forceAI?: boolean): Promis
         return response.data;
     } catch (error) {
         console.error('Error parsing recipe:', error);
+        // Surface server-provided message if available
+        if (axios.isAxiosError(error)) {
+            const message = error.response?.data?.message || error.message || 'Failed to parse recipe';
+            throw new Error(message);
+        }
         throw error;
     }
 };

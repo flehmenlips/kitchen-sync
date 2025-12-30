@@ -1174,7 +1174,8 @@ export const parseRecipe = async (req: Request, res: Response): Promise<void> =>
         }
     } catch (error) {
         console.error('Error parsing recipe:', error);
-        res.status(500).json({ message: 'Error parsing recipe' });
+        const safeMessage = error instanceof Error ? error.message : 'Error parsing recipe';
+        res.status(500).json({ message: safeMessage });
     }
 };
 
