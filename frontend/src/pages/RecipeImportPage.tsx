@@ -35,6 +35,8 @@ import {
 import { Link as RouterLink } from 'react-router-dom';
 import {
     parseRecipe,
+    generateRecipeAI,
+    scaleRecipeAI,
     createRecipe,
     getUnits,
     createUnit,
@@ -248,6 +250,8 @@ const IngredientEditDialog: React.FC<IngredientEditDialogProps> = ({
 
 const RecipeImportPage: React.FC = () => {
     const [rawRecipe, setRawRecipe] = useState('');
+    const [aiPrompt, setAiPrompt] = useState('');
+    const [scaleMultiplier, setScaleMultiplier] = useState<number>(2);
     const [isProcessing, setIsProcessing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [parsedRecipe, setParsedRecipe] = useState<ParsedRecipe | null>(null);
@@ -520,6 +524,55 @@ const RecipeImportPage: React.FC = () => {
             setActiveStep(1);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to parse recipe');
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const handleGenerateAI = async () => {
+        if (!aiPrompt.trim()) {
+            setError('Please enter a prompt for the AI');
+            return;
+        }
+        setIsProcessing(true);
+        setError(null);
+        try {
+            const result = await generateRecipeAI(aiPrompt);
+            if (result?.rawText) {
+                setRawRecipe(result.rawText);
+            }
+            if (result?.parsedRecipe) {
+                setParsedRecipe(result.parsedRecipe);
+                setActiveStep(1);
+            }
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to generate recipe');
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const handleScaleAI = async () => {
+        if (!parsedRecipe) {
+            setError('Parse or generate a recipe first before scaling.');
+            return;
+        }
+        if (!scaleMultiplier || Number.isNaN(scaleMultiplier)) {
+            setError('Enter a valid scale multiplier (e.g., 2 for 2x).');
+            return;
+        }
+        setIsProcessing(true);
+        setError(null);
+        try {
+            const result = await scaleRecipeAI({
+                parsedRecipe,
+                scaleMultiplier: Number(scaleMultiplier)
+            });
+            if (result?.parsedRecipe) {
+                setParsedRecipe(result.parsedRecipe);
+            }
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to scale recipe');
         } finally {
             setIsProcessing(false);
         }
@@ -897,6 +950,31 @@ const RecipeImportPage: React.FC = () => {
                         We'll identify ingredients, quantities, units, and instructions automatically.
                     </Typography>
 
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 3 }}>
+                        <Typography variant="subtitle1">Ask AI to draft a recipe</Typography>
+                        <TextField
+                            fullWidth
+                            multiline
+                            rows={3}
+                            value={aiPrompt}
+                            onChange={(e) => setAiPrompt(e.target.value)}
+                            placeholder={`e.g., "Fresh salsa with persimmons and quince"\n"Create a savory flan with 650g pumpkin flesh"`}
+                        />
+                        <Box sx={{ display: 'flex', gap: 2 }}>
+                            <Button
+                                variant="outlined"
+                                onClick={handleGenerateAI}
+                                disabled={isProcessing || !aiPrompt.trim()}
+                                startIcon={isProcessing ? <CircularProgress size={20} /> : null}
+                            >
+                                {isProcessing ? 'Working...' : 'Generate with AI'}
+                            </Button>
+                            <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'center' }}>
+                                Or paste an existing recipe below.
+                            </Typography>
+                        </Box>
+                    </Box>
+
                     <TextField
                         fullWidth
                         multiline
@@ -970,6 +1048,25 @@ const RecipeImportPage: React.FC = () => {
                             onChange={(e) => setParsedRecipe({ ...parsedRecipe, description: e.target.value })}
                             sx={{ mb: 3 }}
                         />
+
+                        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 3, flexWrap: 'wrap' }}>
+                            <TextField
+                                label="Scale (e.g., 0.5, 2, 3)"
+                                type="number"
+                                inputProps={{ step: 0.1 }}
+                                value={scaleMultiplier}
+                                onChange={(e) => setScaleMultiplier(Number(e.target.value))}
+                                sx={{ width: 200 }}
+                            />
+                            <Button
+                                variant="outlined"
+                                onClick={handleScaleAI}
+                                disabled={isProcessing}
+                                startIcon={isProcessing ? <CircularProgress size={20} /> : null}
+                            >
+                                {isProcessing ? 'Scaling...' : 'Scale with AI'}
+                            </Button>
+                        </Box>
 
                         <Typography variant="subtitle1" gutterBottom>
                             Ingredients:

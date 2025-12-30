@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import prisma from '../config/db';
-import { parseRecipeWithAI } from '../services/aiParserService';
+import { parseRecipeWithAI, generateRecipeFromPrompt, scaleRecipeWithAI, ParsedRecipe as AIParsedRecipe } from '../services/aiParserService';
 import cloudinaryService from '../services/cloudinaryService';
 import { getRestaurantFilter } from '../middleware/restaurantContext';
 
@@ -1175,6 +1175,136 @@ export const parseRecipe = async (req: Request, res: Response): Promise<void> =>
     } catch (error) {
         console.error('Error parsing recipe:', error);
         const safeMessage = error instanceof Error ? error.message : 'Error parsing recipe';
+        res.status(500).json({ message: safeMessage });
+    }
+};
+
+// @desc    Generate a recipe from a freeform prompt using AI
+// @route   POST /api/recipes/generate
+// @access  Private
+export const generateRecipe = async (req: Request, res: Response): Promise<void> => {
+    if (!req.user?.id) {
+        res.status(401).json({ message: 'Not authorized, user ID missing' });
+        return;
+    }
+
+    try {
+        const { prompt } = req.body;
+        if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
+            res.status(400).json({ message: 'Prompt is required' });
+            return;
+        }
+
+        const { rawText, parsed } = await generateRecipeFromPrompt(prompt);
+
+        const formattedInstructions = parsed.instructions
+            .map((instruction: string) => `<li>${instruction}</li>`)
+            .join('\n');
+
+        const formattedIngredients = parsed.ingredients.map((ing: any) => {
+            let rawTextIng = `${ing.quantity} ${ing.unit} ${ing.name}`;
+            if (ing.notes) {
+                rawTextIng += ` (${ing.notes})`;
+            }
+            return {
+                type: "ingredient",
+                quantity: ing.quantity,
+                unit: ing.unit,
+                unitId: "",
+                name: ing.name,
+                raw: rawTextIng,
+                notes: ing.notes
+            };
+        });
+
+        res.status(200).json({
+            rawText,
+            parsedRecipe: parsed,
+            preview: {
+                name: parsed.name,
+                description: parsed.description + (parsed.notes ? `\n\n${parsed.notes}` : ''),
+                instructions: formattedInstructions ? `<ol>${formattedInstructions}</ol>` : "",
+                ingredients: formattedIngredients,
+                yieldQuantity: parsed.yieldQuantity,
+                yieldUnit: parsed.yieldUnit,
+                prepTimeMinutes: parsed.prepTimeMinutes,
+                cookTimeMinutes: parsed.cookTimeMinutes
+            }
+        });
+    } catch (error) {
+        console.error('Error generating recipe with AI:', error);
+        const safeMessage = error instanceof Error ? error.message : 'Error generating recipe';
+        res.status(500).json({ message: safeMessage });
+    }
+};
+
+// @desc    Scale a recipe via AI (multiplier or target yield)
+// @route   POST /api/recipes/scale
+// @access  Private
+export const scaleRecipeAI = async (req: Request, res: Response): Promise<void> => {
+    if (!req.user?.id) {
+        res.status(401).json({ message: 'Not authorized, user ID missing' });
+        return;
+    }
+
+    try {
+        const { parsedRecipe, recipeText, scaleMultiplier, targetYieldQuantity, targetYieldUnit } = req.body;
+
+        if (!parsedRecipe && !recipeText) {
+            res.status(400).json({ message: 'Provide parsedRecipe or recipeText to scale.' });
+            return;
+        }
+
+        let baseParsed: AIParsedRecipe;
+        if (parsedRecipe) {
+            baseParsed = parsedRecipe as AIParsedRecipe;
+        } else {
+            // Parse raw text with AI first
+            baseParsed = await parseRecipeWithAI(recipeText as string);
+        }
+
+        const scaled = await scaleRecipeWithAI(baseParsed, {
+            scaleMultiplier: typeof scaleMultiplier === 'number' ? scaleMultiplier : undefined,
+            targetYieldQuantity: typeof targetYieldQuantity === 'number' ? targetYieldQuantity : undefined,
+            targetYieldUnit: typeof targetYieldUnit === 'string' ? targetYieldUnit : undefined
+        });
+
+        const formattedInstructions = scaled.instructions
+            .map((instruction: string) => `<li>${instruction}</li>`)
+            .join('\n');
+
+        const formattedIngredients = scaled.ingredients.map((ing: any) => {
+            let rawTextIng = `${ing.quantity} ${ing.unit} ${ing.name}`;
+            if (ing.notes) {
+                rawTextIng += ` (${ing.notes})`;
+            }
+            return {
+                type: "ingredient",
+                quantity: ing.quantity,
+                unit: ing.unit,
+                unitId: "",
+                name: ing.name,
+                raw: rawTextIng,
+                notes: ing.notes
+            };
+        });
+
+        res.status(200).json({
+            parsedRecipe: scaled,
+            preview: {
+                name: scaled.name,
+                description: scaled.description + (scaled.notes ? `\n\n${scaled.notes}` : ''),
+                instructions: formattedInstructions ? `<ol>${formattedInstructions}</ol>` : "",
+                ingredients: formattedIngredients,
+                yieldQuantity: scaled.yieldQuantity,
+                yieldUnit: scaled.yieldUnit,
+                prepTimeMinutes: scaled.prepTimeMinutes,
+                cookTimeMinutes: scaled.cookTimeMinutes
+            }
+        });
+    } catch (error) {
+        console.error('Error scaling recipe with AI:', error);
+        const safeMessage = error instanceof Error ? error.message : 'Error scaling recipe';
         res.status(500).json({ message: safeMessage });
     }
 };

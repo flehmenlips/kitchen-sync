@@ -6,6 +6,8 @@ import {
   updateRecipe,
   deleteRecipe,
   parseRecipe,
+  generateRecipe,
+  scaleRecipeAI,
   uploadRecipePhoto
 } from '../controllers/recipeController'; // Using relative path
 import { protect } from '../middleware/authMiddleware';
@@ -26,6 +28,12 @@ router.route('/')
 
 router.route('/parse')
   .post(parseRecipe);     // POST /api/recipes/parse
+
+router.route('/generate')
+  .post(generateRecipe);   // POST /api/recipes/generate
+
+router.route('/scale')
+  .post(scaleRecipeAI);    // POST /api/recipes/scale
 
 router.route('/:id')
   .get(getRecipeById)    // GET /api/recipes/:id

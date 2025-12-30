@@ -626,6 +626,40 @@ export const parseRecipe = async (recipeText: string, forceAI?: boolean): Promis
     }
 };
 
+export const generateRecipeAI = async (prompt: string): Promise<any> => {
+    try {
+        const response = await apiService.post('/recipes/generate', { prompt });
+        return response.data;
+    } catch (error) {
+        console.error('Error generating recipe with AI:', error);
+        if (axios.isAxiosError(error)) {
+            const message = error.response?.data?.message || error.message || 'Failed to generate recipe';
+            throw new Error(message);
+        }
+        throw error;
+    }
+};
+
+export const scaleRecipeAI = async (payload: {
+    parsedRecipe?: any;
+    recipeText?: string;
+    scaleMultiplier?: number;
+    targetYieldQuantity?: number;
+    targetYieldUnit?: string;
+}): Promise<any> => {
+    try {
+        const response = await apiService.post('/recipes/scale', payload);
+        return response.data;
+    } catch (error) {
+        console.error('Error scaling recipe with AI:', error);
+        if (axios.isAxiosError(error)) {
+            const message = error.response?.data?.message || error.message || 'Failed to scale recipe';
+            throw new Error(message);
+        }
+        throw error;
+    }
+};
+
 export const uploadRecipePhoto = async (recipeId: number, photoFile: File): Promise<{photoUrl: string}> => {
     try {
         const formData = new FormData();

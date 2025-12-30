@@ -131,6 +131,127 @@ export async function parseRecipeWithAI(recipeText: string): Promise<ParsedRecip
   }
 }
 
+/**
+ * Generate a recipe from a freeform prompt.
+ * Returns both structured data and a rawText string for convenience.
+ */
+export async function generateRecipeFromPrompt(prompt: string): Promise<{ rawText: string; parsed: ParsedRecipe }> {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    throw new Error('AI generation unavailable: ANTHROPIC_API_KEY is not configured.');
+  }
+
+  const system = `You are a chef and recipe-writing expert. Create a complete recipe that is realistic and precise. Return ONLY valid JSON (no markdown fences). Use the exact JSON shape:
+{
+  "name": "string",
+  "description": "string",
+  "ingredients": [
+    { "quantity": number, "unit": "string", "name": "string", "notes": "string (optional)" }
+  ],
+  "instructions": ["string"],
+  "notes": "string (optional)",
+  "yieldQuantity": number (optional),
+  "yieldUnit": "string (optional)",
+  "prepTimeMinutes": number (optional),
+  "cookTimeMinutes": number (optional),
+  "rawText": "string (a readable recipe text)"
+}
+- Convert mixed numbers to decimals.
+- Default missing quantity to 1 and unit to "piece".
+- Use cooking units (g, ml, cup, tbsp, tsp, oz, lb, piece).
+- Keep instructions as clear step strings.`;
+
+  const user = `Create a recipe that fits this request:\n${prompt}\n\nReturn JSON only.`;
+
+  const response = await anthropic.messages.create({
+    model: process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022',
+    max_tokens: 4000,
+    system,
+    messages: [{ role: 'user', content: user }],
+    temperature: 0.3
+  });
+
+  const content = response.content[0]?.type === 'text' ? response.content[0].text : '';
+  const jsonContent = extractJson(content);
+
+  let parsed: any;
+  try {
+    parsed = JSON.parse(jsonContent);
+  } catch (err) {
+    console.error('AI generate JSON error:', err, 'Raw content:', jsonContent);
+    throw new Error('AI generation response was not valid JSON.');
+  }
+
+  const validated = validateParsedRecipe(parsed);
+  const normalized: ParsedRecipe = {
+    ...validated,
+    ingredients: validated.ingredients.map(normalizeIngredient),
+    description: validated.description || ''
+  };
+
+  const rawText = typeof parsed.rawText === 'string' && parsed.rawText.trim().length > 0
+    ? parsed.rawText.trim()
+    : buildReadableRawText(normalized);
+
+  return { rawText, parsed: normalized };
+}
+
+/**
+ * Scale a parsed recipe using AI. Accepts a parsed recipe and a scale directive.
+ */
+export async function scaleRecipeWithAI(
+  parsedRecipe: ParsedRecipe,
+  options: { scaleMultiplier?: number; targetYieldQuantity?: number; targetYieldUnit?: string }
+): Promise<ParsedRecipe> {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    throw new Error('AI scaling unavailable: ANTHROPIC_API_KEY is not configured.');
+  }
+
+  const { scaleMultiplier, targetYieldQuantity, targetYieldUnit } = options;
+  if (!scaleMultiplier && !targetYieldQuantity) {
+    throw new Error('Provide a scaleMultiplier or a targetYieldQuantity to scale the recipe.');
+  }
+
+  const directive = scaleMultiplier
+    ? `Scale all ingredient quantities by ${scaleMultiplier}x.`
+    : `Adjust the recipe to yield ${targetYieldQuantity}${targetYieldUnit ? ' ' + targetYieldUnit : ''}.`;
+
+  const system = `You are a culinary scaling assistant. Given a recipe JSON, return a scaled recipe JSON with the SAME SHAPE. JSON only, no markdown fences.
+- Recalculate quantities and yield.
+- Keep instructions logically consistent.
+- Preserve units; keep names and notes.
+- Do not add prose.`;
+
+  const user = `Recipe to scale (JSON):\n${JSON.stringify(parsedRecipe, null, 2)}\n\n${directive}\nReturn JSON only.`;
+
+  const response = await anthropic.messages.create({
+    model: process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022',
+    max_tokens: 4000,
+    system,
+    messages: [{ role: 'user', content: user }],
+    temperature: 0.1
+  });
+
+  const content = response.content[0]?.type === 'text' ? response.content[0].text : '';
+  const jsonContent = extractJson(content);
+
+  let parsed: any;
+  try {
+    parsed = JSON.parse(jsonContent);
+  } catch (err) {
+    console.error('AI scale JSON error:', err, 'Raw content:', jsonContent);
+    throw new Error('AI scaling response was not valid JSON.');
+  }
+
+  const validated = validateParsedRecipe(parsed);
+  const normalized: ParsedRecipe = {
+    ...validated,
+    ingredients: validated.ingredients.map(normalizeIngredient),
+    description: validated.description || ''
+  };
+
+  return normalized;
+}
+
 const isFiniteNumber = (val: unknown): val is number =>
   typeof val === 'number' && Number.isFinite(val);
 
@@ -186,6 +307,18 @@ const validateParsedRecipe = (data: any): ParsedRecipe => {
   return recipe;
 };
 
+// Build a human-friendly raw text recipe from structured data (fallback)
+const buildReadableRawText = (recipe: ParsedRecipe): string => {
+  const ingredients = recipe.ingredients
+    .map((ing) => `${ing.quantity} ${ing.unit} ${ing.name}${ing.notes ? ` (${ing.notes})` : ''}`)
+    .join('\n');
+  const instructions = recipe.instructions.map((step, idx) => `${idx + 1}. ${step}`).join('\n');
+  const yieldLine = recipe.yieldQuantity ? `Yield: ${recipe.yieldQuantity} ${recipe.yieldUnit || ''}` : '';
+  return `${recipe.name}\n\n${recipe.description || ''}\n\nIngredients:\n${ingredients}\n\nInstructions:\n${instructions}\n${yieldLine}`;
+};
+
 export default {
-  parseRecipeWithAI
+  parseRecipeWithAI,
+  generateRecipeFromPrompt,
+  scaleRecipeWithAI
 };
