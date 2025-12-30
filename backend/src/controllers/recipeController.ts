@@ -1372,19 +1372,26 @@ export const scaleRecipeAI = async (req: Request, res: Response): Promise<void> 
                 };
             }
 
-            let quantityValue = typeof ingredient.quantity === 'number'
-                ? ingredient.quantity
-                : Number(ingredient.quantity);
+            let quantityValue: number | undefined;
+            if (typeof ingredient.quantity === 'number') {
+                quantityValue = ingredient.quantity;
+            } else if (typeof ingredient.quantity === 'string') {
+                // Handle fraction-like strings (e.g., "1/2") before falling back to Number()
+                quantityValue = parseQuantityToken(ingredient.quantity) ?? Number(ingredient.quantity);
+            }
 
             let unit = typeof ingredient.unit === 'string' && ingredient.unit.trim() ? ingredient.unit.trim() : undefined;
 
             let name = typeof ingredient.name === 'string' ? ingredient.name.trim() : '';
 
+            const hasPositiveQuantity = (val: unknown): val is number =>
+                typeof val === 'number' && Number.isFinite(val) && val > 0;
+
             if (!name && rawText) {
                 const parsed = parseFromRaw(rawText);
                 if (parsed) {
                     name = parsed.nameFromRaw;
-                    if (!Number.isFinite(quantityValue) || quantityValue <= 0) {
+                    if (!hasPositiveQuantity(quantityValue)) {
                         quantityValue = parsed.qty;
                     }
                     if (!unit && parsed.unitFromRaw) {
@@ -1397,7 +1404,7 @@ export const scaleRecipeAI = async (req: Request, res: Response): Promise<void> 
 
             if (!name) return null;
 
-            const safeQuantity = Number.isFinite(quantityValue) && quantityValue > 0 ? quantityValue : 1;
+            const safeQuantity = hasPositiveQuantity(quantityValue) ? quantityValue : 1;
             const safeUnit = unit || 'piece';
 
             const notes = typeof ingredient.notes === 'string' && ingredient.notes.trim()
