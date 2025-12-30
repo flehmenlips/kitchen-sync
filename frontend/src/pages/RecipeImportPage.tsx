@@ -541,8 +541,12 @@ const RecipeImportPage: React.FC = () => {
             if (result?.rawText) {
                 setRawRecipe(result.rawText);
             }
-            if (result?.parsedRecipe) {
-                setParsedRecipe(result.parsedRecipe);
+            if (result?.preview) {
+                // Use the preview payload which matches ParsedRecipe shape (HTML instructions, typed ingredients)
+                setParsedRecipe({
+                    ...result.preview,
+                    instructions: result.preview.instructions || ''
+                });
                 setActiveStep(1);
             }
         } catch (err) {
@@ -568,8 +572,12 @@ const RecipeImportPage: React.FC = () => {
                 parsedRecipe,
                 scaleMultiplier: Number(scaleMultiplier)
             });
-            if (result?.parsedRecipe) {
-                setParsedRecipe(result.parsedRecipe);
+            if (result?.preview) {
+                // Use preview to keep instructions as HTML string and ingredient shape consistent
+                setParsedRecipe({
+                    ...result.preview,
+                    instructions: result.preview.instructions || ''
+                });
             }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to scale recipe');

@@ -4,7 +4,13 @@ import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import prisma from '../config/db';
-import { parseRecipeWithAI, generateRecipeFromPrompt, scaleRecipeWithAI, ParsedRecipe as AIParsedRecipe } from '../services/aiParserService';
+import {
+    parseRecipeWithAI,
+    generateRecipeFromPrompt,
+    scaleRecipeWithAI,
+    ParsedRecipe as AIParsedRecipe,
+    ParsedIngredient as AIParsedIngredient
+} from '../services/aiParserService';
 import cloudinaryService from '../services/cloudinaryService';
 import { getRestaurantFilter } from '../middleware/restaurantContext';
 
@@ -1255,9 +1261,97 @@ export const scaleRecipeAI = async (req: Request, res: Response): Promise<void> 
             return;
         }
 
+        const normalizeInstructions = (instructions: unknown): string[] => {
+            if (Array.isArray(instructions)) {
+                return instructions
+                    .map((step) => (typeof step === 'string' ? step.trim() : ''))
+                    .filter((step) => step.length > 0);
+            }
+
+            if (typeof instructions === 'string') {
+                const htmlListMatches = Array.from(instructions.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi))
+                    .map((m) => m[1]?.replace(/<\/?[^>]+>/g, '').trim())
+                    .filter((step) => step && step.length > 0);
+
+                if (htmlListMatches.length > 0) {
+                    return htmlListMatches;
+                }
+
+                return instructions
+                    .split(/\n+/)
+                    .map((step) => step.replace(/^\d+[\).\s-]*/, '').trim())
+                    .filter((step) => step.length > 0);
+            }
+
+            return [];
+        };
+
+        const normalizeIngredient = (ingredient: any): AIParsedIngredient | null => {
+            if (!ingredient) return null;
+            if (typeof ingredient === 'string') {
+                return {
+                    quantity: 1,
+                    unit: 'piece',
+                    name: ingredient.trim(),
+                    notes: undefined
+                };
+            }
+
+            const quantity = Number(ingredient.quantity);
+            const safeQuantity = Number.isFinite(quantity) ? quantity : 1;
+            const unit = typeof ingredient.unit === 'string' && ingredient.unit.trim() ? ingredient.unit.trim() : 'piece';
+            const nameSource = typeof ingredient.name === 'string'
+                ? ingredient.name
+                : typeof ingredient.raw === 'string'
+                    ? ingredient.raw
+                    : '';
+            const name = nameSource.trim();
+            if (!name) return null;
+
+            const notes = typeof ingredient.notes === 'string' && ingredient.notes.trim()
+                ? ingredient.notes.trim()
+                : undefined;
+
+            return {
+                quantity: safeQuantity,
+                unit,
+                name,
+                notes
+            };
+        };
+
+        const normalizeParsedRecipe = (recipe: any): AIParsedRecipe => {
+            const instructions = normalizeInstructions(recipe?.instructions);
+            if (!instructions.length) {
+                throw new Error('Invalid recipe: instructions are missing or malformed.');
+            }
+
+            const normalizedIngredients = Array.isArray(recipe?.ingredients)
+                ? recipe.ingredients
+                    .map(normalizeIngredient)
+                    .filter((ing: AIParsedIngredient | null): ing is AIParsedIngredient => Boolean(ing))
+                : [];
+
+            if (!normalizedIngredients.length) {
+                throw new Error('Invalid recipe: ingredients are missing or malformed.');
+            }
+
+            return {
+                name: typeof recipe?.name === 'string' ? recipe.name : 'Untitled Recipe',
+                description: typeof recipe?.description === 'string' ? recipe.description : '',
+                notes: typeof recipe?.notes === 'string' ? recipe.notes : undefined,
+                ingredients: normalizedIngredients,
+                instructions,
+                yieldQuantity: Number.isFinite(Number(recipe?.yieldQuantity)) ? Number(recipe.yieldQuantity) : undefined,
+                yieldUnit: typeof recipe?.yieldUnit === 'string' ? recipe.yieldUnit : undefined,
+                prepTimeMinutes: Number.isFinite(Number(recipe?.prepTimeMinutes)) ? Number(recipe.prepTimeMinutes) : undefined,
+                cookTimeMinutes: Number.isFinite(Number(recipe?.cookTimeMinutes)) ? Number(recipe.cookTimeMinutes) : undefined
+            };
+        };
+
         let baseParsed: AIParsedRecipe;
         if (parsedRecipe) {
-            baseParsed = parsedRecipe as AIParsedRecipe;
+            baseParsed = normalizeParsedRecipe(parsedRecipe);
         } else {
             // Parse raw text with AI first
             baseParsed = await parseRecipeWithAI(recipeText as string);
