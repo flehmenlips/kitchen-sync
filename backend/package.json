@@ -43,7 +43,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
-    "@prisma/adapter-pg": "^7.2.0",
+    "@prisma/adapter-pg": "^7.3.0",
     "@prisma/client": "^7.1.0",
     "@sendgrid/mail": "^8.1.6",
     "@types/bcrypt": "^5.0.2",
