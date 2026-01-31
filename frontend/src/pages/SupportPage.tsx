@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, Container, Divider, Typography } from '@mui/material';
+import { Box, Button, Container, Divider, Typography } from '@mui/material';
+import { Link as RouterLink } from 'react-router-dom';
 
 const SupportPage: React.FC = () => {
   return (
@@ -10,6 +11,17 @@ const SupportPage: React.FC = () => {
       <Typography variant="subtitle1" color="text.secondary" gutterBottom>
         Need help with KitchenSync? We&apos;re here to assist.
       </Typography>
+
+      <Box sx={{ mt: 2 }}>
+        <Button
+          component={RouterLink}
+          to="/"
+          variant="outlined"
+          size="small"
+        >
+          Back to KitchenSync
+        </Button>
+      </Box>
 
       <Box sx={{ mt: 4, display: 'flex', flexDirection: 'column', gap: 3 }}>
         <Box>

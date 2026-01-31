@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, Container, Divider, Typography } from '@mui/material';
+import { Box, Button, Container, Divider, Typography } from '@mui/material';
+import { Link as RouterLink } from 'react-router-dom';
 
 const PrivacyPolicyPage: React.FC = () => {
   return (
@@ -10,6 +11,17 @@ const PrivacyPolicyPage: React.FC = () => {
       <Typography variant="subtitle2" color="text.secondary" gutterBottom>
         Last updated: January 31, 2026
       </Typography>
+
+      <Box sx={{ mt: 2 }}>
+        <Button
+          component={RouterLink}
+          to="/"
+          variant="outlined"
+          size="small"
+        >
+          Back to KitchenSync
+        </Button>
+      </Box>
 
       <Box sx={{ mt: 4, display: 'flex', flexDirection: 'column', gap: 3 }}>
         <Typography variant="body1">
