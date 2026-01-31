@@ -88,6 +88,7 @@ import WebsiteBuilderPage from './pages/WebsiteBuilderPage';
 import ContentBlocksPage from './pages/ContentBlocksPage';
 import BillingPage from './pages/BillingPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import SupportPage from './pages/SupportPage';
 
 // Customer Portal Components
 import CustomerLayout from './components/customer/CustomerLayout';
@@ -155,6 +156,7 @@ const App: React.FC = () => {
                         <Route path="/verify-email-sent" element={<VerifyEmailSentPage />} />
                         <Route path="/verify-email" element={<VerifyEmailPage />} />
                         <Route path="/privacypolicy" element={<PrivacyPolicyPage />} />
+                        <Route path="/support" element={<SupportPage />} />
                         
                         {/* Logo Test Page */}
                         <Route path="/logo-test" element={<LogoTestPage />} />
@@ -252,6 +254,8 @@ const App: React.FC = () => {
                       </ConditionalRoutes>
                     </SubdomainRouter>
                     <div className="global-privacy-footer">
+                      <RouterLink to="/support">Support</RouterLink>
+                      <span aria-hidden="true">•</span>
                       <RouterLink to="/privacypolicy">Privacy Policy</RouterLink>
                     </div>
                   </SnackbarProvider>
