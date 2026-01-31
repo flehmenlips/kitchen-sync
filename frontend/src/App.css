@@ -40,3 +40,21 @@
 .read-the-docs {
   color: #888;
 }
+
+.global-privacy-footer {
+  position: fixed;
+  bottom: 8px;
+  right: 12px;
+  font-size: 11px;
+  color: #666;
+  z-index: 2000;
+}
+
+.global-privacy-footer a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.global-privacy-footer a:hover {
+  text-decoration: underline;
+}
