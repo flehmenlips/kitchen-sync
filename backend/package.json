@@ -66,7 +66,7 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.2",
     "pg": "^8.14.1",
-    "resend": "^6.5.2",
+    "resend": "^6.8.0",
     "stripe": "^20.0.0",
     "typescript": "^5.8.3",
     "uuid": "^11.1.0"
