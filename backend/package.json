@@ -73,7 +73,7 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",
-    "@types/multer": "^2.0.0",
+    "@types/multer": "^2.1.0",
     "@types/uuid": "^10.0.0",
     "dotenv-cli": "^11.0.0",
     "nodemon": "^3.1.9",
